@@ -340,17 +340,42 @@ import{getDatabase,ref,onValue,get,set,update,remove,push,runTransaction,query,o
    Every record is keyed by numeric user ID, never by username.
    ===================================================================== */
 
-/* ---------- 0. F12 / DevTools shortcuts ----------
-   NOTE: This is a deterrent only. Real protection = server-side rules. */
+/* ---------- 0. Client-side hardening (deterrent layer) ----------
+   IMPORTANT: everything in this block can be bypassed by a determined person,
+   because the browser belongs to the user. Real protection = the database rules.
+   This just raises the effort and reloads the page when tampering is detected. */
 (function(){
+  const bail=()=>{try{location.reload()}catch(_){}};
+  // Block DevTools / view-source shortcuts
   function hit(e){
-    const k=e.key;
-    const bad = k==='F12' ||
-      (e.ctrlKey&&e.shiftKey&&['I','J','C','i','j','c'].includes(k)) ||
-      (e.ctrlKey&&['U','u'].includes(k));
-    if(bad){e.preventDefault();e.stopPropagation();location.reload();return false}
+    const k=(e.key||'').toLowerCase();
+    const bad = e.key==='F12' ||
+      (e.ctrlKey&&e.shiftKey&&['i','j','c','k','e'].includes(k)) ||   // Chrome/Edge/Firefox panels
+      (e.metaKey&&e.altKey&&['i','j','c','u'].includes(k)) ||          // macOS
+      (e.ctrlKey&&['u','s'].includes(k));                              // view-source / save page
+    if(bad){e.preventDefault();e.stopPropagation();bail();return false}
   }
   window.addEventListener('keydown',hit,true);
+  // No right-click menu ("Inspect"), no dragging assets out
+  window.addEventListener('contextmenu',e=>{e.preventDefault();bail()},true);
+  // Detect docked DevTools by window size gap
+  let strikes=0;
+  setInterval(()=>{
+    const wGap=window.outerWidth-window.innerWidth>160;
+    const hGap=window.outerHeight-window.innerHeight>200;
+    if(wGap||hGap){if(++strikes>=2)bail()}else strikes=0;
+  },1000);
+  // Detect DevTools (docked or undocked) via debugger timing:
+  // when the inspector is open, `debugger` pauses and the gap becomes large.
+  setInterval(()=>{
+    const t=performance.now();
+    (function(){}).constructor('debugger')();
+    if(performance.now()-t>120)bail();
+  },1500);
+  // Detect DevTools via console getter (fires when the console is open and formats an object)
+  const probe=new Image();
+  Object.defineProperty(probe,'id',{get(){bail()}});
+  setInterval(()=>{console.debug(probe)},2000);
 })();
 
 /* ---------- 1. Config + validation ---------- */
@@ -361,7 +386,9 @@ const CFG={
   MAX_MSG:2000,
   MAX_IMG_BYTES:8*1024*1024,
   MIN_PW:6,
-  GLOBAL_ROOM:'global'
+  GLOBAL_ROOM:'global',
+  NUKE_MSGS:3,          // this many messages...
+  NUKE_WINDOW_MS:1000   // ...within this window triggers anti-nuke
 };
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -842,7 +869,41 @@ const DB=(()=>{
     },
 
     /* --- Messages --- */
+    /* Anti-nuke: if an account fires NUKE_MSGS messages inside NUKE_WINDOW_MS,
+       it's treated as a spam/nuke attempt. The account is frozen as "Deleted User",
+       its login/username index entries are removed, and the user is signed out. */
+    _sendTimes:[],
+    async antiNuke(id){
+      if(DB._nuking)return;DB._nuking=true;
+      try{
+        const u=C.users[id]||{};
+        const oldKey=(u.username||'').toLowerCase();
+        // 1) mark profile deleted. The rules allow 'Deleted User' ONLY together with deleted:true.
+        await update(R('users/'+id),{deleted:true,username:'Deleted User'});
+        // 2) free the username + login lookup (best effort)
+        if(oldKey){
+          await remove(R('usernameLogin/'+oldKey)).catch(()=>{});
+          await remove(R('usernames/'+oldKey)).catch(()=>{});
+        }
+        // 3) wipe private per-user data (best effort; rules allow the owner)
+        await remove(R('userRooms/'+id)).catch(()=>{});
+        await remove(R('lastRead/'+id)).catch(()=>{});
+        await remove(R('settings/'+id)).catch(()=>{});
+      }catch(e){console.warn('anti-nuke cleanup partial',e)}
+      // 4) sign out and hard-refresh no matter what happened above
+      try{stopAll();await fbSignOut(auth)}catch(_){}
+      try{localStorage.clear();sessionStorage.clear()}catch(_){}
+      location.reload();
+    },
     async sendMessage(key,{senderId,text,images,pings}){
+      // ---- anti-nuke: sliding window on outgoing messages ----
+      const now0=Date.now();
+      DB._sendTimes=DB._sendTimes.filter(t=>now0-t<CFG.NUKE_WINDOW_MS);
+      DB._sendTimes.push(now0);
+      if(DB._sendTimes.length>=CFG.NUKE_MSGS){
+        DB.antiNuke(senderId);
+        throw new Error('Sending too fast — account locked.');
+      }
       const at=Date.now();
       const m={senderId,at};
       if(text)m.text=text;
@@ -857,7 +918,14 @@ const DB=(()=>{
       const arr=C.messages[key]||(C.messages[key]=[]);
       const tmp={...m,images:images||[],pings:pings||[],text:text||'',id:newRef.key};
       if(key===msgKey){arr.push(tmp);emit()}
-      try{await set(newRef,m)}
+      try{
+        // The database rules require rate/$senderId === server time on every message write,
+        // so write both atomically in one multi-path update (both validated against the same `now`).
+        await update(R(''),{
+          ['rate/'+senderId]:serverTimestamp(),
+          ['messages/'+key+'/'+newRef.key]:m
+        });
+      }
       catch(e){C.messages[key]=(C.messages[key]||[]).filter(x=>x!==tmp);emit();throw new Error('Message failed to send ('+(e.code||e.message)+')')}
     },
     messages:key=>C.messages[key]||[],
@@ -1176,7 +1244,7 @@ function renderMessages(key){
 function msgEl(m){
   const mine=m.senderId===ME.id;
   const sender=DB.getUser(m.senderId);           // username resolved via ID at render time
-  const name=sender?sender.username:'Deleted User';
+  const name=(sender&&!sender.deleted)?sender.username:'Deleted User';
   const pinged=!mine&&(m.pings.includes(ME.id)||m.pings.includes('everyone'));
   const el=document.createElement('div');el.className='msg'+(mine?' me':'');
   const time=new Date(m.at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
@@ -1302,10 +1370,16 @@ function extractPings(text){
   }
   return[...out];
 }
+let _lastSendAt=0;
 function send(){
   const text=msgIn.value.trim().slice(0,CFG.MAX_MSG);
   if(!text&&!view.pending.length)return;
   if(!view.roomKey)return;
+  // Friendly throttle: the database only accepts one message per 300ms, and
+  // 3 messages inside 1 second triggers anti-nuke. Normal typing stays well under both.
+  const nowMs=Date.now();
+  if(nowMs-_lastSendAt<350){toast('Slow down a little!','bad');return}
+  _lastSendAt=nowMs;
   DB.sendMessage(view.roomKey,{senderId:ME.id,text,images:view.pending.slice(),pings:extractPings(text)})
     .catch(e=>toast(e.message,'bad'));
   msgIn.value='';msgIn.style.height='auto';$('#cc').textContent=0;
