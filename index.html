@@ -410,6 +410,8 @@ const auth=getAuth(fbApp);
 setPersistence(auth,browserLocalPersistence).catch(()=>{}); // survive reloads/new tabs
 const rtdb=getDatabase(fbApp);
 const R=p=>ref(rtdb,p);
+let SKEW=0;
+onValue(ref(rtdb,'.info/serverTimeOffset'),s=>{SKEW=Number(s.val())||0});
 
 const DB=(()=>{
   // live cache
@@ -904,7 +906,7 @@ const DB=(()=>{
         DB.antiNuke(senderId);
         throw new Error('Sending too fast — account locked.');
       }
-      const at=Date.now();
+      const at=Date.now()+SKEW;   // corrected by Firebase's server clock offset
       const m={senderId,at};
       if(text)m.text=text;
       if(images&&images.length)m.images=images;
@@ -921,7 +923,9 @@ const DB=(()=>{
       try{
         // The database rules require rate/$senderId === server time on every message write,
         // so write both atomically in one multi-path update (both validated against the same `now`).
-        await update(R(''),{
+        // Root-level multi-path update: rules are checked per path, and the message's
+        // validate rule reads rate/<id> from the same request's newData.
+        await update(ref(rtdb),{
           ['rate/'+senderId]:serverTimestamp(),
           ['messages/'+key+'/'+newRef.key]:m
         });
