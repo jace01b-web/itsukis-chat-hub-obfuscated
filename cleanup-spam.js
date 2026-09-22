@@ -14,8 +14,16 @@ if (!since) { console.log('Give a start time, e.g. 2026-09-19T00:00:00Z'); proce
   const db = admin.database();
   const users = (await db.ref('users').get()).val() || {};
   const uidToId = (await db.ref('uidToId').get()).val() || {};
+  const owners = (await db.ref('owners').get()).val() || {};
   const idToUid = {}; Object.entries(uidToId).forEach(([u, i]) => idToUid[i] = u);
-  const victims = Object.entries(users).filter(([id, u]) => (u.createdAt || 0) >= since);
+  const isOwnerId = id => Number(owners[id]) === 1;
+  const candidates = Object.entries(users).filter(([id, u]) => (u.createdAt || 0) >= since);
+  const victims = candidates.filter(([id]) => !isOwnerId(id));
+  const skippedOwners = candidates.filter(([id]) => isOwnerId(id));
+  if (skippedOwners.length) {
+    console.log('Skipping ' + skippedOwners.length + ' owner account(s) matched by date (owners are never auto-cleaned):');
+    skippedOwners.forEach(([id, u]) => console.log('  #' + id + '  ' + u.username + '  (owner — protected)'));
+  }
   console.log(victims.length + ' accounts created since ' + process.argv[2]);
   victims.forEach(([id, u]) => console.log('  #' + id + '  ' + u.username));
   if (!doIt) return process.exit(0);
