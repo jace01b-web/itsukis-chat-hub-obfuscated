@@ -1,5 +1,6 @@
-window.onload = function() {
+(function() {
     // Checks if the script is running inside our custom-named iframe. 
+    // If yes, we are already in the cloaked tab, so stop the script.
     if (window.name === 'cloaked-frame') {
         return; 
     }
@@ -8,16 +9,25 @@ window.onload = function() {
         let blankWindow = window.open('about:blank', '_blank');
         
         if (!blankWindow) {
-            alert("Pop-up blocked! Please allow pop-ups for this site.");
+            console.log("Pop-up blocked! Please allow pop-ups for this site.");
             return;
         }
 
         let iframe = blankWindow.document.createElement('iframe');
         
+        // Give the iframe a specific internal name to detect it later
         iframe.name = 'cloaked-frame';
         
-        // Use the /embed/ path to bypass p5.js iframe restrictions
-        iframe.src = 'https://editor.p5js.org/jace01b/embed/mYFtQwQgD';
+        // Target the parent launcher URL instead of the iframe's 'about:srcdoc'
+        let targetUrl;
+        try {
+            targetUrl = window.top.location.href;
+        } catch (e) {
+            // Fallback just in case cross-origin restrictions apply
+            targetUrl = window.location.href;
+        }
+        
+        iframe.src = targetUrl;
         
         iframe.style.width = '100vw';
         iframe.style.height = '100vh';
@@ -28,12 +38,11 @@ window.onload = function() {
         blankWindow.document.body.style.margin = '0';
         blankWindow.document.body.style.overflow = 'hidden';
         
-        blankWindow.document.title = "Dashboard";
+        blankWindow.document.title = "Cloaked Tab";
         
         blankWindow.document.body.appendChild(iframe);
 
-        window.location.replace('https://classroom.google.com/');
-
+        // Remove the listener from the original page
         window.removeEventListener('click', cloakSite);
     });
-};
+})();
