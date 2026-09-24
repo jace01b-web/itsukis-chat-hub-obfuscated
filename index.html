@@ -925,7 +925,7 @@ function checkBanLock(currentId,bannedMap){
 
 const DB=(()=>{
   // live cache
-  const C={users:{},usernames:{},rooms:{},roomMembers:{},dmMembers:{},friends:{},friendReqIn:{},friendReqOut:{},lastRead:{},messages:{},myRoomIds:[],online:0,onlineIds:[],banned:{},muted:{}};
+  const C={users:{},usernames:{},rooms:{},roomMembers:{},dmMembers:{},friends:{},friendReqIn:{},friendReqOut:{},lastRead:{},messages:{},myRoomIds:[],online:0,onlineIds:[],banned:{},muted:{},blocked:{},blockedBy:{}};
   let myId=null,myUid=null,ready=false;
   const listeners=new Set();
   const unsubs=[];         // base listeners
@@ -980,6 +980,10 @@ const DB=(()=>{
       ids.forEach(f=>watchPreview(dmKey(myId,f)));
     });
     listen('sentRequests/'+myId,v=>{C.friendReqOut[myId]=Object.keys(v||{}).map(t=>({from:myId,to:Number(t),status:'pending'}))});
+    // Blocking: my own blocked list, and the mirror list of who has blocked me (blockedBy/myId/*
+    // is written by whoever blocks me, so I can filter their messages and they can filter mine).
+    listen('blocked/'+myId,v=>{C.blocked[myId]=v?Object.keys(v).map(Number):[]});
+    listen('blockedBy/'+myId,v=>{C.blockedBy[myId]=v?Object.keys(v).map(Number):[]});
     // Presence: mark myself online while connected, and let the server auto-remove me
     // the instant this connection drops (tab close, network loss, crash) via onDisconnect.
     // Re-armed on every (re)connect, per Firebase's recommended presence pattern.
@@ -1339,6 +1343,7 @@ const DB=(()=>{
       to=Number(to);
       if(!to||Number.isNaN(to))throw new Error('No user with that username.');
       if(to===from)throw new Error("You can't add yourself.");
+      if((C.blocked[from]||[]).includes(to)||(C.blockedBy[from]||[]).includes(to))throw new Error("You can't add this user.");
       if((C.friends[from]||[]).includes(to))throw new Error('Already friends.');
       // they already asked me -> just accept
       if(C.friendReqIn[to]){await this.acceptFriend(from,to);return 'accepted'}
@@ -1396,6 +1401,37 @@ const DB=(()=>{
       C.friends[me]=(C.friends[me]||[]).filter(x=>x!==other);emit();
     },
     isFriend:(me,other)=>(C.friends[me]||[]).includes(other),
+    /* --- Blocking ---
+       blocked/$me/$other = true    (people I blocked; only I can read/write my own list)
+       blockedBy/$other/$me = true  (mirror, written by me at the same time, so $other's
+       client can see I blocked them and hide my messages/requests without ever reading my list) */
+    isBlocked:(me,other)=>(C.blocked[me]||[]).includes(other),      // I blocked them
+    isBlockedBy:(me,other)=>(C.blockedBy[me]||[]).includes(other),  // they blocked me
+    async blockUser(me,other){
+      other=Number(other);
+      if(other===me)throw new Error("You can't block yourself.");
+      try{
+        await set(R(`blocked/${me}/${other}`),true);
+        await set(R(`blockedBy/${other}/${me}`),true);
+      }catch(e){throw new Error('Could not block ('+(e.code||e.message)+')')}
+      C.blocked[me]=[...new Set([...(C.blocked[me]||[]),other])];emit();
+      // Blocking also ends any friendship/pending requests between the two of you.
+      if((C.friends[me]||[]).includes(other))await this.removeFriend(me,other).catch(()=>{});
+      await remove(R(`friendRequests/${me}/${other}`)).catch(()=>{});
+      await remove(R(`friendRequests/${other}/${me}`)).catch(()=>{});
+      await remove(R(`sentRequests/${me}/${other}`)).catch(()=>{});
+      await remove(R(`sentRequests/${other}/${me}`)).catch(()=>{});
+      delete C.friendReqIn[other];
+      C.friendReqOut[me]=(C.friendReqOut[me]||[]).filter(r=>r.to!==other);emit();
+    },
+    async unblockUser(me,other){
+      other=Number(other);
+      try{
+        await remove(R(`blocked/${me}/${other}`));
+        await remove(R(`blockedBy/${other}/${me}`)).catch(()=>{});
+      }catch(e){throw new Error('Could not unblock ('+(e.code||e.message)+')')}
+      C.blocked[me]=(C.blocked[me]||[]).filter(x=>x!==other);emit();
+    },
     hasIncoming:from=>!!C.friendReqIn[from],
     hasOutgoing:(me,to)=>(C.friendReqOut[me]||[]).some(r=>r.to===to),
 
@@ -1738,7 +1774,17 @@ const DB=(()=>{
       }
       return targets.length;
     },
-    messages:key=>C.messages[key]||[],
+    messages(key){
+      const my=myId;
+      return(C.messages[key]||[]).filter(m=>{
+        const s=C.users[m.senderId];
+        if(s&&s.deleted)return false; // deleted accounts: hide instantly, don't wait on server cleanup
+        if(m.senderId===my)return true;
+        if((C.blocked[my]||[]).includes(m.senderId))return false;   // I blocked them
+        if((C.blockedBy[my]||[]).includes(m.senderId))return false; // they blocked me
+        return true;
+      });
+    },
     unreadDMs(uid){
       let n=0;
       (C.friends[uid]||[]).forEach(f=>{
@@ -2889,8 +2935,14 @@ function openUserProfile(id){
     const accent=safeColor(u.settings&&u.settings.meBubble,'#7c6cff');
     const joined=u.createdAt?new Date(u.createdAt).toLocaleDateString(undefined,{month:'short',year:'numeric'}):null;
 
+    const iBlocked=!isMe&&DB.isBlocked(ME.id,id);
+    const blockedMe=!isMe&&DB.isBlockedBy(ME.id,id);
     let socialHtml='';
-    if(!isMe&&!deleted){
+    if(!isMe&&!deleted&&iBlocked){
+      socialHtml=`<button class="btn sec small" id="pfUnblock" style="flex:1">Unblock</button>`;
+    }else if(!isMe&&!deleted&&blockedMe){
+      socialHtml='';
+    }else if(!isMe&&!deleted){
       if(DB.isFriend(ME.id,id)){
         socialHtml=`<button class="btn small" id="pfMsg" style="flex:1">💬 Message</button><button class="btn sec small pf-icon-btn" id="pfRemove" title="Remove friend">🗑️</button>`;
       }else if(DB.hasIncoming(id)){
@@ -2901,6 +2953,7 @@ function openUserProfile(id){
         socialHtml=`<button class="btn sec small" id="pfMsg" style="flex:1">💬 Message</button><button class="btn small" id="pfAdd" style="flex:1">+ Add friend</button>`;
       }
     }
+    const blockBtnHtml=(!isMe&&!deleted&&!blockedMe&&!iBlocked)?`<button class="btn sec small" id="pfBlock" style="width:100%">Block user</button>`:'';
     let modHtml='';
     if(!isMe&&!deleted&&isOwner(ME.id)&&!owner){
       modHtml=banned
@@ -2938,7 +2991,10 @@ function openUserProfile(id){
           </div>`:''}
         </div>
 
+        ${blockedMe?'<div class="hint" style="color:var(--danger);margin-top:10px">This user has blocked you.</div>':''}
+        ${iBlocked?'<div class="hint" style="color:var(--danger);margin-top:10px">You have blocked this user.</div>':''}
         ${socialHtml?`<div style="display:flex;gap:8px;margin-top:18px">${socialHtml}</div>`:''}
+        ${blockBtnHtml?`<div style="margin-top:8px">${blockBtnHtml}</div>`:''}
         ${modHtml?`<div style="display:flex;gap:8px;margin-top:8px;justify-content:center">${modHtml}</div>`:''}
       </div>
     </div></div>`;
@@ -2968,6 +3024,13 @@ function openUserProfile(id){
     if(el2('pfRemove'))el2('pfRemove').onclick=()=>{
       if(!confirm('Remove this friend?'))return;
       DB.removeFriend(ME.id,id).then(()=>{ME=DB.currentUser();render();renderChat()});
+    };
+    if(el2('pfBlock'))el2('pfBlock').onclick=()=>{
+      if(!confirm('Block '+name+"? They won't be able to add you, and neither of you will see each other's messages."))return;
+      DB.blockUser(ME.id,id).then(()=>{toast(name+' blocked.');render();renderChat()}).catch(e=>toast(e.message,'bad'));
+    };
+    if(el2('pfUnblock'))el2('pfUnblock').onclick=()=>{
+      DB.unblockUser(ME.id,id).then(()=>{toast(name+' unblocked.');render();renderChat()}).catch(e=>toast(e.message,'bad'));
     };
     if(el2('pfBan'))el2('pfBan').onclick=()=>{root.innerHTML='';modalBanConfirm(id,name)};
     if(el2('pfMute'))el2('pfMute').onclick=()=>{root.innerHTML='';modalMuteConfirm(id,name)};
