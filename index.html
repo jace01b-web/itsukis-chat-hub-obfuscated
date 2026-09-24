@@ -311,9 +311,11 @@ input[type=color]{display:none!important}
 /* Image-only bubble: no padded/colored frame around the photo, just the image itself */
 .bubble.img-only{padding:0;background:none;box-shadow:none}
 .bubble.img-only .imgs{margin-top:4px}
-.mention{background:rgba(255,108,180,.25);color:#ffd0e8;padding:0 4px;border-radius:5px;font-weight:600}
-.mention.me{background:var(--accent2);color:#fff}
-.mention.everyone{background:#ffb84d;color:#3a2400}
+.mention{background:rgba(255,108,180,.38);color:#fff;padding:1px 5px;border-radius:6px;font-weight:700;cursor:pointer}
+.mention:hover{filter:brightness(1.2);text-decoration:underline}
+.mention.me{background:var(--accent2);color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.4)}
+.mention.everyone{background:#ffb84d;color:#3a2400;cursor:default}
+.mention.everyone:hover{text-decoration:none;filter:none}
 .sys{align-self:center;color:var(--muted);font-size:12px;padding:5px 12px;background:var(--ui-panel);border-radius:20px}
 .date-sep{align-self:center;color:var(--muted);font-size:11px;margin:8px 0;background:var(--ui-panel);padding:3px 12px;border-radius:20px}
 /* ===== Discord-style reply reference: sits above the whole message row (avatar
@@ -426,6 +428,17 @@ input[type=color]{display:none!important}
 .toast-wrap{position:fixed;top:18px;right:18px;z-index:2000;display:flex;flex-direction:column;gap:8px}
 .toast{background:var(--panel2);border:1px solid var(--border);border-left:4px solid var(--accent);padding:12px 16px;border-radius:12px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:slide .25s}
 .toast.ping{border-left-color:var(--accent2)}
+.toast.ping-rich{max-width:340px;cursor:pointer;padding:12px 16px;border-left-width:5px;background:var(--panel2)}
+.toast.ping-rich .pt-title{font-weight:700;font-size:15px;color:#fff;margin-bottom:2px}
+.toast.ping-rich .pt-where{font-size:12px;color:var(--accent2);font-weight:600;margin-bottom:4px}
+.toast.ping-rich .pt-text{font-size:13.5px;color:var(--text);opacity:.9;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
+.toast.ping-rich .pt-hint{font-size:11px;color:var(--muted);margin-top:5px}
+.typing-bar{height:18px;font-size:12.5px;color:var(--muted);padding:0 8px 3px;display:flex;align-items:center;gap:7px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.typing-bar b{color:var(--text);font-weight:600}
+.typing-dots{display:inline-flex;gap:3px}
+.typing-dots i{width:5px;height:5px;border-radius:50%;background:var(--accent2);animation:typedot 1.2s infinite ease-in-out}
+.typing-dots i:nth-child(2){animation-delay:.15s}.typing-dots i:nth-child(3){animation-delay:.3s}
+@keyframes typedot{0%,60%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
 .toast.bad{border-left-color:var(--danger)}
 @keyframes slide{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
 .tag{font-size:10px;background:var(--accent2);color:#fff;padding:1px 6px;border-radius:8px;font-weight:700}
@@ -632,6 +645,7 @@ input[type=color]{display:none!important}
         </div>
         <div class="previews" id="previews"></div>
         <div class="mention-pop hidden" id="mentionPop"></div>
+        <div class="typing-bar" id="typingBar"></div>
         <div class="row">
           <button class="icon-btn" id="attachBtn" title="Attach images (max 10)">🖼️</button>
           <input type="file" id="fileIn" accept="image/*" multiple hidden>
@@ -1780,6 +1794,20 @@ let view={page:'loadingPage',mode:null,roomKey:null,pending:[],mentionSel:0,repl
 function toast(msg,type=''){
   const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;
   $('#toasts').appendChild(t);setTimeout(()=>t.remove(),4000);
+}
+
+// Readable ping toast: who pinged you, where, and a preview of the message. Click it to open their profile.
+function pingToast(m,key,sender){
+  const name=sender&&!sender.deleted?displayUsername(sender.username):'Someone';
+  const where=key===CFG.GLOBAL_ROOM?'in Global chat':(String(key).startsWith('dm_')?'in a DM':'in a room');
+  const raw=(m.text||'').replace(/\s+/g,' ').trim();
+  const prev=raw?(raw.length>90?raw.slice(0,90)+'…':raw):((m.images&&m.images.length)?'[sent an image]':'');
+  const t=document.createElement('div');t.className='toast ping ping-rich';
+  const mk=(c,tx)=>{const d=document.createElement('div');d.className=c;d.textContent=tx;t.appendChild(d)};
+  mk('pt-title','@ '+name+' pinged you');mk('pt-where',where);if(prev)mk('pt-text',prev);
+  if(sender&&!sender.deleted)mk('pt-hint','Tap to view profile');
+  t.onclick=()=>{t.remove();if(sender&&!sender.deleted)openUserProfile(m.senderId)};
+  $('#toasts').appendChild(t);setTimeout(()=>t.remove(),9000);
 }
 
 /* ---------- Auto-update: keep everyone on the latest deployed version ---------- */
@@ -3131,7 +3159,7 @@ function renderMessages(key){
       const pinged=m.pings.includes(ME.id)||(m.pings.includes('everyone')&&ME.settings.pings.everyone);
       if(pinged){
         const s=DB.getUser(m.senderId);
-        toast(`${s?.username} pinged you`,'ping');
+        pingToast(m,key,s);
         if(ME.settings.pings.sound)beep();
       }
     });
@@ -3327,7 +3355,7 @@ function fmtText(t){
     const id=DB.get().usernameIndex[n.toLowerCase()];
     if(id===undefined)return full;
     const u=DB.getUser(id);
-    return `<span class="mention${id===ME.id?' me':''}">@${esc(u.username)}</span>`;
+    return `<span class="mention${id===ME.id?' me':''}" data-open-profile="${id}" title="View profile">@${esc(u.username)}</span>`;
   });
   return s;
 }
@@ -4236,6 +4264,57 @@ function renderChatLight(keepFriends){
   renderChat();
   msgIn.value=draft;try{msgIn.setSelectionRange(ss,ss)}catch(e){}
 }
+
+/* ---------- Typing indicator ----------
+   Writes typing/<room>/<myId> = timestamp while I type (refreshed every 3s), removes it when I stop,
+   send, switch rooms or disconnect. Others show anyone whose stamp is under 6s old.
+   Needs a matching rule in the Realtime Database rules (see reply). */
+(function(){
+  const STALE=6000,PUSH=3000;
+  const bar=$('#typingBar');
+  let watchKey=null,unsub=null,typers={},lastPush=0,myKey=null;
+  const now=()=>Date.now()+(SKEW||0);
+  function draw(){
+    if(!bar)return;
+    if(!ME||!watchKey){bar.innerHTML='';return}
+    const t=now();
+    const ids=Object.keys(typers).map(Number).filter(id=>id!==ME.id&&Number(typers[id])&&t-Number(typers[id])<STALE);
+    if(!ids.length){bar.innerHTML='';return}
+    const nm=ids.map(id=>{const u=DB.getUser(id);return u&&!u.deleted?displayUsername(u.username):'Someone'});
+    let html;
+    if(nm.length===1)html=`<b>${esc(nm[0])}</b> is typing`;
+    else if(nm.length===2)html=`<b>${esc(nm[0])}</b> and <b>${esc(nm[1])}</b> are typing`;
+    else if(nm.length===3)html=`<b>${esc(nm[0])}</b>, <b>${esc(nm[1])}</b> and <b>${esc(nm[2])}</b> are typing`;
+    else html='Several people are typing';
+    bar.innerHTML=`<span class="typing-dots"><i></i><i></i><i></i></span><span>${html}</span>`;
+  }
+  function watch(key){
+    if(unsub){try{unsub()}catch(_){}unsub=null}
+    typers={};watchKey=key;draw();
+    if(!key)return;
+    try{unsub=onValue(R('typing/'+key),s=>{typers=s.val()||{};draw()},()=>{})}catch(_){}
+  }
+  function stopMine(){
+    if(myKey&&ME){try{remove(R('typing/'+myKey+'/'+ME.id)).catch(()=>{})}catch(_){}}
+    myKey=null;lastPush=0;
+  }
+  msgIn.addEventListener('input',()=>{
+    if(!ME||!view.roomKey)return;
+    if(!msgIn.value.trim()){stopMine();return}
+    const t=Date.now();
+    if(myKey===view.roomKey&&t-lastPush<PUSH)return;
+    if(myKey&&myKey!==view.roomKey)stopMine();
+    const r=R('typing/'+view.roomKey+'/'+ME.id);
+    if(myKey!==view.roomKey){try{onDisconnect(r).remove().catch(()=>{})}catch(_){}}
+    myKey=view.roomKey;lastPush=t;
+    set(r,now()).catch(()=>{});
+  });
+  setInterval(()=>{
+    const k=(ME&&view.page==='chatPage')?view.roomKey:null;
+    if(k!==watchKey)watch(k);else draw();
+    if(myKey&&(!msgIn.value.trim()||myKey!==k))stopMine();
+  },1000);
+})();
 
 /* ---------- Boot ---------- */
 (async function init(){
