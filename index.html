@@ -460,6 +460,7 @@ input[type=color]{display:none!important}
 /* ===== Reactions ===== */
 .msg-body{position:relative}
 .bubble{position:relative}
+.msg-hover-bar .hb-danger:hover{color:var(--danger)}
 .msg-hover-bar{position:absolute;top:-38px;right:0;display:flex;gap:2px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:3px;box-shadow:0 4px 14px rgba(0,0,0,.35);
   opacity:0;pointer-events:none;transform:translateY(3px) scale(.96);transition:opacity .12s ease,transform .12s ease;z-index:6}
 .msg.me .msg-hover-bar{right:auto;left:0}
@@ -3270,7 +3271,7 @@ function msgEl(m){
   // Delete control lives inline in the meta line of your OWN messages only — no
   // floating/absolutely-positioned button, so it can't drift onto another message.
   // Owners deleting someone else's message use the moderation panel instead.
-  const delLink=canDelete?` · <span data-more-btn style="cursor:pointer;color:var(--muted)" title="Delete message">🗑️ Delete</span>`:'';
+  const delBtn=canDelete?`<button data-more-btn title="Delete message" class="hb-danger">🗑️</button>`:'';
   const editedTag=(m.editedAt&&m.text)?`<span class="edited-tag">(edited)</span>`:'';
   let replyRefHTML='';
   if(m.replyTo&&m.replyTo.id){
@@ -3284,8 +3285,8 @@ function msgEl(m){
     </div>`;
   }
   const myAv=mine?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${av}</span>`:'';
-  el.innerHTML=`${replyRefHTML}<div class="msg-row">${mine?myAv:avClickable}<div class="msg-body"><div class="meta">${mine?'':(sender&&!sender.deleted?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${esc(name)}</span>`:esc(name))+' · '}${time}${editedTag}${isOwner(m.senderId)?' <span class="tag owner">#'+m.senderId+'</span>':''}${DB.isMuted(m.senderId)?' <span class="tag" style="background:#555;color:#fff">muted</span>':''}${delLink}</div>
-    <div class="bubble${pinged?' pinged':''}${(!m.text&&m.images&&m.images.length)?' img-only':''}"${bStyle}><div class="msg-hover-bar">${reactBtn}${replyBtn}${copyBtn}${editBtn}</div>${fmtText(displayMsgText(m.text))}${imagesHTML(m.images)}</div>
+  el.innerHTML=`${replyRefHTML}<div class="msg-row">${mine?myAv:avClickable}<div class="msg-body"><div class="meta">${mine?'':(sender&&!sender.deleted?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${esc(name)}</span>`:esc(name))+' · '}${time}${editedTag}${isOwner(m.senderId)?' <span class="tag owner">#'+m.senderId+'</span>':''}${DB.isMuted(m.senderId)?' <span class="tag" style="background:#555;color:#fff">muted</span>':''}</div>
+    <div class="bubble${pinged?' pinged':''}${(!m.text&&m.images&&m.images.length)?' img-only':''}"${bStyle}><div class="msg-hover-bar">${reactBtn}${copyBtn}${editBtn}${delBtn}${replyBtn}</div>${fmtText(displayMsgText(m.text))}${imagesHTML(m.images)}</div>
     <div class="react-bar" data-react-bar></div></div></div>`;
   el.querySelectorAll('.imgs img').forEach((img,i)=>img.onclick=()=>openLightbox(m.images,i));
   const moreBtn=el.querySelector('[data-more-btn]');
