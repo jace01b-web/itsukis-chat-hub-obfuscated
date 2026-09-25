@@ -3283,7 +3283,8 @@ function msgEl(m){
       <span class="rr-avatar">${rav}</span><span class="rr-name">${esc(rname)}</span><span class="rr-text">${rtext}</span>
     </div>`;
   }
-  el.innerHTML=`${replyRefHTML}<div class="msg-row">${mine?'':avClickable}<div class="msg-body"><div class="meta">${mine?'':(sender&&!sender.deleted?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${esc(name)}</span>`:esc(name))+' · '}${time}${editedTag}${isOwner(m.senderId)?' <span class="tag owner">#'+m.senderId+'</span>':''}${DB.isMuted(m.senderId)?' <span class="tag" style="background:#555;color:#fff">muted</span>':''}${delLink}</div>
+  const myAv=mine?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${av}</span>`:'';
+  el.innerHTML=`${replyRefHTML}<div class="msg-row">${mine?myAv:avClickable}<div class="msg-body"><div class="meta">${mine?'':(sender&&!sender.deleted?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${esc(name)}</span>`:esc(name))+' · '}${time}${editedTag}${isOwner(m.senderId)?' <span class="tag owner">#'+m.senderId+'</span>':''}${DB.isMuted(m.senderId)?' <span class="tag" style="background:#555;color:#fff">muted</span>':''}${delLink}</div>
     <div class="bubble${pinged?' pinged':''}${(!m.text&&m.images&&m.images.length)?' img-only':''}"${bStyle}><div class="msg-hover-bar">${reactBtn}${replyBtn}${copyBtn}${editBtn}</div>${fmtText(displayMsgText(m.text))}${imagesHTML(m.images)}</div>
     <div class="react-bar" data-react-bar></div></div></div>`;
   el.querySelectorAll('.imgs img').forEach((img,i)=>img.onclick=()=>openLightbox(m.images,i));
