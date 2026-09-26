@@ -612,7 +612,6 @@ input[type=color]{display:none!important}
 .msg-ban-btn{background:transparent;border:none;color:var(--danger);font-size:11px;margin-left:6px;padding:0 2px;opacity:.55;vertical-align:middle}
 .msg-ban-btn:hover{opacity:1}
 
-/* ===== Reactions ===== */
 .msg-body{position:relative}
 .bubble{position:relative}
 .msg-hover-bar .hb-danger:hover{color:var(--danger)}
@@ -622,8 +621,6 @@ input[type=color]{display:none!important}
 .msg-body:hover .msg-hover-bar,.msg-hover-bar.pinned{opacity:1;pointer-events:auto;transform:none}
 .msg-hover-bar button{width:26px;height:26px;border-radius:7px;background:transparent;font-size:14px;display:flex;align-items:center;justify-content:center;transition:.12s}
 .msg-hover-bar button:hover{background:var(--ui-panel2)}
-.react-bar{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
-.react-bar:empty{margin-top:0}
 /* ===== "editing" tag ===== */
 .edited-tag{font-size:10.5px;opacity:.6;font-style:italic;margin-left:4px}
 /* ===== Reply/edit context bar above the composer ===== */
@@ -636,18 +633,8 @@ input[type=color]{display:none!important}
 .compose-context .cc-close{background:transparent;color:var(--muted);width:24px;height:24px;border-radius:7px;flex-shrink:0}
 .compose-context .cc-close:hover{background:var(--panel);color:var(--text)}
 .msg.pinned-flash .bubble{outline:2px solid var(--accent2);transition:outline .15s ease}
-.react-chip{display:inline-flex;align-items:center;gap:4px;background:var(--ui-panel2);border:1px solid var(--border);border-radius:12px;padding:2px 8px 2px 6px;font-size:12.5px;line-height:1.6;transition:.12s;color:var(--text)}
-.react-chip:hover{border-color:rgba(124,108,255,.5)}
-.react-chip.mine{background:rgba(124,108,255,.22);border-color:var(--accent)}
-.react-chip .rc-emo{font-size:14px}
-.react-chip .rc-n{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
-.react-chip.mine .rc-n{color:var(--text)}
-.react-chip.more{color:var(--muted);cursor:pointer}
-.react-chip.more:hover{color:var(--text)}
-.react-add-chip{width:24px;height:24px;border-radius:12px;background:var(--ui-panel2);border:1px dashed var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted);opacity:0;transition:.12s}
-.msg:hover .react-add-chip,.react-bar:has(.react-chip) .react-add-chip{opacity:1}
 
-/* emoji / reaction picker popover */
+/* emoji picker popover (message composer) */
 .emoji-pop{position:absolute;z-index:50;width:280px;max-width:88vw;background:var(--panel);border:1px solid var(--border);border-radius:16px;box-shadow:0 16px 40px rgba(0,0,0,.5);overflow:hidden;display:flex;flex-direction:column;animation:modalIn .16s cubic-bezier(.2,.8,.3,1)}
 .emoji-pop-search{padding:8px;border-bottom:1px solid var(--border)}
 .emoji-pop-quick{display:flex;gap:2px;padding:8px 8px 0}
@@ -659,12 +646,6 @@ input[type=color]{display:none!important}
 .emoji-pop-grid button{width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:19px;border-radius:8px;background:transparent;transition:.1s}
 .emoji-pop-grid button:hover{background:var(--ui-panel2);transform:scale(1.12)}
 .emoji-pop-empty{grid-column:1/-1;text-align:center;color:var(--muted);font-size:12.5px;padding:18px 6px}
-
-/* reaction tooltip: who reacted */
-.react-tip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#000;color:#fff;font-size:11.5px;
-  padding:6px 9px;border-radius:8px;white-space:nowrap;max-width:220px;white-space:normal;text-align:center;box-shadow:0 6px 16px rgba(0,0,0,.4);
-  opacity:0;pointer-events:none;transition:opacity .12s ease;z-index:7}
-.react-chip:hover .react-tip{opacity:1}
 .banned-banner{background:rgba(255,93,115,.14);border-top:1px solid rgba(255,93,115,.35);color:var(--danger);
   font-size:13px;font-weight:600;text-align:center;padding:10px 16px}
 
@@ -805,7 +786,7 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
   border:1px solid rgba(255,255,255,.3);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.42),inset 0 -12px 18px rgba(0,0,0,.16),0 6px 18px rgba(124,108,255,.28)
 }
-.react-chip,.mtrack{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.mtrack{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 
 /* ---- icon badges: glassy bevel like an iOS app icon ---- */
 .avatar,.music-note,.np-ic{
@@ -1042,8 +1023,8 @@ import{initializeAuth,indexedDBLocalPersistence,browserLocalPersistence as _bLP,
 import{initializeAppCheck,ReCaptchaEnterpriseProvider}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js";
 import{getDatabase,ref,onValue,get,set,update,remove,push,runTransaction,query,orderByChild,limitToLast,serverTimestamp,onDisconnect,enableLogging}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 // TEMP DIAGNOSTIC: prints the exact rule-evaluation reason for every denied write to the
-// browser console (e.g. "Permission denied ... at /messages/global/-Ab.../reactions/😭/2").
-// Safe to leave on temporarily; remove enableLogging(true) once reactions are confirmed fixed.
+// browser console (e.g. "Permission denied ... at /messages/global/-Ab.../text").
+// Safe to leave on temporarily; remove enableLogging(true) once writes are confirmed fixed.
 // enableLogging(true) removed: it dumped every DB event to the console, which froze/blacked-out
 // low-power devices and embedded windows (VUS OS, launchers). Re-enable only while debugging.
 // Capture Firebase's verbose "FIREBASE WARNING: ... permission_denied" rule-evaluation
@@ -1121,7 +1102,7 @@ const CFG={
   OWNER_IDS:[], // no longer used for permission checks — kept empty; owner status now comes live from owners/$id===1 in the database (see C.owners / isOwner()). Populate owners/$id there from your own backend, not here.
   SEND_COOLDOWN_MS:1500
 };
-/* ---------- Emoji picker data (reactions + message composer) ---------- */
+/* ---------- Emoji picker data (message composer) ---------- */
 const QUICK_REACT=['👍','❤️','😂','😮','😢','🔥'];
 // Each entry is [emoji, shortcode-name]. Names power the Discord-style :name: search
 // (e.g. ":sob:" -> 😭) as well as the "browse" grid tooltip.
@@ -1579,7 +1560,7 @@ const DB=(()=>{
               // not already linked — the rules reject this write once idToUid/$id exists,
               // and firing it unconditionally on every login just spams a permission_denied
               // warning into the console every single time (harmless functionally, but it
-              // was polluting the reaction-error diagnostic below by looking like a real failure).
+              // was polluting the write-error diagnostic below by looking like a real failure).
               get(R('idToUid/'+id)).then(existing=>{
                 if(!existing.exists())return set(R('idToUid/'+id),user.uid);
               }).catch(()=>{});
@@ -2219,63 +2200,6 @@ const DB=(()=>{
       try{out.push('uidToId='+(await get(R('uidToId/'+auth.currentUser.uid))).val())}catch(e){out.push('uidToId '+(e.code||'err'))}
       try{const slot=Date.now()+SKEW;await set(R('rate/'+id+'/'+slot),slot);out.push('link+rate ok');await remove(R('rate/'+id+'/'+slot)).catch(()=>{})}catch(e){out.push('account link/rate denied')}
       return out.join(', ');
-    },
-    // Toggle MY reaction with a given emoji on a message. Works on any message,
-    // old or new, since reactions/ is just an optional child node — nothing about
-    // the message itself has to change for it to support reactions.
-    async toggleReaction(key,msgId,emoji){
-      if(!key||!msgId||!emoji)return;
-      if(DB.isBanned(myId))throw new Error('Your account has been banned.');
-      // Clear any stale captured warning from an earlier, unrelated Firebase operation —
-      // otherwise an old permission_denied (e.g. from login) can get misreported below as
-      // the reason THIS reaction failed, even though it's unrelated and already resolved.
-      _lastFbWarn='';
-      const p='messages/'+key+'/'+msgId+'/reactions/'+emoji+'/'+myId;
-      // optimistic local update so the tap feels instant
-      const arr=C.messages[key];const m=arr&&arr.find(x=>x.id===msgId);
-      const already=!!(m&&m.reactions&&m.reactions[emoji]&&m.reactions[emoji][myId]);
-      if(m){
-        m.reactions=m.reactions||{};
-        if(already){if(m.reactions[emoji]){delete m.reactions[emoji][myId];if(!Object.keys(m.reactions[emoji]).length)delete m.reactions[emoji]}}
-        else{(m.reactions[emoji]=m.reactions[emoji]||{})[myId]=true}
-        if(key===msgKey)emit();
-      }
-      const doWrite=()=>already?remove(R(p)):set(R(p),true);
-      try{
-        await doWrite();
-      }catch(e){
-        console.error('[reaction error, raw]',e,e&&e.code,e&&e.message);
-        // Firebase's verbose permission_denied reason (captured via enableLogging above)
-        // often logs asynchronously, slightly AFTER this catch block runs, so give it a
-        // moment to land before reading _lastFbWarn — otherwise we show a blank reason
-        // even though Firebase did log the real one a beat later.
-        await new Promise(r=>setTimeout(r,250));
-        // A stale/missing idToUid/{myId} link (e.g. the one-time set() at login silently
-        // failed, or this account predates that line) is the classic hidden cause of
-        // "permission_denied" here, since every reaction write keys off that exact link.
-        // idToUid/$id is now readable by its own owner, so check it for real and, if it's
-        // missing or wrong, try to (re)link it and retry the reaction once before giving up.
-        let diag=' [path='+p+', op='+(already?'remove':'set')+']',healed=false;
-        try{
-          const mapped=await get(R('idToUid/'+myId));
-          diag+=' [idToUid/'+myId+' = '+JSON.stringify(mapped.val())+', auth.uid = '+JSON.stringify(myUid)+']';
-          if(e.code==='PERMISSION_DENIED'&&mapped.val()!==myUid){
-            try{
-              await set(R('idToUid/'+myId),myUid);
-              await doWrite();
-              healed=true;
-            }catch(healErr){diag+=' [relink failed: '+(healErr.code||healErr.message)+']'}
-          }
-        }catch(diagErr){diag+=' [idToUid check failed: '+(diagErr.code||diagErr.message)+']'}
-        if(healed)return; // retry succeeded — local optimistic state was already correct
-        // roll back the optimistic flip and re-sync from the server on failure
-        if(m){
-          if(already){(m.reactions[emoji]=m.reactions[emoji]||{})[myId]=true}
-          else{if(m.reactions[emoji]){delete m.reactions[emoji][myId];if(!Object.keys(m.reactions[emoji]).length)delete m.reactions[emoji]}}
-          if(key===msgKey)emit();
-        }
-        throw new Error('The reaction system is broken at the moment.');
-      }
     },
     // Deletes one message. Allowed by the rules for the sender themselves, or
     // for any owner deleting someone else's message. Removes it for everyone —
@@ -3808,17 +3732,13 @@ function senderSig(m){
   // skipped by the append-only fast path in renderMessages.
   return resolved+'|'+name+'|'+avatar+'|'+(m.text||'')+'|'+(m.editedAt||0);
 }
-function reactSig(m){
-  const r=m.reactions;if(!r)return'';
-  return Object.keys(r).sort().map(e=>e+':'+Object.keys(r[e]||{}).sort().join(',')).join('|');
-}
 function appendMsgRow(box,m,lastDay){
   const day=new Date(m.at).toDateString();
   if(day!==lastDay){const d=document.createElement('div');d.className='date-sep';d.textContent=day;box.appendChild(d)}
   const el=msgEl(m);
   box.appendChild(el);
   fitAvatarToRow(el);
-  renderedNodes.set(m.id,{el,sig:senderSig(m),rsig:reactSig(m)});
+  renderedNodes.set(m.id,{el,sig:senderSig(m)});
   return day;
 }
 // No-ops kept so every existing call site (initial render, image load,
@@ -3826,7 +3746,7 @@ function appendMsgRow(box,m,lastDay){
 // Avatars now stay a fixed size and bottom-align to the bubble purely via
 // CSS (.msg-row{align-items:flex-end}), so no per-message JS measurement
 // or resizing is needed any more — that measurement is what used to drift
-// out of sync (window resize, late reactions, etc.) and leave the avatar
+// out of sync (window resize, late edits, etc.) and leave the avatar
 // looking detached/floating from the bubble.
 function refitAllAvatars(){}
 function fitAvatarToRow(el){}
@@ -3839,15 +3759,7 @@ function patchResolvedSenders(list){
       const fresh=msgEl(m);
       rec.el.replaceWith(fresh);
       fitAvatarToRow(fresh);
-      renderedNodes.set(m.id,{el:fresh,sig,rsig:reactSig(m)});
-      return;
-    }
-    // reactions can change on any message at any time (not just the newest few),
-    // so refresh just that chip row in place without touching the rest of the bubble
-    const rsig=reactSig(m);
-    if(rsig!==rec.rsig){
-      renderReactBar(rec.el.querySelector('[data-react-bar]'),m);
-      rec.rsig=rsig;
+      renderedNodes.set(m.id,{el:fresh,sig});
     }
   });
 }
@@ -3957,10 +3869,9 @@ function msgEl(m){
   }
   const canDelete=mine;
   const canEdit=mine&&!!m.text;
-  // Discord-style hover bar: a single smiley opens the emoji/reaction picker,
-  // a reply arrow starts a reply, edit (own messages only) is a pencil.
-  // Deleting stays inline in the meta line further below, same as before.
-  const reactBtn=`<button data-open-react title="Add Reaction">😊</button>`;
+  // Discord-style hover bar: a reply arrow starts a reply, edit (own
+  // messages only) is a pencil. Deleting stays inline in the meta line
+  // further below, same as before.
   const replyBtn=`<button data-reply-btn title="Reply">↪</button>`;
   const copyBtn=m.text?`<button data-copy-btn title="Copy message">📋</button>`:'';
   const editBtn=canEdit?`<button data-edit-btn title="Edit message">✏️</button>`:'';
@@ -3982,8 +3893,7 @@ function msgEl(m){
   }
   const myAv=mine?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${av}</span>`:'';
   el.innerHTML=`${replyRefHTML}<div class="msg-row">${mine?myAv:avClickable}<div class="msg-body"><div class="meta">${mine?'':(sender&&!sender.deleted?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${esc(name)}</span>`:esc(name))+' · '}${time}${editedTag}${isOwner(m.senderId)?' <span class="tag owner">#'+m.senderId+'</span>':''}${DB.isMuted(m.senderId)?' <span class="tag" style="background:#555;color:#fff">muted</span>':''}</div>
-    <div class="bubble${pinged?' pinged':''}${(!m.text&&m.images&&m.images.length)?' img-only':''}"${bStyle}><div class="msg-hover-bar">${reactBtn}${copyBtn}${editBtn}${delBtn}${replyBtn}</div>${fmtText(displayMsgText(m.text))}${imagesHTML(m.images)}</div>
-    <div class="react-bar" data-react-bar></div></div></div>`;
+    <div class="bubble${pinged?' pinged':''}${(!m.text&&m.images&&m.images.length)?' img-only':''}"${bStyle}><div class="msg-hover-bar">${copyBtn}${editBtn}${delBtn}${replyBtn}</div>${fmtText(displayMsgText(m.text))}${imagesHTML(m.images)}</div></div></div>`;
   el.querySelectorAll('.imgs img').forEach((img,i)=>img.onclick=()=>openLightbox(m.images,i));
   const moreBtn=el.querySelector('[data-more-btn]');
   if(moreBtn)moreBtn.onclick=(ev)=>{
@@ -3991,8 +3901,6 @@ function msgEl(m){
     modalDeleteMessageConfirm(view.roomKey,m);
   };
   el.querySelectorAll('[data-open-profile]').forEach(pEl=>{pEl.onclick=()=>openUserProfile(Number(pEl.dataset.openProfile))});
-  const openBtn=el.querySelector('[data-open-react]');
-  if(openBtn)openBtn.onclick=()=>openEmojiPicker(openBtn,emoji=>DB.toggleReaction(view.roomKey,m.id,emoji).catch(e=>toast(e.message,'bad')));
   const copyBtnEl=el.querySelector('[data-copy-btn]');
   if(copyBtnEl)copyBtnEl.onclick=(ev)=>{ev.stopPropagation();copyText(displayMsgText(m.text)).then(ok=>toast(ok?'Message copied':'Couldn\'t copy — select the text and copy manually',ok?'':'bad'))};
   const replyBtnEl=el.querySelector('[data-reply-btn]');
@@ -4001,7 +3909,6 @@ function msgEl(m){
   if(editBtnEl)editBtnEl.onclick=()=>startEdit(m);
   const jumpEl=el.querySelector('[data-reply-jump]');
   if(jumpEl)jumpEl.onclick=()=>jumpToMessage(jumpEl.dataset.replyJump);
-  renderReactBar(el.querySelector('[data-react-bar]'),m);
   return el;
 }
 // Scrolls to and briefly highlights a message already rendered in the current view,
@@ -4012,36 +3919,6 @@ function jumpToMessage(id){
   el.scrollIntoView({behavior:'smooth',block:'center'});
   el.classList.add('pinned-flash');
   setTimeout(()=>el.classList.remove('pinned-flash'),1200);
-}
-/* ---------- Reactions ---------- */
-function renderReactBar(bar,m){
-  if(!bar)return;
-  const reactions=m.reactions||{};
-  const entries=Object.entries(reactions).filter(([,uids])=>uids&&Object.keys(uids).length);
-  bar.innerHTML='';
-  entries.forEach(([emoji,uids])=>{
-    const ids=Object.keys(uids).map(Number);
-    const mine=ids.includes(ME.id);
-    const chip=document.createElement('button');
-    chip.className='react-chip'+(mine?' mine':'');
-    chip.innerHTML=`<span class="rc-emo">${esc(emoji)}</span><span class="rc-n">${ids.length}</span><span class="react-tip"></span>`;
-    chip.onclick=()=>DB.toggleReaction(view.roomKey,m.id,emoji).catch(e=>toast(e.message,'bad'));
-    const tip=chip.querySelector('.react-tip');
-    chip.onmouseenter=()=>{
-      const names=ids.map(id=>{
-        if(id===ME.id)return'You';
-        const u=DB.getUser(id);return(u&&!u.deleted)?displayUsername(u.username):'Deleted User';
-      });
-      tip.textContent=names.slice(0,12).join(', ')+(names.length>12?` +${names.length-12} more`:'');
-    };
-    bar.appendChild(chip);
-  });
-  if(entries.length){
-    const add=document.createElement('button');
-    add.className='react-add-chip';add.title='Add reaction';add.textContent='+';
-    add.onclick=()=>openEmojiPicker(add,emoji=>DB.toggleReaction(view.roomKey,m.id,emoji).catch(e=>toast(e.message,'bad')));
-    bar.appendChild(add);
-  }
 }
 let _emojiPopClose=null,_emojiPopAnchor=null;
 function openEmojiPicker(anchorEl,onPick){
@@ -4055,10 +3932,10 @@ function openEmojiPicker(anchorEl,onPick){
     <div class="emoji-pop-search"><input type="text" placeholder="Search emoji…" id="emojiSearchIn"></div>
     <div class="emoji-pop-grid" id="emojiGrid"></div>`;
   root.appendChild(pop);
-  // Discord-style quick-pick row of common reactions above the full picker
+  // Discord-style quick-pick row of common emoji above the full picker
   const quick=pop.querySelector('#emojiQuick');
   QUICK_REACT.forEach(e=>{
-    const b=document.createElement('button');b.textContent=e;b.title='React '+e;
+    const b=document.createElement('button');b.textContent=e;b.title=e;
     b.onclick=()=>{onPick(e);close()};
     quick.appendChild(b);
   });
