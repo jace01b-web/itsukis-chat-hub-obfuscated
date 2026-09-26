@@ -14,11 +14,16 @@
   --text:#eef0ff; --muted:#9a9dc4; --accent:#7c6cff; --accent2:#ff6cb4;
   --danger:#ff5d73; --ok:#4cd6a0; --border:rgba(255,255,255,.09);
   --radius:16px;
-  --ui-alpha:.72;            /* UI transparency (customizable) */
-  --ui-blur:14px;
-  --ui-panel:rgba(26,28,56,var(--ui-alpha));
-  --ui-panel2:rgba(35,38,74,var(--ui-alpha));
-  --ui-bg2:rgba(20,21,43,calc(var(--ui-alpha) + .1));
+  --ui-alpha:.5;             /* UI transparency (customizable) — lower = more see-through */
+  --ui-blur:18px;
+  /* Near-neutral, barely-tinted darks — not the old saturated blue-purple.
+     A glass surface should pick up ITS color from whatever's blurred behind it
+     (a red backdrop, a photo, a gradient the person picked in Settings), not
+     dye everything toward blue/purple on top. These stay dark enough for text
+     contrast on any background, without imposing a hue of their own. */
+  --ui-panel:rgba(15,16,20,var(--ui-alpha));
+  --ui-panel2:rgba(24,25,31,var(--ui-alpha));
+  --ui-bg2:rgba(8,9,12,calc(var(--ui-alpha) + .1));
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;width:100%}
@@ -201,14 +206,30 @@ input[type=color]{display:none!important}
 
 .page{position:absolute;inset:0;display:flex;flex-direction:column;animation:fadeIn .35s ease}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-.spinner{width:40px;height:40px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 #loadingPage{align-items:center;justify-content:center}
+/* ===== LOADING — same neutral glass card as the auth screen (.card), plus a
+   two-tone gradient ring spinner with a soft pulsing glow behind it. ===== */
+#loadingPage .loading-card{display:flex;flex-direction:column;align-items:center;text-align:center;padding:40px 44px}
+.spinner-wrap{position:relative;width:56px;height:56px;display:flex;align-items:center;justify-content:center}
+.spinner{position:relative;width:56px;height:56px;border-radius:50%;
+  border:4px solid rgba(255,255,255,.14);
+  border-top-color:var(--accent);border-right-color:var(--accent2);
+  animation:spin .85s cubic-bezier(.5,0,.5,1) infinite}
+.spinner-glow{position:absolute;inset:-16px;border-radius:50%;z-index:-1;
+  background:radial-gradient(circle,rgba(124,108,255,.4),transparent 70%);
+  filter:blur(8px);animation:pulseGlow 1.8s ease-in-out infinite}
+@keyframes pulseGlow{0%,100%{opacity:.45;transform:scale(.88)}50%{opacity:1;transform:scale(1.1)}}
 
-/* ===== FULL-SCREEN BACKGROUND (fixed, always fills the entire viewport, blur clipped inside) ===== */
+/* ===== FULL-SCREEN BACKGROUND (fixed, always fills the entire viewport, blur clipped inside) =====
+   A soft "aurora" mesh gradient — several overlapping color pools over a deep
+   diagonal base — so the app looks good out of the box, before anyone even
+   opens Settings > Background. */
 .bgfx{position:fixed;inset:0;z-index:-2;overflow:hidden;background:
-  radial-gradient(900px 500px at 10% 0%,rgba(124,108,255,.28),transparent 60%),
-  radial-gradient(800px 500px at 100% 100%,rgba(255,108,180,.2),transparent 60%),var(--bg)}
+  radial-gradient(1100px 680px at 12% -8%,rgba(124,108,255,.38),transparent 58%),
+  radial-gradient(950px 640px at 96% 6%,rgba(255,108,180,.30),transparent 58%),
+  radial-gradient(1000px 720px at 50% 118%,rgba(94,170,255,.20),transparent 62%),
+  linear-gradient(160deg,#0b0c1a 0%,#14152b 45%,#1a1030 100%)}
 .bgfx .layer{position:absolute;inset:-60px;background-size:cover;background-position:center;background-repeat:no-repeat;transform:translateZ(0)}
 .bgfx .dim{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none}
 
@@ -242,8 +263,9 @@ input[type=color]{display:none!important}
 #homePage{align-items:center;justify-content:center;padding:24px;overflow-y:auto}
 .home-wrap{max-width:820px;width:100%;margin:auto;display:flex;flex-direction:column;align-items:center;text-align:center}
 .home-head{position:absolute;top:20px;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:0 24px}
-.userchip{display:flex;align-items:center;gap:10px;background:var(--ui-panel);backdrop-filter:blur(var(--ui-blur));-webkit-backdrop-filter:blur(var(--ui-blur));border:1px solid var(--border);padding:7px 16px 7px 7px;border-radius:40px;cursor:pointer;transition:.15s;font-weight:600;font-size:14px}
-.userchip:hover{border-color:var(--accent);transform:translateY(-1px)}
+.userchip{display:flex;align-items:center;gap:10px;background:var(--ui-panel);backdrop-filter:blur(var(--ui-blur));-webkit-backdrop-filter:blur(var(--ui-blur));border:1px solid var(--border);padding:7px 16px 7px 7px;border-radius:40px;cursor:pointer;transition:border-color .15s ease,transform .15s ease;font-weight:600;font-size:14px;
+  transform:translateZ(0);will-change:transform;-webkit-mask-image:-webkit-radial-gradient(white,black)}
+.userchip:hover{border-color:var(--accent);transform:translate3d(0,-1px,0)}
 .avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:none;color:#fff}
 .home-hero{margin-bottom:38px}
 .home-hero .logo{font-size:46px;margin-bottom:14px;white-space:nowrap}
@@ -251,13 +273,18 @@ input[type=color]{display:none!important}
 .home-sub{color:var(--muted);font-size:15px}
 .options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;width:100%;max-width:640px}
 .home-foot{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin-top:30px}
-.online-pill{display:flex;align-items:center;gap:8px;background:var(--ui-panel);backdrop-filter:blur(var(--ui-blur));-webkit-backdrop-filter:blur(var(--ui-blur));border:1px solid var(--border);padding:8px 16px;border-radius:40px;font-size:13px;color:var(--muted);font-weight:600}
+.online-pill{display:flex;align-items:center;gap:8px;background:var(--ui-panel);backdrop-filter:blur(var(--ui-blur));-webkit-backdrop-filter:blur(var(--ui-blur));border:1px solid var(--border);padding:8px 16px;border-radius:40px;font-size:13px;color:var(--muted);font-weight:600;
+  transform:translateZ(0);will-change:transform;-webkit-mask-image:-webkit-radial-gradient(white,black)}
 .online-pill .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
 .discord-link{display:flex;align-items:center;gap:8px;background:#5865F2;color:#fff;padding:8px 18px;border-radius:40px;font-size:13px;font-weight:700;text-decoration:none;transition:.15s;box-shadow:0 6px 18px rgba(88,101,242,.35)}
 .discord-link:hover{transform:translateY(-1px);filter:brightness(1.08)}
-.opt{background:var(--ui-panel);backdrop-filter:blur(var(--ui-blur));-webkit-backdrop-filter:blur(var(--ui-blur));border:1px solid var(--border);border-radius:22px;padding:30px 22px;display:flex;flex-direction:column;align-items:center;text-align:center;transition:.22s;position:relative;overflow:hidden}
-.opt:before{content:"";position:absolute;inset:0;background:radial-gradient(400px 160px at 50% -20%,rgba(124,108,255,.28),transparent 70%);opacity:0;transition:.25s}
-.opt:hover{transform:translateY(-5px);border-color:rgba(124,108,255,.7);box-shadow:0 16px 40px rgba(124,108,255,.28)}
+.opt{background:var(--ui-panel);backdrop-filter:blur(var(--ui-blur));-webkit-backdrop-filter:blur(var(--ui-blur));border:1px solid var(--border);border-radius:22px;padding:30px 22px;display:flex;flex-direction:column;align-items:center;text-align:center;transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease;position:relative;overflow:hidden;
+  /* Pre-promote to its own GPU layer instead of only doing so once :hover adds a transform —
+     that late promotion is what made the blur "glitch": the backdrop has to be re-rasterized
+     the instant the layer appears, showing up as a flash or a hard seam at the rounded corners. */
+  transform:translateZ(0);will-change:transform;-webkit-mask-image:-webkit-radial-gradient(white,black)}
+.opt:before{content:"";position:absolute;inset:0;background:radial-gradient(400px 160px at 50% -20%,rgba(124,108,255,.28),transparent 70%);opacity:0;transition:opacity .25s ease}
+.opt:hover{transform:translate3d(0,-5px,0);border-color:rgba(124,108,255,.7);box-shadow:0 16px 40px rgba(124,108,255,.28)}
 .opt:hover:before{opacity:1}
 .opt .ic{font-size:38px;margin-bottom:12px;width:70px;height:70px;display:flex;align-items:center;justify-content:center;background:rgba(124,108,255,.14);border-radius:20px;position:relative}
 .opt h3{font-size:18px;margin-bottom:4px;position:relative}
@@ -285,8 +312,11 @@ input[type=color]{display:none!important}
 .sb-section{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:14px 8px 6px;display:flex;justify-content:space-between;align-items:center}
 .sb-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;cursor:pointer;color:var(--muted);transition:.12s;margin-bottom:2px}
 .sb-item:hover{background:var(--ui-panel2);color:var(--text)}
-.sb-item.active{background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(124,108,255,.3)}
+.sb-item.active{background:rgba(124,108,255,.5);color:#fff;box-shadow:0 4px 14px rgba(124,108,255,.3);backdrop-filter:blur(10px) saturate(180%);-webkit-backdrop-filter:blur(10px) saturate(180%)}
 .sb-item .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-leave{display:none;flex:0 0 auto;padding:4px;border-radius:6px;color:var(--muted)}
+.sb-item:hover .sb-leave{display:inline-flex}
+.sb-leave:hover{color:var(--danger);background:rgba(255,255,255,.08)}
 .sb-foot{padding:12px;border-top:1px solid var(--border);display:flex;gap:8px}
 .sb-foot .btn{flex:1}
 .main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative}
@@ -296,10 +326,16 @@ input[type=color]{display:none!important}
 .tb-right{display:flex;align-items:center;justify-content:flex-end;gap:10px;min-width:0}
 .topbar h2{font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .menu-btn{display:none;background:var(--ui-panel2);width:36px;height:36px;border-radius:10px}
+.menu-btn.force-show{display:flex;align-items:center;justify-content:center}
+.sidebar.gc-hide{display:none}
 .messages{position:relative;z-index:1;flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:6px}
+/* Played once whenever the active room/chat changes (Global Chat, a room, a
+   DM) so switching feels like a soft transition instead of a hard swap. */
+@keyframes roomSwitchIn{0%{opacity:0;transform:translateY(10px) scale(.99);filter:blur(5px)}100%{opacity:1;transform:none;filter:blur(0)}}
+.messages.room-switch{animation:roomSwitchIn .38s var(--glass-spring)}
 .msg{display:flex;flex-direction:column;gap:0;max-width:78%;animation:msgIn .18s ease;position:relative}
 .msg.me{align-self:flex-end;align-items:flex-end}
-.msg-row{display:flex;gap:10px;align-items:flex-end;width:100%}
+.msg-row{display:flex;gap:10px;align-items:center;width:100%}
 .msg.me .msg-row{flex-direction:row-reverse}
 @keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .msg .meta{font-size:11px;color:var(--muted);margin:0 6px 6px;text-shadow:0 1px 3px rgba(0,0,0,.6)}
@@ -338,6 +374,8 @@ input[type=color]{display:none!important}
 .imgs.n3 img:first-child{grid-column:span 2}
 .imgs.n4{grid-template-columns:1fr 1fr}
 .imgs.multi{grid-template-columns:repeat(3,1fr)}
+.imgs.multi.rem1 img:last-child{grid-column:1/-1}
+.imgs.multi.rem2 img:last-child{grid-column:span 2}
 .imgs img{width:100%;height:100%;object-fit:cover;cursor:zoom-in;display:block;background:var(--bg2)}
 .imgs.n1 img{max-height:320px;height:auto;object-fit:contain}
 .imgs:not(.n1) img{aspect-ratio:1;}
@@ -365,12 +403,89 @@ input[type=color]{display:none!important}
 .charcount{font-size:11px;color:var(--muted);text-align:right;margin-top:3px}
 
 /* ===== Modals ===== */
-.modal-bg{position:fixed;inset:0;background:rgba(5,5,15,.62);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px;animation:fadeIn .2s ease}
-.modal{background:var(--panel);border:1px solid var(--border);border-radius:22px;padding:28px;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;animation:modalIn .22s cubic-bezier(.2,.8,.3,1);box-shadow:0 30px 80px rgba(0,0,0,.55)}
-@keyframes modalIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+.modal-bg{position:fixed;inset:0;background:rgba(5,5,15,.62);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px;animation:modalBgIn .32s ease forwards}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:22px;padding:28px;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;animation:modalIn .46s cubic-bezier(.16,1.15,.3,1) forwards;box-shadow:0 30px 80px rgba(0,0,0,.55);transform-origin:center bottom}
+/* Pull-up-from-the-bottom feel: starts lower, slightly shrunk and blurred, then
+   springs up into place — used by Settings and every other dialog in the app. */
+@keyframes modalBgIn{from{opacity:0;backdrop-filter:blur(0px) saturate(100%);-webkit-backdrop-filter:blur(0px) saturate(100%)}to{opacity:1;backdrop-filter:blur(8px) saturate(140%);-webkit-backdrop-filter:blur(8px) saturate(140%)}}
+@keyframes modalIn{0%{opacity:0;transform:translateY(26px) scale(.94);filter:blur(6px)}60%{opacity:1;filter:blur(0)}100%{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}}
+.modal-bg.closing{animation:fadeOut .18s ease forwards}
+.modal-bg.closing .modal{animation:modalOut .2s cubic-bezier(.4,0,1,1) forwards}
+@keyframes fadeOut{to{opacity:0}}
+@keyframes modalOut{to{opacity:0;transform:translateY(14px) scale(.96);filter:blur(3px)}}
+.modal{position:relative}
+.modal-x{position:absolute;top:16px;right:16px;width:32px;height:32px;border-radius:10px;background:var(--ui-panel2);color:var(--muted);font-size:15px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border)}
+.modal-x:hover{color:var(--text);background:var(--panel2)}
+.gc-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:420px){.gc-grid{grid-template-columns:1fr}}
+/* Neutral glass tiles — a thin, low-tint pane so the blurred backdrop (whatever's
+   behind the modal) reads through as glass rather than a flat gray/mauve card.
+   Saturation is pushed up to compensate for stacking two blur passes (modal + tile),
+   which otherwise washes color out. Just a big icon and a name underneath it. */
+.gc-card{position:relative;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;
+  background:rgba(255,255,255,.025);
+  backdrop-filter:blur(22px) saturate(220%);-webkit-backdrop-filter:blur(22px) saturate(220%);
+  border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:42px 18px;min-height:210px;
+  transition:transform .22s cubic-bezier(.2,.9,.3,1.2),border-color .2s ease,background .2s ease,box-shadow .2s ease;
+  transform:translateZ(0);will-change:transform;-webkit-mask-image:-webkit-radial-gradient(white,black)}
+.gc-card::before{content:'';position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .2s ease;
+  background:radial-gradient(120% 60% at 50% -12%,rgba(255,255,255,.14),transparent 65%)}
+.gc-card:hover{transform:translate3d(0,-4px,0) scale(1.015);border-color:rgba(255,255,255,.24);background:rgba(255,255,255,.05);
+  box-shadow:0 16px 38px rgba(0,0,0,.3)}
+.gc-card:hover::before{opacity:1}
+.gc-card:active{transform:translate3d(0,-1px,0) scale(.98)}
+/* No box, no border, no fill behind the icon — just the emoji itself, large. */
+.gc-ic{position:relative;width:100%;display:flex;align-items:center;justify-content:center;
+  font-size:84px;line-height:1;filter:drop-shadow(0 6px 14px rgba(0,0,0,.35));
+  transition:transform .22s cubic-bezier(.2,.9,.3,1.2)}
+.gc-card:hover .gc-ic{transform:scale(1.06)}
+.gc-card h3{position:relative;font-size:17px;font-weight:700;margin:0;color:rgba(255,255,255,.94)}
+
+/* ===== Itsukis Chat picker — liquid glass ===== */
+.gc-overlay{background:rgba(0,0,0,.28);backdrop-filter:blur(0px) saturate(100%);-webkit-backdrop-filter:blur(0px) saturate(100%);
+  animation:gcOverlayIn .38s ease forwards}
+.gc-overlay.closing{animation:gcOverlayOut .26s cubic-bezier(.4,0,1,1) forwards}
+@keyframes gcOverlayIn{from{opacity:0;backdrop-filter:blur(0px) saturate(100%);-webkit-backdrop-filter:blur(0px) saturate(100%)}
+  to{opacity:1;backdrop-filter:blur(26px) saturate(150%);-webkit-backdrop-filter:blur(26px) saturate(150%)}}
+@keyframes gcOverlayOut{from{opacity:1;backdrop-filter:blur(26px) saturate(150%);-webkit-backdrop-filter:blur(26px) saturate(150%)}
+  to{opacity:0;backdrop-filter:blur(0px) saturate(100%);-webkit-backdrop-filter:blur(0px) saturate(100%)}}
+
+/* True glass panel: no tint color of its own — just blur+saturate of whatever
+   is behind it, plus a faint neutral white sheen for specular highlight. Kept
+   very low-alpha so the actual background shows through instead of a gray/mauve
+   flat card; saturate is pushed up to keep that background's color from washing out. */
+.gc-modal{background:rgba(255,255,255,.03);
+  backdrop-filter:blur(30px) saturate(220%);-webkit-backdrop-filter:blur(30px) saturate(220%);
+  border:1px solid rgba(255,255,255,.2);border-radius:28px;
+  box-shadow:0 26px 70px rgba(0,0,0,.45),0 2px 8px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.25),inset 0 0 40px rgba(255,255,255,.02);
+  animation:gcModalIn .5s cubic-bezier(.2,1.28,.32,1) forwards;transform-origin:center}
+.gc-modal::before{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;
+  background:radial-gradient(120% 55% at 18% -12%,rgba(255,255,255,.12),transparent 58%)}
+.gc-modal>*{position:relative;z-index:1}
+.gc-overlay.closing .gc-modal{animation:gcModalOut .24s cubic-bezier(.4,0,1,1) forwards}
+@keyframes gcModalIn{
+  0%{opacity:0;transform:scale(.8) translateY(14px);filter:blur(8px)}
+  55%{opacity:1;filter:blur(0)}
+  100%{opacity:1;transform:scale(1) translateY(0);filter:blur(0)}
+}
+@keyframes gcModalOut{
+  from{opacity:1;transform:scale(1) translateY(0);filter:blur(0)}
+  to{opacity:0;transform:scale(.88) translateY(8px);filter:blur(3px)}
+}
+.gc-modal .modal-x{background:rgba(255,255,255,.10);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-color:rgba(255,255,255,.22);transition:background .16s ease,transform .16s ease}
+.gc-modal .modal-x:hover{background:rgba(255,255,255,.2);color:#fff;transform:rotate(90deg)}
+.gc-modal h2{font-size:19px;font-weight:700;letter-spacing:.01em;color:rgba(255,255,255,.92)}
+.gc-modal .hint{color:var(--muted);font-size:13px}
+.gc-modal .gc-grid{grid-template-columns:1fr 1fr;gap:10px;margin-top:0}
+@media (max-width:420px){.gc-modal .gc-grid{grid-template-columns:1fr}}
+.gc-modal{padding:22px}
+
+/* .gc-card's own styles already give the icon-up-top, glass-tile look here —
+   no per-modal override needed now that there's no description or arrow left
+   to lay out differently. */
 .modal h2{margin-bottom:6px;font-size:22px}
 .modal .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
-.modal.wide .actions{position:sticky;bottom:-28px;margin:16px -28px -28px;padding:14px 28px;background:linear-gradient(to top,var(--panel) 70%,transparent);border-radius:0 0 22px 22px;z-index:3}
+.modal.wide .actions{position:sticky;bottom:-28px;margin:16px -28px -28px;padding:14px 28px;background:linear-gradient(to top,var(--ui-panel) 70%,transparent);border-radius:0 0 22px 22px;z-index:3}
 .modal.wide .preview-box{position:sticky;top:-28px;z-index:3;margin-top:8px}
 .set-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .preview-box{position:relative;overflow:hidden;background:var(--bg2);border-radius:16px;padding:16px;margin:12px 0 18px;min-height:130px;border:1px solid var(--border);isolation:isolate}
@@ -378,7 +493,7 @@ input[type=color]{display:none!important}
 .preview-box .pv-dim{position:absolute;inset:0;z-index:-1;background:#000}
 .preview-box .msg{max-width:100%;margin-bottom:8px}
 .section-h{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin:18px 0 10px;font-weight:700}
-.set-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:14px;transition:.2s}
+.set-card{background:var(--ui-panel2);backdrop-filter:blur(var(--ui-blur));-webkit-backdrop-filter:blur(var(--ui-blur));border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:14px;transition:.2s}
 .set-card:hover{border-color:rgba(124,108,255,.35)}
 .set-card .set-grid{margin-bottom:0}
 .set-card .field:last-child{margin-bottom:0}
@@ -448,7 +563,7 @@ input[type=color]{display:none!important}
 .pf-x{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.28);color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;transition:.15s}
 .pf-x:hover{background:rgba(0,0,0,.45)}
 .pf-meta-row{display:flex;gap:8px;margin-top:16px}
-.pf-meta-chip{flex:1;min-width:0;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:8px 12px;transition:.15s}
+.pf-meta-chip{flex:1;min-width:0;background:var(--ui-panel2);backdrop-filter:blur(var(--ui-blur));-webkit-backdrop-filter:blur(var(--ui-blur));border:1px solid var(--border);border-radius:12px;padding:8px 12px;transition:.15s}
 #pfCopyId{cursor:pointer}
 #pfCopyId:hover{border-color:var(--accent);background:var(--ui-panel2)}
 .pf-meta-label{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
@@ -513,14 +628,214 @@ input[type=color]{display:none!important}
   font-size:13px;font-weight:600;text-align:center;padding:10px 16px}
 
 @media(max-width:760px){
-  .sidebar{position:absolute;z-index:20;height:100%;transform:translateX(-100%);transition:.2s;background:var(--panel)}
-  .sidebar.open{transform:none}
+  .sidebar{position:absolute;z-index:20;height:100%;transform:translateX(-100%);transition:transform .38s var(--glass-spring),box-shadow .38s var(--glass-spring)}
+  .sidebar.open{transform:none;box-shadow:16px 0 44px rgba(0,0,0,.42)}
+  /* soft dim behind the sidebar while it's pulled out, so it reads as a sheet
+     sliding over the chat rather than just a hard column appearing */
+  .chat-layout{position:relative}
+  .chat-layout::before{content:'';position:fixed;inset:0;z-index:19;pointer-events:none;
+    background:rgba(0,0,0,0);backdrop-filter:blur(0px);-webkit-backdrop-filter:blur(0px);
+    transition:background .38s var(--glass-spring),backdrop-filter .38s var(--glass-spring),-webkit-backdrop-filter .38s var(--glass-spring)}
+  .chat-layout:has(.sidebar.open)::before{background:rgba(0,0,0,.35);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
   .menu-btn{display:block}
   .msg{max-width:92%}
   .set-grid{grid-template-columns:1fr}
   .options{grid-template-columns:1fr 1fr;gap:12px}
   .opt{padding:22px 12px}
   .home-hero .logo{font-size:30px}
+}
+
+/* ===================================================================
+   LIQUID GLASS — iOS-style global glass pass
+   Layers real specular highlights, saturation and depth onto the
+   existing frosted-panel system. Respects the user's own UI-opacity /
+   UI-blur settings (still driven by --ui-alpha / --ui-blur) — this only
+   adds edge light, inner glow and saturation on top of them.
+   =================================================================== */
+:root{
+  --border:rgba(255,255,255,.14);
+  --glass-sheen:rgba(255,255,255,.28);
+  --glass-edge:rgba(255,255,255,.4);
+  --glass-edge-soft:rgba(255,255,255,.18);
+  --glass-shadow:0 24px 60px rgba(0,0,0,.42),0 2px 10px rgba(0,0,0,.24);
+  --glass-inset:inset 0 1.5px 0 rgba(255,255,255,.38),inset 0 0 34px rgba(255,255,255,.05),inset 0 -18px 30px rgba(0,0,0,.16);
+  /* shared "liquid" spring easing for glass motion (panels, sheets, hovers) */
+  --glass-spring:cubic-bezier(.16,1,.3,1);
+}
+
+/* ---- big frosted surfaces: real blur, saturation, glass bevel ---- */
+.sidebar,.topbar,.composer,.card,.userchip,.online-pill,.opt,.np.show{
+  backdrop-filter:blur(var(--ui-blur)) saturate(165%) brightness(1.04)!important;
+  -webkit-backdrop-filter:blur(var(--ui-blur)) saturate(165%) brightness(1.04)!important;
+  border-color:var(--glass-edge-soft)!important;
+  transition:box-shadow .35s var(--glass-spring),border-color .35s var(--glass-spring);
+}
+@media(max-width:760px){
+  .sidebar{background:var(--ui-panel)!important}
+}
+.topbar,.composer,.card,.modal{position:relative;isolation:isolate}
+.sidebar{isolation:isolate}
+.sidebar{box-shadow:var(--glass-inset),4px 0 26px rgba(0,0,0,.28)}
+.topbar{box-shadow:var(--glass-inset),0 4px 20px rgba(0,0,0,.2)}
+.composer{box-shadow:var(--glass-inset),0 -4px 20px rgba(0,0,0,.2)}
+.card{box-shadow:var(--glass-shadow),var(--glass-inset)}
+.opt{box-shadow:0 16px 40px rgba(0,0,0,.24),var(--glass-inset);isolation:isolate}
+.userchip,.online-pill{box-shadow:var(--glass-inset),0 6px 18px rgba(0,0,0,.22)}
+
+/* soft light washing in from the top-left, like light hitting glass —
+   pinned to z-index:-1 inside an isolated stacking context so it never
+   sits on top of real content or on top of absolutely-positioned
+   children like .modal-x */
+.sidebar::before,.topbar::before,.composer::before,.card::before,.modal::before,.opt::after{
+  content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;
+  background:radial-gradient(140% 60% at 15% -10%,var(--glass-sheen),transparent 60%);opacity:.55
+}
+
+/* ---- buttons: frosted glass pills ---- */
+.btn.sec,.icon-btn,.menu-btn,.modal-x,.sb-head .back,.music-controls button,.cp-eye,.lb-btn,.tab-mini button{
+  background:rgba(255,255,255,.07)!important;
+  backdrop-filter:blur(16px) saturate(180%);-webkit-backdrop-filter:blur(16px) saturate(180%);
+  border:1px solid var(--glass-edge-soft)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 4px 12px rgba(0,0,0,.22);
+  transition:background .28s var(--glass-spring),border-color .28s var(--glass-spring),transform .28s var(--glass-spring),box-shadow .28s var(--glass-spring)
+}
+/* .modal-x is already position:absolute (positioned) for its own placement;
+   the rest need position:relative so the shimmer sweep below is contained. */
+.btn.sec,.icon-btn,.menu-btn,.sb-head .back,.music-controls button,.cp-eye,.lb-btn,.tab-mini button{position:relative;overflow:hidden}
+.modal-x{overflow:hidden}
+.btn.sec::after,.icon-btn::after,.menu-btn::after,.modal-x::after,.sb-head .back::after,.music-controls button::after,.cp-eye::after,.lb-btn::after,.tab-mini button::after{
+  content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.24) 48%,rgba(255,255,255,.24) 52%,transparent 70%);
+  background-size:220% 220%;background-position:130% 0;opacity:0;
+  transition:opacity .3s ease,background-position .65s var(--glass-spring)
+}
+.btn.sec:hover,.icon-btn:hover,.menu-btn:hover,.modal-x:hover,.sb-head .back:hover,.music-controls button:hover,.cp-eye:hover,.lb-btn:hover,.tab-mini button:hover{
+  background:rgba(255,255,255,.15)!important;border-color:var(--glass-edge)!important;transform:translateY(-1px)
+}
+.btn.sec:hover::after,.icon-btn:hover::after,.menu-btn:hover::after,.modal-x:hover::after,.sb-head .back:hover::after,.music-controls button:hover::after,.cp-eye:hover::after,.lb-btn:hover::after,.tab-mini button:hover::after{
+  opacity:1;background-position:-30% 0
+}
+.btn.sec:active,.icon-btn:active{transform:scale(.95)}
+.btn,.send,.music-controls button.mc-play,.modal-tabs button.active,.tabs button.active{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 -10px 16px rgba(0,0,0,.14),0 6px 18px rgba(124,108,255,.32)!important;
+  border:1px solid rgba(255,255,255,.2)
+}
+
+/* ---- inputs: recessed frosted wells ---- */
+.field input,.field select,.field textarea,.row textarea,.cp-btn,.csel-btn,.emoji-pop-search input{
+  background:rgba(255,255,255,.05)!important;
+  backdrop-filter:blur(14px) saturate(160%);-webkit-backdrop-filter:blur(14px) saturate(160%);
+  border-color:var(--glass-edge-soft)!important;
+  box-shadow:inset 0 2px 6px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.05)
+}
+input[type=checkbox]{background:rgba(255,255,255,.06)}
+.switch .slider{background:rgba(255,255,255,.09)!important;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.switch input:checked+.slider{background:linear-gradient(135deg,var(--accent),#5a4bff)!important}
+
+/* ---- popovers, menus, toasts, pills: true glass ----
+   Neutral --ui-panel now carries almost no hue of its own, so this is mostly
+   background-color-from-behind, blurred and saturated back up — a red backdrop
+   reads red, a photo reads as that photo, a picked gradient reads as itself. */
+.mention-pop,.emoji-pop,.cp-pop,.csel-menu,.list-row,.modal,.empty,.toast,.msg-hover-bar,.sys,.date-sep{
+  background:linear-gradient(rgba(255,255,255,.05),rgba(255,255,255,.05)),var(--ui-panel)!important;
+  backdrop-filter:blur(26px) saturate(210%)!important;-webkit-backdrop-filter:blur(26px) saturate(210%)!important;
+  border:1px solid var(--glass-edge-soft)!important;
+  box-shadow:var(--glass-shadow),inset 0 1px 0 rgba(255,255,255,.18)
+}
+.modal{overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.modal-bg{backdrop-filter:blur(8px) saturate(140%);-webkit-backdrop-filter:blur(8px) saturate(140%)}
+
+/* ---- message bubbles: frosted for others, glossy tinted glass for you ----
+   Both variants now get their color from a translucent rgba() (see hexToRgba,
+   set per-sender inline for others and via --b-me for your own), layered under
+   a faint sheen, so the backdrop-filter blur actually shows through instead of
+   being hidden behind a flat opaque fill. No !important here on purpose — it's
+   what let a solid inline/var color fully mask the glass before. */
+.bubble{
+  background:linear-gradient(rgba(255,255,255,.08),rgba(255,255,255,.08)),var(--b-other,var(--ui-panel2));
+  backdrop-filter:blur(18px) saturate(200%);-webkit-backdrop-filter:blur(18px) saturate(200%);
+  border:1px solid var(--glass-edge-soft);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 4px 14px rgba(0,0,0,.22)
+}
+.bubble.img-only{background:none!important;backdrop-filter:none!important;border:none;box-shadow:none}
+.msg.me .bubble{
+  background:linear-gradient(rgba(255,255,255,.14),rgba(255,255,255,.02)),var(--b-me,rgba(124,108,255,.6));
+  border:1px solid rgba(255,255,255,.3);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.42),inset 0 -12px 18px rgba(0,0,0,.16),0 6px 18px rgba(124,108,255,.28)
+}
+.react-chip,.mtrack{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+
+/* ---- icon badges: glassy bevel like an iOS app icon ---- */
+.avatar,.music-note,.np-ic{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -6px 10px rgba(0,0,0,.18),0 4px 12px rgba(0,0,0,.25)
+}
+
+/* ---- sidebar rows & tab strips: subtle glass on hover/active ---- */
+.sb-item:hover{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.sb-item.active{box-shadow:inset 0 1px 0 rgba(255,255,255,.38),inset 0 -8px 14px rgba(0,0,0,.14),0 4px 14px rgba(124,108,255,.32)!important}
+.tabs,.modal-tabs{background:rgba(255,255,255,.045)!important;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+
+@media(max-width:700px){.sidebar::before,.topbar::before,.composer::before{opacity:.4}}
+
+/* ===================================================================
+   LIQUID GLASS v2 — pointer-reactive light + floating "Void Launcher /
+   iOS 26" panels. On wider screens the sidebar/topbar/composer detach
+   from the screen edge into rounded, free-floating glass cards (like a
+   launcher's floating widgets, or iOS's floating toolbars with content
+   scrolling underneath). Every big glass surface also catches a soft
+   highlight that follows the pointer or finger — real specular
+   reaction, layered under the existing static top-left sheen, instead
+   of one fixed painted highlight.
+   =================================================================== */
+:root{--px:50%;--py:0%}
+
+/* soften the base rounding everywhere, even before the floating-desktop
+   treatment below kicks in — no more hard 90° panel corners */
+.sidebar{border-radius:0 22px 22px 0}
+.topbar{border-radius:0 0 22px 22px}
+.composer{border-radius:22px 22px 0 0}
+
+/* pointer-reactive specular highlight — a true circular glint (not an
+   oval smear), plain white at low opacity so it reads consistently on
+   any background hue instead of shifting color via a blend mode. Same
+   z-index:-1 / isolation trick as the static sheen, so it stays behind
+   real content. */
+.sidebar::after,.topbar::after,.composer::after,.card::after,.modal::after{
+  content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;
+  background:radial-gradient(circle 220px at var(--px) var(--py),rgba(255,255,255,.16),transparent 72%);
+  /* --glow-op is driven by JS from the pointer's distance to this panel (see the
+     "Liquid Glass: pointer-reactive specular highlight" script) — 0 once the
+     pointer is further away than the glow's own 220px radius, ramping up to 1
+     as it gets close, so the light reads as glass reacting to a nearby hand
+     rather than snapping on only once you're directly over it. */
+  opacity:var(--glow-op,0);transition:opacity .2s ease;
+}
+
+/* a very slow, subtle "breathing" of the static sheen — glass that reads
+   as alive rather than a flat painted highlight. Off for anyone who's
+   asked their system to reduce motion. */
+@media (prefers-reduced-motion: no-preference){
+  .sidebar::before,.topbar::before,.composer::before,.card::before,.modal::before,.opt::after{
+    animation:glassBreathe 7s ease-in-out infinite
+  }
+}
+@keyframes glassBreathe{0%,100%{opacity:.45}50%{opacity:.72}}
+
+/* tactile, elastic press feedback on the main pill buttons */
+.btn:active{transform:scale(.96)}
+.send:active{transform:scale(.9)}
+
+/* ---- Desktop: panels detach into floating glass cards, dock-style ----
+   content still scrolls in the gap between them, edge to edge */
+@media(min-width:761px){
+  .chat-layout{gap:14px;padding:14px}
+  .main{gap:12px}
+  .sidebar{border-radius:26px;border:1px solid var(--glass-edge-soft);
+    box-shadow:var(--glass-inset),0 22px 54px rgba(0,0,0,.4)}
+  .topbar{border-radius:22px;border:1px solid var(--glass-edge-soft);
+    box-shadow:var(--glass-inset),0 14px 34px rgba(0,0,0,.3)}
+  .composer{border-radius:22px;border:1px solid var(--glass-edge-soft);
+    box-shadow:var(--glass-inset),0 14px 34px rgba(0,0,0,.3)}
 }
 </style>
 </head>
@@ -530,11 +845,11 @@ input[type=color]{display:none!important}
 
 <!-- ============ LOADING ============ -->
 <div id="loadingPage" class="page">
-  <div style="margin:auto;display:flex;flex-direction:column;align-items:center;gap:16px">
-    <div class="spinner"></div>
-    <div class="logo" style="margin:0">Itsukis Chat Hub</div>
+  <div class="card loading-card">
+    <div class="spinner-wrap"><div class="spinner-glow"></div><div class="spinner"></div></div>
+    <div class="logo" style="margin:16px 0 4px">Itsukis Chat Hub</div>
     <div class="hint" id="loadingHint">Connecting...</div>
-    <button class="btn sec small hidden" id="loadingRetry">Reload</button>
+    <button class="btn sec small hidden" id="loadingRetry" style="margin-top:16px">Reload</button>
   </div>
 </div>
 
@@ -594,7 +909,7 @@ input[type=color]{display:none!important}
       <button class="opt" id="goOut"><div class="ic">🚪</div><h3>Sign Out</h3><p>See you soon</p></button>
     </div>
     <div class="home-foot">
-      <div class="online-pill"><span class="dot"></span><span id="onlineCount">0</span> online</div>
+      <div class="online-pill" title="Everyone online across Itsuki's Chat, not just this room or DM"><span class="dot"></span><span id="onlineCount">0</span> everyone online</div>
       <a class="discord-link" href="https://discord.gg/MV8RD9XzvA" target="_blank" rel="noopener noreferrer">Join our Discord</a>
     </div>
   </div>
@@ -631,6 +946,7 @@ input[type=color]{display:none!important}
           </div>
         </div>
         <div class="tb-right">
+          <button class="online-pill hidden" id="topOnlinePill" type="button" title="See who's online" style="margin-left:0"><span class="dot"></span><span id="topOnlinePillText"></span></button>
           <button class="btn small hidden" id="dmFriendBtn"></button>
           <button class="btn sec small" id="settingsBtn">⚙️ Settings</button>
         </div>
@@ -646,9 +962,8 @@ input[type=color]{display:none!important}
         </div>
         <div class="previews" id="previews"></div>
         <div class="mention-pop hidden" id="mentionPop"></div>
-        <div class="typing-bar" id="typingBar"></div>
         <div class="row">
-          <button class="icon-btn" id="attachBtn" title="Attach images (max 10)">🖼️</button>
+          <button class="icon-btn" id="attachBtn" title="Attach images (max 5)">🖼️</button>
           <input type="file" id="fileIn" accept="image/*" multiple hidden>
           <button class="icon-btn" id="emojiBtn" title="Insert emoji">😊</button>
           <textarea id="msgIn" rows="1" maxlength="2000" placeholder="Message... use @ to ping"></textarea>
@@ -744,9 +1059,19 @@ console.error=function(...a){_capture(...a);_origConsoleError.apply(console,a)};
 const CFG={
   USERNAME_RE:/^[0-9a-zA-Z._-]{1,20}$/,
   NAME_CHANGE_MS:7*24*60*60*1000,
-  MAX_IMAGES:10,
+  MAX_IMAGES:5,
   MAX_MSG:2000,
   MAX_IMG_BYTES:8*1024*1024,
+  // Cap on the final base64 data-URL string written to the database, per image.
+  // Matches the actual server rule: messages/$key/$msg/images/$i must be a string
+  // beginning with 'data:image/jpeg;base64,' and under 900,000 characters. We stay
+  // well under that (not right at the edge) so: (1) small encoding differences
+  // between browsers never tip a "just barely compressed enough" image over the
+  // server's real limit, and (2) smaller payloads upload faster, which matters
+  // because the rules also require the message's timestamp to be within 1.5s of
+  // the server's clock AT THE MOMENT THE WRITE LANDS — a slow upload of a huge
+  // image can miss that window even though the write itself would've been valid.
+  MAX_IMG_DATAURL_CHARS:700000,
   MIN_PW:6,
   GLOBAL_ROOM:'global',
   NUKE_MSGS:3,          // this many messages...
@@ -926,11 +1251,12 @@ function checkBanLock(currentId,bannedMap){
 
 const DB=(()=>{
   // live cache
-  const C={users:{},usernames:{},rooms:{},roomMembers:{},dmMembers:{},friends:{},friendReqIn:{},friendReqOut:{},lastRead:{},messages:{},myRoomIds:[],online:0,onlineIds:[],banned:{},muted:{},blocked:{},blockedBy:{}};
+  const C={users:{},usernames:{},rooms:{},roomMembers:{},dmMembers:{},friends:{},friendReqIn:{},friendReqOut:{},lastRead:{},messages:{},myRoomIds:[],online:0,onlineIds:[],presenceIds:[],banned:{},muted:{},blocked:{},blockedBy:{}};
   let myId=null,myUid=null,ready=false;
   const listeners=new Set();
   const unsubs=[];         // base listeners
   let msgUnsub=null,msgKey=null;
+  let presUnsub=null,presenceSelfRef=null;   // scoped "who's here" presence for the open context
   const previewUnsubs={};
   const roomUnsubs={};
   const fetchingUsers=new Set();
@@ -952,7 +1278,7 @@ const DB=(()=>{
     const u=onValue(R(path),s=>{cb(s.val());if(ready)emit()},err=>console.warn('listen denied',path,err.code));
     unsubs.push(u);return u;
   }
-  function stopAll(){unsubs.splice(0).forEach(u=>u());Object.keys(previewUnsubs).forEach(k=>{previewUnsubs[k]();delete previewUnsubs[k]});Object.keys(roomUnsubs).forEach(k=>{roomUnsubs[k]();delete roomUnsubs[k]});if(msgUnsub){msgUnsub();msgUnsub=null}msgKey=null}
+  function stopAll(){unsubs.splice(0).forEach(u=>u());Object.keys(previewUnsubs).forEach(k=>{previewUnsubs[k]();delete previewUnsubs[k]});Object.keys(roomUnsubs).forEach(k=>{roomUnsubs[k]();delete roomUnsubs[k]});if(msgUnsub){msgUnsub();msgUnsub=null}if(presUnsub){try{presUnsub()}catch(_){}presUnsub=null}if(presenceSelfRef){try{remove(presenceSelfRef).catch(()=>{})}catch(_){}presenceSelfRef=null}C.presenceIds=[];msgKey=null}
 
   function startListeners(){
     stopAll();
@@ -1029,7 +1355,26 @@ const DB=(()=>{
   function watchMessages(key){
     if(key===msgKey)return;
     if(msgUnsub){msgUnsub();msgUnsub=null}
-    msgKey=key;if(!key)return;
+    // Presence: leave whichever context I was in and join the new one, so
+    // "who's online" can be scoped to global/this room/this DM instead of
+    // showing literally every online user everywhere. Mirrors the typing
+    // pattern: onDisconnect handles tab close/crash, we handle a plain
+    // context switch ourselves. Needs a matching 'presence' rule (see reply).
+    if(presUnsub){try{presUnsub()}catch(_){}presUnsub=null}
+    if(presenceSelfRef){try{remove(presenceSelfRef).catch(()=>{})}catch(_){}presenceSelfRef=null}
+    C.presenceIds=[];
+    msgKey=key;
+    if(!key){if(ready)emit();return}
+    if(myId!=null){
+      presenceSelfRef=R('presence/'+key+'/'+myId);
+      try{onDisconnect(presenceSelfRef).remove().catch(()=>{})}catch(_){}
+      set(presenceSelfRef,true).catch(()=>{});
+    }
+    presUnsub=onValue(R('presence/'+key),s=>{
+      C.presenceIds=s.val()?Object.keys(s.val()).map(Number):[];
+      C.presenceIds.forEach(fetchUserIfMissing);
+      if(ready)emit();
+    },()=>{});
     const q=query(R('messages/'+key),orderByChild('at'),limitToLast(300));
     msgUnsub=onValue(q,s=>{
       const arr=[];s.forEach(c=>{arr.push({...c.val(),id:c.key})});
@@ -1132,6 +1477,8 @@ const DB=(()=>{
     get:()=>({usernameIndex:C.usernames,rooms:C.rooms}),
     onlineCount:()=>C.online,
     onlineIds:()=>C.onlineIds.slice(),
+    // ids currently present in whichever context is open (global / this room / this DM)
+    presenceIds:()=>C.presenceIds.slice(),
     // ids of my DM partners (from dmMembers keys I'm part of) who are currently online
     onlineDmIds:uid=>{
       const onlineSet=new Set(C.onlineIds);
@@ -1240,6 +1587,7 @@ const DB=(()=>{
     },
     async signOut(){
       if(myId!=null)await remove(R('onlineUsers/'+myId)).catch(()=>{});
+      if(msgKey!=null&&myId!=null)await remove(R('presence/'+msgKey+'/'+myId)).catch(()=>{});
       stopAll();await fbSignOut(auth);myId=null;
     },
     async resetPassword(email){try{await sendPasswordResetEmail(auth,email)}catch(e){throw new Error(authMsg(e))}},
@@ -1406,6 +1754,7 @@ const DB=(()=>{
        blocked/$me/$other = true    (people I blocked; only I can read/write my own list)
        blockedBy/$other/$me = true  (mirror, written by me at the same time, so $other's
        client can see I blocked them and hide my messages/requests without ever reading my list) */
+    blockedList:me=>C.blocked[me]||[],
     isBlocked:(me,other)=>(C.blocked[me]||[]).includes(other),      // I blocked them
     isBlockedBy:(me,other)=>(C.blockedBy[me]||[]).includes(other),  // they blocked me
     async blockUser(me,other){
@@ -1484,6 +1833,23 @@ const DB=(()=>{
       C.myRoomIds=C.myRoomIds.filter(x=>x!==id);emit();
     },
     myRooms:uid=>C.myRoomIds.filter(id=>C.rooms[id]).map(id=>({id,...C.rooms[id],type:'private',members:Object.keys(C.roomMembers[id]||{}).map(Number)})),
+    async leaveRoom(me,roomId){
+      try{
+        await remove(R(`roomMembers/${roomId}/${me}`));
+        await remove(R(`userRooms/${me}/${roomId}`)).catch(()=>{});
+      }catch(e){throw new Error('Could not leave room ('+(e.code||e.message)+')')}
+      C.myRoomIds=(C.myRoomIds||[]).filter(id=>id!==roomId);emit();
+      // If that was the last member, clean up the room itself. This can fail silently if the
+      // rules on this project haven't been updated to allow deleting an empty room — the room
+      // just sits there unused until an owner deletes it, which is harmless.
+      try{
+        const snap=await get(R(`roomMembers/${roomId}`));
+        if(!snap.exists()){
+          await remove(R(`rooms/${roomId}`)).catch(()=>{});
+          await remove(R(`roomMembers/${roomId}`)).catch(()=>{});
+        }
+      }catch(_){}
+    },
     // Finds every message by a user ID, across every conversation the CURRENT
     // user (the owner running this) can actually read: global chat, rooms the
     // owner is a member of, and DMs the owner is a member of (their friends'
@@ -1614,22 +1980,33 @@ const DB=(()=>{
       // ---- profanity filter (censors rather than blocks, matching "Hey man, **** YOU" style) ----
       let outText=text;
       if(text)outText=checkMessageText_(text);
-      const at=Date.now()+SKEW;   // corrected by Firebase's server clock offset; also used as the rate-limit slot key below
-      const m={senderId,at};
-      if(outText)m.text=outText;
-      if(images&&images.length)m.images=images;
-      if(pings&&pings.length)m.pings=pings;
-      if(replyTo&&replyTo.id)m.replyTo={id:replyTo.id,senderId:replyTo.senderId,...(replyTo.preview?{preview:replyTo.preview}:{})};
       // DM: make sure MY membership exists before writing (fixes "can't send in a new DM")
       if(key.startsWith('dm_')&&!(C.dmMembers[key]&&C.dmMembers[key][senderId])){
         try{await set(R(`dmMembers/${key}/${senderId}`),true);(C.dmMembers[key]=C.dmMembers[key]||{})[senderId]=true}catch(_){}
       }
       const newRef=push(R('messages/'+key));
+      // The database rules require the message's `at` to be within 1.5s of the SERVER's
+      // clock at the moment the write is actually processed (not when we started building
+      // it) — so a large image payload that takes a while to upload on a slow connection
+      // can miss that window even though everything about the request was valid when sent.
+      // We try once with `at` stamped right before transmission, and — only if the write is
+      // rejected — retry a single time with a freshly-stamped `at`/rate-slot, so a slow
+      // upload gets a second chance instead of surfacing a confusing rules error.
+      const build=()=>{
+        const at=Date.now()+SKEW;
+        const m={senderId,at};
+        if(outText)m.text=outText;
+        if(images&&images.length)m.images=images;
+        if(pings&&pings.length)m.pings=pings;
+        if(replyTo&&replyTo.id)m.replyTo={id:replyTo.id,senderId:replyTo.senderId,...(replyTo.preview?{preview:replyTo.preview}:{})};
+        return{at,m};
+      };
+      let{at,m}=build();
       // optimistic local echo (replaced automatically when the server copy arrives with the same id)
       const arr=C.messages[key]||(C.messages[key]=[]);
       const tmp={...m,images:images||[],pings:pings||[],text:outText||'',id:newRef.key,replyTo:m.replyTo||null};
       if(key===msgKey){arr.push(tmp);emit()}
-      try{
+      const attemptWrite=async()=>{
         // The database rules require rate/$senderId/$at to equal the message's own `at`
         // (a per-write timestamped slot keyed by the same timestamp as the message), so
         // both paths are written atomically in one multi-path update using the same value.
@@ -1637,6 +2014,23 @@ const DB=(()=>{
           ['rate/'+senderId+'/'+at]:at,
           ['messages/'+key+'/'+newRef.key]:m
         });
+      };
+      try{
+        try{
+          await attemptWrite();
+        }catch(e1){
+          // Only worth retrying if this looks like a stale-timestamp miss (large/slow
+          // upload) rather than a real ban/mute/spam block — those would fail again
+          // identically, so don't waste a retry on them.
+          const hasImages=!!(images&&images.length);
+          if(e1.code==='PERMISSION_DENIED'&&hasImages&&!DB.isBanned(senderId)&&!DB.isMuted(senderId)){
+            ({at,m}=build());
+            Object.assign(tmp,m,{images:images||[],pings:pings||[],text:outText||'',replyTo:m.replyTo||null});
+            await attemptWrite();
+          }else{
+            throw e1;
+          }
+        }
       }
       catch(e){
         C.messages[key]=(C.messages[key]||[]).filter(x=>x!==tmp);emit();
@@ -1809,8 +2203,8 @@ const DB=(()=>{
     avatar:'',
     meBubble:'#7c6cff',meText:'#ffffff',
     radius:16,font:'system',size:15,bold:false,italic:false,
-    bgType:'none',bgColor:'#0f1020',bgColor2:'#171830',bgImage:'',bgFit:'cover',bgBlur:0,bgDim:30,
-    uiOpacity:72,uiBlur:14,
+    bgType:'gradient',bgColor:'#2a1f5c',bgColor2:'#7c2f66',bgImage:'',bgFit:'cover',bgBlur:0,bgDim:30,
+    uiOpacity:50,uiBlur:18,
     autoScrollBottom:true,
     filterLocal:true,
     pings:{everyone:true,sound:true,desktop:false},
@@ -1835,7 +2229,7 @@ const DB=(()=>{
 
 /* ---------- 3. Auth helpers ---------- */
 let ME=null;
-let view={page:'loadingPage',mode:null,roomKey:null,pending:[],mentionSel:0,replyingTo:null,editingId:null};
+let view={page:'loadingPage',mode:null,section:null,roomKey:null,pending:[],mentionSel:0,replyingTo:null,editingId:null};
 
 /* ---------- Toasts ---------- */
 // Copies text to the clipboard. Falls back to a hidden textarea when the async Clipboard API is
@@ -2766,7 +3160,7 @@ function modalPickUsername(){
 }
 
 /* ---------- Home ---------- */
-$('#goGlobal').onclick=()=>openChat('global');
+$('#goGlobal').onclick=()=>modalGlobalChoice();
 $('#goDMs').onclick=()=>openChat('dms');
 $('#goSettings').onclick=()=>openSettings(false);
 $('#homeChip').onclick=()=>openAccount();
@@ -2777,20 +3171,45 @@ $('#goOut').onclick=async()=>{
   paintBg($('#bgLayer'),$('#bgDimEl'),{bgType:'none'});
   show('authPage');
 };
-$('#backHome').onclick=()=>{view.roomKey=null;DB.watchMessages(null);goHome()};
+$('#backHome').onclick=()=>{view.roomKey=null;view.section=null;DB.watchMessages(null);goHome()};
 
 /* ---------- Chat page ---------- */
-function openChat(mode){
-  view.mode=mode;view.pending=[];renderPreviews();
-  if(mode==='global'){view.roomKey=CFG.GLOBAL_ROOM}
-  else{
+function openChat(mode,section){
+  view.mode=mode;view.section=section||null;view.pending=[];renderPreviews();
+  if(mode==='global'){
+    if(section==='rooms'){
+      const myRooms=DB.myRooms(ME.id);
+      view.roomKey=myRooms.length?myRooms[0].id:null;
+    }else{
+      view.roomKey=CFG.GLOBAL_ROOM;
+    }
+  }else{
     const first=ME.friends[0];
     view.roomKey=first?DB.dmKey(ME.id,first):null;
     view.dmView=first?'chat':'friends';
   }
   DB.watchMessages(view.roomKey);
-  show('chatPage');renderChat();
+  show('chatPage');renderChat();bumpRoomSwitch();
   DB.ensureDmMemberships();
+}
+// Home screen "Itsukis Chat" tile: ask Global Chat vs Rooms instead of assuming Global Chat.
+function modalGlobalChoice(){
+  $('#modalRoot').innerHTML=`<div class="modal-bg gc-overlay" id="gcBg"><div class="modal gc-modal" style="max-width:560px;text-align:center">
+    <div class="gc-grid">
+      <button class="gc-card gc-global" id="gcGlobal">
+        <div class="gc-ic">🌐</div>
+        <h3>Global Chat</h3>
+      </button>
+      <button class="gc-card gc-rooms" id="gcRooms">
+        <div class="gc-ic">🚪</div>
+        <h3>Rooms</h3>
+      </button>
+    </div>
+  </div></div>`;
+  const close=(after)=>{const bg=$('#gcBg');if(!bg){if(after)after();return}bg.classList.add('closing');setTimeout(()=>{if($('#modalRoot'))$('#modalRoot').innerHTML='';if(after)after()},240)};
+  $('#gcBg').onclick=e=>{if(e.target.id==='gcBg')close()};
+  $('#gcGlobal').onclick=()=>close(()=>openChat('global','global'));
+  $('#gcRooms').onclick=()=>close(()=>openChat('global','rooms'));
 }
 $('#menuBtn').onclick=()=>$('#sidebar').classList.toggle('open');
 
@@ -2822,6 +3241,12 @@ function updateMuteLock(){
   // lifts on its own once the timer runs out
   _muteLockTimer=setTimeout(updateMuteLock,Math.min(1000,Math.max(50,remaining)));
 }
+// Replays the room-switch entrance animation on the message list — call this
+// right after switching which room/DM/global chat is active.
+function bumpRoomSwitch(){
+  const box=$('#messages');if(!box)return;
+  box.classList.remove('room-switch');void box.offsetWidth;box.classList.add('room-switch');
+}
 function renderChat(){
   ME=DB.currentUser();if(!ME)return;
   applyStyle();
@@ -2833,19 +3258,42 @@ function renderChat(){
   updateMuteLock();
   renderComposeContext();
   const g=view.mode==='global';
+  const globalOnly=g&&view.section!=='rooms';
   $('#sbTitle').textContent=g?'Itsukis Chat':'Itsuki DMs';
   renderOnlinePill(g);
+  const sidebar=$('#sidebar'),menuBtn=$('#menuBtn');
+  sidebar.classList.toggle('gc-hide',globalOnly);
+  // When the sidebar is hidden (Global Chat, no room switcher), its online
+  // pill goes with it — so show a copy in the topbar instead, otherwise the
+  // online count has nowhere to live.
+  $('#topOnlinePill').classList.toggle('hidden',!globalOnly);
+  if(globalOnly){
+    // No sidebar to switch rooms from — repurpose the topbar button as a
+    // permanent back-to-menu control (shown even on desktop, since the
+    // sidebar's own back arrow is gone).
+    menuBtn.textContent='←';menuBtn.title='Home';menuBtn.classList.add('force-show');
+    menuBtn.onclick=()=>{view.roomKey=null;view.section=null;DB.watchMessages(null);goHome()};
+  }else{
+    menuBtn.textContent='☰';menuBtn.title='';menuBtn.classList.remove('force-show');
+    menuBtn.onclick=()=>sidebar.classList.toggle('open');
+  }
   const list=$('#sbList'),foot=$('#sbFoot');list.innerHTML='';foot.innerHTML='';
 
-  if(g){
-    addHTML(list,`<div class="sb-section">Public</div>`);
-    list.appendChild(sbItem('🌍','Global Chat',view.roomKey===CFG.GLOBAL_ROOM,()=>selectRoom(CFG.GLOBAL_ROOM)));
+  if(g&&view.section==='rooms'){
+    // Entered via "Rooms": just the room switcher, no Global Chat entry —
+    // the back arrow is the only way out, straight to the main menu.
     addHTML(list,`<div class="sb-section">My Rooms</div>`);
     const rooms=DB.myRooms(ME.id);
     if(!rooms.length)addHTML(list,`<div class="hint" style="padding:6px 10px">No rooms yet.</div>`);
-    rooms.forEach(r=>list.appendChild(sbItem('🔒',r.name,view.roomKey===r.id,()=>selectRoom(r.id))));
+    rooms.forEach(r=>list.appendChild(sbItem('🔒',r.name,view.roomKey===r.id,()=>selectRoom(r.id),null,null,()=>{
+      if(!confirm(`Leave "${r.name}"? If you're the last member, the room is deleted.`))return;
+      DB.leaveRoom(ME.id,r.id).then(()=>{if(view.roomKey===r.id){view.roomKey=null}render();renderChat()}).catch(e=>toast(e.message,'bad'));
+    })));
     foot.innerHTML=`<button class="btn small" id="newRoom">+ Create</button><button class="btn sec small" id="joinRoom">Join</button>`;
     $('#newRoom').onclick=modalCreateRoom;$('#joinRoom').onclick=modalJoinRoom;
+  }else if(g){
+    // Entered via "Global Chat": no room switcher at all — the back arrow
+    // just exits straight to the main menu.
   }else{
     const inc=DB.incoming(ME.id);
     list.appendChild(sbItem('👥','Friends & Requests',view.dmView==='friends',()=>{view.dmView='friends';view.roomKey=null;renderChat()},inc.length));
@@ -2862,27 +3310,44 @@ function renderChat(){
   renderMain();
 }
 function addHTML(parent,html){const t=document.createElement('template');t.innerHTML=html.trim();parent.appendChild(t.content)}
-function sbItem(ic,name,active,fn,badge,profileUser){
+function sbItem(ic,name,active,fn,badge,profileUser,leaveFn){
   const d=document.createElement('div');
   d.className='sb-item'+(active?' active':'');
   const icHtml=profileUser?`<span data-open-profile="${profileUser.id}" style="cursor:pointer">${avatarHtml(profileUser,profileUser.username,'width:22px;height:22px;font-size:10px')}</span>`:`<span>${ic}</span>`;
-  d.innerHTML=`${icHtml}<span class="nm">${esc(name)}</span>${badge?`<span class="badge">${badge}</span>`:''}`;
+  d.innerHTML=`${icHtml}<span class="nm">${esc(name)}</span>${badge?`<span class="badge">${badge}</span>`:''}${leaveFn?`<span class="sb-leave" data-leave title="Leave room">🗑️</span>`:''}`;
   d._fn=fn;d.onclick=()=>{fn();$('#sidebar').classList.remove('open')};
   if(profileUser){
     const av=d.querySelector('[data-open-profile]');
     av.onclick=e=>{e.stopPropagation();openUserProfile(profileUser.id)};
   }
+  if(leaveFn){
+    const lv=d.querySelector('[data-leave]');
+    lv.onclick=e=>{e.stopPropagation();leaveFn()};
+  }
   return d;
 }
-function selectRoom(k){view.roomKey=k;view.pending=[];view.replyingTo=null;view.editingId=null;renderPreviews();DB.watchMessages(k);renderChat()}
+function selectRoom(k){view.roomKey=k;view.pending=[];view.replyingTo=null;view.editingId=null;renderPreviews();DB.watchMessages(k);renderChat();bumpRoomSwitch()}
 
 function renderOnlinePill(isGlobalSection){
-  const pill=$('#onlinePill');if(!pill)return;
-  const ids=isGlobalSection?DB.onlineIds():DB.onlineDmIds(ME.id);
-  $('#onlinePillText').textContent=ids.length+' online';
-  pill.onclick=()=>openOnlineModal(isGlobalSection,ids);
+  // A specific context is open (Global Chat, a room, or a DM) -> show who is
+  // actually present THERE, scoped via the new 'presence' node, instead of
+  // every online user in the whole app. No specific context open (browsing
+  // the room list or the friends list) -> fall back to the old broader view.
+  const key=view.roomKey;
+  let ids,label;
+  if(key===CFG.GLOBAL_ROOM){ids=DB.presenceIds();label='Online in Global Chat'}
+  else if(key&&String(key).startsWith('dm_')){ids=DB.presenceIds();label='Online in this DM'}
+  else if(key){ids=DB.presenceIds();label='Online in this room'}
+  else if(isGlobalSection){ids=DB.onlineIds();label='Online now'}
+  else{ids=DB.onlineDmIds(ME.id);label='Online in your DMs'}
+  const openFn=()=>openOnlineModal(label,ids);
+  [['#onlinePill','#onlinePillText'],['#topOnlinePill','#topOnlinePillText']].forEach(([pillSel,textSel])=>{
+    const pill=$(pillSel);if(!pill)return;
+    $(textSel).textContent=ids.length+' online';
+    pill.onclick=openFn;
+  });
 }
-function openOnlineModal(isGlobalSection,ids){
+function openOnlineModal(label,ids){
   const root=$('#modalRoot');
   const rows=ids.map(id=>{
     const u=DB.getUser(id);
@@ -2890,7 +3355,7 @@ function openOnlineModal(isGlobalSection,ids){
     return`<div class="online-row" data-open-profile="${id}"><span class="dot"></span><span class="nm">${esc(nm)}</span><span class="idv">#${id}</span></div>`;
   }).join('')||`<div class="hint" style="padding:10px">No one is online right now.</div>`;
   root.innerHTML=`<div class="modal-bg"><div class="modal" style="max-width:380px">
-    <h2>${isGlobalSection?'Online now':'Online in your DMs'}</h2>
+    <h2>${esc(label)}</h2>
     <div class="online-list">${rows}</div>
     <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn sec small" id="onlineModalClose">Close</button></div>
   </div></div>`;
@@ -3257,7 +3722,7 @@ function msgEl(m){
   if(!mine){
     const ss=sender&&sender.settings;
     const bg=safeColor(ss&&ss.meBubble,'#7c6cff'),fg=safeColor(ss&&ss.meText,'#ffffff');
-    bStyle=` style="background:${bg};color:${fg}"`;
+    bStyle=` style="background:${hexToRgba(bg,.5)};color:${fg}"`;
   }
   const canDelete=mine;
   const canEdit=mine&&!!m.text;
@@ -3425,6 +3890,16 @@ function openEmojiPicker(anchorEl,onPick){
   _emojiPopClose=close;_emojiPopAnchor=anchorEl;
 }
 function safeColor(c,fb){return /^#[0-9a-fA-F]{3,8}$/.test(c||'')?c:fb}
+// Turns a user-picked opaque hex color into a translucent rgba() of the same
+// hue, so bubble colors tint the frosted-glass backdrop-filter instead of
+// painting a flat opaque block over it (which hides the blur entirely).
+function hexToRgba(hex,alpha){
+  let h=(hex||'').replace('#','');
+  if(h.length===3)h=h.split('').map(c=>c+c).join('');
+  const n=parseInt(h.slice(0,6),16);
+  if(Number.isNaN(n))return `rgba(124,108,255,${alpha})`;
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${alpha})`;
+}
 function fmtText(t){
   if(!t)return'';
   let s=esc(t);
@@ -3445,7 +3920,8 @@ function imagesHTML(imgs){
   imgs=(imgs||[]).map(safeImg).filter(Boolean);
   if(!imgs.length)return'';
   const n=imgs.length;
-  const cls=n===1?'n1':n===2?'n2':n===3?'n3':n===4?'n4':'multi';
+  const rem=n%3;
+  const cls=n===1?'n1':n===2?'n2':n===3?'n3':n===4?'n4':'multi'+(rem===1?' rem1':rem===2?' rem2':'');
   return `<div class="imgs ${cls}">${imgs.map(s=>`<img src="${esc(s)}" alt="image" decoding="async">`).join('')}</div>`;
 }
 
@@ -3630,23 +4106,43 @@ $('#fileIn').onchange=async e=>{
     if(view.pending.length>=CFG.MAX_IMAGES){toast(`Max ${CFG.MAX_IMAGES} images per message.`,'bad');break}
     if(!f.type.startsWith('image/')){toast('Only images are allowed.','bad');continue}
     if(f.size>CFG.MAX_IMG_BYTES){toast(`${f.name} is too large (max 8MB).`,'bad');continue}
-    view.pending.push(await compressImage(f));
+    try{view.pending.push(await compressImage(f))}
+    catch(err){toast(err.message||`${f.name} could not be processed.`,'bad')}
   }
   renderPreviews();
 };
 function compressImage(file,max=1280,q=.82){
-  return new Promise(res=>{
+  return new Promise((res,rej)=>{
     const r=new FileReader();
     r.onload=()=>{
       const img=new Image();
       img.onload=()=>{
         const s=Math.min(1,max/Math.max(img.width,img.height));
-        const c=document.createElement('canvas');c.width=img.width*s;c.height=img.height*s;
+        const c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.width*s));c.height=Math.max(1,Math.round(img.height*s));
         c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-        res(c.toDataURL('image/jpeg',q));
+        // Iteratively shrink dimensions/quality until the encoded data URL is safely
+        // under the database's per-field size limit. RTDB rejects oversized writes
+        // outright (PERMISSION_DENIED, indistinguishable client-side from an auth
+        // problem) — so we can't just trust one pass at fixed max/q like before.
+        let dims={w:c.width,h:c.height},quality=q,out=c.toDataURL('image/jpeg',quality);
+        let attempts=0;
+        while(out.length>CFG.MAX_IMG_DATAURL_CHARS&&attempts<8){
+          attempts++;
+          if(quality>0.5){quality=Math.max(0.5,quality-0.12)}
+          else{dims={w:Math.max(1,Math.round(dims.w*0.8)),h:Math.max(1,Math.round(dims.h*0.8))};
+            const c2=document.createElement('canvas');c2.width=dims.w;c2.height=dims.h;
+            c2.getContext('2d').drawImage(c,0,0,dims.w,dims.h);
+            c.width=dims.w;c.height=dims.h;c.getContext('2d').drawImage(c2,0,0);
+          }
+          out=c.toDataURL('image/jpeg',quality);
+        }
+        if(out.length>CFG.MAX_IMG_DATAURL_CHARS){rej(new Error('Image is still too large after compression — try a smaller photo.'));return}
+        res(out);
       };
+      img.onerror=()=>rej(new Error('Could not read that image file.'));
       img.src=r.result;
     };
+    r.onerror=()=>rej(new Error('Could not read that image file.'));
     r.readAsDataURL(file);
   });
 }
@@ -3664,7 +4160,8 @@ msgIn.addEventListener('paste',async e=>{
   if(!files.length)return;e.preventDefault();
   for(const f of files){
     if(view.pending.length>=CFG.MAX_IMAGES){toast(`Max ${CFG.MAX_IMAGES} images.`,'bad');break}
-    view.pending.push(await compressImage(f));
+    try{view.pending.push(await compressImage(f))}
+    catch(err){toast(err.message||'Pasted image could not be processed.','bad')}
   }
   renderPreviews();
 });
@@ -3679,7 +4176,7 @@ const FONTS={
 };
 function bgCSS(s){
   if(s.bgType==='color')return s.bgColor;
-  if(s.bgType==='gradient')return `linear-gradient(135deg,${s.bgColor},${s.bgColor2})`;
+  if(s.bgType==='gradient')return `radial-gradient(130% 90% at 12% -10%,${hexToRgba(s.bgColor,.55)},transparent 55%),radial-gradient(130% 90% at 100% 112%,${hexToRgba(s.bgColor2,.55)},transparent 58%),linear-gradient(150deg,${s.bgColor},${s.bgColor2})`;
   if(s.bgType==='image'&&s.bgImage)return `url("${s.bgImage}")`;
   return '';
 }
@@ -3695,7 +4192,7 @@ function paintBg(layer,dim,s){
   dim.style.opacity=(s.bgDim||0)/100;
 }
 function applyStyle(target=document.documentElement,s=ME.settings){
-  target.style.setProperty('--b-me',s.meBubble);
+  target.style.setProperty('--b-me',hexToRgba(s.meBubble,.6));
   target.style.setProperty('--b-me-text',s.meText);
   target.style.setProperty('--b-radius',s.radius+'px');
   target.style.setProperty('--m-font',FONTS[s.font]||FONTS.system);
@@ -3704,9 +4201,9 @@ function applyStyle(target=document.documentElement,s=ME.settings){
   target.style.setProperty('--m-style',s.italic?'italic':'normal');
   if(target===document.documentElement){
     // UI transparency + glass blur (customisable)
-    const op=(s.uiOpacity??72)/100;
+    const op=(s.uiOpacity??50)/100;
     target.style.setProperty('--ui-alpha',op);
-    target.style.setProperty('--ui-blur',(s.uiBlur??14)+'px');
+    target.style.setProperty('--ui-blur',(s.uiBlur??18)+'px');
     // background covers the ENTIRE app (all pages), not just the chat area
     paintBg($('#bgLayer'),$('#bgDimEl'),s);
   }
@@ -3785,8 +4282,8 @@ function openSettings(fromChat){
     <div data-p="ui" class="hidden">
       <div class="set-card">
         <div class="section-h" style="margin-top:0">Interface glass</div>
-        <div class="field"><label>UI opacity <span class="val" id="vUiO"></span></label><input type="range" id="sUiO" min="10" max="100" value="${s.uiOpacity??72}"></div>
-        <div class="field"><label>UI blur (frosted glass) <span class="val" id="vUiB"></span></label><input type="range" id="sUiB" min="0" max="30" value="${s.uiBlur??14}"></div>
+        <div class="field"><label>UI opacity <span class="val" id="vUiO"></span></label><input type="range" id="sUiO" min="10" max="100" value="${s.uiOpacity??50}"></div>
+        <div class="field"><label>UI blur (frosted glass) <span class="val" id="vUiB"></span></label><input type="range" id="sUiB" min="0" max="30" value="${s.uiBlur??18}"></div>
         <div class="hint">Lower opacity lets your custom background show through panels, the sidebar and the top bar.</div>
       </div>
       <div class="set-card">
@@ -4101,7 +4598,7 @@ function openSettings(fromChat){
   const closeRevert=()=>{if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();root.innerHTML='';applyStyle(document.documentElement,ME.settings);MusicPlayer.applyPrefs(ME.settings.music)};
   $$('#sCancel').onclick=closeRevert;
   $$('#sReset').onclick=()=>{
-    Object.assign(s,{meBubble:'#7c6cff',meText:'#ffffff',radius:16,font:'system',size:15,bold:false,italic:false,bgType:'none',bgImage:'',bgFit:'cover',bgBlur:0,bgDim:30,uiOpacity:72,uiBlur:14,autoScrollBottom:true,filterLocal:true,pings:{everyone:true,sound:true,desktop:false},music:{enabled:true,volume:15,shuffle:true}});
+    Object.assign(s,{meBubble:'#7c6cff',meText:'#ffffff',radius:16,font:'system',size:15,bold:false,italic:false,bgType:'gradient',bgColor:'#2a1f5c',bgColor2:'#7c2f66',bgImage:'',bgFit:'cover',bgBlur:0,bgDim:30,uiOpacity:50,uiBlur:18,autoScrollBottom:true,filterLocal:true,pings:{everyone:true,sound:true,desktop:false},music:{enabled:true,volume:15,shuffle:true}});
     if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();
     MusicPlayer.setBackground(false);
     root.innerHTML='';
@@ -4279,12 +4776,13 @@ function renderAfResults(v){
 }
 function renderFriends(){
   const box=$('#messages');ME=DB.currentUser();
-  const inc=DB.incoming(ME.id),out=DB.outgoing(ME.id);
+  const inc=DB.incoming(ME.id),out=DB.outgoing(ME.id),blk=DB.blockedList(ME.id);
   box.innerHTML=`<div style="max-width:640px;width:100%;margin:0 auto" id="frWrap">
     <div class="tab-mini">
       <button data-t="friends" class="${friendTab==='friends'?'active':''}">Friends (${ME.friends.length})</button>
       <button data-t="incoming" class="${friendTab==='incoming'?'active':''}">Incoming (${inc.length})</button>
       <button data-t="outgoing" class="${friendTab==='outgoing'?'active':''}">Sent (${out.length})</button>
+      <button data-t="blocked" class="${friendTab==='blocked'?'active':''}">Blocked (${blk.length})</button>
       <button class="btn small" id="frAdd">+ Add Friend</button>
     </div><div id="frBody"></div></div>`;
   box.querySelectorAll('.tab-mini [data-t]').forEach(b=>b.onclick=()=>{friendTab=b.dataset.t;renderFriends()});
@@ -4309,9 +4807,14 @@ function renderFriends(){
       ['Accept','',()=>{DB.acceptFriend(ME.id,r.from).then(()=>{ME=DB.currentUser();renderChat()}).catch(e=>toast(e.message||'Failed','bad'))}],
       ['Decline','sec',()=>{DB.declineFriend(ME.id,r.from).then(renderChat).catch(e=>toast(e.message||'Failed','bad'))}]
     ]));
-  }else{
+  }else if(friendTab==='outgoing'){
     if(!out.length)body.innerHTML='<div class="empty">No sent requests.</div>';
     out.forEach(r=>row(r.to,[['Cancel','sec',()=>{DB.cancelReq(ME.id,r.to).then(renderChat).catch(e=>toast(e.message||'Failed','bad'))}]]));
+  }else{
+    if(!blk.length)body.innerHTML='<div class="empty">You haven\'t blocked anyone.</div>';
+    blk.forEach(id=>row(id,[
+      ['Unblock','sec',()=>{DB.unblockUser(ME.id,id).then(()=>{toast('Unblocked.');renderChat()}).catch(e=>toast(e.message,'bad'))}]
+    ]));
   }
 }
 
@@ -4393,6 +4896,49 @@ function renderChatLight(keepFriends){
     if(k!==watchKey)watch(k);else draw();
     if(myKey&&(!msgIn.value.trim()||myKey!==k))stopMine();
   },1000);
+})();
+
+/* ---------- Liquid Glass: pointer-reactive specular highlight ----------
+   Tracks the pointer/finger against EVERY glass panel (sidebar, topbar,
+   composer, cards, modals — including ones created later, since we just
+   re-query on each move) and feeds each one its own --px/--py (position)
+   and --glow-op (strength), which the "LIQUID GLASS v2" CSS highlight
+   follows. The light now fades in as the pointer gets close rather than
+   only appearing once it's directly over the panel — RADIUS matches the
+   glow's own 220px reach, so "close" here means the same distance the
+   light would actually be visible from. rAF-throttled so it stays cheap
+   even with several panels on screen at once. */
+(function(){
+  const GLASS='.sidebar,.topbar,.composer,.card,.modal';
+  const RADIUS=220; // px — matches the radial-gradient's own circle radius
+  let raf=null,pending=null;
+  function distToRect(x,y,r){
+    const dx=Math.max(r.left-x,0,x-r.right);
+    const dy=Math.max(r.top-y,0,y-r.bottom);
+    return Math.hypot(dx,dy);
+  }
+  function apply(){
+    raf=null;if(!pending)return;
+    const{x,y}=pending;pending=null;
+    document.querySelectorAll(GLASS).forEach(t=>{
+      const r=t.getBoundingClientRect();if(!r.width||!r.height)return;
+      const d=distToRect(x,y,r);
+      const op=Math.max(0,Math.min(1,1-d/RADIUS));
+      t.style.setProperty('--glow-op',op.toFixed(3));
+      if(op>0){
+        t.style.setProperty('--px',((x-r.left)/r.width*100).toFixed(1)+'%');
+        t.style.setProperty('--py',((y-r.top)/r.height*100).toFixed(1)+'%');
+      }
+    });
+  }
+  function point(e){
+    const cx=e.touches?e.touches[0].clientX:e.clientX;
+    const cy=e.touches?e.touches[0].clientY:e.clientY;
+    pending={x:cx,y:cy};
+    if(!raf)raf=requestAnimationFrame(apply);
+  }
+  document.addEventListener('pointermove',point,{passive:true});
+  document.addEventListener('touchmove',point,{passive:true});
 })();
 
 /* ---------- Boot ---------- */
