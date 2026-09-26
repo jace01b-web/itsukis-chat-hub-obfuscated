@@ -1233,6 +1233,16 @@ let OWNERS_LOADED=false; // true only after the first live snapshot of owners/ h
 // starts empty. Anything that can auto-ban/auto-punish (like the anti-nuke heuristic)
 // must check this flag first and refuse to act until owners/ is actually known.
 function isOwner(id){return OWNERS_CACHE[Number(id)]===1}
+// Live cache of mods/, same idea as OWNERS_CACHE above: mods/$id === 1 means that numeric
+// user id is a mod; the client never writes here either (rules: mods/.write is always
+// false), it only reads the live value populated by your backend (Admin SDK).
+let MODS_CACHE={};
+let MODS_LOADED=false;
+function isMod(id){return MODS_CACHE[Number(id)]===1}
+// Timeout durations mods are allowed to use, in minutes (must match the rules' allow-list
+// in muted/$id/.validate exactly, or a mod's mute attempt gets rejected server-side).
+const MOD_MUTE_OPTS=[[5,'5 minutes'],[60,'1 hour'],[360,'6 hours'],[720,'12 hours'],[1440,'1 day']];
+const OWNER_MUTE_OPTS=[[5,'5 minutes'],[60,'1 hour'],[1440,'24 hours'],[10080,'7 days']];
 /* ---------- Menu lockout on ban ----------
    isOwner() above now reads live from the real database (owners/$id, populated by
    your own backend), not a hardcoded client array — so there's no longer a separate
@@ -1429,6 +1439,7 @@ const DB=(()=>{
     });
     listen('muted',v=>{C.muted=v||{};if(typeof updateMuteLock==='function')updateMuteLock();});
     listen('owners',v=>{OWNERS_CACHE=v||{};OWNERS_LOADED=true;checkBanLock(myId,C.banned);});
+    listen('mods',v=>{MODS_CACHE=v||{};MODS_LOADED=true;});
     listen('dmMembers',v=>C.dmMembers=v||{});
     listen('friendRequests/'+myId,v=>C.friendReqIn=v||{});
     listen('lastRead/'+myId,v=>C.lastRead=v||{});
@@ -2038,17 +2049,18 @@ const DB=(()=>{
        the rules protect (sending messages, changing settings, etc.) is rejected. */
     _sendTimes:[],
     async antiNuke(id){
-      if(!OWNERS_LOADED)return; // owners/ hasn't loaded yet this session — isOwner() could
-      // give a false negative for a real owner right now, so refuse to auto-ban anyone
-      // until we actually know who the owners are. A few extra fast messages getting
-      // through for one beat is far safer than wrongly banning an owner.
-      if(isOwner(id))return; // owners are never auto-banned by the client-side spam heuristic
+      if(!OWNERS_LOADED||!MODS_LOADED)return; // owners/ or mods/ hasn't loaded yet this session —
+      // isOwner()/isMod() could give a false negative for a real owner/mod right now, so
+      // refuse to auto-ban anyone until we actually know who they are. A few extra fast
+      // messages getting through for one beat is far safer than wrongly banning someone.
+      if(isOwner(id)||isMod(id))return; // owners and mods are never auto-banned by the client-side spam heuristic
       if(DB._nuking)return;DB._nuking=true;
       try{await DB.banUser(id)}catch(e){console.warn('anti-nuke ban failed',e)}
       DB._nuking=false;
     },
-    /* --- Owner moderation --- */
+    /* --- Owner / mod moderation --- */
     isOwner(id){return isOwner(id)},
+    isMod(id){return isMod(id)},
     async banUser(id){
       if(!isOwner(myId))throw new Error('Only owners can ban.');
       if(isOwner(id))throw new Error('Owners cannot be banned.');
@@ -2071,14 +2083,23 @@ const DB=(()=>{
     },
     isBanned(id){return!!C.banned&&!!C.banned[id]},
     /* Mute: blocks sending only (menus, settings, reading all still work). Stored as
-       muted/$id = a future ms timestamp (auto-expires) or false/absent = not muted. */
+       muted/$id = a future ms timestamp (auto-expires) or false/absent = not muted.
+       Owners can mute for any duration. Mods can mute too, but only for one of the
+       preset MOD_MUTE_OPTS durations, and never against an owner or another mod — the
+       rules enforce both of those independently, this is just so a compromised/hostile
+       client gets a clear error instead of a confusing PERMISSION_DENIED. */
     async muteUser(id,durationMs){
-      if(!isOwner(myId))throw new Error('Only owners can mute.');
+      if(!isOwner(myId)&&!isMod(myId))throw new Error('Only owners and mods can mute.');
+      if(isOwner(id))throw new Error('Owners cannot be muted.');
+      if(!isOwner(myId)){
+        if(isMod(id))throw new Error('Mods cannot mute other mods.');
+        if(!MOD_MUTE_OPTS.some(([m])=>m*60000===durationMs))throw new Error('Mods can only use the preset timeout durations.');
+      }
       const until=Date.now()+SKEW+durationMs;
       await set(R('muted/'+id),until);
     },
     async unmuteUser(id){
-      if(!isOwner(myId))throw new Error('Only owners can unmute.');
+      if(!isOwner(myId)&&!isMod(myId))throw new Error('Only owners and mods can unmute.');
       // Removing the node (not setting it to `false`) — Firebase rules compare
       // muted/$id's value against `now` with <=, and comparing the boolean `false`
       // to a number never evaluates true in the rules engine, so a stored `false`
@@ -3252,7 +3273,7 @@ function modalBanConfirm(id,name){
   };
 }
 function modalMuteConfirm(id,name){
-  const opts=[[5,'5 minutes'],[60,'1 hour'],[1440,'24 hours'],[10080,'7 days']];
+  const opts=isOwner(ME.id)?OWNER_MUTE_OPTS:MOD_MUTE_OPTS;
   $('#modalRoot').innerHTML=`<div class="modal-bg"><div class="modal" style="max-width:400px;text-align:center">
     <div style="font-size:40px;margin-bottom:6px">🔇</div>
     <h2 style="margin-bottom:8px">Mute ${esc(name)}?</h2>
@@ -3266,6 +3287,7 @@ function modalMuteConfirm(id,name){
     </div>
   </div></div>`;
   $('#muteCancel').onclick=()=>{$('#modalRoot').innerHTML=''};
+  enhanceSelects($('#modalRoot'));
   $('#muteGo').onclick=async()=>{
     try{
       const mins=+$('#muteDur').value;
@@ -3581,6 +3603,7 @@ function openUserProfile(id){
     const name=deleted?'Deleted User':displayUsername(u.username);
     const online=DB.onlineIds().includes(id);
     const owner=isOwner(id);
+    const mod=isMod(id);
     const banned=DB.isBanned(id);
     const muted=DB.isMuted(id);
     const muteMs=muted?DB.muteRemainingMs(id):0;
@@ -3608,10 +3631,17 @@ function openUserProfile(id){
     }
     const blockBtnHtml=(!isMe&&!deleted&&!blockedMe&&!iBlocked)?`<button class="btn sec small" id="pfBlock" style="width:100%">Block user</button>`:'';
     let modHtml='';
-    if(!isMe&&!deleted&&isOwner(ME.id)&&!owner){
+    const iAmOwner=isOwner(ME.id),iAmMod=isMod(ME.id);
+    if(!isMe&&!deleted&&iAmOwner&&!owner){
+      // Owners: full powers — ban/unban plus mute at any duration.
       modHtml=banned
         ?`<button class="btn sec small" id="pfUnban">Unban</button>`
         :`<button class="btn sec small" id="pfMute">🔇 Mute</button><button class="btn danger small" id="pfBan">🔨 Ban</button>`;
+    }else if(!isMe&&!deleted&&iAmMod&&!owner&&!mod&&!banned){
+      // Mods: mute/unmute only (preset durations, enforced in modalMuteConfirm/DB.muteUser
+      // and again server-side by the rules), no ban, and never against an owner or
+      // another mod — banned users are owner-only to unban, so mods see nothing there.
+      modHtml=`<button class="btn sec small" id="pfMute">🔇 Mute</button>`;
     }
 
     const statusDot=deleted?'':`<span style="width:9px;height:9px;border-radius:50%;flex:none;${online?'background:#3ddc73;box-shadow:0 0 6px #3ddc73':'background:var(--muted)'}"></span>`;
@@ -3626,6 +3656,7 @@ function openUserProfile(id){
         <div style="display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap">
           <h2 style="margin:0;font-size:20px">${esc(name)}</h2>
           ${owner?'<span class="tag owner">Owner</span>':''}
+          ${mod&&!owner?'<span class="tag" style="background:var(--accent)">Mod</span>':''}
           ${banned?'<span class="tag" style="background:var(--danger)">Banned</span>':''}
         </div>
         <div style="display:flex;align-items:center;gap:6px;margin-top:6px;color:var(--muted);font-size:13px">
@@ -4433,7 +4464,7 @@ function openSettings(fromChat){
       <button data-t="ping">🔔 Pings</button>
       <button data-t="music">🎵 Music</button>
       <button data-t="filter">🚫 Filter</button>
-      ${isOwner(ME.id)?'<button data-t="mod">🛡️ Moderation</button>':''}
+      ${(isOwner(ME.id)||isMod(ME.id))?'<button data-t="mod">🛡️ Moderation</button>':''}
     </div>
 
     <div data-p="msg">
@@ -4542,8 +4573,8 @@ function openSettings(fromChat){
       <div class="hint">Server-wide username filtering is controlled separately by the server owners.</div>
     </div>
 
-    ${isOwner(ME.id)?`<div data-p="mod" class="hidden">
-      <div class="set-card">
+    ${(isOwner(ME.id)||isMod(ME.id))?`<div data-p="mod" class="hidden">
+      ${isOwner(ME.id)?`<div class="set-card">
         <div class="section-h" style="margin-top:0">🛡️ Content filter</div>
         <div class="toggle-row">
           <div>
@@ -4563,22 +4594,21 @@ function openSettings(fromChat){
           <button class="btn sec" id="modUnbanGo">Unban</button>
         </div>
         <div class="hint" style="margin-top:8px">Banned accounts show as "Deleted User", permanently reserve their old username so it can never be reused, and can't send messages, change settings, or do anything else — but they stay signed in so they can't ban-evade by making a new account.</div>
-      </div>
+      </div>`:''}
       <div class="set-card">
         <div class="section-h" style="margin-top:0">🔇 Mute a user</div>
         <div class="set-grid">
           <div class="field"><label>User ID</label><input type="number" id="modMuteId" placeholder="e.g. 42"></div>
           <div class="field"><label>Duration</label><select id="modMuteDur">
-            <option value="5">5 minutes</option><option value="60">1 hour</option>
-            <option value="1440">24 hours</option><option value="10080">7 days</option></select></div>
+            ${(isOwner(ME.id)?OWNER_MUTE_OPTS:MOD_MUTE_OPTS).map(([m,l])=>`<option value="${m}">${l}</option>`).join('')}</select></div>
         </div>
         <div class="actions" style="justify-content:flex-start;margin-top:10px">
           <button class="btn" style="background:var(--danger)" id="modMuteGo">Mute</button>
           <button class="btn sec" id="modUnmuteGo">Unmute</button>
         </div>
-        <div class="hint" style="margin-top:8px">Muted users can still read messages and use menus, just can't send anything until the mute expires or is lifted.</div>
+        <div class="hint" style="margin-top:8px">${isOwner(ME.id)?'Muted users can still read messages and use menus, just can\'t send anything until the mute expires or is lifted.':'Muted users can still read messages and use menus, just can\'t send anything until the timeout expires or is lifted. Timeouts are capped at 1 day, and owners and other mods can\'t be muted.'}</div>
       </div>
-      <div class="set-card">
+      ${isOwner(ME.id)?`<div class="set-card">
         <div class="section-h" style="margin-top:0">🗑️ Delete messages</div>
         <div class="set-grid">
           <div class="field"><label>User ID</label><input type="number" id="modDelId" placeholder="e.g. 42"></div>
@@ -4588,7 +4618,7 @@ function openSettings(fromChat){
         </div>
         <div class="hint" style="margin-top:8px">Shows this user's messages in Global Chat and in every room or DM <b>your own account</b> is a member of. It can't reach conversations you're not part of — for a true server-wide wipe, use the ban-user.js admin script, which already cascade-deletes everywhere when you ban someone.</div>
         <div id="modDelResults" style="margin-top:12px"></div>
-      </div>
+      </div>`:''}
     </div>`:''}
 
     <div class="err" id="sErr"></div>
@@ -4664,7 +4694,7 @@ function openSettings(fromChat){
       musicUnsub=MusicPlayer.on(renderMusicWidget);
     }
   });
-  if(isOwner(ME.id)){
+  if(isOwner(ME.id)||isMod(ME.id)){
     $$('#modFilterNames')&&$$('#modFilterNames').addEventListener('change',e=>{
       DB.setFilterSettings({filterNames:e.target.checked}).catch(err=>toast(err.message,'bad'));
     });
