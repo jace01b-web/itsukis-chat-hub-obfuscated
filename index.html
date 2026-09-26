@@ -273,22 +273,46 @@ input[type=color]{display:none!important}
 .home-sub{color:var(--muted);font-size:15px}
 .options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;width:100%;max-width:640px}
 .home-foot{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin-top:30px}
-.online-pill{display:flex;align-items:center;gap:8px;background:var(--ui-panel);backdrop-filter:blur(var(--ui-blur));-webkit-backdrop-filter:blur(var(--ui-blur));border:1px solid var(--border);padding:8px 16px;border-radius:40px;font-size:13px;color:var(--muted);font-weight:600;
+/* ----- Main menu entrance transition -----
+   #homePage is toggled via display:none<->flex (see show()), which naturally
+   resets/restarts any CSS animation on its descendants each time it appears —
+   so this plays fresh every time someone lands back on the main menu. */
+@keyframes homeRise{0%{opacity:0;transform:translateY(26px) scale(.94)}60%{opacity:1}100%{opacity:1;transform:none}}
+@keyframes homeDrop{0%{opacity:0;transform:translateY(-14px)}100%{opacity:1;transform:none}}
+#homePage .home-hero{animation:homeDrop .6s var(--glass-spring,cubic-bezier(.16,1,.3,1)) both}
+#homePage .options .opt{animation:homeRise .55s var(--glass-spring,cubic-bezier(.16,1,.3,1)) both}
+#homePage .options .opt:nth-child(1){animation-delay:.08s}
+#homePage .options .opt:nth-child(2){animation-delay:.15s}
+#homePage .options .opt:nth-child(3){animation-delay:.22s}
+#homePage .options .opt:nth-child(4){animation-delay:.29s}
+#homePage .home-foot{opacity:0;animation:homeDrop .55s ease .38s both}
+.online-pill{display:flex;align-items:center;gap:8px;background:var(--ui-panel);backdrop-filter:blur(var(--ui-blur));-webkit-backdrop-filter:blur(var(--ui-blur));border:1px solid var(--border);padding:8px 16px;border-radius:40px;font-size:13px;color:var(--muted);font-weight:600;cursor:pointer;transition:.15s;
   transform:translateZ(0);will-change:transform;-webkit-mask-image:-webkit-radial-gradient(white,black)}
+.online-pill:hover{background:var(--accent);color:#fff}
 .online-pill .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
 .discord-link{display:flex;align-items:center;gap:8px;background:#5865F2;color:#fff;padding:8px 18px;border-radius:40px;font-size:13px;font-weight:700;text-decoration:none;transition:.15s;box-shadow:0 6px 18px rgba(88,101,242,.35)}
 .discord-link:hover{transform:translateY(-1px);filter:brightness(1.08)}
-.opt{background:var(--ui-panel);backdrop-filter:blur(var(--ui-blur));-webkit-backdrop-filter:blur(var(--ui-blur));border:1px solid var(--border);border-radius:22px;padding:30px 22px;display:flex;flex-direction:column;align-items:center;text-align:center;transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease;position:relative;overflow:hidden;
+.opt{background:var(--ui-panel);backdrop-filter:blur(var(--ui-blur));-webkit-backdrop-filter:blur(var(--ui-blur));border:1px solid var(--border);border-radius:22px;padding:30px 22px;display:flex;flex-direction:column;align-items:center;text-align:center;transition:transform .3s var(--glass-spring,cubic-bezier(.16,1,.3,1)),border-color .3s ease,box-shadow .3s ease,background .3s ease;position:relative;overflow:hidden;
   /* Pre-promote to its own GPU layer instead of only doing so once :hover adds a transform —
      that late promotion is what made the blur "glitch": the backdrop has to be re-rasterized
      the instant the layer appears, showing up as a flash or a hard seam at the rounded corners. */
   transform:translateZ(0);will-change:transform;-webkit-mask-image:-webkit-radial-gradient(white,black)}
-.opt:before{content:"";position:absolute;inset:0;background:radial-gradient(400px 160px at 50% -20%,rgba(124,108,255,.28),transparent 70%);opacity:0;transition:opacity .25s ease}
-.opt:hover{transform:translate3d(0,-5px,0);border-color:rgba(124,108,255,.7);box-shadow:0 16px 40px rgba(124,108,255,.28)}
+.opt:before{content:"";position:absolute;inset:0;background:radial-gradient(400px 160px at 50% -20%,rgba(124,108,255,.28),transparent 70%);opacity:0;transition:opacity .3s ease}
+/* Diagonal shine sweep that glides across the card on hover */
+.opt:after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;
+  background:linear-gradient(115deg,transparent,rgba(255,255,255,.16),transparent);
+  transform:skewX(-20deg);opacity:0;transition:opacity .2s ease;pointer-events:none}
+.opt:hover{transform:translate3d(0,-8px,0) scale(1.025);border-color:rgba(124,108,255,.7);box-shadow:0 20px 46px rgba(124,108,255,.32);background:var(--ui-panel2)}
 .opt:hover:before{opacity:1}
-.opt .ic{font-size:38px;margin-bottom:12px;width:70px;height:70px;display:flex;align-items:center;justify-content:center;background:rgba(124,108,255,.14);border-radius:20px;position:relative}
-.opt h3{font-size:18px;margin-bottom:4px;position:relative}
-.opt p{color:var(--muted);font-size:13px;position:relative}
+.opt:hover:after{opacity:1;animation:optShine .9s ease forwards}
+.opt:active{transform:translate3d(0,-4px,0) scale(.99);transition-duration:.1s}
+@keyframes optShine{from{left:-60%}to{left:130%}}
+.opt .ic{font-size:38px;margin-bottom:12px;width:70px;height:70px;display:flex;align-items:center;justify-content:center;background:rgba(124,108,255,.14);border-radius:20px;position:relative;transition:transform .35s var(--glass-spring,cubic-bezier(.16,1,.3,1)),background .3s ease}
+.opt:hover .ic{transform:scale(1.14) rotate(-6deg);background:rgba(124,108,255,.26)}
+.opt h3{font-size:18px;margin-bottom:4px;position:relative;transition:transform .25s ease}
+.opt:hover h3{transform:translateY(-1px)}
+.opt p{color:var(--muted);font-size:13px;position:relative;transition:color .25s ease}
+.opt:hover p{color:var(--text)}
 .opt .badge{position:absolute;top:14px;right:14px}
 .badge{background:var(--accent2);color:#fff;border-radius:20px;font-size:11px;font-weight:700;padding:2px 8px}
 
@@ -335,10 +359,17 @@ input[type=color]{display:none!important}
 .messages.room-switch{animation:roomSwitchIn .38s var(--glass-spring)}
 .msg{display:flex;flex-direction:column;gap:0;max-width:78%;animation:msgIn .18s ease;position:relative}
 .msg.me{align-self:flex-end;align-items:flex-end}
-.msg-row{display:flex;gap:10px;align-items:center;width:100%}
+/* Avatar sits beside msg-body (meta + bubble stacked, exactly like before) —
+   keeping that original nesting is what lets .msg-body's own content (meta
+   line vs bubble) determine the message's shrink-to-fit width safely.
+   Bottom-aligned so the avatar is always flush with the bottom of the
+   bubble, no matter how tall the meta+bubble stack gets — fixed avatar
+   size, no JS measurement needed (that's what used to leave it looking
+   detached/floating whenever the bubble's height changed after the fact). */
+.msg-row{display:flex;gap:12px;align-items:flex-end;width:100%}
 .msg.me .msg-row{flex-direction:row-reverse}
 @keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-.msg .meta{font-size:11px;color:var(--muted);margin:0 6px 6px;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.msg .meta{font-size:13px;font-weight:600;color:var(--muted);margin:2px 6px 6px;text-shadow:0 1px 3px rgba(0,0,0,.6);line-height:1.1}
 .msg .meta [data-more-btn]:hover{color:var(--danger);text-decoration:underline}
 .msg.me .meta{text-align:right}
 .bubble{padding:9px 14px;border-radius:var(--b-radius,16px);background:var(--b-other,var(--panel2));color:var(--b-other-text,var(--text));font-family:var(--m-font,inherit);font-size:var(--m-size,15px);font-weight:var(--m-weight,400);font-style:var(--m-style,normal);word-wrap:break-word;overflow-wrap:anywhere;white-space:pre-wrap;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,.18)}
@@ -356,14 +387,14 @@ input[type=color]{display:none!important}
 .date-sep{align-self:center;color:var(--muted);font-size:11px;margin:8px 0;background:var(--ui-panel);padding:3px 12px;border-radius:20px}
 /* ===== Discord-style reply reference: sits above the whole message row (avatar
    included), with a small elbow connector pointing down into the sender's name ===== */
-.reply-ref{display:flex;align-items:flex-start;gap:5px;width:100%;margin:0 0 -3px;padding-left:40px;font-size:12.5px;color:var(--muted);cursor:pointer;min-width:0}
+.reply-ref{display:flex;align-items:flex-start;gap:5px;width:100%;margin:0 0 -3px;padding-left:48px;font-size:12.5px;color:var(--muted);cursor:pointer;min-width:0}
 .reply-ref .rr-elbow{flex-shrink:0;width:20px;height:12px;margin-right:-2px;margin-top:3px;opacity:.5}
 .reply-ref .rr-elbow path{stroke:currentColor;stroke-width:1.5;fill:none}
 .reply-ref .rr-avatar{width:15px;height:15px;border-radius:50%;flex-shrink:0;margin-top:1px}
 .reply-ref .rr-name{font-weight:600;color:var(--text);flex-shrink:0;opacity:.85}
 .reply-ref .rr-text{overflow:hidden;white-space:pre-wrap;word-break:break-word;opacity:.8;max-height:4.8em;-webkit-line-clamp:3;-webkit-box-orient:vertical;display:-webkit-box}
 .reply-ref:hover .rr-name,.reply-ref:hover .rr-text{opacity:1}
-.msg.me .reply-ref{justify-content:flex-end;padding-left:0;padding-right:40px;flex-direction:row-reverse;text-align:right}
+.msg.me .reply-ref{justify-content:flex-end;padding-left:0;padding-right:48px;flex-direction:row-reverse;text-align:right}
 .msg.me .reply-ref .rr-elbow{transform:scaleX(-1);margin-right:0;margin-left:-2px}
 
 /* Images in messages */
@@ -480,6 +511,15 @@ input[type=color]{display:none!important}
 @media (max-width:420px){.gc-modal .gc-grid{grid-template-columns:1fr}}
 .gc-modal{padding:22px}
 
+/* ===== Single-active-session "Disconnected" pause overlay ===== */
+.sess-modal{max-width:380px;text-align:center;padding:30px 26px}
+.sess-ic{font-size:42px;line-height:1;margin-bottom:12px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.35));animation:sessIcPulse 2.4s ease-in-out infinite}
+@keyframes sessIcPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.sess-modal h2{margin-bottom:8px}
+.sess-modal .hint{margin-bottom:20px;line-height:1.5}
+.sess-btn-row{display:flex;gap:10px;justify-content:center}
+.sess-spin{display:inline-block;width:13px;height:13px;border-radius:50%;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:7px}
+
 /* .gc-card's own styles already give the icon-up-top, glass-tile look here —
    no per-modal override needed now that there's no description or arrow left
    to lay out differently. */
@@ -583,6 +623,7 @@ input[type=color]{display:none!important}
 .msg-hover-bar button{width:26px;height:26px;border-radius:7px;background:transparent;font-size:14px;display:flex;align-items:center;justify-content:center;transition:.12s}
 .msg-hover-bar button:hover{background:var(--ui-panel2)}
 .react-bar{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.react-bar:empty{margin-top:0}
 /* ===== "editing" tag ===== */
 .edited-tag{font-size:10.5px;opacity:.6;font-style:italic;margin-left:4px}
 /* ===== Reply/edit context bar above the composer ===== */
@@ -636,9 +677,10 @@ input[type=color]{display:none!important}
   .chat-layout::before{content:'';position:fixed;inset:0;z-index:19;pointer-events:none;
     background:rgba(0,0,0,0);backdrop-filter:blur(0px);-webkit-backdrop-filter:blur(0px);
     transition:background .38s var(--glass-spring),backdrop-filter .38s var(--glass-spring),-webkit-backdrop-filter .38s var(--glass-spring)}
-  .chat-layout:has(.sidebar.open)::before{background:rgba(0,0,0,.35);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+  .chat-layout:has(.sidebar.open:not(.gc-hide))::before{background:rgba(0,0,0,.35);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
   .menu-btn{display:block}
   .msg{max-width:92%}
+  .msg-row .avatar{width:38px;height:38px;font-size:14px}
   .set-grid{grid-template-columns:1fr}
   .options{grid-template-columns:1fr 1fr;gap:12px}
   .opt{padding:22px 12px}
@@ -909,7 +951,7 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
       <button class="opt" id="goOut"><div class="ic">🚪</div><h3>Sign Out</h3><p>See you soon</p></button>
     </div>
     <div class="home-foot">
-      <div class="online-pill" title="Everyone online across Itsuki's Chat, not just this room or DM"><span class="dot"></span><span id="onlineCount">0</span> everyone online</div>
+      <button class="online-pill" id="homeOnlinePill" type="button" title="Everyone online across Itsuki's Chat, not just this room or DM"><span class="dot"></span><span id="onlineCount">0</span> online</button>
       <a class="discord-link" href="https://discord.gg/MV8RD9XzvA" target="_blank" rel="noopener noreferrer">Join our Discord</a>
     </div>
   </div>
@@ -1249,6 +1291,42 @@ function checkBanLock(currentId,bannedMap){
   else{unlockMenuBanned()}
 }
 
+/* ---------- Single-active-session pause overlay ----------
+   Same UX pattern as the ban lockout above: freeze the shell, show a full-screen
+   card. This one fires when DB notices (via sessions/$myId, see the DB closure)
+   that a different tab/device has claimed this account more recently than us —
+   so we stop competing for onlineUsers/myId and let the person explicitly choose
+   which client should be the live one. */
+let KICK_OVERLAY=null;
+function showKickOverlay(){
+  if(KICK_OVERLAY)return;
+  try{$('#modalRoot').innerHTML='';}catch(_){}
+  document.querySelectorAll('.sidebar,.app-shell,#settingsBtn,.composer,.tabs').forEach(el=>el&&(el.style.pointerEvents='none',el.style.opacity='.35'));
+  const bg=document.createElement('div');
+  bg.className='modal-bg gc-overlay';
+  bg.style.zIndex='99999';
+  bg.innerHTML='<div class="modal gc-modal sess-modal"><div class="sess-ic">🔌</div>'
+    +'<h2>Disconnected</h2>'
+    +'<div class="hint">This account just signed in somewhere else, so this tab has been paused (and won\'t show as online) until you reconnect it.</div>'
+    +'<div class="sess-btn-row"><button class="btn" id="sessReconnectBtn">Reconnect here</button></div></div>';
+  document.body.appendChild(bg);
+  KICK_OVERLAY=bg;
+  const btn=bg.querySelector('#sessReconnectBtn');
+  btn.addEventListener('click',()=>{
+    if(btn.disabled)return;
+    btn.disabled=true;btn.innerHTML='<span class="sess-spin"></span>Reconnecting…';
+    DB.reconnectSession();
+    setTimeout(()=>{if(btn&&document.body.contains(btn)&&btn.disabled){btn.disabled=false;btn.textContent='Reconnect here'}},8000);
+  });
+}
+function hideKickOverlay(){
+  if(!KICK_OVERLAY)return;
+  const el=KICK_OVERLAY;KICK_OVERLAY=null;
+  document.querySelectorAll('.sidebar,.app-shell,#settingsBtn,.composer,.tabs').forEach(el2=>el2&&(el2.style.pointerEvents='',el2.style.opacity=''));
+  el.classList.add('closing');
+  setTimeout(()=>{try{el.remove()}catch(_){}},260);
+}
+
 const DB=(()=>{
   // live cache
   const C={users:{},usernames:{},rooms:{},roomMembers:{},dmMembers:{},friends:{},friendReqIn:{},friendReqOut:{},lastRead:{},messages:{},myRoomIds:[],online:0,onlineIds:[],presenceIds:[],banned:{},muted:{},blocked:{},blockedBy:{}};
@@ -1257,6 +1335,7 @@ const DB=(()=>{
   const unsubs=[];         // base listeners
   let msgUnsub=null,msgKey=null;
   let presUnsub=null,presenceSelfRef=null;   // scoped "who's here" presence for the open context
+  let presenceRef=null,sessUnsub=null,mySessionToken=null,sessionConfirmed=false,kicked=false;   // single-active-session enforcement
   const previewUnsubs={};
   const roomUnsubs={};
   const fetchingUsers=new Set();
@@ -1278,10 +1357,70 @@ const DB=(()=>{
     const u=onValue(R(path),s=>{cb(s.val());if(ready)emit()},err=>console.warn('listen denied',path,err.code));
     unsubs.push(u);return u;
   }
-  function stopAll(){unsubs.splice(0).forEach(u=>u());Object.keys(previewUnsubs).forEach(k=>{previewUnsubs[k]();delete previewUnsubs[k]});Object.keys(roomUnsubs).forEach(k=>{roomUnsubs[k]();delete roomUnsubs[k]});if(msgUnsub){msgUnsub();msgUnsub=null}if(presUnsub){try{presUnsub()}catch(_){}presUnsub=null}if(presenceSelfRef){try{remove(presenceSelfRef).catch(()=>{})}catch(_){}presenceSelfRef=null}C.presenceIds=[];msgKey=null}
+  function stopAll(){unsubs.splice(0).forEach(u=>u());Object.keys(previewUnsubs).forEach(k=>{previewUnsubs[k]();delete previewUnsubs[k]});Object.keys(roomUnsubs).forEach(k=>{roomUnsubs[k]();delete roomUnsubs[k]});if(msgUnsub){msgUnsub();msgUnsub=null}if(presUnsub){try{presUnsub()}catch(_){}presUnsub=null}if(presenceSelfRef){try{remove(presenceSelfRef).catch(()=>{})}catch(_){}presenceSelfRef=null}if(sessUnsub){try{sessUnsub()}catch(_){}sessUnsub=null}presenceRef=null;mySessionToken=null;sessionConfirmed=false;kicked=false;hideKickOverlay();C.presenceIds=[];msgKey=null}
+
+  // ---- Single-active-session enforcement --------------------------------
+  // onlineUsers/$id is one shared boolean per account, not one per tab. The old
+  // code had every open tab race to set it true and register its OWN
+  // onDisconnect().remove() on that same shared path — so closing any one tab,
+  // even an old one that had long since been superseded by a newer login, could
+  // wipe out "online" for an account that was still very much connected
+  // elsewhere. Fix: only the most-recently-claimed client is allowed to touch
+  // that path at all. Every (re)login writes a random token to sessions/$id;
+  // whichever token lands there last is the winner. A client that loses the
+  // claim cancels its own onDisconnect (so it can never again clear
+  // onlineUsers, even when it eventually closes) and shows a pause screen with
+  // a Reconnect button that re-claims the session — which in turn kicks
+  // whichever client is currently active.
+  function genSessionToken(){return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)}
+  function armPresence(){
+    if(!presenceRef)return;
+    onDisconnect(presenceRef).remove();
+    if(!kicked)set(presenceRef,true).catch(()=>{});
+  }
+  // Session debug logging — console only (no on-page panel).
+  function sessLog(...args){
+    const msg=args.map(a=>{try{return typeof a==='object'?JSON.stringify(a):String(a)}catch(_){return String(a)}}).join(' ');
+    console.log('[session]',msg);
+  }
+
+  function watchSession(){
+    if(sessUnsub){try{sessUnsub()}catch(_){}sessUnsub=null}
+    sessUnsub=onValue(R('sessions/'+myId),s=>{
+      const val=s.val();
+      sessLog('snapshot',val,'| mine=',mySessionToken,'| confirmed=',sessionConfirmed,'| kicked=',kicked);
+      if(!val||!val.token)return;
+      if(val.token===mySessionToken){
+        sessionConfirmed=true;
+        if(kicked){sessLog('reconnect confirmed, un-kicking');kicked=false;hideKickOverlay();armPresence()}
+        return;
+      }
+      // Only act once we've actually confirmed OUR claim landed — otherwise the
+      // very first snapshot (still holding a stale value from a previous
+      // session) would wrongly look like an instant takeover on every login.
+      if(sessionConfirmed&&!kicked){sessLog('token mismatch after confirmation -> KICKING this client');takeoverKick()}
+    },e=>sessLog('LISTEN DENIED on sessions/'+myId,e.code||e.message));
+  }
+  function claimSession(){
+    mySessionToken=genSessionToken();sessionConfirmed=false;
+    sessLog('claiming id=',myId,'token=',mySessionToken);
+    return set(R('sessions/'+myId),{token:mySessionToken,at:serverTimestamp()})
+      .then(()=>sessLog('claim write acknowledged by server'))
+      .catch(e=>sessLog('CLAIM WRITE FAILED:',e.code||e.message));
+  }
+  function takeoverKick(){
+    if(kicked)return;kicked=true;
+    sessLog('takeoverKick() firing — showing overlay now');
+    if(presenceRef){try{onDisconnect(presenceRef).cancel()}catch(_){}}
+    if(presenceSelfRef){try{onDisconnect(presenceSelfRef).cancel()}catch(_){}remove(presenceSelfRef).catch(()=>{});presenceSelfRef=null}
+    if(presUnsub){try{presUnsub()}catch(_){}presUnsub=null}
+    showKickOverlay();
+  }
 
   function startListeners(){
     stopAll();
+    presenceRef=R('onlineUsers/'+myId);
+    claimSession();watchSession();
     listen('users',v=>C.users=v||{});
     listen('usernames',v=>C.usernames=v||{});
     listen('banned',v=>{
@@ -1314,10 +1453,7 @@ const DB=(()=>{
     // Presence: mark myself online while connected, and let the server auto-remove me
     // the instant this connection drops (tab close, network loss, crash) via onDisconnect.
     // Re-armed on every (re)connect, per Firebase's recommended presence pattern.
-    const presenceRef=R('onlineUsers/'+myId);
-    listen('.info/connected',connected=>{
-      if(connected){onDisconnect(presenceRef).remove();set(presenceRef,true).catch(()=>{})}
-    });
+    listen('.info/connected',connected=>{if(connected)armPresence()});
     listen('onlineUsers',v=>{
       C.onlineIds=v?Object.keys(v).map(Number):[];
       C.online=C.onlineIds.length;
@@ -1452,6 +1588,11 @@ const DB=(()=>{
 
   return{
     authReady,
+    // Re-claims this client's session (kicking whichever client is currently
+    // active). Doesn't flip the UI itself — watchSession() above notices the
+    // confirmed claim and hides the overlay / re-arms presence from there, so
+    // the button reacts the same way whether the claim lands in 50ms or 3s.
+    reconnectSession:()=>{if(myId!=null)claimSession()},
     settle:async()=>{await Promise.race([authReady,sleep(12000)]);await sessionDone;},
     onChange:f=>{listeners.add(f);return()=>listeners.delete(f)},
     dmKey,watchMessages,
@@ -1479,9 +1620,13 @@ const DB=(()=>{
     onlineIds:()=>C.onlineIds.slice(),
     // ids currently present in whichever context is open (global / this room / this DM)
     presenceIds:()=>C.presenceIds.slice(),
-    // ids of my DM partners (from dmMembers keys I'm part of) who are currently online
+    // ids of my current friends (not just anyone I've ever DMed — unfriending
+    // leaves the old dmMembers record in place so chat history survives, so we
+    // filter that record down to the live friends list instead of trusting it alone)
+    // who are currently online
     onlineDmIds:uid=>{
       const onlineSet=new Set(C.onlineIds);
+      const friendSet=new Set(C.friends[uid]||[]);
       const out=new Set();
       Object.keys(C.dmMembers||{}).forEach(key=>{
         const m=C.dmMembers[key];
@@ -1489,7 +1634,7 @@ const DB=(()=>{
         const parts=key.split('_');if(parts[0]!=='dm')return;
         const a=Number(parts[1]),b=Number(parts[2]);
         const other=a===uid?b:a;
-        if(other!==uid&&onlineSet.has(other))out.add(other);
+        if(other!==uid&&friendSet.has(other)&&onlineSet.has(other))out.add(other);
       });
       return[...out];
     },
@@ -1586,8 +1731,9 @@ const DB=(()=>{
       return{needsProfile:!this.currentUser()};
     },
     async signOut(){
-      if(myId!=null)await remove(R('onlineUsers/'+myId)).catch(()=>{});
+      if(myId!=null&&!kicked)await remove(R('onlineUsers/'+myId)).catch(()=>{});
       if(msgKey!=null&&myId!=null)await remove(R('presence/'+msgKey+'/'+myId)).catch(()=>{});
+      if(myId!=null&&mySessionToken){await get(R('sessions/'+myId)).then(s=>{const v=s.val();if(v&&v.token===mySessionToken)return remove(R('sessions/'+myId))}).catch(()=>{})}
       stopAll();await fbSignOut(auth);myId=null;
     },
     async resetPassword(email){try{await sendPasswordResetEmail(auth,email)}catch(e){throw new Error(authMsg(e))}},
@@ -3017,6 +3163,7 @@ function refreshBadge(){
   const b=$('#dmBadge');b.classList.toggle('hidden',!n);b.textContent=n;
   $('#onlineCount').textContent=DB.onlineCount();
 }
+$('#homeOnlinePill').onclick=()=>openOnlineModal('Online now',DB.onlineIds());
 
 /* ---------- Auth UI ---------- */
 $('#tabIn').onclick=()=>authTab('in');
@@ -3132,6 +3279,41 @@ function modalMuteConfirm(id,name){
     catch(e){toast(e.message,'bad')}
   };
 }
+function modalLeaveRoomConfirm(r,onConfirm){
+  const lastMember=(r.members||[]).length<=1;
+  $('#modalRoot').innerHTML=`<div class="modal-bg"><div class="modal" style="max-width:400px;text-align:center">
+    <div style="font-size:40px;margin-bottom:6px">🗑️</div>
+    <h2 style="margin-bottom:8px">${lastMember?'Delete':'Leave'} "${esc(r.name)}"?</h2>
+    <div class="hint">${lastMember?"You're the last member, so this deletes the room for good — this cannot be undone.":"You'll lose access to this room. If you're the last member, it gets deleted too."}</div>
+    <div class="actions" style="justify-content:center;margin-top:18px">
+      <button class="btn sec" id="leaveRoomCancel">Cancel</button>
+      <button class="btn" style="background:var(--danger)" id="leaveRoomGo">${lastMember?'Delete room':'Leave room'}</button>
+    </div>
+  </div></div>`;
+  $('#leaveRoomCancel').onclick=()=>{$('#modalRoot').innerHTML=''};
+  $('#leaveRoomGo').onclick=async()=>{
+    const b=$('#leaveRoomGo');b.disabled=true;
+    try{await onConfirm();$('#modalRoot').innerHTML=''}
+    catch(e){toast(e.message,'bad');b.disabled=false}
+  };
+}
+function modalBlockConfirm(id,name,onConfirm){
+  $('#modalRoot').innerHTML=`<div class="modal-bg"><div class="modal" style="max-width:400px;text-align:center">
+    <div style="font-size:40px;margin-bottom:6px">🚫</div>
+    <h2 style="margin-bottom:8px">Block ${esc(name)}?</h2>
+    <div class="hint">They won't be able to add you, and neither of you will see each other's messages.</div>
+    <div class="actions" style="justify-content:center;margin-top:18px">
+      <button class="btn sec" id="blockCancel">Cancel</button>
+      <button class="btn" style="background:var(--danger)" id="blockGo">Block</button>
+    </div>
+  </div></div>`;
+  $('#blockCancel').onclick=()=>{$('#modalRoot').innerHTML=''};
+  $('#blockGo').onclick=async()=>{
+    const b=$('#blockGo');b.disabled=true;
+    try{await onConfirm();$('#modalRoot').innerHTML=''}
+    catch(e){toast(e.message,'bad');b.disabled=false}
+  };
+}
 function modalSignupSuccess(user,hasEmail){
   $('#modalRoot').innerHTML=`<div class="modal-bg"><div class="modal" style="max-width:420px;text-align:center">
     <div style="font-size:44px;margin-bottom:6px">🎉</div>
@@ -3171,7 +3353,7 @@ $('#goOut').onclick=async()=>{
   paintBg($('#bgLayer'),$('#bgDimEl'),{bgType:'none'});
   show('authPage');
 };
-$('#backHome').onclick=()=>{view.roomKey=null;view.section=null;DB.watchMessages(null);goHome()};
+$('#backHome').onclick=()=>{view.roomKey=null;view.section=null;DB.watchMessages(null);$('#sidebar').classList.remove('open');goHome()};
 
 /* ---------- Chat page ---------- */
 function openChat(mode,section){
@@ -3184,9 +3366,10 @@ function openChat(mode,section){
       view.roomKey=CFG.GLOBAL_ROOM;
     }
   }else{
-    const first=ME.friends[0];
-    view.roomKey=first?DB.dmKey(ME.id,first):null;
-    view.dmView=first?'chat':'friends';
+    // Always land on Friends & Requests first when opening DMs — jumping
+    // straight into whichever friend's chat used to be first felt random,
+    // and buried the friend-request/add-friend flows people actually want.
+    view.roomKey=null;view.dmView='friends';
   }
   DB.watchMessages(view.roomKey);
   show('chatPage');renderChat();bumpRoomSwitch();
@@ -3267,6 +3450,7 @@ function renderChat(){
   // pill goes with it — so show a copy in the topbar instead, otherwise the
   // online count has nowhere to live.
   $('#topOnlinePill').classList.toggle('hidden',!globalOnly);
+  if(globalOnly)sidebar.classList.remove('open'); // no sidebar to show here — drop any stray open state so the mobile dim/blur overlay can't linger over Global Chat
   if(globalOnly){
     // No sidebar to switch rooms from — repurpose the topbar button as a
     // permanent back-to-menu control (shown even on desktop, since the
@@ -3286,8 +3470,11 @@ function renderChat(){
     const rooms=DB.myRooms(ME.id);
     if(!rooms.length)addHTML(list,`<div class="hint" style="padding:6px 10px">No rooms yet.</div>`);
     rooms.forEach(r=>list.appendChild(sbItem('🔒',r.name,view.roomKey===r.id,()=>selectRoom(r.id),null,null,()=>{
-      if(!confirm(`Leave "${r.name}"? If you're the last member, the room is deleted.`))return;
-      DB.leaveRoom(ME.id,r.id).then(()=>{if(view.roomKey===r.id){view.roomKey=null}render();renderChat()}).catch(e=>toast(e.message,'bad'));
+      modalLeaveRoomConfirm(r,async()=>{
+        await DB.leaveRoom(ME.id,r.id);
+        if(view.roomKey===r.id){view.roomKey=null}
+        render();renderChat();
+      });
     })));
     foot.innerHTML=`<button class="btn small" id="newRoom">+ Create</button><button class="btn sec small" id="joinRoom">Join</button>`;
     $('#newRoom').onclick=modalCreateRoom;$('#joinRoom').onclick=modalJoinRoom;
@@ -3492,8 +3679,10 @@ function openUserProfile(id){
       DB.removeFriend(ME.id,id).then(()=>{ME=DB.currentUser();render();renderChat()});
     };
     if(el2('pfBlock'))el2('pfBlock').onclick=()=>{
-      if(!confirm('Block '+name+"? They won't be able to add you, and neither of you will see each other's messages."))return;
-      DB.blockUser(ME.id,id).then(()=>{toast(name+' blocked.');render();renderChat()}).catch(e=>toast(e.message,'bad'));
+      modalBlockConfirm(id,name,async()=>{
+        await DB.blockUser(ME.id,id);
+        toast(name+' blocked.');render();renderChat();
+      });
     };
     if(el2('pfUnblock'))el2('pfUnblock').onclick=()=>{
       DB.unblockUser(ME.id,id).then(()=>{toast(name+' unblocked.');render();renderChat()}).catch(e=>toast(e.message,'bad'));
@@ -3597,9 +3786,19 @@ function appendMsgRow(box,m,lastDay){
   if(day!==lastDay){const d=document.createElement('div');d.className='date-sep';d.textContent=day;box.appendChild(d)}
   const el=msgEl(m);
   box.appendChild(el);
+  fitAvatarToRow(el);
   renderedNodes.set(m.id,{el,sig:senderSig(m),rsig:reactSig(m)});
   return day;
 }
+// No-ops kept so every existing call site (initial render, image load,
+// settings preview, sender-resolve rebuild) still has something to call.
+// Avatars now stay a fixed size and bottom-align to the bubble purely via
+// CSS (.msg-row{align-items:flex-end}), so no per-message JS measurement
+// or resizing is needed any more — that measurement is what used to drift
+// out of sync (window resize, late reactions, etc.) and leave the avatar
+// looking detached/floating from the bubble.
+function refitAllAvatars(){}
+function fitAvatarToRow(el){}
 function patchResolvedSenders(list){
   list.forEach(m=>{
     const rec=renderedNodes.get(m.id);
@@ -3608,6 +3807,7 @@ function patchResolvedSenders(list){
     if(sig!==rec.sig){
       const fresh=msgEl(m);
       rec.el.replaceWith(fresh);
+      fitAvatarToRow(fresh);
       renderedNodes.set(m.id,{el:fresh,sig,rsig:reactSig(m)});
       return;
     }
@@ -3714,7 +3914,7 @@ function msgEl(m){
   const pinged=!mine&&(m.pings.includes(ME.id)||m.pings.includes('everyone'));
   const el=document.createElement('div');el.className='msg'+(mine?' me':'');el.dataset.msgId=m.id;
   const time=new Date(m.at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-  const av=avatarHtml(sender,name,'width:30px;height:30px;font-size:12px');
+  const av=avatarHtml(sender,name,'width:46px;height:46px;font-size:17px');
   const avClickable=(sender&&!sender.deleted)?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${av}</span>`:av;
   // Everyone's message bubble reflects how THEY styled their own messages (their meBubble/meText),
   // not a color the viewer picks for "others" — so no per-viewer "others' color" setting exists anymore.
@@ -3922,7 +4122,7 @@ function imagesHTML(imgs){
   const n=imgs.length;
   const rem=n%3;
   const cls=n===1?'n1':n===2?'n2':n===3?'n3':n===4?'n4':'multi'+(rem===1?' rem1':rem===2?' rem2':'');
-  return `<div class="imgs ${cls}">${imgs.map(s=>`<img src="${esc(s)}" alt="image" decoding="async">`).join('')}</div>`;
+  return `<div class="imgs ${cls}">${imgs.map(s=>`<img src="${esc(s)}" alt="image" decoding="async" onload="fitAvatarToRow(this.closest('.msg'))">`).join('')}</div>`;
 }
 
 /* Lightbox */
@@ -4222,8 +4422,8 @@ function openSettings(fromChat){
 
     <div class="preview-box" id="pvBox">
       <div class="pv-bg" id="pvBg"></div><div class="pv-dim" id="pvDim"></div>
-      <div class="msg"><div class="msg-row"><div class="avatar" style="width:30px;height:30px;font-size:12px">A</div><div><div class="meta">Alex</div><div class="bubble" style="background:#3b3f7a;color:#fff">Hey! How does this look?</div></div></div></div>
-      <div class="msg me"><div class="msg-row"><div><div class="meta">You</div><div class="bubble">Looking great 🔥</div></div></div></div>
+      <div class="msg"><div class="msg-row"><div class="avatar" style="width:28px;height:28px;font-size:11px">A</div><div class="msg-body"><div class="meta">Alex</div><div class="bubble" style="background:#3b3f7a;color:#fff">Hey! How does this look?</div></div></div></div>
+      <div class="msg me"><div class="msg-row"><div class="avatar" style="width:28px;height:28px;font-size:11px">Y</div><div class="msg-body"><div class="meta">You</div><div class="bubble">Looking great 🔥</div></div></div></div>
     </div>
 
     <div class="modal-tabs" id="sTabs">
@@ -4577,6 +4777,7 @@ function openSettings(fromChat){
     paintBg($$('#pvBg'),$$('#pvDim'),s);
     // live-preview the real app too, so background/glass changes are visible behind the modal
     applyStyle(document.documentElement,s);
+    refitAllAvatars();
   }
   $$('#sMusicOn').addEventListener('change',()=>{
     preview();
@@ -4595,7 +4796,7 @@ function openSettings(fromChat){
     }catch(_){$$('#fileTxt').textContent='❌ Could not load that image'}
     preview();
   };
-  const closeRevert=()=>{if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();root.innerHTML='';applyStyle(document.documentElement,ME.settings);MusicPlayer.applyPrefs(ME.settings.music)};
+  const closeRevert=()=>{if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();root.innerHTML='';applyStyle(document.documentElement,ME.settings);refitAllAvatars();MusicPlayer.applyPrefs(ME.settings.music)};
   $$('#sCancel').onclick=closeRevert;
   $$('#sReset').onclick=()=>{
     Object.assign(s,{meBubble:'#7c6cff',meText:'#ffffff',radius:16,font:'system',size:15,bold:false,italic:false,bgType:'gradient',bgColor:'#2a1f5c',bgColor2:'#7c2f66',bgImage:'',bgFit:'cover',bgBlur:0,bgDim:30,uiOpacity:50,uiBlur:18,autoScrollBottom:true,filterLocal:true,pings:{everyone:true,sound:true,desktop:false},music:{enabled:true,volume:15,shuffle:true}});
@@ -4603,7 +4804,7 @@ function openSettings(fromChat){
     MusicPlayer.setBackground(false);
     root.innerHTML='';
     DB.updateSettings(ME.id,s).catch(()=>{});
-    ME=DB.currentUser();applyStyle(document.documentElement,s);MusicPlayer.applyPrefs(s.music);toast('Settings reset.');
+    ME=DB.currentUser();applyStyle(document.documentElement,s);refitAllAvatars();MusicPlayer.applyPrefs(s.music);toast('Settings reset.');
   };
   $$('#sSave').onclick=async()=>{
     read();
