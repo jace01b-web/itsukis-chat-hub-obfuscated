@@ -1445,6 +1445,38 @@ const DB=(()=>{
     onDisconnect(presenceRef).remove();
     if(!kicked)set(presenceRef,true).catch(()=>{});
   }
+  // Re-arms the SCOPED "who's here" marker (presence/$key/$myId) — the one behind
+  // "Online in Global Chat" / "Online in this DM" / "Online in this room". This is
+  // separate from the account-level onlineUsers marker above. It used to only get
+  // set once, when you switched context (watchMessages) — so a real network drop
+  // (Firebase's onDisconnect fires server-side the instant the socket closes) left
+  // it missing forever afterward: the client never re-wrote it once the connection
+  // came back, so you'd look offline in that room/DM until you actually switched
+  // chats again. Called from the same '.info/connected' handler as armPresence so
+  // both markers recover together on every reconnect.
+  function armScopedPresence(){
+    if(!presenceSelfRef)return;
+    onDisconnect(presenceSelfRef).remove();
+    if(!kicked)set(presenceSelfRef,true).catch(()=>{});
+  }
+  // (Re)join the scoped presence node for whichever chat is currently open. Used both
+  // by watchMessages (switching context) and by the un-kick path below — takeoverKick()
+  // tears presenceSelfRef/presUnsub all the way down to null, so simply un-setting
+  // 'kicked' isn't enough to bring the room/DM's "who's online" list back; we have to
+  // actually re-create them for the chat that's still open (msgKey doesn't change
+  // across a kick/un-kick, so watchMessages' own "already on this key" guard would
+  // otherwise skip rejoining until the person switched chats and back).
+  function rejoinScopedPresence(){
+    if(!msgKey||myId==null)return;
+    if(presUnsub){try{presUnsub()}catch(_){}presUnsub=null}
+    presenceSelfRef=R('presence/'+msgKey+'/'+myId);
+    armScopedPresence();
+    presUnsub=onValue(R('presence/'+msgKey),s=>{
+      C.presenceIds=s.val()?Object.keys(s.val()).map(Number):[];
+      C.presenceIds.forEach(fetchUserIfMissing);
+      if(ready)emit();
+    },()=>{});
+  }
   // Session debug logging — console only (no on-page panel).
   function sessLog(...args){
     const msg=args.map(a=>{try{return typeof a==='object'?JSON.stringify(a):String(a)}catch(_){return String(a)}}).join(' ');
@@ -1459,7 +1491,7 @@ const DB=(()=>{
       if(!val||!val.token)return;
       if(val.token===mySessionToken){
         sessionConfirmed=true;
-        if(kicked){sessLog('reconnect confirmed, un-kicking');kicked=false;hideKickOverlay();armPresence()}
+        if(kicked){sessLog('reconnect confirmed, un-kicking');kicked=false;hideKickOverlay();armPresence();rejoinScopedPresence()}
         return;
       }
       // Only act once we've actually confirmed OUR claim landed — otherwise the
@@ -1521,7 +1553,7 @@ const DB=(()=>{
     // Presence: mark myself online while connected, and let the server auto-remove me
     // the instant this connection drops (tab close, network loss, crash) via onDisconnect.
     // Re-armed on every (re)connect, per Firebase's recommended presence pattern.
-    listen('.info/connected',connected=>{if(connected)armPresence()});
+    listen('.info/connected',connected=>{if(connected){armPresence();armScopedPresence()}});
     listen('onlineUsers',v=>{
       C.onlineIds=v?Object.keys(v).map(Number):[];
       C.online=C.onlineIds.length;
@@ -1570,16 +1602,7 @@ const DB=(()=>{
     C.presenceIds=[];
     msgKey=key;
     if(!key){if(ready)emit();return}
-    if(myId!=null){
-      presenceSelfRef=R('presence/'+key+'/'+myId);
-      try{onDisconnect(presenceSelfRef).remove().catch(()=>{})}catch(_){}
-      set(presenceSelfRef,true).catch(()=>{});
-    }
-    presUnsub=onValue(R('presence/'+key),s=>{
-      C.presenceIds=s.val()?Object.keys(s.val()).map(Number):[];
-      C.presenceIds.forEach(fetchUserIfMissing);
-      if(ready)emit();
-    },()=>{});
+    rejoinScopedPresence();
     const q=query(R('messages/'+key),orderByChild('at'),limitToLast(300));
     msgUnsub=onValue(q,s=>{
       const arr=[];s.forEach(c=>{arr.push({...c.val(),id:c.key})});
