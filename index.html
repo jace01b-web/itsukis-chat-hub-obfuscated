@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-09-27.1">
+<meta name="build-version" content="2026-09-27.2">
 <title>Itsukis Chat Hub</title>
 <style>
 :root{
@@ -191,6 +191,20 @@ input[type=color]{display:none!important}
 .csel-opt:hover,.csel-opt.hl{background:var(--ui-panel2);color:var(--text)}
 .csel-opt.sel{background:rgba(124,108,255,.2);color:var(--text);font-weight:700}
 .csel-opt.sel::after{content:"✓";color:var(--accent);font-weight:800}
+
+/* ---- Custom right-click context menu ---- */
+.ctx-menu{position:fixed;z-index:3000;min-width:212px;
+  background:var(--panel);border:1px solid rgba(124,108,255,.35);border-radius:14px;padding:6px;
+  box-shadow:0 18px 44px rgba(0,0,0,.55);
+  opacity:0;transform:scale(.96);transform-origin:top left;pointer-events:none;
+  transition:opacity .14s ease,transform .14s ease}
+.ctx-menu.open{opacity:1;transform:none;pointer-events:auto}
+.ctx-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;cursor:pointer;
+  font-size:13.5px;font-weight:600;color:var(--text);white-space:nowrap;transition:background .1s ease}
+.ctx-item:hover{background:var(--ui-panel2)}
+.ctx-item.danger:hover{background:rgba(255,93,115,.16);color:var(--danger)}
+.ctx-ic{width:18px;text-align:center;flex:none;font-size:14px}
+.ctx-sep{height:1px;background:var(--border);margin:5px 6px}
 
 /* seekable progress in the Music tab */
 .music-seek{display:flex;align-items:center;gap:10px;margin:-4px 0 14px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -5619,6 +5633,75 @@ function renderChatLight(keepFriends){
   }
   document.addEventListener('pointermove',point,{passive:true});
   document.addEventListener('touchmove',point,{passive:true});
+})();
+
+/* ---------- Custom right-click menu ----------
+   Replaces the native browser context menu app-wide with quick actions
+   (Settings, Profile Settings, Fullscreen, Home, Sign Out) styled to match
+   the rest of the UI. Left alone for text inputs/contenteditable (so
+   cut/copy/paste still works) and for images/links (so "save image",
+   "open link in new tab" etc. still work natively). */
+(function(){
+  const menu=document.createElement('div');
+  menu.className='ctx-menu';menu.id='ctxMenu';
+  document.body.appendChild(menu);
+
+  function toggleFullscreen(){
+    if(document.fullscreenElement)document.exitFullscreen?.().catch(()=>{});
+    else document.documentElement.requestFullscreen?.().catch(()=>{});
+  }
+  function items(){
+    const fsOn=!!document.fullscreenElement;
+    const list=[
+      {ic:'⚙️',label:'Settings',needsMe:true,fn:()=>openSettings(true)},
+      {ic:'👤',label:'Profile Settings',needsMe:true,fn:()=>openAccount()},
+      {sep:true},
+      {ic:'⛶',label:fsOn?'Exit Fullscreen':'Fullscreen',fn:toggleFullscreen},
+      {ic:'🔄',label:'Reload',fn:()=>location.reload()},
+    ];
+    if(ME){
+      list.push({sep:true});
+      list.push({ic:'🏠',label:'Home',fn:()=>{view.roomKey=null;view.section=null;DB.watchMessages(null);$('#sidebar')?.classList.remove('open');goHome()}});
+      list.push({ic:'🚪',label:'Sign Out',danger:true,fn:()=>doSignOut()});
+    }
+    return list.filter(it=>!it.needsMe||ME);
+  }
+  function close(){
+    menu.classList.remove('open');
+    document.removeEventListener('pointerdown',onOutside,true);
+    document.removeEventListener('scroll',close,true);
+    window.removeEventListener('resize',close);
+    document.removeEventListener('keydown',onKey,true);
+  }
+  function onOutside(e){if(!menu.contains(e.target))close()}
+  function onKey(e){if(e.key==='Escape')close()}
+  function open(x,y){
+    close();
+    const list=items();
+    menu.innerHTML=list.map((it,i)=>it.sep?`<div class="ctx-sep"></div>`
+      :`<div class="ctx-item${it.danger?' danger':''}" data-i="${i}"><span class="ctx-ic">${it.ic}</span><span>${it.label}</span></div>`).join('');
+    menu.querySelectorAll('.ctx-item').forEach(el=>{
+      el.onclick=()=>{const it=list[Number(el.dataset.i)];close();it.fn&&it.fn()};
+    });
+    // place, then clamp so it never runs off the edge of the viewport
+    menu.style.left=x+'px';menu.style.top=y+'px';
+    menu.classList.add('open');
+    const r=menu.getBoundingClientRect();
+    const nx=r.right>innerWidth-8?Math.max(8,innerWidth-r.width-8):x;
+    const ny=r.bottom>innerHeight-8?Math.max(8,innerHeight-r.height-8):y;
+    menu.style.left=nx+'px';menu.style.top=ny+'px';
+    document.addEventListener('pointerdown',onOutside,true);
+    document.addEventListener('scroll',close,true);
+    window.addEventListener('resize',close);
+    document.addEventListener('keydown',onKey,true);
+  }
+  document.addEventListener('contextmenu',e=>{
+    const t=e.target;
+    const tag=(t.tagName||'').toLowerCase();
+    if(tag==='input'||tag==='textarea'||tag==='img'||tag==='a'||t.isContentEditable)return; // keep the native menu where it's actually useful
+    e.preventDefault();
+    open(e.clientX,e.clientY);
+  });
 })();
 
 /* ---------- Boot ---------- */
