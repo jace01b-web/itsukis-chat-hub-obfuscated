@@ -417,6 +417,8 @@ input[type=color]{display:none!important}
 .mention.me{background:var(--accent2);color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.4)}
 .mention.everyone{background:#ffb84d;color:#3a2400;cursor:default}
 .mention.everyone:hover{text-decoration:none;filter:none}
+.bubble a{color:inherit;text-decoration:underline;text-decoration-color:currentColor;word-break:break-all}
+.bubble a:hover{opacity:.82}
 .sys{align-self:center;color:var(--muted);font-size:12px;padding:5px 12px;background:var(--ui-panel);border-radius:20px}
 .date-sep{align-self:center;color:var(--muted);font-size:11px;margin:8px 0;background:var(--ui-panel);padding:3px 12px;border-radius:20px}
 /* ===== Discord-style reply reference: sits above the whole message row (avatar
@@ -4641,7 +4643,32 @@ function fmtText(t){
     const u=DB.getUser(id);
     return `<span class="mention${id===ME.id?' me':''}" data-open-profile="${id}" title="View profile">@${esc(u.username)}</span>`;
   });
+  s=linkify(s);
   return s;
+}
+// Turns bare "https://..." / "http://..." URLs into clickable links, Discord-style —
+// the scheme is required, so plain "example.com" is left as plain text. Runs on
+// already-escaped text (see fmtText above), so it never has to worry about raw
+// '<'/'>'/'&' breaking the markup it's inserting; it peels off trailing punctuation
+// (and the HTML entities esc() turned matching punctuation into) one token at a time
+// so a URL at the end of a sentence doesn't drag the period or a closing quote into
+// the link, and leaves a trailing ')' or ']' alone if the URL itself contains the
+// matching opening bracket (e.g. Wikipedia links).
+function linkify(escapedText){
+  return escapedText.replace(/\bhttps?:\/\/[^\s<]+/gi,raw=>{
+    let url=raw,trail='';
+    for(;;){
+      let m=url.match(/(&quot;|&#39;)$/);
+      if(m){url=url.slice(0,-m[0].length);trail=m[0]+trail;continue}
+      m=url.match(/[.,!?:;'"]$/);
+      if(m){url=url.slice(0,-1);trail=m[0]+trail;continue}
+      if(/\)$/.test(url)&&!url.includes('(')){url=url.slice(0,-1);trail=')'+trail;continue}
+      if(/\]$/.test(url)&&!url.includes('[')){url=url.slice(0,-1);trail=']'+trail;continue}
+      break;
+    }
+    if(!url)return raw;
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer nofollow">${url}</a>${trail}`;
+  });
 }
 // Only accept real JPEG data URLs we generate ourselves. Anything else (e.g. a crafted string that
 // tries to break out of the src attribute) is dropped, so a hostile message can't run script in your page.
