@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-09-27.92">
+<meta name="build-version" content="2026-09-27.93">
 <title>Itsukis Chat Hub</title>
 <link rel="icon" type="image/png" href="https://aniitsukicoded.github.io/backups/icon.png">
 <style>
@@ -1078,6 +1078,19 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
 .flair-gold,.flair-crown{filter:drop-shadow(0 0 4px rgba(255,200,80,.8))}
 @keyframes flairHue{to{filter:hue-rotate(360deg)}}
 
+/* Custom (role/flair) colored usernames — applied when the owner-level
+   "custom usernames with roles" setting is on. Kept separate from the small
+   emoji badges above: these color the NAME TEXT itself. */
+.flair-name{font-weight:700}
+.flair-name.flair-gold{color:#e6a91f}
+.flair-name.flair-rainbow{background:linear-gradient(90deg,#ff5fc0,#ffd84d,#5aa9ff,#4cd6a0,#ff5fc0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flairHue2 5s linear infinite}
+.flair-name.flair-crown{color:#8b78ff}
+.flair-name.flair-neon{color:#27d8f0;text-shadow:0 0 6px rgba(39,216,240,.6)}
+.flair-name.flair-lucky{color:#22a95e}
+.flair-name.flair-ice{color:#5aa9ff;text-shadow:0 0 5px rgba(90,169,255,.5)}
+.flair-name.flair-fire{color:#ff5a1f;text-shadow:0 0 5px rgba(255,90,31,.5)}
+@keyframes flairHue2{to{background-position:300% 0}}
+
 /* spin modal */
 .spin-modal{max-width:440px;text-align:center;padding:26px 22px 22px}
 .spin-modal h2{font-size:22px;margin-bottom:6px}
@@ -1419,11 +1432,36 @@ function _wordPat(word){
 const FILTER_RE=new RegExp(FILTER_WORDS.map(w=>'('+_wordPat(w)+')').join('|'),'gi');
 function containsProfanity(str){if(!str)return false;FILTER_RE.lastIndex=0;return FILTER_RE.test(String(str).normalize('NFKC'))}
 function censorText(str){if(!str)return str;return String(str).normalize('NFKC').replace(FILTER_RE,m=>'*'.repeat(m.length))}
-let MODSET={filterEnabled:true,filterNames:true};
+let MODSET={filterEnabled:true,filterNames:true,customNames:true};
 function filterMsgEnabled(){return MODSET.filterEnabled!==false}       // owner-controlled, server-side default (affects what's stored/shown to everyone)
 function filterNamesOn(){return MODSET.filterNames!==false}
+// Owner toggle: when on (default), a user holding a decorative role/flair gets a
+// styled/colored name everywhere their name is shown; when off, everyone displays
+// as a plain username regardless of what roles they hold.
+function customNamesOn(){return MODSET.customNames!==false}
 function displayUsername(name){return(filterNamesOn()&&containsProfanity(name))?censorText(name):name}
 function usernameAllowed(name){return!filterNamesOn()||!containsProfanity(name)}
+// Which decorative preset (if any) should color this user's name right now: their
+// live 24h flair takes priority, falling back to a permanent role of the same kind
+// so the styling doesn't disappear the moment the 24h flair window ends.
+const NAME_STYLE_PRESETS=['rainbow','gold','crown','neon','lucky','ice','fire'];
+function nameStylePreset(id){
+  if(!customNamesOn())return null;
+  try{
+    const live=DB.flairOf(id);
+    if(live)return live;
+    const roles=DB.rolesOf(id);
+    for(const p of NAME_STYLE_PRESETS)if(roles[p]===true)return p;
+  }catch(_){}
+  return null;
+}
+// Wraps an already-escaped display name in the styling for the user's current
+// decorative preset (if any and if the owner-level toggle is on). Falls back to
+// the plain escaped name.
+function styledNameHTML(id,escapedName){
+  const p=nameStylePreset(id);
+  return p?'<span class="flair-name flair-'+p+'">'+escapedName+'</span>':escapedName;
+}
 function checkMessageText_(text){return text}       // no longer pre-censors at send time — see displayMsgText()
 // Personal, per-viewer filter: ON by default, editable in Settings > Filter, client-side
 // only (each user's own preference for what THEY see; independent of the owner's
@@ -1475,7 +1513,7 @@ const rtdb=getDatabase(fbApp);
 const R=p=>ref(rtdb,p);
 let SKEW=0;
 onValue(ref(rtdb,'.info/serverTimeOffset'),s=>{SKEW=Number(s.val())||0});
-onValue(R('modSettings'),s=>{MODSET={filterEnabled:true,filterNames:true,...(s.val()||{})}});
+onValue(R('modSettings'),s=>{MODSET={filterEnabled:true,filterNames:true,customNames:true,...(s.val()||{})};if(typeof render==='function')try{render()}catch(_){}if(typeof renderChat==='function')try{renderChat()}catch(_){}});
 // Live cache of owners/, kept in sync by a listener started in DB.startListeners().
 // owners/$id === 1 means that numeric user id is an owner; 0 or missing means not.
 // This is populated from your backend (Admin SDK) — the client never writes to it
@@ -1648,7 +1686,17 @@ const DB=(()=>{
   function armPresence(){
     if(!presenceRef)return;
     onDisconnect(presenceRef).remove();
-    if(!kicked)set(presenceRef,true).catch(()=>{});
+    if(kicked)return;
+    set(presenceRef,true).catch(e=>{
+      // The write requires idToUid/$myId===auth.uid, which for a brand-new signup
+      // may not have landed yet (it's linked separately, right after startListeners()
+      // fires this the first time via .info/connected) — that link write resolves a
+      // beat later and nothing used to retry the presence write once it did, so a
+      // fresh account could silently never show as online for the rest of that
+      // session. Log it and retry shortly instead of swallowing it outright.
+      console.warn('presence write failed, will retry',e.code||e.message);
+      setTimeout(()=>{if(!kicked&&presenceRef)set(presenceRef,true).catch(e2=>console.warn('presence retry failed',e2.code||e2.message))},1500);
+    });
   }
   // Re-arms the SCOPED "who's here" marker (presence/$key/$myId) — the one behind
   // "Online in Global Chat" / "Online in this DM" / "Online in this room". This is
@@ -1662,7 +1710,11 @@ const DB=(()=>{
   function armScopedPresence(){
     if(!presenceSelfRef)return;
     onDisconnect(presenceSelfRef).remove();
-    if(!kicked)set(presenceSelfRef,true).catch(()=>{});
+    if(kicked)return;
+    set(presenceSelfRef,true).catch(e=>{
+      console.warn('scoped presence write failed, will retry',e.code||e.message);
+      setTimeout(()=>{if(!kicked&&presenceSelfRef)set(presenceSelfRef,true).catch(()=>{})},1500);
+    });
   }
   // (Re)join the scoped presence node for whichever chat is currently open. Used both
   // by watchMessages (switching context) and by the un-kick path below — takeoverKick()
@@ -1926,7 +1978,14 @@ const DB=(()=>{
               // warning into the console every single time (harmless functionally, but it
               // was polluting the write-error diagnostic below by looking like a real failure).
               get(R('idToUid/'+id)).then(existing=>{
-                if(!existing.exists())return set(R('idToUid/'+id),user.uid);
+                if(!existing.exists())return set(R('idToUid/'+id),user.uid).then(()=>{
+                  // Presence (armPresence, fired from .info/connected inside startListeners()
+                  // above) may have already tried and failed to write onlineUsers/$id before
+                  // this link existed — the rule requires idToUid/$id===auth.uid. Now that it's
+                  // linked, re-arm so a brand-new account shows online immediately instead of
+                  // waiting on the retry timer or the next reconnect.
+                  armPresence();
+                });
               }).catch(()=>{});
               // NOTE: no immediate banned-check here — it used stale pre-login C.banned
               // and ran before owners/ had loaded, so it could wrongly lock an owner's
@@ -2533,12 +2592,27 @@ const DB=(()=>{
       const v=C.muted&&C.muted[id];
       return typeof v==='number'?Math.max(0,v-(Date.now()+SKEW)):0;
     },
-    async setFilterSettings({filterEnabled,filterNames}){
+    async setFilterSettings({filterEnabled,filterNames,customNames}){
       if(!isOwner(myId))throw new Error('Only owners can change filter settings.');
       const upd={};
       if(filterEnabled!=null)upd.filterEnabled=!!filterEnabled;
       if(filterNames!=null)upd.filterNames=!!filterNames;
+      if(customNames!=null)upd.customNames=!!customNames;
       await update(R('modSettings'),upd);
+    },
+    /* --- Owner: grant/revoke VIP directly (no spin required) --- */
+    async giveVip(id,kind){
+      if(!isOwner(myId))throw new Error('Only owners can grant VIP.');
+      id=Number(id);if(!id)throw new Error('Enter a valid user ID.');
+      if(isOwner(id))throw new Error('Owners already have full access.');
+      if(kind==='perm')await set(R('vip/'+id),{perm:true});
+      else if(kind==='24h')await set(R('vip/'+id),{until:Date.now()+SKEW+86400000});
+      else throw new Error('Unknown VIP duration.');
+    },
+    async removeVip(id){
+      if(!isOwner(myId))throw new Error('Only owners can remove VIP.');
+      id=Number(id);if(!id)throw new Error('Enter a valid user ID.');
+      await remove(R('vip/'+id)).catch(()=>{});
     },
     /* --- Version history / forced updates --- */
     // The build this tab is actually running, from the <meta name="build-version"> tag
@@ -4053,8 +4127,15 @@ function vipBadgeHTML(id){
   try{
     const v=DB.vipInfo(id);
     if(v&&v.kind!=='owner')h+='<span class="vip-badge" title="VIP">💎</span>';
+    // Live 24h flair takes priority; otherwise fall back to a permanent role of the
+    // same preset so the little name-badge doesn't vanish once the 24h window ends.
     const f=DB.flairOf(id);
-    if(f&&VIP_FLAIRS[f])h+='<span class="flair-badge flair-'+f+'" title="'+VIP_FLAIRS[f].n+'">'+VIP_FLAIRS[f].e+'</span>';
+    const roles=DB.rolesOf(id);
+    const perm=f||NAME_STYLE_PRESETS.find(p=>roles[p]===true);
+    if(perm&&VIP_FLAIRS[perm])h+='<span class="flair-badge flair-'+perm+'" title="'+VIP_FLAIRS[perm].n+(roles[perm]&&!f?' (permanent)':'')+'">'+VIP_FLAIRS[perm].e+'</span>';
+    // Roles with no flair/name-color of their own (currently just Confetti Blast)
+    // still deserve a permanent little badge once earned.
+    if(roles.confetti===true)h+='<span class="flair-badge" title="Confetti Blast (permanent)">🎉</span>';
   }catch(_){}
   return h?' '+h:'';
 }
@@ -4494,7 +4575,8 @@ function openOnlineModal(label,ids){
   const rows=ids.map(id=>{
     const u=DB.getUser(id);
     const nm=u?displayUsername(u.username):'Loading…';
-    return`<div class="online-row" data-open-profile="${id}"><span class="dot"></span><span class="nm">${esc(nm)}</span><span class="idv">#${id}</span></div>`;
+    const nmHTML=u?styledNameHTML(id,esc(nm)):esc(nm);
+    return`<div class="online-row" data-open-profile="${id}"><span class="dot"></span><span class="nm">${nmHTML}</span><span class="idv">#${id}</span></div>`;
   }).join('')||`<div class="hint" style="padding:10px">No one is online right now.</div>`;
   root.innerHTML=`<div class="modal-bg"><div class="modal" style="max-width:380px">
     <h2>${esc(label)}</h2>
@@ -4588,7 +4670,7 @@ function openUserProfile(id){
       <div style="padding:0 24px 24px;margin-top:-46px">
         <div style="position:relative;width:fit-content">${av}${online&&!deleted?'<span style="position:absolute;bottom:4px;right:4px;width:18px;height:18px;border-radius:50%;background:#3ddc73;box-shadow:0 0 8px #3ddc73;border:3px solid var(--panel)"></span>':''}</div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap">
-          <h2 style="margin:0;font-size:20px">${esc(name)}</h2>
+          <h2 style="margin:0;font-size:20px">${deleted?esc(name):styledNameHTML(id,esc(name))}</h2>
           ${owner?'<span class="tag owner">Owner</span>':''}
           ${mod&&!owner?'<span class="tag" style="background:var(--accent)">Mod</span>':''}
           ${banned?'<span class="tag" style="background:var(--danger)">Banned</span>':''}
@@ -4995,7 +5077,7 @@ function msgEl(m){
   }
   const myAv=mine?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${av}</span>`:'';
   const reactionsHTML=reactionRowHTML(m.id);
-  el.innerHTML=`${replyRefHTML}<div class="msg-row">${mine?myAv:avClickable}<div class="msg-body"><div class="meta">${mine?'':(sender&&!sender.deleted?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${esc(name)}</span>`:esc(name))+' · '}${time}${editedTag}${vipBadgeHTML(m.senderId)}${isOwner(m.senderId)?' <span class="tag owner">#'+m.senderId+'</span>':''}${DB.isMuted(m.senderId)?' <span class="tag" style="background:#555;color:#fff">muted</span>':''}</div>
+  el.innerHTML=`${replyRefHTML}<div class="msg-row">${mine?myAv:avClickable}<div class="msg-body"><div class="meta">${mine?'':(sender&&!sender.deleted?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${styledNameHTML(m.senderId,esc(name))}</span>`:esc(name))+' · '}${time}${editedTag}${vipBadgeHTML(m.senderId)}${isOwner(m.senderId)?' <span class="tag owner">#'+m.senderId+'</span>':''}${DB.isMuted(m.senderId)?' <span class="tag" style="background:#555;color:#fff">muted</span>':''}</div>
     <div class="bubble${pinged?' pinged':''}${(!m.text&&m.images&&m.images.length)?' img-only':''}"${bStyle}><div class="msg-hover-bar">${copyBtn}${editBtn}${delBtn}${reactBtn}${replyBtn}</div>${fmtText(displayMsgText(m.text))}${imagesHTML(m.images)}</div>${reactionsHTML}</div></div>`;
   el.querySelectorAll('.imgs img').forEach((img,i)=>img.onclick=()=>openLightbox(m.images,i));
   wireReactions(el,m);
@@ -5708,6 +5790,31 @@ function openSettings(fromChat){
         </div>
       </div>
       <div class="set-card">
+        <div class="section-h" style="margin-top:0">🎨 Custom usernames</div>
+        <div class="toggle-row">
+          <div>
+            <div style="font-weight:600;font-size:14px">Show custom usernames with roles</div>
+            <div class="hint" style="margin-top:2px">When on (default), a user's earned flair/role colors their name everywhere it's shown. When off, everyone displays as a plain username regardless of roles.</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="modCustomNames" ${customNamesOn()?'checked':''}><span class="slider"></span></label>
+        </div>
+      </div>
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">💎 Give VIP</div>
+        <div class="set-grid">
+          <div class="field"><label>User ID</label><input type="number" id="modVipId" placeholder="e.g. 42"></div>
+          <div class="field"><label>Duration</label><select id="modVipDur">
+            <option value="24h">24 hours</option>
+            <option value="perm">Forever</option>
+          </select></div>
+        </div>
+        <div class="actions" style="justify-content:flex-start;margin-top:10px">
+          <button class="btn" id="modVipGo">Give VIP</button>
+          <button class="btn sec" id="modVipRemoveGo">Remove VIP</button>
+        </div>
+        <div class="hint" style="margin-top:8px">Grants access to the VIP Lounge directly, without needing the daily spin. "Forever" never expires; "24 hours" counts down from now the same as a spin win.</div>
+      </div>
+      <div class="set-card">
         <div class="section-h" style="margin-top:0">🔨 Ban a user</div>
         <div class="set-grid">
           <div class="field"><label>User ID</label><input type="number" id="modBanId" placeholder="e.g. 42"></div>
@@ -5907,6 +6014,21 @@ function openSettings(fromChat){
   if(isOwner(ME.id)||isMod(ME.id)){
     $$('#modFilterNames')&&$$('#modFilterNames').addEventListener('change',e=>{
       DB.setFilterSettings({filterNames:e.target.checked}).catch(err=>toast(err.message,'bad'));
+    });
+    $$('#modCustomNames')&&$$('#modCustomNames').addEventListener('change',e=>{
+      DB.setFilterSettings({customNames:e.target.checked}).catch(err=>{toast(err.message,'bad');e.target.checked=!e.target.checked});
+    });
+    $$('#modVipGo')&&($$('#modVipGo').onclick=async()=>{
+      const id=+$$('#modVipId').value,dur=$$('#modVipDur').value;
+      if(!id){toast('Enter a user ID','bad');return}
+      try{await DB.giveVip(id,dur);toast('User #'+id+' given VIP ('+(dur==='perm'?'forever':'24 hours')+').')}
+      catch(err){toast(err.message,'bad')}
+    });
+    $$('#modVipRemoveGo')&&($$('#modVipRemoveGo').onclick=async()=>{
+      const id=+$$('#modVipId').value;
+      if(!id){toast('Enter a user ID','bad');return}
+      try{await DB.removeVip(id);toast('VIP removed from user #'+id+'.')}
+      catch(err){toast(err.message,'bad')}
     });
     $$('#modBanGo')&&($$('#modBanGo').onclick=async()=>{
       const id=+$$('#modBanId').value;
