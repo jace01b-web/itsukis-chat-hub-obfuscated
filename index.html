@@ -2012,9 +2012,17 @@ const DB=(()=>{
     async updateSettings(id,patch){
       const cur=C.users[id]||{};
       const merged={...(cur.settings||{}),...patch};
-      const style={bubble:merged.meBubble||'#7c6cff',text:merged.meText||'#ffffff',radius:Number(merged.radius)||16,avatar:merged.avatar||''};
+      // Avatar lives only in the public `style` node, never in `settings` (it's
+      // deliberately stripped out below before every settings save) — so it can
+      // NEVER be read back via merged.avatar. Reading it from there always came
+      // back undefined and fell through to '', which meant every settings save
+      // that wasn't itself changing the avatar (e.g. just picking a banner color)
+      // silently wiped the person's profile picture. Carry the real current
+      // avatar forward from style unless this patch is explicitly changing it.
+      const avatar=('avatar' in patch)?(patch.avatar||''):((cur.style&&cur.style.avatar)||'');
+      const style={bubble:merged.meBubble||'#7c6cff',text:merged.meText||'#ffffff',radius:Number(merged.radius)||16,avatar};
       C.users[id]={...cur,settings:merged,style};emit();
-      // avatar lives in the public `style` node (below), not `settings` (which is
+      // avatar lives in the public `style` node (above), not `settings` (which is
       // private and rules-limited to short values) — strip it before that write.
       const settingsToSave={...merged};delete settingsToSave.avatar;
       try{
