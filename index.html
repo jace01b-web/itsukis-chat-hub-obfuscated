@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-09-27.9">
+<meta name="build-version" content="2026-09-27.91">
 <title>Itsukis Chat Hub</title>
 <link rel="icon" type="image/png" href="https://aniitsukicoded.github.io/backups/icon.png">
 <style>
@@ -287,17 +287,6 @@ input[type=color]{display:none!important}
 .home-title{font-size:26px;font-weight:700;margin-bottom:6px}
 .home-sub{color:var(--muted);font-size:15px}
 .options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;width:100%;max-width:640px}
-/* When there's an odd number of tiles, the last one is left stranded alone in
-   its row with empty space beside it (e.g. 5 tiles = a lone 5th tile under the
-   left column). Instead, let it span the full row and switch to a horizontal
-   layout (icon beside text) so it reads as a deliberate "wide" tile rather
-   than a leftover. */
-.options .opt:last-child:nth-child(odd){
-  grid-column:1/-1;flex-direction:row;justify-content:flex-start;text-align:left;
-  gap:18px;padding:22px 26px;max-width:100%
-}
-.options .opt:last-child:nth-child(odd) .ic{margin-bottom:0;flex:none}
-.options .opt:last-child:nth-child(odd) h3,.options .opt:last-child:nth-child(odd) p{width:100%}
 .home-foot{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin-top:30px}
 /* ----- Main menu entrance transition -----
    #homePage is toggled via display:none<->flex (see show()), which naturally
@@ -544,12 +533,6 @@ input[type=color]{display:none!important}
   transition:transform .22s cubic-bezier(.2,.9,.3,1.2)}
 .gc-card:hover .gc-ic{transform:scale(1.06)}
 .gc-card h3{position:relative;font-size:17px;font-weight:700;margin:0;color:rgba(255,255,255,.94)}
-/* VIP Chat tile: same glass tile as Global/Rooms/Announcements, with a gold-tinted
-   border so it reads as the exclusive option — only shown to owners/mods/VIP (see
-   modalGlobalChoice()). */
-.gc-card.gc-vip{border-color:rgba(255,184,77,.35)}
-.gc-card.gc-vip:hover{border-color:rgba(255,184,77,.7)}
-.gc-card.gc-vip h3{color:#ffd27a}
 
 /* ===== Itsukis Chat picker — liquid glass =====
    The overlay behind the modal only dims the page a little (plus a very light blur so
@@ -716,62 +699,6 @@ input[type=color]{display:none!important}
 @keyframes slide{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
 .tag{font-size:10px;background:var(--accent2);color:#fff;padding:1px 6px;border-radius:8px;font-weight:700}
 .tag.owner{background:#ffb84d;color:#3a2400}
-.tag.vip{background:linear-gradient(135deg,#ffd700,#ff8c00);color:#3a2400}
-.tag.vip.perm{background:linear-gradient(135deg,#fff2b8,#ffd700,#ff8c00);box-shadow:0 0 8px rgba(255,180,0,.6)}
-.tag.flair-gold{background:linear-gradient(135deg,#ffe08a,#d99a1b);color:#3a2400}
-.tag.flair-rainbow{background:linear-gradient(90deg,#ff5e5e,#ffd166,#06d6a0,#4d9dff,#a78bfa);color:#1a1a2e}
-.tag.flair-crown{background:linear-gradient(135deg,#c9a4ff,#7c6cff);color:#fff}
-.tag.flair-neon{background:linear-gradient(135deg,#7dffea,#22d3ee);color:#053b3a}
-.tag.flair-lucky{background:linear-gradient(135deg,#8ef58f,#22a860);color:#083019}
-.tag.flair-ice{background:linear-gradient(135deg,#bfe9ff,#3b82f6);color:#062a4a}
-.tag.flair-fire{background:linear-gradient(135deg,#ffb199,#ff3d00);color:#3a0a00}
-/* Stacked, permanent Daily Spin role badges on a profile — rarest first (see ROLE_DEFS) */
-.pf-roles{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.tag.role-badge{font-size:11px;padding:3px 8px;border-radius:9px;font-weight:700}
-/* ---- Daily Spin wheel ---- */
-.spin-modal{max-width:440px;text-align:center}
-.spin-wrap{position:relative;width:280px;height:280px;margin:20px auto 10px}
-/* Slow rotating conic "aura" behind the wheel, blurred into a soft glow ring —
-   gives the whole thing a sense of energy even before you spin it. */
-.spin-wrap::before{
-  content:'';position:absolute;inset:-14px;border-radius:50%;z-index:0;
-  background:conic-gradient(from 0deg,#7c6cff,#ff8ce0,#ffd166,#7c6cff);
-  filter:blur(22px);opacity:.55;
-  animation:spinAuraTurn 6s linear infinite
-}
-@media (prefers-reduced-motion:reduce){.spin-wrap::before{animation:none}}
-@keyframes spinAuraTurn{to{transform:rotate(360deg)}}
-.spin-pointer{position:absolute;top:-10px;left:50%;transform:translateX(-50%);z-index:3;width:0;height:0;
-  border-left:13px solid transparent;border-right:13px solid transparent;border-top:22px solid #fff;
-  filter:drop-shadow(0 3px 6px rgba(0,0,0,.5))}
-.spin-pointer::after{content:'';position:absolute;top:-24px;left:-9px;width:18px;height:18px;border-radius:50%;
-  background:var(--accent);box-shadow:0 0 0 3px rgba(255,255,255,.15),0 3px 8px rgba(0,0,0,.4)}
-.spin-wheel{width:100%;height:100%;border-radius:50%;position:relative;z-index:1;
-  border:7px solid rgba(255,255,255,.9);
-  box-shadow:0 0 0 3px rgba(0,0,0,.25),inset 0 2px 10px rgba(255,255,255,.25),inset 0 -6px 16px rgba(0,0,0,.3),0 14px 38px rgba(0,0,0,.45);
-  transition:transform 4.2s cubic-bezier(.13,.83,.24,1);overflow:hidden}
-/* Thin radial divider lines between slices, layered on top of the per-slice
-   color background set inline via style="background:...". */
-.spin-wheel::after{content:'';position:absolute;inset:0;border-radius:50%;pointer-events:none;
-  background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.5) 0deg .6deg,transparent .6deg calc(360deg / var(--slices,10)))}
-.spin-wheel .slice{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center;
-  font-size:22px;padding-top:16px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))}
-.spin-hub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:50px;height:50px;border-radius:50%;
-  background:linear-gradient(135deg,var(--accent),#5a4bff);border:3px solid #fff;display:flex;align-items:center;justify-content:center;
-  font-size:19px;z-index:2;box-shadow:0 4px 14px rgba(124,108,255,.5),inset 0 1px 0 rgba(255,255,255,.5)}
-.spin-result{margin-top:16px;min-height:48px;font-size:16px;font-weight:700}
-.spin-result .sub{font-weight:500;opacity:.7;font-size:13px;margin-top:2px}
-.spin-cooldown{margin-top:8px;font-size:12.5px;opacity:.65}
-/* Legend: what every slice actually is, so the wheel isn't just unlabeled
-   emoji — shown under the description, above the wheel. */
-.spin-legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:14px 0 4px;text-align:left}
-.spin-legend-item{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:11px;background:var(--ui-panel2);border:1px solid var(--border);font-size:12.5px}
-.spin-legend-item .sl-emoji{font-size:16px;flex:none}
-.spin-legend-item .sl-label{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-.spin-legend-item .sl-chance{font-size:11px;font-weight:700;opacity:.6;flex:none;margin-left:auto}
-.spin-legend-item.sl-rare{border-color:rgba(255,184,77,.5);background:rgba(255,184,77,.1)}
-@keyframes confettiFall{0%{transform:translateY(-10px) rotate(0deg);opacity:1}100%{transform:translateY(320px) rotate(360deg);opacity:0}}
-.confetti-piece{position:absolute;top:0;width:8px;height:14px;border-radius:2px;animation:confettiFall 1.6s ease-in forwards}
 /* Profile card */
 .pf-banner{height:92px;position:relative;overflow:hidden}
 /* A single narrow band sweeping across, not a repeating background-position
@@ -1075,6 +1002,120 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
   .composer{border-radius:22px;border:1px solid var(--glass-edge-soft);
     box-shadow:var(--glass-inset),0 14px 34px rgba(0,0,0,.3)}
 }
+/* ===== VIP Lounge + Daily Spin ===== */
+@property --vipA{syntax:'<angle>';initial-value:0deg;inherits:false}
+.vip-hero{grid-column:1/-1;position:relative}
+.gc-modal .gc-card.gc-vip,.gc-modal .gc-card.gc-vip:hover{
+  background:radial-gradient(80% 150% at 6% 50%,rgba(255,190,70,.24),transparent 62%),linear-gradient(100deg,rgba(64,44,8,.55),rgba(22,20,30,.45) 65%),var(--ui-panel2)}
+.gc-modal .gc-card.gc-vip{width:100%;flex-direction:row;justify-content:flex-start;align-items:center;text-align:left;gap:22px;min-height:0;padding:26px 200px 26px 28px;
+  border:1px solid rgba(255,196,86,.3);
+  box-shadow:0 18px 46px rgba(0,0,0,.35),0 0 44px rgba(255,180,60,.16),inset 0 1px 0 rgba(255,236,190,.28)}
+.gc-modal .gc-card.gc-vip:hover{border-color:rgba(255,206,110,.55);box-shadow:0 20px 52px rgba(0,0,0,.4),0 0 60px rgba(255,180,60,.28),inset 0 1px 0 rgba(255,236,190,.35)}
+.vip-ring{position:absolute;inset:0;border-radius:inherit;padding:1.5px;pointer-events:none;
+  background:conic-gradient(from var(--vipA),rgba(255,214,120,0) 0%,#ffd97a 12%,rgba(255,214,120,0) 32%,rgba(120,200,255,0) 55%,#8fd4ff 68%,rgba(120,200,255,0) 84%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;
+  animation:vipSpin 6s linear infinite}
+@keyframes vipSpin{to{--vipA:360deg}}
+.vip-sheen{position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg,transparent 42%,rgba(255,238,196,.17) 50%,transparent 58%);
+  transform:translateX(-130%);animation:vipSheen 6s ease-in-out 1.2s infinite}
+@keyframes vipSheen{0%{transform:translateX(-130%)}32%,100%{transform:translateX(130%)}}
+.vip-sparks{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:inherit}
+.vip-sparks i{position:absolute;left:var(--x);top:var(--y);width:var(--s);height:var(--s);border-radius:50%;background:#fff1c9;
+  box-shadow:0 0 8px 2px rgba(255,205,100,.85);opacity:0;animation:vipTw var(--d) ease-in-out var(--t) infinite}
+@keyframes vipTw{0%,100%{opacity:0;transform:translateY(4px) scale(.4)}50%{opacity:.95;transform:translateY(-6px) scale(1)}}
+.vip-gem{position:relative;flex:none;font-size:66px;line-height:1;animation:vipFloat 4.2s ease-in-out infinite;
+  filter:drop-shadow(0 6px 16px rgba(80,170,255,.5)) drop-shadow(0 0 18px rgba(255,200,90,.35))}
+.vip-gem::before{content:'';position:absolute;inset:-22px;z-index:-1;border-radius:50%;background:radial-gradient(circle,rgba(255,200,90,.32),transparent 68%);animation:vipHalo 3.2s ease-in-out infinite}
+@keyframes vipFloat{0%,100%{transform:translateY(2px) rotate(-3deg)}50%{transform:translateY(-6px) rotate(3deg)}}
+@keyframes vipHalo{0%,100%{opacity:.55;transform:scale(.9)}50%{opacity:1;transform:scale(1.08)}}
+.vip-copy{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0}
+.vip-title{font-size:24px;font-weight:800;line-height:1.1;background:linear-gradient(100deg,#ffe9b0,#ffbf4d 40%,#fff1c9 60%,#ffd27a);background-size:220% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:vipText 7s linear infinite}
+@keyframes vipText{to{background-position:-220% 0}}
+.vip-sub{font-size:13px;line-height:1.4;color:rgba(255,236,200,.72)}
+.vip-state{margin-top:2px;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;color:#ffe2a0;background:rgba(255,196,86,.15);border:1px solid rgba(255,196,86,.34)}
+.vip-hero.locked .vip-state{color:#e9d9b5;background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.16)}
+.vip-spin{position:absolute;right:22px;top:50%;transform:translateY(-50%);z-index:3;padding:11px 17px;border-radius:14px;font-weight:700;font-size:13.5px;color:#2a1c00;
+  background:linear-gradient(135deg,#ffd97a,#e8a020);box-shadow:0 8px 22px rgba(224,154,31,.38),inset 0 1px 0 rgba(255,255,255,.55);transition:transform .18s ease,box-shadow .18s ease}
+.vip-spin:hover{transform:translateY(-50%) scale(1.05);box-shadow:0 10px 28px rgba(224,154,31,.5),inset 0 1px 0 rgba(255,255,255,.55)}
+.vip-spin:active{transform:translateY(-50%) scale(.97)}
+.gc-vip:focus-visible,.vip-spin:focus-visible{outline:2px solid #ffd97a;outline-offset:3px}
+@media (max-width:620px){
+  .vip-hero{display:flex;flex-direction:column;gap:8px}
+  .gc-modal .gc-card.gc-vip{padding:20px 18px;gap:16px}
+  .vip-gem{font-size:50px}.vip-title{font-size:21px}
+  .vip-spin{position:static;transform:none;width:100%}
+  .vip-spin:hover,.vip-spin:active{transform:none}
+}
+@media (prefers-reduced-motion:reduce){.vip-ring,.vip-sheen,.vip-sparks i,.vip-gem,.vip-gem::before,.vip-title{animation:none}.vip-sparks i{opacity:.5}}
+
+/* VIP room: same chat, warmer edges so it reads as a different place */
+#chatPage.vip-mode .topbar{box-shadow:inset 0 -1px 0 rgba(255,196,86,.38),0 14px 40px -26px rgba(255,190,70,.6)}
+#chatPage.vip-mode .composer{box-shadow:inset 0 1px 0 rgba(255,196,86,.3)}
+#chatPage.vip-mode .send{background:linear-gradient(135deg,#ffcf6a,#e09a1f);color:#2a1c00}
+.vip-bar{display:flex;align-items:center;gap:12px;margin:10px 14px 0;padding:10px 14px;border-radius:16px;
+  background:linear-gradient(100deg,rgba(255,196,86,.16),rgba(255,196,86,.05));border:1px solid rgba(255,196,86,.32)}
+.vb-gem{font-size:26px;line-height:1;filter:drop-shadow(0 3px 8px rgba(80,170,255,.4))}
+.vb-txt{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+.vb-txt b{font-size:14px;color:#ffe2a0}
+.vb-txt span{font-size:12px;color:var(--muted)}
+.vb-pill{margin-left:auto;font-size:12px;font-weight:600;color:#ffe2a0;background:rgba(255,196,86,.16);border:1px solid rgba(255,196,86,.3);padding:5px 11px;border-radius:999px;white-space:nowrap}
+.vip-lock{flex:1;display:flex;align-items:center;justify-content:center;padding:24px}
+.vl-card{max-width:400px;text-align:center;padding:34px 28px;border-radius:24px;background:var(--ui-panel);
+  backdrop-filter:blur(var(--ui-blur));-webkit-backdrop-filter:blur(var(--ui-blur));border:1px solid rgba(255,196,86,.34);
+  box-shadow:0 20px 60px rgba(0,0,0,.35),0 0 60px rgba(255,190,70,.1)}
+.vl-gem{font-size:64px;line-height:1;margin-bottom:10px;filter:drop-shadow(0 6px 16px rgba(80,170,255,.45))}
+.vl-card h2{font-size:22px;color:#ffe2a0;margin-bottom:8px}
+.vl-card p{font-size:14px;color:var(--muted);line-height:1.5;margin-bottom:20px}
+.vl-btn{background:linear-gradient(135deg,#ffcf6a,#e09a1f)!important;color:#2a1c00!important;box-shadow:0 8px 24px rgba(224,154,31,.3)!important}
+
+/* name badges */
+.vip-badge,.flair-badge{display:inline-block;font-size:13px;line-height:1;vertical-align:-1px}
+.flair-rainbow{animation:flairHue 4s linear infinite}
+.flair-neon{filter:drop-shadow(0 0 5px #27d8f0)}
+.flair-fire{filter:drop-shadow(0 0 4px #ff6a1a)}
+.flair-ice{filter:drop-shadow(0 0 4px #7cc4ff)}
+.flair-gold,.flair-crown{filter:drop-shadow(0 0 4px rgba(255,200,80,.8))}
+@keyframes flairHue{to{filter:hue-rotate(360deg)}}
+
+/* spin modal */
+.spin-modal{max-width:440px;text-align:center;padding:26px 22px 22px}
+.spin-modal h2{font-size:22px;margin-bottom:6px}
+.spin-x{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.07);border:1px solid var(--border);color:var(--text);font-size:14px}
+.spin-sub{font-size:13px;line-height:1.5;color:var(--muted);margin:0 auto 14px;max-width:340px}
+.spin-stage{position:relative;width:min(300px,78vw);aspect-ratio:1;margin:12px auto 10px;border-radius:50%;padding:8px;
+  background:conic-gradient(from 0deg,#f4f1ff,#b9b3d8,#f4f1ff,#b9b3d8,#f4f1ff);box-shadow:0 0 0 1px rgba(255,255,255,.2),0 18px 50px rgba(0,0,0,.45),0 0 60px rgba(124,108,255,.25)}
+.spin-wheel{width:100%;height:100%;border-radius:50%;overflow:hidden;will-change:transform}
+.spin-wheel svg{display:block;width:100%;height:100%}
+.spin-hub{position:absolute;left:50%;top:50%;width:14%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:clamp(14px,4vw,20px);background:linear-gradient(135deg,#8b78ff,#5a4bff);border:3px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.spin-ptr{position:absolute;left:50%;top:-6px;width:0;height:0;transform:translateX(-50%);z-index:3;
+  border-left:11px solid transparent;border-right:11px solid transparent;border-top:20px solid #8b78ff;filter:drop-shadow(0 3px 5px rgba(0,0,0,.5))}
+.spin-res{min-height:20px;margin:6px 0 12px;font-size:13px;color:var(--muted)}
+.spin-res.win{display:flex;align-items:center;gap:12px;text-align:left;padding:12px 14px;border-radius:14px;background:rgba(124,108,255,.14);border:1px solid rgba(124,108,255,.35);color:var(--text)}
+.spin-res .sr-e{font-size:34px;line-height:1}
+.spin-res.win div{display:flex;flex-direction:column;gap:2px}
+.spin-res.win b{font-size:15px}
+.spin-res.win span:not(.sr-e){font-size:12.5px;color:var(--muted)}
+.spin-res.bad{padding:10px 12px;border-radius:12px;background:rgba(255,93,115,.12);border:1px solid rgba(255,93,115,.4);color:#ffb3bd;text-align:left;word-break:break-word}
+.spin-go{width:100%;padding:13px 20px}
+.spin-go:disabled{opacity:.6;cursor:not-allowed;box-shadow:none}
+.odds-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:16px;text-align:left}
+.odd{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 10px;border-radius:10px;font-size:12px;background:rgba(255,255,255,.05);border:1px solid var(--border)}
+.odd b{color:var(--muted);font-weight:600}
+.odd.vip{border-color:rgba(255,196,86,.4);background:rgba(255,196,86,.08)}
+.spin-roles{margin-top:16px;text-align:left}
+.sr-head{display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:8px}
+.sr-head span{color:var(--muted);font-weight:500}
+.sr-grid{display:flex;flex-wrap:wrap;gap:6px}
+.sr-chip{font-size:11.5px;padding:5px 9px;border-radius:999px;border:1px dashed var(--border);color:var(--muted);opacity:.55}
+.sr-chip.on{opacity:1;border-style:solid;border-color:rgba(124,108,255,.5);background:rgba(124,108,255,.16);color:var(--text)}
+@media (max-width:420px){.odds-grid{grid-template-columns:1fr}}
+.cfx{position:fixed;inset:0;pointer-events:none;z-index:900;overflow:hidden}
+.cfx i{position:absolute;top:-16px;left:var(--x);width:var(--w);height:calc(var(--w)*1.6);border-radius:2px;opacity:0;animation:cfxFall var(--d) cubic-bezier(.3,.6,.4,1) forwards}
+@keyframes cfxFall{0%{opacity:1;transform:translate3d(0,0,0) rotate(0)}100%{opacity:0;transform:translate3d(var(--dx),105vh,0) rotate(var(--r))}}
+@media (prefers-reduced-motion:reduce){.spin-wheel{transition:none!important}.flair-rainbow{animation:none}}
+
 </style>
 </head>
 <body>
@@ -1143,7 +1184,6 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
     <div class="options">
       <button class="opt" id="goGlobal"><div class="ic">🌍</div><h3>Itsukis Chat</h3><p>Global chat and rooms</p></button>
       <button class="opt" id="goDMs"><div class="ic">💬</div><h3>Itsuki DMs</h3><p>Private chats and friends</p><span class="badge hidden" id="dmBadge"></span></button>
-      <button class="opt" id="goSpin"><div class="ic">🎡</div><h3>Daily Spin</h3><p>Free daily prizes &amp; VIP</p><span class="badge hidden" id="spinBadge">1</span></button>
       <button class="opt" id="goSettings"><div class="ic">⚙️</div><h3>Settings</h3><p>Style your chat and UI</p></button>
       <button class="opt" id="goGameHubs"><div class="ic">🎮</div><h3>Game Hubs</h3><p>Browse game sites</p></button>
     </div>
@@ -1193,7 +1233,16 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
           <button class="btn sec small" id="settingsBtn">⚙️ Settings</button>
         </div>
       </div>
+      <div class="vip-bar hidden" id="vipBar"></div>
       <div class="messages" id="messages"></div>
+      <div class="vip-lock hidden" id="vipLock">
+        <div class="vl-card">
+          <div class="vl-gem">💎</div>
+          <h2>VIP Lounge</h2>
+          <p>A members-only room. Win VIP from the Daily Spin — you get one free spin every day.</p>
+          <button class="btn vl-btn" id="vlSpin" type="button">Open Daily Spin</button>
+        </div>
+      </div>
       <div class="banned-banner hidden" id="bannedBanner">🚫 Your account has been banned. You can still view chat, but you can't send messages, change settings, or do anything else.</div>
       <div class="banned-banner hidden" id="mutedBanner" style="background:#3a3410;border-color:#6b5d1a;color:#ffe9a8"></div>
       <div class="banned-banner hidden" id="announceBanner" style="background:#132a3a;border-color:#1f4a63;color:#a8d4ff">📢 Only the owner can post here — you can view announcements but not send messages.</div>
@@ -1319,67 +1368,12 @@ const CFG={
   MIN_PW:6,
   GLOBAL_ROOM:'global',
   ANNOUNCEMENTS_ROOM:'announcements',
-  VIP_ROOM:'vip', // VIP-only chat — see canUseVipChat(); mirror this in your Firebase rules under messages/vip (read/write restricted to owners/$id===1, mods/$id===1, or vip/$id present)
+  VIP_ROOM:'vip',
   NUKE_MSGS:3,          // this many messages...
   NUKE_WINDOW_MS:1000,  // ...within this window triggers anti-nuke
   OWNER_IDS:[], // no longer used for permission checks — kept empty; owner status now comes live from owners/$id===1 in the database (see C.owners / isOwner()). Populate owners/$id there from your own backend, not here.
-  SEND_COOLDOWN_MS:1500,
-  SPIN_COOLDOWN_MS:24*60*60*1000 // one Daily Spin per account every 24h, enforced server-side too (see rules: lastSpin/$id)
+  SEND_COOLDOWN_MS:1500
 };
-/* ---------- Daily Spin: prize table ----------
-   Weights must sum to 100 (they're treated as percentages, and are shown to the
-   player directly in the wheel's legend — see openSpinWheel()). VIP is deliberately
-   the rarest tier: permanent VIP is a 1-in-100 pull, 1-day VIP is a 1-in-20 pull
-   ("rare, but not as rare"). Everything else is a lighter cosmetic flair that
-   lasts 24h, or a purely-cosmetic client-side effect, or nothing.
-   type: 'vip' -> writes vip/$id ({perm:true} or {until}); 'flair' -> writes
-   flair/$id ({preset,until}); 'confetti'/'none' -> no database write beyond
-   the lastSpin cooldown stamp itself. */
-const WHEEL_PRIZES=[
-  {id:'none1',   label:'No luck',           sub:'Try again tomorrow',   emoji:'😅', weight:28, type:'none',    color:'#4b4b63'},
-  {id:'confetti',label:'Confetti Blast',    sub:'A little celebration', emoji:'🎉', weight:12, type:'confetti',color:'#ff6ec7'},
-  {id:'gold',    label:'Golden Flair',      sub:'24 hours',             emoji:'🥇', weight:8,  type:'flair', preset:'gold',   color:'#d99a1b'},
-  {id:'rainbow', label:'Rainbow Flair',     sub:'24 hours',             emoji:'🌈', weight:7,  type:'flair', preset:'rainbow',color:'#4d9dff'},
-  {id:'crown',   label:'Crown Flair',       sub:'24 hours',             emoji:'👑', weight:7,  type:'flair', preset:'crown',  color:'#7c6cff'},
-  {id:'neon',    label:'Neon Flair',        sub:'24 hours',             emoji:'💡', weight:6,  type:'flair', preset:'neon',   color:'#22d3ee'},
-  {id:'lucky',   label:'Lucky Flair',       sub:'24 hours',             emoji:'🍀', weight:6,  type:'flair', preset:'lucky',  color:'#22a860'},
-  {id:'ice',     label:'Ice Flair',         sub:'24 hours',             emoji:'❄️', weight:6,  type:'flair', preset:'ice',    color:'#3b82f6'},
-  {id:'fire',    label:'Fire Flair',        sub:'24 hours',             emoji:'🔥', weight:6,  type:'flair', preset:'fire',   color:'#ff3d00'},
-  {id:'none2',   label:'So close!',         sub:'Spin again tomorrow',  emoji:'😬', weight:8,  type:'none',    color:'#38384c'},
-  {id:'vip1',    label:'VIP — 1 Day',       sub:'Rare! Unlocks the VIP chat',emoji:'🌟', weight:5,  type:'vip', perm:false, color:'#ffb84d'},
-  {id:'vipperm', label:'VIP — Forever',     sub:'Extremely rare! Unlocks the VIP chat',emoji:'💎', weight:1,  type:'vip', perm:true, color:'#ffd700'}
-];
-const FLAIR_PRESETS={
-  gold:   {emoji:'🥇',label:'Golden',  css:'background:linear-gradient(135deg,#ffe08a,#d99a1b);color:#3a2400'},
-  rainbow:{emoji:'🌈',label:'Rainbow', css:'background:linear-gradient(90deg,#ff5e5e,#ffd166,#06d6a0,#4d9dff,#a78bfa);color:#1a1a2e'},
-  crown:  {emoji:'👑',label:'Crown',   css:'background:linear-gradient(135deg,#c9a4ff,#7c6cff);color:#fff'},
-  neon:   {emoji:'💡',label:'Neon',    css:'background:linear-gradient(135deg,#7dffea,#22d3ee);color:#053b3a'},
-  lucky:  {emoji:'🍀',label:'Lucky',   css:'background:linear-gradient(135deg,#8ef58f,#22a860);color:#083019'},
-  ice:    {emoji:'❄️',label:'Ice',     css:'background:linear-gradient(135deg,#bfe9ff,#3b82f6);color:#062a4a'},
-  fire:   {emoji:'🔥',label:'Fire',    css:'background:linear-gradient(135deg,#ffb199,#ff3d00);color:#3a0a00'}
-};
-/* ---------- Daily Spin: permanent profile roles ----------
-   Every prize on the wheel (except the two "nothing" outcomes) also grants a
-   PERMANENT role badge the very first time it's won — separate from (and in
-   addition to) the existing temporary vip/flair effects above, which still
-   expire exactly as before and still gate things like VIP chat access. Roles
-   themselves never expire and are never removed by another spin.
-   Order here is rarest -> most common (ascending WHEEL_PRIZES weight), which
-   is also the order roles are shown in on a profile (rarest first).
-   perk: optional {prefix, desc} — prefix is prepended to the person's display
-   name everywhere it's shown (see namePrefixFor()/nameWithRole()), and desc is
-   a one-line description of the perk. Only the two VIP tiers and Golden Flair
-   carry a perk; every other role is a pure cosmetic badge with no perk. */
-const ROLE_DEFS=(()=>{
-  const PERKS={
-    vipperm:{prefix:'👑 Legend',desc:'Permanent name prefix, a gold "Legend" tag everywhere, and lifetime VIP chat access.'},
-    vip1:   {prefix:'🌟 Star',  desc:'Name prefix for good — VIP chat access itself still only lasts as long as your VIP timer.'},
-    gold:   {prefix:'🥇 Golden',desc:'Permanent name prefix marking you as one of the rare Golden Flair winners.'}
-  };
-  return [...WHEEL_PRIZES].filter(p=>p.type!=='none').sort((a,b)=>a.weight-b.weight)
-    .map(p=>({id:p.id,label:p.label,emoji:p.emoji,weight:p.weight,color:p.color,perk:PERKS[p.id]||null}));
-})();
-function roleDef(id){return ROLE_DEFS.find(r=>r.id===id)||null}
 /* ---------- Emoji picker data (message composer) ---------- */
 const QUICK_REACT=['👍','❤️','😂','😮','😢','🔥'];
 // Each entry is [emoji, shortcode-name]. Names power the Discord-style :name: search
@@ -1429,10 +1423,6 @@ let MODSET={filterEnabled:true,filterNames:true};
 function filterMsgEnabled(){return MODSET.filterEnabled!==false}       // owner-controlled, server-side default (affects what's stored/shown to everyone)
 function filterNamesOn(){return MODSET.filterNames!==false}
 function displayUsername(name){return(filterNamesOn()&&containsProfanity(name))?censorText(name):name}
-// Same as displayUsername(), but also prepends the person's rarest held perk-role
-// title (see ROLE_DEFS/nameWithRole()) — e.g. "👑 Legend Itsuki". Use this instead
-// of displayUsername() wherever a name is tied to a specific user id.
-function nameForUser(id,username){return nameWithRole(id,displayUsername(username))}
 function usernameAllowed(name){return!filterNamesOn()||!containsProfanity(name)}
 function checkMessageText_(text){return text}       // no longer pre-censors at send time — see displayMsgText()
 // Personal, per-viewer filter: ON by default, editable in Settings > Filter, client-side
@@ -1502,49 +1492,6 @@ function isOwner(id){return OWNERS_CACHE[Number(id)]===1}
 let MODS_CACHE={};
 let MODS_LOADED=false;
 function isMod(id){return MODS_CACHE[Number(id)]===1}
-// Who can see/use the VIP chat: owners, mods, and anyone currently holding VIP
-// (either tier — see isVIP() below, defined once VIP_CACHE exists).
-function canUseVipChat(id){return isOwner(id)||isMod(id)||isVIP(id)}
-// Live caches for vip/ and flair/, populated by a listener in DB.startListeners().
-// Unlike owners/mods these ARE writable by the client — see the Daily Spin feature
-// (DB.spin()) — but every write is still independently validated server-side by the
-// rules (rate-limited to one spin/24h, and the prize's shape/duration is checked
-// against a fixed allow-list), this is just the live view for rendering badges.
-let VIP_CACHE={};
-let FLAIR_CACHE={};
-// Live cache of roles/, populated by a listener in DB.startListeners(). roles/$id
-// is {[roleId]:true, ...} — a permanent, append-only set of every Daily Spin role
-// that account has ever won. Unlike VIP_CACHE/FLAIR_CACHE this never expires and
-// is never cleared by the client; the only writes are additive (see DB.spin()).
-let ROLES_CACHE={};
-// All role ids a user currently holds, ordered rarest -> most common (ROLE_DEFS
-// is already sorted that way). Used for the stacked profile badge list.
-function userRoles(id){
-  const r=ROLES_CACHE[Number(id)]||{};
-  return ROLE_DEFS.filter(d=>r[d.id]);
-}
-// The single highest-priority (rarest) perk-granting role this user holds, or
-// null. Only vipperm/vip1/gold define a perk — see ROLE_DEFS.
-function topPerkRole(id){
-  return userRoles(id).find(d=>d.perk)||null;
-}
-// Prepends the rarest held perk-role's title to a display name, e.g. "👑 Legend Itsuki".
-// Falls back to the plain name when the user holds no perk role.
-function nameWithRole(id,name){
-  const r=topPerkRole(id);
-  return r?r.perk.prefix+' '+name:name;
-}
-function vipEntry(id){return VIP_CACHE[Number(id)]||null}
-function isVIP(id){
-  const v=vipEntry(id);if(!v)return false;
-  if(v.perm===true)return true;
-  return typeof v.until==='number'&&v.until>Date.now()+SKEW;
-}
-function flairPreset(id){
-  const f=FLAIR_CACHE[Number(id)];
-  if(!f||typeof f.until!=='number'||f.until<=Date.now()+SKEW)return null;
-  return FLAIR_PRESETS[f.preset]?f.preset:null;
-}
 // Live cache of appVersion/, populated by a listener started in DB.startListeners().
 // appVersion/current is the version label an owner has pinned as canonical (usually
 // the build-version they're currently running, right after deploying it) and
@@ -1653,7 +1600,7 @@ function hideKickOverlay(){
 
 const DB=(()=>{
   // live cache
-  const C={users:{},usernames:{},rooms:{},roomMembers:{},dmMembers:{},friends:{},friendReqIn:{},friendReqOut:{},lastRead:{},messages:{},myRoomIds:[],online:0,onlineIds:[],presenceIds:[],banned:{},muted:{},blocked:{},blockedBy:{},reactions:{},lastSpin:{}};
+  const C={users:{},usernames:{},rooms:{},roomMembers:{},dmMembers:{},friends:{},friendReqIn:{},friendReqOut:{},lastRead:{},messages:{},myRoomIds:[],online:0,onlineIds:[],presenceIds:[],banned:{},muted:{},blocked:{},blockedBy:{},reactions:{},vip:{},flair:{},roles:{},lastSpin:0};
   let myId=null,myUid=null,ready=false;
   const listeners=new Set();
   const unsubs=[];         // base listeners
@@ -1785,14 +1732,14 @@ const DB=(()=>{
       checkBanLock(myId,C.banned);
     });
     listen('muted',v=>{C.muted=v||{};if(typeof updateMuteLock==='function')updateMuteLock();});
-    listen('owners',v=>{OWNERS_CACHE=v||{};OWNERS_LOADED=true;checkBanLock(myId,C.banned);checkForcedVersion();});
+    listen('owners',v=>{OWNERS_CACHE=v||{};OWNERS_LOADED=true;checkBanLock(myId,C.banned);checkForcedVersion();if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
     listen('mods',v=>{MODS_CACHE=v||{};MODS_LOADED=true;});
-    listen('vip',v=>{VIP_CACHE=v||{};});
-    listen('flair',v=>{FLAIR_CACHE=v||{};});
-    listen('roles',v=>{ROLES_CACHE=v||{};});
-    listen('lastSpin/'+myId,v=>{C.lastSpin[myId]=v||0;});
     listen('appVersion',v=>{APP_VERSION_CACHE=v||null;APP_VERSION_LOADED=true;checkForcedVersion();});
     listen('dmMembers',v=>C.dmMembers=v||{});
+    listen('vip',v=>{C.vip=v||{};if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
+    listen('flair',v=>{C.flair=v||{}});
+    listen('roles',v=>{C.roles=v||{};if(typeof refreshSpinUI==='function'){try{refreshSpinUI()}catch(_){}}});
+    listen('lastSpin/'+myId,v=>{C.lastSpin=Number(v)||0;if(typeof refreshSpinUI==='function'){try{refreshSpinUI()}catch(_){}}});
     listen('friendRequests/'+myId,v=>C.friendReqIn=v||{});
     listen('lastRead/'+myId,v=>C.lastRead=v||{});
     // Rooms: rather than trying to read the whole 'rooms'/'roomMembers' trees (which
@@ -1860,6 +1807,8 @@ const DB=(()=>{
   }
   // The message listener follows whichever chat is open
   function watchMessages(key){
+    // VIP Lounge: don't even attach the listener unless I qualify (the rules would just deny it).
+    if(key===CFG.VIP_ROOM&&!DB.vipInfo(myId))key=null;
     if(key===msgKey)return;
     if(msgUnsub){msgUnsub();msgUnsub=null}
     if(reactUnsub){try{reactUnsub()}catch(_){}reactUnsub=null}
@@ -2003,6 +1952,14 @@ const DB=(()=>{
     settle:async()=>{await Promise.race([authReady,sleep(12000)]);await sessionDone;},
     onChange:f=>{listeners.add(f);return()=>listeners.delete(f)},
     dmKey,watchMessages,
+    // VIP status: owners always count; otherwise a permanent flag or an unexpired 'until'.
+    vipInfo:(id)=>{id=Number(id);if(isOwner(id))return{kind:'owner'};const v=C.vip[id];if(!v)return null;
+      if(v.perm===true)return{kind:'perm'};
+      if(typeof v.until==='number'&&v.until>Date.now()+SKEW)return{kind:'day',until:v.until};
+      return null},
+    flairOf:(id)=>{const f=C.flair[Number(id)];return(f&&typeof f.until==='number'&&f.until>Date.now()+SKEW)?f.preset:null},
+    rolesOf:(id)=>C.roles[Number(id)]||{},
+    lastSpinAt:()=>C.lastSpin||0,
     reactionsFor,toggleReaction,
     isLoggedIn:()=>!!myUid,
     // Only true when we CONFIRMED there is no profile. A failed/slow read is never treated as "no username".
@@ -2422,7 +2379,7 @@ const DB=(()=>{
     // account, which already does a full cross-path cascade delete on ban.
     async searchUserMessages(userId){
       userId=Number(userId);
-      const keys=['global','announcements','vip',...C.myRoomIds.filter(id=>C.rooms[id]),
+      const keys=['global','announcements',...C.myRoomIds.filter(id=>C.rooms[id]),
         ...(C.friends[myId]||[]).map(f=>dmKey(myId,f))];
       const results=[];
       await Promise.all(keys.map(async key=>{
@@ -2576,97 +2533,6 @@ const DB=(()=>{
       const v=C.muted&&C.muted[id];
       return typeof v==='number'?Math.max(0,v-(Date.now()+SKEW)):0;
     },
-    /* --- VIP / flair (Daily Spin rewards) ---
-       vip/$id is either {perm:true} (permanent) or {until:<ms>} (expires). flair/$id
-       is always {preset,until}. Both are only ever granted through DB.spin() below
-       (or by an owner, who can also grant/revoke directly) — see the matching rules
-       for vip/ and flair/ for the actual server-side enforcement. */
-    isVIP(id){return isVIP(id)},
-    vipInfo(id){
-      const v=vipEntry(id);
-      if(!v)return null;
-      if(v.perm===true)return{perm:true,until:null};
-      if(typeof v.until==='number'&&v.until>Date.now()+SKEW)return{perm:false,until:v.until};
-      return null;
-    },
-    getFlair(id){
-      const p=flairPreset(id);
-      return p?{preset:p,...FLAIR_PRESETS[p]}:null;
-    },
-    /* --- Permanent Daily Spin roles (see ROLE_DEFS) ---
-       Roles are additive-only and never expire; the client never removes one
-       (rules: roles/$id/$roleId can only ever be set to true, never deleted,
-       except by an owner). */
-    getRoles(id){return userRoles(id)},
-    topPerkRole(id){return topPerkRole(id)},
-    nameWithRole(id,name){return nameWithRole(id,name)},
-    async unsetVIP(id){
-      if(!isOwner(myId))throw new Error('Only owners can revoke VIP.');
-      await remove(R('vip/'+id)).catch(()=>{});
-      delete VIP_CACHE[id]; // update local cache immediately; don't wait on the listener round-trip
-    },
-    async grantVIP(id,perm){
-      if(!isOwner(myId))throw new Error('Only owners can grant VIP.');
-      const val=perm?{perm:true}:{until:Date.now()+SKEW+CFG.SPIN_COOLDOWN_MS};
-      const upd={};
-      upd['vip/'+id]=val;
-      // Owner-granted VIP also permanently unlocks the matching profile role/name
-      // prefix, exactly like winning it from the wheel would — see ROLE_DEFS.
-      const roleId=perm?'vipperm':'vip1';
-      if(!(ROLES_CACHE[id]&&ROLES_CACHE[id][roleId]))upd['roles/'+id+'/'+roleId]=true;
-      await update(ref(rtdb),upd);
-      VIP_CACHE[id]=val; // update local cache immediately; don't wait on the listener round-trip
-      ROLES_CACHE[id]=ROLES_CACHE[id]||{};ROLES_CACHE[id][roleId]=true;
-    },
-    /* --- Daily Spin --- */
-    // ms remaining before this account can spin again; 0 (or less) means it can spin now.
-    spinCooldownMs(){
-      const last=C.lastSpin[myId];
-      if(typeof last!=='number')return 0;
-      return Math.max(0,(last+CFG.SPIN_COOLDOWN_MS)-(Date.now()+SKEW));
-    },
-    canSpin(){return DB.spinCooldownMs()<=0},
-    // Picks a weighted prize from WHEEL_PRIZES and writes it, atomically alongside the
-    // lastSpin/$id cooldown stamp so both succeed or fail together. NOTE: the *rate*
-    // (once per 24h) and the *shape* of what can be written (only the fixed VIP/flair
-    // durations defined in the rules) are enforced server-side — but nothing server-side
-    // can verify the spin's outcome was genuinely random, since this app has no backend
-    // function to roll the dice itself. A modified client could in principle always claim
-    // the rare VIP prize. If that ever becomes a real problem, moving the prize pick into
-    // a Cloud Function (or similar trusted server code) is the fix.
-    async spin(){
-      if(DB.isBanned(myId))throw new Error('Your account has been banned.');
-      const remaining=DB.spinCooldownMs();
-      if(remaining>0)throw new Error('Come back in '+fmtDuration(remaining)+' for your next spin.');
-      let r=Math.random()*100,prize=WHEEL_PRIZES[WHEEL_PRIZES.length-1];
-      for(const p of WHEEL_PRIZES){if(r<p.weight){prize=p;break}r-=p.weight}
-      const now=Date.now()+SKEW;
-      const upd={};
-      upd['lastSpin/'+myId]=now;
-      let vipVal=null,flairVal=null,newRole=false;
-      if(prize.type==='vip'){
-        vipVal=prize.perm?{perm:true}:{until:now+CFG.SPIN_COOLDOWN_MS};
-        upd['vip/'+myId]=vipVal;
-      }else if(prize.type==='flair'){
-        flairVal={preset:prize.preset,until:now+CFG.SPIN_COOLDOWN_MS};
-        upd['flair/'+myId]=flairVal;
-      }
-      // Every non-"none" prize also permanently unlocks its matching profile role,
-      // the first time it's won — this write is separate from (and additive to)
-      // the temporary vip/flair writes above, and is never overwritten by a later
-      // spin of the same prize (see roles/ rules: create-only, never deleted).
-      if(roleDef(prize.id)&&!(ROLES_CACHE[myId]&&ROLES_CACHE[myId][prize.id])){
-        upd['roles/'+myId+'/'+prize.id]=true;
-        newRole=true;
-      }
-      await update(ref(rtdb),upd);
-      // update local state immediately; don't wait on the listener round-trip
-      C.lastSpin[myId]=now;
-      if(vipVal)VIP_CACHE[myId]=vipVal;
-      if(flairVal)FLAIR_CACHE[myId]=flairVal;
-      if(newRole){ROLES_CACHE[myId]=ROLES_CACHE[myId]||{};ROLES_CACHE[myId][prize.id]=true;}
-      return{...prize,isNewRole:newRole};
-    },
     async setFilterSettings({filterEnabled,filterNames}){
       if(!isOwner(myId))throw new Error('Only owners can change filter settings.');
       const upd={};
@@ -2701,6 +2567,7 @@ const DB=(()=>{
       await update(ref(rtdb),upd);
     },
     async sendMessage(key,{senderId,text,images,pings,replyTo}){
+      if(key===CFG.VIP_ROOM&&!DB.vipInfo(senderId))throw new Error('VIP Chat is for VIP members. Win VIP from the Daily Spin.');
       if(DB.isBanned(senderId))throw new Error('Your account has been banned.');
       if(DB.isMuted(senderId)){
         const secs=Math.ceil(DB.muteRemainingMs(senderId)/1000);
@@ -2939,13 +2806,6 @@ async function copyText(t){
     const ok=document.execCommand('copy');ta.remove();return ok;
   }catch(_){return false}
 }
-function fmtDuration(ms){
-  if(ms<=0)return'a moment';
-  const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000);
-  if(h>0)return h+'h '+m+'m';
-  const s=Math.max(1,Math.floor((ms%60000)/1000));
-  return m>0?m+'m '+s+'s':s+'s';
-}
 function toast(msg,type=''){
   const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;
   $('#toasts').appendChild(t);setTimeout(()=>t.remove(),4000);
@@ -2953,7 +2813,7 @@ function toast(msg,type=''){
 
 // Readable ping toast: who pinged you, where, and a preview of the message. Click it to open their profile.
 function pingToast(m,key,sender){
-  const name=sender&&!sender.deleted?nameForUser(m.senderId,sender.username):'Someone';
+  const name=sender&&!sender.deleted?displayUsername(sender.username):'Someone';
   const where=key===CFG.GLOBAL_ROOM?'in Global chat':(String(key).startsWith('dm_')?'in a DM':'in a room');
   const raw=(m.text||'').replace(/\s+/g,' ').trim();
   const prev=raw?(raw.length>90?raw.slice(0,90)+'…':raw):((m.images&&m.images.length)?'[sent an image]':'');
@@ -3001,7 +2861,7 @@ function checkPingNotifications(){
       if(!isDM&&!pinged)return;                 // only pings & DMs — never every ordinary message
       if(_viewingRoom(key))return;               // already looking right at it — the in-app toast/sound covers this
       const sender=DB.getUser(m.senderId);
-      const name=sender&&!sender.deleted?nameForUser(m.senderId,sender.username):'Someone';
+      const name=sender&&!sender.deleted?displayUsername(sender.username):'Someone';
       try{
         const n=new Notification(name,{
           icon:'https://aniitsukicoded.github.io/backups/icon.png',
@@ -3904,7 +3764,6 @@ function refreshBadge(){
   if(!ME)return;const n=DB.unreadDMs(ME.id);
   const b=$('#dmBadge');b.classList.toggle('hidden',!n);b.textContent=n;
   $('#onlineCount').textContent=DB.onlineCount();
-  const sb=$('#spinBadge');if(sb)sb.classList.toggle('hidden',!DB.canSpin());
 }
 $('#homeOnlinePill').onclick=()=>openOnlineModal('Online now',DB.onlineIds());
 
@@ -4088,7 +3947,6 @@ function modalPickUsername(){
 /* ---------- Home ---------- */
 $('#goGlobal').onclick=()=>modalGlobalChoice();
 $('#goDMs').onclick=()=>openChat('dms');
-$('#goSpin').onclick=()=>openSpinWheel();
 $('#goSettings').onclick=()=>openSettings(false);
 $('#goGameHubs').onclick=()=>modalGameHubs();
 $('#homeChip').onclick=()=>openAccount();
@@ -4113,10 +3971,7 @@ function openChat(mode,section){
     }else if(section==='announcements'){
       view.roomKey=CFG.ANNOUNCEMENTS_ROOM;
     }else if(section==='vip'){
-      // Defense in depth: the tile is already hidden from anyone who doesn't
-      // qualify, but re-check here too in case this is ever reached another way.
-      if(!canUseVipChat(ME.id)){toast('VIP chat is for owners, mods, and VIP only.','bad');view.roomKey=CFG.GLOBAL_ROOM}
-      else view.roomKey=CFG.VIP_ROOM;
+      view.roomKey=CFG.VIP_ROOM;
     }else{
       view.roomKey=CFG.GLOBAL_ROOM;
     }
@@ -4132,13 +3987,21 @@ function openChat(mode,section){
 }
 // Home screen "Itsukis Chat" tile: ask Global Chat vs Rooms instead of assuming Global Chat.
 function modalGlobalChoice(){
-  // VIP Chat tile only renders at all for owners/mods/VIP — everyone else never
-  // sees it exists (canUseVipChat() below; openChat()/send() also re-check this
-  // server... er, client-side, so treat it as UX-only until your Firebase rules
-  // for messages/vip match — see the CFG.VIP_ROOM comment).
-  const showVip=canUseVipChat(ME.id);
   $('#modalRoot').innerHTML=`<div class="modal-bg gc-overlay" id="gcBg"><div class="modal gc-modal" style="max-width:760px;text-align:center">
     <div class="gc-grid">
+    ${(()=>{
+      const vi=DB.vipInfo(ME.id);
+      const state=!vi?'🔒 Locked':(vi.kind==='perm'?'VIP forever':(vi.kind==='owner'?'Owner access':'Ends in '+fmtDur(vi.until-(Date.now()+SKEW))));
+      const sub=vi?'Your members-only lounge is open.':'Members only. Win VIP from the Daily Spin to get in.';
+      const sparks=Array.from({length:14},(_,i)=>`<i style="--x:${(i*37+11)%96}%;--y:${(i*53+7)%88}%;--s:${3+(i%3)*2}px;--d:${(2.4+(i%5)*.6).toFixed(1)}s;--t:${((i*0.37)%3).toFixed(2)}s"></i>`).join('');
+      return `<div class="vip-hero${vi?' open':' locked'}">
+      <button class="gc-card gc-vip" id="gcVip" type="button">
+        <span class="vip-ring"></span><span class="vip-sheen"></span><span class="vip-sparks" aria-hidden="true">${sparks}</span>
+        <span class="vip-gem">💎</span>
+        <span class="vip-copy"><span class="vip-title">VIP Chat</span><span class="vip-sub">${sub}</span><span class="vip-state">${state}</span></span>
+      </button>
+      <button class="vip-spin" id="gcSpin" type="button">🎡 Daily Spin</button>
+    </div>`})()}
       <button class="gc-card gc-global" id="gcGlobal">
         <div class="gc-ic">🌐</div>
         <h3>Global Chat</h3>
@@ -4151,10 +4014,6 @@ function modalGlobalChoice(){
         <div class="gc-ic">📢</div>
         <h3>Announcements</h3>
       </button>
-      ${showVip?`<button class="gc-card gc-vip" id="gcVip">
-        <div class="gc-ic">💎</div>
-        <h3>VIP Chat</h3>
-      </button>`:''}
     </div>
   </div></div>`;
   const close=(after)=>{const bg=$('#gcBg');if(!bg){if(after)after();return}bg.classList.add('closing');setTimeout(()=>{if($('#modalRoot'))$('#modalRoot').innerHTML='';if(after)after()},240)};
@@ -4162,8 +4021,209 @@ function modalGlobalChoice(){
   $('#gcGlobal').onclick=()=>close(()=>openChat('global','global'));
   $('#gcRooms').onclick=()=>close(()=>openChat('global','rooms'));
   $('#gcAnnouncements').onclick=()=>close(()=>openChat('global','announcements'));
-  if(showVip)$('#gcVip').onclick=()=>close(()=>openChat('global','vip'));
+  $('#gcVip').onclick=()=>close(()=>openChat('global','vip'));
+  $('#gcSpin').onclick=()=>close(()=>openSpin());
 }
+/* ---------- VIP Lounge + Daily Spin ---------- */
+const VIP_FLAIRS={
+  gold:{e:'🥇',n:'Golden Flair'},rainbow:{e:'🌈',n:'Rainbow Flair'},crown:{e:'👑',n:'Crown Flair'},
+  neon:{e:'💡',n:'Neon Flair'},lucky:{e:'🍀',n:'Lucky Flair'},ice:{e:'❄️',n:'Ice Flair'},fire:{e:'🔥',n:'Fire Flair'}
+};
+// Order matters: this is the clockwise order of the wheel slices, starting at the top.
+const SPIN_PRIZES=[
+  {id:'none',    name:'No luck',        e:'😅',pct:28,color:'#4a4d63',msg:'No prize this time. Your next free spin unlocks in 24 hours.'},
+  {id:'confetti',name:'Confetti Blast', e:'🎉',pct:12,color:'#ff5fc0',role:'confetti',msg:'Confetti Blast! The role is now saved to your profile.'},
+  {id:'gold',    name:'Golden Flair',   e:'🥇',pct:8, color:'#e6a91f',flair:'gold',role:'gold',msg:'Golden Flair now shows next to your name for 24 hours.'},
+  {id:'rainbow', name:'Rainbow Flair',  e:'🌈',pct:7, color:'#5aa9ff',flair:'rainbow',role:'rainbow',msg:'Rainbow Flair now shows next to your name for 24 hours.'},
+  {id:'crown',   name:'Crown Flair',    e:'👑',pct:7, color:'#8b78ff',flair:'crown',role:'crown',msg:'Crown Flair now shows next to your name for 24 hours.'},
+  {id:'neon',    name:'Neon Flair',     e:'💡',pct:6, color:'#27d8f0',flair:'neon',role:'neon',msg:'Neon Flair now shows next to your name for 24 hours.'},
+  {id:'lucky',   name:'Lucky Flair',    e:'🍀',pct:6, color:'#22a95e',flair:'lucky',role:'lucky',msg:'Lucky Flair now shows next to your name for 24 hours.'},
+  {id:'ice',     name:'Ice Flair',      e:'❄️',pct:6, color:'#3f86f5',flair:'ice',role:'ice',msg:'Ice Flair now shows next to your name for 24 hours.'},
+  {id:'fire',    name:'Fire Flair',     e:'🔥',pct:6, color:'#ff4a0f',flair:'fire',role:'fire',msg:'Fire Flair now shows next to your name for 24 hours.'},
+  {id:'close',   name:'So close!',      e:'😬',pct:8, color:'#3a3c4d',msg:'So close! Try again tomorrow.'},
+  {id:'vip1',    name:'VIP — 1 Day',    e:'🌞',pct:5, color:'#ffbf4d',role:'vip1',msg:'VIP for 24 hours. The VIP Lounge is open to you.'},
+  {id:'vipperm', name:'VIP — Forever',  e:'💎',pct:1, color:'#ffe11a',role:'vipperm',msg:'VIP forever. The VIP Lounge is yours for good.'}
+];
+const ROLE_LABELS={
+  confetti:'🎉 Confetti Blast',gold:'🥇 Golden Flair',rainbow:'🌈 Rainbow Flair',crown:'👑 Crown Flair',neon:'💡 Neon Flair',
+  lucky:'🍀 Lucky Flair',ice:'❄️ Ice Flair',fire:'🔥 Fire Flair',vip1:'🌞 VIP — 1 Day',vipperm:'💎 VIP — Forever'
+};
+function vipBadgeHTML(id){
+  let h='';
+  try{
+    const v=DB.vipInfo(id);
+    if(v&&v.kind!=='owner')h+='<span class="vip-badge" title="VIP">💎</span>';
+    const f=DB.flairOf(id);
+    if(f&&VIP_FLAIRS[f])h+='<span class="flair-badge flair-'+f+'" title="'+VIP_FLAIRS[f].n+'">'+VIP_FLAIRS[f].e+'</span>';
+  }catch(_){}
+  return h?' '+h:'';
+}
+function fmtDur(ms){
+  ms=Math.max(0,ms);const h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),s=Math.floor(ms%60000/1000);
+  if(h>0)return h+'h '+String(m).padStart(2,'0')+'m';
+  if(m>0)return m+'m '+String(s).padStart(2,'0')+'s';
+  return s+'s';
+}
+function renderVipBar(){
+  const bar=$('#vipBar');if(!bar||!ME)return;
+  const inVip=view.roomKey===CFG.VIP_ROOM;
+  const info=inVip?DB.vipInfo(ME.id):null;
+  bar.classList.toggle('hidden',!(inVip&&info));
+  if(!inVip||!info)return;
+  const status=info.kind==='perm'?'VIP forever':(info.kind==='owner'?'Owner access':'VIP ends in '+fmtDur(info.until-(Date.now()+SKEW)));
+  const html='<span class="vb-gem">💎</span><div class="vb-txt"><b>VIP Lounge</b><span>Members-only chat</span></div><span class="vb-pill">'+status+'</span>';
+  if(bar.dataset.h!==html){bar.dataset.h=html;bar.innerHTML=html}
+}
+let _vipWasLocked=null;
+function applyVipLock(){
+  if(!ME)return;
+  const inVip=view.roomKey===CFG.VIP_ROOM;
+  const locked=inVip&&!DB.vipInfo(ME.id);
+  const pg=$('#chatPage');if(pg)pg.classList.toggle('vip-mode',inVip);
+  const vl=$('#vipLock'),mb=$('#messages'),comp=document.querySelector('.composer');
+  if(vl)vl.classList.toggle('hidden',!locked);
+  if(mb)mb.classList.toggle('hidden',locked);
+  if(comp&&locked)comp.classList.add('hidden');
+  _vipWasLocked=inVip?locked:null;
+  renderVipBar();
+}
+// Called whenever VIP data or owner data changes: re-attach (or drop) the VIP message
+// listener and redraw only if this room's locked/unlocked state actually flipped.
+function refreshVipUI(){
+  if(!ME||typeof view==='undefined')return;
+  if(view.roomKey===CFG.VIP_ROOM){
+    const locked=!DB.vipInfo(ME.id);
+    if(_vipWasLocked!==locked){DB.watchMessages(view.roomKey);renderChat()}
+    else renderVipBar();
+  }
+  refreshSpinUI();
+}
+$('#vlSpin').onclick=()=>openSpin();
+// One light timer: countdown in the VIP bar, expiry of a 1-day VIP, and the spin cooldown.
+setInterval(()=>{
+  try{
+    if(!ME)return;
+    if(view.roomKey===CFG.VIP_ROOM)refreshVipUI();
+    if($('#spinBtn'))setSpinBtn();
+  }catch(_){}
+},1000);
+
+/* ----- Daily Spin ----- */
+let _spinBusy=false,_wheelRot=0;
+function rollPrize(){
+  const buf=new Uint32Array(1);crypto.getRandomValues(buf);
+  let r=(buf[0]/4294967296)*100,acc=0;
+  for(const p of SPIN_PRIZES){acc+=p.pct;if(r<acc)return p}
+  return SPIN_PRIZES[0];
+}
+function wheelSVG(){
+  const R0=150,C0=160,pt=(deg,r)=>{const a=deg*Math.PI/180;return[(C0+r*Math.sin(a)).toFixed(2),(C0-r*Math.cos(a)).toFixed(2)]};
+  let out='<svg viewBox="0 0 320 320" aria-hidden="true">';
+  SPIN_PRIZES.forEach((p,i)=>{
+    const a=pt(i*30,R0),b=pt((i+1)*30,R0),m=pt(i*30+15,102);
+    out+='<path d="M160 160 L'+a[0]+' '+a[1]+' A150 150 0 0 1 '+b[0]+' '+b[1]+' Z" fill="'+p.color+'" stroke="rgba(255,255,255,.14)" stroke-width="1"/>';
+    out+='<text transform="translate('+m[0]+' '+m[1]+') rotate('+(i*30+15)+')" text-anchor="middle" dominant-baseline="central" font-size="27">'+p.e+'</text>';
+  });
+  return out+'</svg>';
+}
+function spinReady(){
+  const now=Date.now()+SKEW,last=DB.lastSpinAt();
+  return(!last||last+86400000<=now)?0:(last+86400000-now);
+}
+function setSpinBtn(){
+  const b=$('#spinBtn');if(!b)return;
+  const wait=spinReady();
+  if(_spinBusy){b.disabled=true;b.textContent='Spinning…';return}
+  if(wait>0){b.disabled=true;b.textContent='Next free spin in '+fmtDur(wait);return}
+  b.disabled=false;b.textContent='Spin the wheel';
+}
+function refreshSpinUI(){
+  if(!$('#spinBtn'))return;
+  setSpinBtn();
+  const box=$('#spinRoles');if(box)box.innerHTML=spinRolesHTML();
+}
+function spinRolesHTML(){
+  const mine=DB.rolesOf(ME.id);
+  const keys=Object.keys(ROLE_LABELS);
+  const have=keys.filter(k=>mine[k]===true).length;
+  return '<div class="sr-head">Your roles <span>'+have+' of '+keys.length+'</span></div><div class="sr-grid">'+
+    keys.map(k=>'<span class="sr-chip'+(mine[k]===true?' on':'')+'">'+ROLE_LABELS[k]+'</span>').join('')+'</div>';
+}
+function openSpin(){
+  if(!ME)return;
+  $('#modalRoot').innerHTML=`<div class="modal-bg" id="spinBg"><div class="modal spin-modal">
+    <button class="spin-x" id="spinX" type="button" aria-label="Close">✕</button>
+    <h2>Daily Spin</h2>
+    <p class="spin-sub">One free spin every day. Flairs show next to your name for 24 hours, VIP opens the VIP Lounge, and every prize you win is saved to your profile as a role.</p>
+    <div class="spin-stage">
+      <div class="spin-ptr"></div>
+      <div class="spin-wheel" id="spinWheel" style="transform:rotate(${_wheelRot}deg)">${wheelSVG()}</div>
+      <div class="spin-hub">🎯</div>
+    </div>
+    <div class="spin-res" id="spinRes" aria-live="polite"></div>
+    <button class="btn spin-go" id="spinBtn" type="button"></button>
+    <div class="odds-grid">${SPIN_PRIZES.map(p=>'<div class="odd'+(p.id==='vip1'||p.id==='vipperm'?' vip':'')+'"><span>'+p.e+' '+p.name+'</span><b>'+p.pct+'%</b></div>').join('')}</div>
+    <div class="spin-roles" id="spinRoles">${spinRolesHTML()}</div>
+  </div></div>`;
+  const close=()=>{const bg=$('#spinBg');if(!bg)return;bg.classList.add('closing');setTimeout(()=>{if($('#spinBg'))$('#modalRoot').innerHTML=''},220)};
+  $('#spinBg').onclick=e=>{if(e.target.id==='spinBg')close()};
+  $('#spinX').onclick=close;
+  $('#spinBtn').onclick=doSpin;
+  setSpinBtn();
+}
+function burstConfetti(n){
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const host=document.createElement('div');host.className='cfx';
+  const cols=['#ff5fc0','#ffd84d','#5aa9ff','#4cd6a0','#ff7a45','#a78bfa'];
+  for(let i=0;i<n;i++){
+    const p=document.createElement('i');
+    p.style.cssText='--x:'+(Math.random()*100)+'vw;--dx:'+((Math.random()-.5)*160)+'px;--r:'+(Math.random()*720-360)+'deg;--d:'+(1.6+Math.random()*1.6)+'s;--w:'+(6+Math.random()*6)+'px;background:'+cols[i%cols.length]+';animation-delay:'+(Math.random()*.35)+'s';
+    host.appendChild(p);
+  }
+  document.body.appendChild(host);setTimeout(()=>host.remove(),3800);
+}
+async function doSpin(){
+  if(_spinBusy||!ME)return;
+  const res=$('#spinRes');
+  if(spinReady()>0){setSpinBtn();return}
+  _spinBusy=true;setSpinBtn();res.className='spin-res';res.textContent='';
+  const prize=rollPrize(),id=ME.id;
+  const serverNow=Math.round(Date.now()+SKEW);
+  const up={};
+  // One atomic update: the spin marker and the prize either all save or none do.
+  up['lastSpin/'+id]=serverTimestamp();
+  if(prize.flair)up['flair/'+id]={preset:prize.flair,until:serverNow+86400000};
+  if(prize.id==='vip1'){
+    const cur=DB.vipInfo(id);
+    if(!(cur&&cur.kind==='perm'))up['vip/'+id]={until:serverNow+86400000};
+  }
+  if(prize.id==='vipperm')up['vip/'+id]={perm:true};
+  if(prize.role)up['roles/'+id+'/'+prize.role]=true;
+  try{
+    await update(R(''),up);
+  }catch(e){
+    console.error('spin write failed',e,Object.keys(up));
+    _spinBusy=false;setSpinBtn();
+    res.className='spin-res bad';
+    res.textContent='The spin could not be saved ('+(e.code||e.message)+'). Blocked paths: '+Object.keys(up).join(', ')+'.';
+    return;
+  }
+  const idx=SPIN_PRIZES.indexOf(prize);
+  const jitter=(Math.random()-.5)*16;
+  const mid=idx*30+15+jitter;
+  const d=(((-(mid+_wheelRot))%360)+360)%360;
+  _wheelRot=_wheelRot+360*6+d;
+  const wheel=$('#spinWheel');
+  if(wheel){wheel.style.transition='transform 5.2s cubic-bezier(.12,.72,.14,1)';wheel.style.transform='rotate('+_wheelRot+'deg)'}
+  setTimeout(()=>{
+    _spinBusy=false;setSpinBtn();refreshSpinUI();
+    const r2=$('#spinRes');
+    if(r2){r2.className='spin-res win';r2.innerHTML='<span class="sr-e">'+prize.e+'</span><div><b>'+prize.name+'</b><span>'+prize.msg+'</span></div>'}
+    if(prize.id!=='none'&&prize.id!=='close')burstConfetti(prize.id==='vipperm'?140:(prize.id==='confetti'?110:60));
+    if(prize.id==='vip1'||prize.id==='vipperm')toast('VIP unlocked. Open VIP Chat from the chat menu.');
+  },5400);
+}
+
 $('#menuBtn').onclick=()=>$('#sidebar').classList.toggle('open');
 
 /* ---------- Game Hubs ---------- */
@@ -4282,21 +4342,15 @@ function updateMuteLock(){
   // composer stays locked, same idea as a mute but scoped to this one channel.
   const inAnnouncements=view.roomKey===CFG.ANNOUNCEMENTS_ROOM;
   const announceLocked=inAnnouncements&&!isOwner(ME.id);
-  // VIP chat: if VIP lapses (or this was reached some other way) while it's open,
-  // lock the composer instead of silently letting a now-ineligible account keep
-  // posting — same defense-in-depth idea as the announcements lock above.
-  const inVip=view.roomKey===CFG.VIP_ROOM;
-  const vipLocked=inVip&&!canUseVipChat(ME.id);
   if(mutedBanner)mutedBanner.classList.toggle('hidden',!muted);
   if(announceBanner)announceBanner.classList.toggle('hidden',!announceLocked);
-  const locked=muted||announceLocked||vipLocked;
+  const locked=muted||announceLocked||(view.roomKey===CFG.VIP_ROOM&&!DB.vipInfo(ME.id));
   [input,sendBtn,attachBtn,emojiBtn].forEach(el=>{if(el)el.disabled=locked});
-  if(input)input.placeholder=muted?'You are muted — you can\'t send messages right now':(announceLocked?'Only the owner can post announcements':(vipLocked?'VIP chat is for owners, mods, and VIP only':'Message... use @ to ping'));
+  if(input)input.placeholder=muted?'You are muted — you can\'t send messages right now':(announceLocked?'Only the owner can post announcements':'Message... use @ to ping');
   // Announcements have no message length limit (owner-only, so no spam risk) —
   // every other channel keeps the normal 2000-char cap.
   if(input){if(inAnnouncements)input.removeAttribute('maxlength');else input.maxLength=CFG.MAX_MSG}
   if(ccMax)ccMax.textContent=inAnnouncements?'':'/'+CFG.MAX_MSG;
-  if(vipLocked){view.roomKey=null;DB.watchMessages(null);goHome();toast('Your VIP access has ended.','bad');return}
   if(!muted)return;
   const remaining=DB.muteRemainingMs(ME.id);
   if(mutedBanner)mutedBanner.textContent='🔇 You are muted for '+fmtMuteRemaining(remaining)+'. You can still view chat, but you can\'t send messages until the timeout ends.';
@@ -4378,7 +4432,7 @@ function renderChat(){
     ME.friends.forEach(fid=>{
       const f=DB.getUser(fid);if(!f)return;const k=DB.dmKey(ME.id,fid);
       const unread=DB.messages(k).filter(m=>m.senderId!==ME.id&&m.at>(ME.lastRead[k]||0)).length;
-      list.appendChild(sbItem(null,nameForUser(fid,f.username),view.roomKey===k,()=>{view.dmView='chat';selectRoom(k)},unread,f));
+      list.appendChild(sbItem(null,f.username,view.roomKey===k,()=>{view.dmView='chat';selectRoom(k)},unread,f));
     });
     foot.innerHTML=`<button class="btn small" id="addFr">+ Add Friend</button>`;
     $('#addFr').onclick=modalAddFriend;
@@ -4423,7 +4477,7 @@ function renderOnlinePill(isGlobalSection){
   let ids,label;
   if(key===CFG.GLOBAL_ROOM){ids=DB.presenceIds();label='Online in Global Chat'}
   else if(key===CFG.ANNOUNCEMENTS_ROOM){ids=DB.presenceIds();label='Online in Announcements'}
-  else if(key===CFG.VIP_ROOM){ids=DB.presenceIds();label='Online in VIP Chat'}
+  else if(key===CFG.VIP_ROOM){ids=DB.presenceIds();label='Online in VIP Lounge'}
   else if(key&&String(key).startsWith('dm_')){ids=DB.presenceIds();label='Online in this DM'}
   else if(key){ids=DB.presenceIds();label='Online in this room'}
   else if(isGlobalSection){ids=DB.onlineIds();label='Online now'}
@@ -4435,97 +4489,11 @@ function renderOnlinePill(isGlobalSection){
     pill.onclick=openFn;
   });
 }
-function openSpinWheel(){
-  const root=$('#modalRoot');
-  const n=WHEEL_PRIZES.length;
-  const sliceDeg=360/n;
-  // Each prize carries its own color (tied to its flair/VIP tier) instead of
-  // a repeating generic palette, so the wheel visually previews what you'd win.
-  const gradient=WHEEL_PRIZES.map((p,i)=>`${p.color} ${i*sliceDeg}deg ${(i+1)*sliceDeg}deg`).join(',');
-  const cd0=DB.spinCooldownMs();
-  const can0=cd0<=0;
-  // Legend so every slice is named, not just an emoji — rarest two (VIP) prizes get a
-  // highlighted style, and every prize shows its exact odds (weight === % chance,
-  // see WHEEL_PRIZES) so nobody has to guess how rare something is.
-  const legend=WHEEL_PRIZES.map(p=>{
-    const rd=roleDef(p.id);
-    const perkTitle=rd&&rd.perk?' — permanent role: '+rd.perk.desc:(rd?' — permanent role badge':'');
-    return`<div class="spin-legend-item${p.type==='vip'?' sl-rare':''}" title="${esc(p.label+perkTitle)}"><span class="sl-emoji">${p.emoji}</span><span class="sl-label">${esc(p.label)}</span><span class="sl-chance">${p.weight}%</span></div>`;
-  }).join('');
-  root.innerHTML=`<div class="modal-bg"><div class="modal spin-modal">
-    <button class="modal-x" id="spinX">✕</button>
-    <h2 style="margin:0 0 2px">🎡 Daily Spin</h2>
-    <p class="hint" style="margin:0">One free spin every day. 12 prizes, two of them are VIP — odds for each are below. Every prize also unlocks a permanent role on your profile the first time you win it, kept forever — hover a prize to see its role and any perk.</p>
-    <div class="spin-legend">${legend}</div>
-    <div class="spin-wrap" style="--slices:${n}">
-      <div class="spin-pointer"></div>
-      <div class="spin-wheel" id="spinWheelEl" data-rot="0" style="background:conic-gradient(${gradient})">
-        ${WHEEL_PRIZES.map((p,i)=>`<div class="slice" style="transform:rotate(${i*sliceDeg+sliceDeg/2}deg)">${p.emoji}</div>`).join('')}
-      </div>
-      <div class="spin-hub">🎯</div>
-    </div>
-    <div class="spin-result" id="spinResult"></div>
-    <button class="btn" id="spinBtn" ${can0?'':'disabled'} style="margin-top:10px;width:100%">${can0?'Spin the wheel':'Come back later'}</button>
-    <div class="spin-cooldown" id="spinCooldownText">${can0?'':'Next spin in '+fmtDuration(cd0)}</div>
-  </div></div>`;
-  root.querySelector('.modal-bg').onclick=e=>{if(e.target===e.currentTarget){clearInterval(ticking);root.innerHTML=''}};
-  $('#spinX').onclick=()=>{clearInterval(ticking);root.innerHTML=''};
-  let spinning=false;
-  const tick=()=>{
-    const btn=$('#spinBtn'),txt=$('#spinCooldownText');
-    if(!btn||!txt)return clearInterval(ticking);
-    if(spinning)return;
-    const c=DB.spinCooldownMs();
-    if(c<=0){btn.disabled=false;btn.textContent='Spin the wheel';txt.textContent=''}
-    else{btn.disabled=true;btn.textContent='Come back later';txt.textContent='Next spin in '+fmtDuration(c)}
-  };
-  const ticking=setInterval(tick,1000);
-  const spinBtn=$('#spinBtn');
-  spinBtn.onclick=async()=>{
-    if(spinBtn.disabled||spinning)return;
-    spinning=true;spinBtn.disabled=true;spinBtn.textContent='Spinning…';
-    const resEl=$('#spinResult');if(resEl)resEl.innerHTML='';
-    let prize;
-    try{prize=await DB.spin()}
-    catch(e){toast(e.message,'bad');spinning=false;tick();return}
-    const wheelEl=$('#spinWheelEl');
-    const idx=WHEEL_PRIZES.findIndex(p=>p.id===prize.id);
-    const targetDeg=360-(idx*sliceDeg+sliceDeg/2)+(Math.random()*sliceDeg*0.6-sliceDeg*0.3);
-    const already=Number(wheelEl.dataset.rot||0);
-    const finalRot=already+5*360+targetDeg-(((already%360)+360)%360);
-    wheelEl.style.transform='rotate('+finalRot+'deg)';
-    wheelEl.dataset.rot=finalRot;
-    setTimeout(()=>{
-      spinning=false;
-      const rd=roleDef(prize.id);
-      const roleLine=prize.isNewRole&&rd?`<div class="sub" style="color:var(--accent);font-weight:700">🎖️ New profile role unlocked: ${esc(rd.label)}${rd.perk?' ('+esc(rd.perk.prefix)+' name prefix)':''}</div>`:'';
-      if(resEl)resEl.innerHTML=`<div>${prize.emoji} ${esc(prize.label)}</div><div class="sub">${esc(prize.sub)}</div>${roleLine}`;
-      if(prize.type==='confetti')fireConfetti(root.querySelector('.spin-wrap'));
-      if(prize.type==='vip')toast(prize.perm?'You won permanent VIP! 💎':'You won 1-day VIP! 🌟');
-      ME=DB.currentUser();refreshBadge();
-      tick();
-    },4300);
-  };
-  tick();
-}
-function fireConfetti(container){
-  if(!container)return;
-  const colors=['#ff5e5e','#ffd166','#06d6a0','#4d9dff','#a78bfa'];
-  for(let i=0;i<24;i++){
-    const p=document.createElement('div');
-    p.className='confetti-piece';
-    p.style.left=Math.random()*100+'%';
-    p.style.background=colors[i%colors.length];
-    p.style.animationDelay=(Math.random()*.3)+'s';
-    container.appendChild(p);
-    setTimeout(()=>p.remove(),2000);
-  }
-}
 function openOnlineModal(label,ids){
   const root=$('#modalRoot');
   const rows=ids.map(id=>{
     const u=DB.getUser(id);
-    const nm=u?nameForUser(id,u.username):'Loading…';
+    const nm=u?displayUsername(u.username):'Loading…';
     return`<div class="online-row" data-open-profile="${id}"><span class="dot"></span><span class="nm">${esc(nm)}</span><span class="idv">#${id}</span></div>`;
   }).join('')||`<div class="hint" style="padding:10px">No one is online right now.</div>`;
   root.innerHTML=`<div class="modal-bg"><div class="modal" style="max-width:380px">
@@ -4565,18 +4533,14 @@ function openUserProfile(id){
     if(!u)return;
     const isMe=id===ME.id;
     const deleted=!!u.deleted;
-    const plainName=deleted?'Deleted User':displayUsername(u.username);
-    const name=deleted?'Deleted User':nameForUser(id,u.username);
+    const name=deleted?'Deleted User':displayUsername(u.username);
     const online=DB.onlineIds().includes(id);
     const owner=isOwner(id);
     const mod=isMod(id);
-    const vip=DB.vipInfo(id);
-    const flair=DB.getFlair(id);
-    const roles=deleted?[]:DB.getRoles(id); // permanent Daily Spin roles, already rarest-first
     const banned=DB.isBanned(id);
     const muted=DB.isMuted(id);
     const muteMs=muted?DB.muteRemainingMs(id):0;
-    const av=avatarHtml(u,plainName,'width:88px;height:88px;font-size:34px;border:4px solid var(--panel)');
+    const av=avatarHtml(u,name,'width:88px;height:88px;font-size:34px;border:4px solid var(--panel)');
     const accent=safeColor(u.settings&&u.settings.meBubble,'#7c6cff');
     const bannerBase=safeColor(u.settings&&u.settings.bannerColor,accent);
     const joined=u.createdAt?new Date(u.createdAt).toLocaleDateString(undefined,{month:'short',year:'numeric'}):null;
@@ -4607,11 +4571,6 @@ function openUserProfile(id){
       modHtml=banned
         ?`<button class="btn sec small" id="pfUnban">Unban</button>`
         :`<button class="btn sec small" id="pfMute">🔇 Mute</button><button class="btn danger small" id="pfBan">🔨 Ban</button>`;
-      if(!banned){
-        modHtml+=vip
-          ?`<button class="btn sec small" id="pfUnvip">Remove VIP</button>`
-          :`<button class="btn sec small" id="pfVip1">🌟 +VIP 1d</button><button class="btn sec small" id="pfVipPerm">💎 +VIP forever</button>`;
-      }
     }else if(!isMe&&!deleted&&iAmMod&&!owner&&!mod&&!banned){
       // Mods: mute/unmute only (preset durations, enforced in modalMuteConfirm/DB.muteUser
       // and again server-side by the rules), no ban, and never against an owner or
@@ -4633,13 +4592,6 @@ function openUserProfile(id){
           ${owner?'<span class="tag owner">Owner</span>':''}
           ${mod&&!owner?'<span class="tag" style="background:var(--accent)">Mod</span>':''}
           ${banned?'<span class="tag" style="background:var(--danger)">Banned</span>':''}
-        </div>
-        ${roles.length?`<div class="pf-roles" title="Every Daily Spin role ever won — permanent, rarest first">
-          ${roles.map(r=>`<span class="tag role-badge" style="background:${r.color}22;border:1px solid ${r.color};color:${r.color}" title="${esc(r.label)}${r.perk?' — '+esc(r.perk.desc):''}">${r.emoji} ${esc(r.label)}</span>`).join('')}
-        </div>`:''}
-        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
-          ${vip?`<span class="tag vip${vip.perm?' perm':''}">${vip.perm?'💎 VIP · Forever':'🌟 VIP · '+fmtDuration(vip.until-(Date.now()+SKEW))+' left'}</span>`:''}
-          ${flair?`<span class="tag flair-${flair.preset}">${flair.emoji} ${esc(flair.label)}</span>`:''}
         </div>
         <div style="display:flex;align-items:center;gap:6px;margin-top:6px;color:var(--muted);font-size:13px">
           ${statusDot}<span>${statusText}</span>
@@ -4706,18 +4658,6 @@ function openUserProfile(id){
       try{await DB.unbanUser(id);toast(name+' unbanned — they\'ll get a fresh username next time they sign in.');render()}
       catch(e){toast(e.message,'bad')}
     };
-    if(el2('pfVip1'))el2('pfVip1').onclick=async()=>{
-      try{await DB.grantVIP(id,false);toast(name+' is now VIP for 1 day.');render()}
-      catch(e){toast(e.message,'bad')}
-    };
-    if(el2('pfVipPerm'))el2('pfVipPerm').onclick=async()=>{
-      try{await DB.grantVIP(id,true);toast(name+' is now permanent VIP 💎');render()}
-      catch(e){toast(e.message,'bad')}
-    };
-    if(el2('pfUnvip'))el2('pfUnvip').onclick=async()=>{
-      try{await DB.unsetVIP(id);toast('VIP removed from '+name);render()}
-      catch(e){toast(e.message,'bad')}
-    };
   };
   tryRender();
 }
@@ -4737,7 +4677,7 @@ function renderMain(){
   let title='';let headerAv='';
   if(key===CFG.GLOBAL_ROOM)title='🌍 Global Chat';
   else if(key===CFG.ANNOUNCEMENTS_ROOM)title='📢 Announcements';
-  else if(key===CFG.VIP_ROOM)title='💎 VIP Chat';
+  else if(key===CFG.VIP_ROOM)title='💎 VIP Lounge';
   else if(key.startsWith('dm_')){
     const [,a,b]=key.split('_').map(Number);const other=a===ME.id?b:a;
     const ou=DB.getUser(other);
@@ -4752,6 +4692,7 @@ function renderMain(){
   const hAv=$('#chatTitle').querySelector('[data-open-profile]');
   if(hAv)hAv.onclick=()=>openUserProfile(Number(hAv.dataset.openProfile));
   renderDmFriendBtn(key);
+  applyVipLock();
   renderMessages(key);
 }
 // Friend action for the person you're DMing (fixes friend requests from inside DMs)
@@ -4792,7 +4733,7 @@ let renderedKey=null,renderedIds=[];
 let renderedNodes=new Map();
 function senderSig(m){
   const sender=DB.getUser(m.senderId);
-  const name=(sender&&!sender.deleted)?nameForUser(m.senderId,sender.username):'Deleted User';
+  const name=(sender&&!sender.deleted)?displayUsername(sender.username):'Deleted User';
   const avatar=(sender&&sender.settings&&sender.settings.avatar)||'';
   // Include whether we've resolved the sender at all (not just name/avatar) so a
   // message rendered before a sender's record loaded gets rebuilt — with a clickable
@@ -5013,12 +4954,11 @@ function wireReactions(el,m){
 function msgEl(m){
   const mine=m.senderId===ME.id;
   const sender=DB.getUser(m.senderId);           // username resolved via ID at render time
-  const plainName=(sender&&!sender.deleted)?displayUsername(sender.username):'Deleted User';
-  const name=(sender&&!sender.deleted)?nameForUser(m.senderId,sender.username):'Deleted User';
+  const name=(sender&&!sender.deleted)?displayUsername(sender.username):'Deleted User';
   const pinged=!mine&&(m.pings.includes(ME.id)||m.pings.includes('everyone'));
   const el=document.createElement('div');el.className='msg'+(mine?' me':'');el.dataset.msgId=m.id;
   const time=new Date(m.at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-  const av=avatarHtml(sender,plainName,'width:46px;height:46px;font-size:17px');
+  const av=avatarHtml(sender,name,'width:46px;height:46px;font-size:17px');
   const avClickable=(sender&&!sender.deleted)?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${av}</span>`:av;
   // Everyone's message bubble reflects how THEY styled their own messages (their meBubble/meText),
   // not a color the viewer picks for "others" — so no per-viewer "others' color" setting exists anymore.
@@ -5045,10 +4985,9 @@ function msgEl(m){
   let replyRefHTML='';
   if(m.replyTo&&m.replyTo.id){
     const rs=DB.getUser(m.replyTo.senderId);
-    const rPlainName=(rs&&!rs.deleted)?displayUsername(rs.username):'Deleted User';
-    const rname=(rs&&!rs.deleted)?nameForUser(m.replyTo.senderId,rs.username):'Deleted User';
+    const rname=(rs&&!rs.deleted)?displayUsername(rs.username):'Deleted User';
     const rtext=m.replyTo.preview?esc(m.replyTo.preview):'';
-    const rav=avatarHtml(rs,rPlainName,'width:15px;height:15px;font-size:8px');
+    const rav=avatarHtml(rs,rname,'width:15px;height:15px;font-size:8px');
     replyRefHTML=`<div class="reply-ref" data-reply-jump="${m.replyTo.id}">
       <svg class="rr-elbow" viewBox="0 0 20 12"><path d="M2 0 v4 a6 6 0 0 0 6 6 h10"/></svg>
       <span class="rr-avatar">${rav}</span><span class="rr-name">${esc(rname)}</span><span class="rr-text">${rtext}</span>
@@ -5056,11 +4995,7 @@ function msgEl(m){
   }
   const myAv=mine?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${av}</span>`:'';
   const reactionsHTML=reactionRowHTML(m.id);
-  const vipInfoMsg=DB.vipInfo(m.senderId);
-  const flairMsg=DB.getFlair(m.senderId);
-  const vipTagHTML=vipInfoMsg?` <span class="tag vip${vipInfoMsg.perm?' perm':''}" title="${vipInfoMsg.perm?'Permanent VIP':'VIP for a bit longer'}">${vipInfoMsg.perm?'💎':'🌟'} VIP</span>`:'';
-  const flairTagHTML=flairMsg?` <span class="tag flair-${flairMsg.preset}">${flairMsg.emoji} ${esc(flairMsg.label)}</span>`:'';
-  el.innerHTML=`${replyRefHTML}<div class="msg-row">${mine?myAv:avClickable}<div class="msg-body"><div class="meta">${mine?'':(sender&&!sender.deleted?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${esc(name)}</span>`:esc(name))+' · '}${time}${editedTag}${isOwner(m.senderId)?' <span class="tag owner">#'+m.senderId+'</span>':''}${vipTagHTML}${flairTagHTML}${DB.isMuted(m.senderId)?' <span class="tag" style="background:#555;color:#fff">muted</span>':''}</div>
+  el.innerHTML=`${replyRefHTML}<div class="msg-row">${mine?myAv:avClickable}<div class="msg-body"><div class="meta">${mine?'':(sender&&!sender.deleted?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${esc(name)}</span>`:esc(name))+' · '}${time}${editedTag}${vipBadgeHTML(m.senderId)}${isOwner(m.senderId)?' <span class="tag owner">#'+m.senderId+'</span>':''}${DB.isMuted(m.senderId)?' <span class="tag" style="background:#555;color:#fff">muted</span>':''}</div>
     <div class="bubble${pinged?' pinged':''}${(!m.text&&m.images&&m.images.length)?' img-only':''}"${bStyle}><div class="msg-hover-bar">${copyBtn}${editBtn}${delBtn}${reactBtn}${replyBtn}</div>${fmtText(displayMsgText(m.text))}${imagesHTML(m.images)}</div>${reactionsHTML}</div></div>`;
   el.querySelectorAll('.imgs img').forEach((img,i)=>img.onclick=()=>openLightbox(m.images,i));
   wireReactions(el,m);
@@ -5330,7 +5265,6 @@ function send(){
   if(!view.roomKey)return;
   if(DB.isBanned(ME.id)){toast('Your account has been banned.','bad');return}
   if(view.roomKey===CFG.ANNOUNCEMENTS_ROOM&&!isOwner(ME.id)){toast('Only the owner can post announcements.','bad');return}
-  if(view.roomKey===CFG.VIP_ROOM&&!canUseVipChat(ME.id)){toast('VIP chat is for owners, mods, and VIP only.','bad');return}
 
   if(view.editingId){
     if(!text){toast('Message can\'t be empty.','bad');return}
@@ -5389,7 +5323,7 @@ function renderComposeContext(){
     $('#ccText').textContent='';
   }else if(view.replyingTo){
     const s=DB.getUser(view.replyingTo.senderId);
-    const name=(s&&!s.deleted)?nameForUser(view.replyingTo.senderId,s.username):'Deleted User';
+    const name=(s&&!s.deleted)?displayUsername(s.username):'Deleted User';
     box.classList.add('active');
     $('#ccLabel').textContent='Replying to '+name;
     const arr=DB.messages(view.roomKey);
@@ -6009,7 +5943,7 @@ function openSettings(fromChat){
   function keyLabel(key){
     if(key===CFG.GLOBAL_ROOM)return '🌍 Global Chat';
     if(key===CFG.ANNOUNCEMENTS_ROOM)return '📢 Announcements';
-    if(key===CFG.VIP_ROOM)return '💎 VIP Chat';
+    if(key===CFG.VIP_ROOM)return '💎 VIP Lounge';
     if(key.startsWith('dm_')){
       const [,a,b]=key.split('_').map(Number);const other=a===ME.id?b:a;
       const u=DB.getUser(other);
