@@ -1152,7 +1152,7 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import{initializeAuth,indexedDBLocalPersistence,browserLocalPersistence as _bLP,browserSessionPersistence,inMemoryPersistence,browserPopupRedirectResolver,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signInWithPopup,GoogleAuthProvider,signOut as fbSignOut,sendEmailVerification,sendPasswordResetEmail,deleteUser,linkWithCredential,EmailAuthProvider,setPersistence,browserLocalPersistence}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import{initializeAppCheck,ReCaptchaEnterpriseProvider}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js";
-import{getDatabase,ref,onValue,get,set,update,remove,push,runTransaction,query,orderByChild,limitToLast,serverTimestamp,onDisconnect,enableLogging}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import{getDatabase,ref,onValue,get,set,update,remove,push,runTransaction,query,orderByChild,orderByValue,equalTo,limitToLast,serverTimestamp,onDisconnect,enableLogging}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 // TEMP DIAGNOSTIC: prints the exact rule-evaluation reason for every denied write to the
 // browser console (e.g. "Permission denied ... at /messages/global/-Ab.../text").
 // Safe to leave on temporarily; remove enableLogging(true) once writes are confirmed fixed.
@@ -2271,8 +2271,63 @@ const DB=(()=>{
       if(!isOwner(myId))throw new Error('Only owners can unban.');
       await remove(R('banned/'+id)).catch(()=>{});
       delete C.banned[id];checkBanLock(myId,C.banned); // update local state immediately; don't wait on the listener round-trip
+      // NOTE: this is deliberately all an owner CAN do here. users/$id only lets an owner
+      // write it in the exact "ban" shape (deleted:true, username:'Deleted User') — there's
+      // no rule letting an owner set someone else's username or clear their `deleted` flag,
+      // since that would mean owners could rename/impersonate other accounts at will. So
+      // unban alone used to leave the account stuck showing "Deleted User" forever, with
+      // their old username permanently reserved and unusable by anyone. The actual profile
+      // repair (new generated username, old name freed) has to be done by that account's
+      // OWN auth the next time they sign back in — see restoreBannedAccount() below, which
+      // fires automatically on their client once banned/$id is gone.
     },
     isBanned(id){return!!C.banned&&!!C.banned[id]},
+    // Self-service repair for a just-unbanned account: only the account's own auth can
+    // rewrite its username (the security rules don't let an owner do this on someone
+    // else's behalf), so this runs on that user's own client right after sign-in once
+    // their ban has been lifted but their profile is still frozen as "Deleted User".
+    // Frees whatever old username was reserved at ban time and issues a fresh generated
+    // one (UnbannedUserXXXXXX) that they're free to change any time in Settings.
+    needsUnbanRestore(){
+      const id=myId;if(id==null)return false;
+      const u=C.users[id];
+      return!!u&&u.deleted===true&&u.username==='Deleted User'&&!(C.banned&&C.banned[id]);
+    },
+    async restoreBannedAccount(){
+      const id=myId;if(id==null)return null;
+      const u=C.users[id];
+      if(!u||u.username!=='Deleted User'||u.deleted!==true)return null; // nothing to restore
+      if(C.banned&&C.banned[id])return null;                           // still banned
+      // Find whatever username(s) still point at me from before the ban, so they can be freed.
+      let oldKeys=[];
+      try{
+        const s=await get(query(R('usernames'),orderByValue(),equalTo(id)));
+        if(s.exists())oldKeys=Object.keys(s.val());
+      }catch(_){/* best-effort — worst case the old name just stays reserved */}
+      // Pick a fresh, available placeholder name.
+      let newName,newKey,tries=0,free=false;
+      do{
+        newName='UnbannedUser'+Math.floor(100000+Math.random()*900000);
+        newKey=newName.toLowerCase();
+        try{free=await this.checkUsernameFree(newName)}catch(_){free=false}
+        tries++;
+      }while(!free&&tries<8);
+      if(!free)throw new Error('Could not find an available name to restore your account with. Try again in a moment.');
+      const email=u.email||(newKey+FAKE);
+      const stamp=Date.now()+SKEW;
+      const patch={};
+      patch['users/'+id+'/username']=newName;
+      patch['users/'+id+'/deleted']=null;          // un-freeze the account
+      patch['users/'+id+'/lastNameChange']=stamp;   // must change alongside username, per the rules
+      patch['usernames/'+newKey]=id;
+      patch['usernameLogin/'+newKey]={email};
+      oldKeys.forEach(k=>{patch['usernames/'+k]=null;patch['usernameLogin/'+k]=null;}); // free the old name for anyone to use
+      await update(ref(rtdb),patch);
+      const nu={...u,username:newName,lastNameChange:stamp};delete nu.deleted;
+      C.users[id]=nu;C.usernames[newKey]=id;oldKeys.forEach(k=>delete C.usernames[k]);
+      emit();
+      return newName;
+    },
     /* Mute: blocks sending only (menus, settings, reading all still work). Stored as
        muted/$id = a future ms timestamp (auto-expires) or false/absent = not muted.
        Owners can mute for any duration. Mods can mute too, but only for one of the
@@ -3465,7 +3520,7 @@ function modalBanConfirm(id,name){
   $('#modalRoot').innerHTML=`<div class="modal-bg"><div class="modal" style="max-width:400px;text-align:center">
     <div style="font-size:40px;margin-bottom:6px">🔨</div>
     <h2 style="margin-bottom:8px">Ban ${esc(name)}?</h2>
-    <div class="hint">Their account will be frozen as "Deleted User", their username freed for reuse, and they'll lose the ability to send messages or change anything — but they'll stay signed in so they can't just make a new account to evade the ban.</div>
+    <div class="hint">Their account will be frozen as "Deleted User" and their username reserved so nobody can grab it, and they'll lose the ability to send messages or change anything — but they'll stay signed in so they can't just make a new account to evade the ban. Unbanning later hands them a fresh username and frees the old one.</div>
     <div class="actions" style="justify-content:center;margin-top:18px">
       <button class="btn sec" id="banCancel">Cancel</button>
       <button class="btn" style="background:var(--danger)" id="banGo">Ban user</button>
@@ -4061,7 +4116,7 @@ function openUserProfile(id){
     if(el2('pfBan'))el2('pfBan').onclick=()=>{root.innerHTML='';modalBanConfirm(id,name)};
     if(el2('pfMute'))el2('pfMute').onclick=()=>{root.innerHTML='';modalMuteConfirm(id,name)};
     if(el2('pfUnban'))el2('pfUnban').onclick=async()=>{
-      try{await DB.unbanUser(id);toast(name+' unbanned.');render()}
+      try{await DB.unbanUser(id);toast(name+' unbanned — they\'ll get a fresh username next time they sign in.');render()}
       catch(e){toast(e.message,'bad')}
     };
   };
@@ -5083,7 +5138,7 @@ function openSettings(fromChat){
           <button class="btn" style="background:var(--danger)" id="modBanGo">Ban</button>
           <button class="btn sec" id="modUnbanGo">Unban</button>
         </div>
-        <div class="hint" style="margin-top:8px">Banned accounts show as "Deleted User", permanently reserve their old username so it can never be reused, and can't send messages, change settings, or do anything else — but they stay signed in so they can't ban-evade by making a new account.</div>
+        <div class="hint" style="margin-top:8px">Banned accounts show as "Deleted User", reserve their old username so it can't be taken while banned, and can't send messages, change settings, or do anything else — but they stay signed in so they can't ban-evade by making a new account. Unbanning gives them a new generated username (which they can change anytime) and frees their old one for reuse.</div>
       </div>`:''}
       <div class="set-card">
         <div class="section-h" style="margin-top:0">🔇 Mute a user</div>
@@ -5196,7 +5251,7 @@ function openSettings(fromChat){
     $$('#modUnbanGo')&&($$('#modUnbanGo').onclick=async()=>{
       const id=+$$('#modBanId').value;
       if(!id){toast('Enter a user ID','bad');return}
-      try{await DB.unbanUser(id);toast('User #'+id+' unbanned.')}catch(err){toast(err.message,'bad')}
+      try{await DB.unbanUser(id);toast('User #'+id+' unbanned — they\'ll get a fresh username next time they sign in.')}catch(err){toast(err.message,'bad')}
     });
     $$('#modMuteGo')&&($$('#modMuteGo').onclick=async()=>{
       const id=+$$('#modMuteId').value;
@@ -5591,9 +5646,25 @@ function renderFriends(){
 }
 
 /* ---------- Live sync (other tabs / future Firestore listeners) ---------- */
+// A just-unbanned account still shows "Deleted User" until it repairs its own profile —
+// only its own auth can do that (see DB.restoreBannedAccount). This runs it once, the
+// moment that account's client notices the ban is gone, and hands them a fresh username.
+let _restoringAccount=false;
 DB.onChange(()=>{
   ME=DB.currentUser();
   if(!ME){if(view.page&&view.page!=='authPage'&&!DB.needsProfile()&&!DB.isLoggedIn())show('authPage');return}
+  if(!_restoringAccount&&DB.needsUnbanRestore()){
+    _restoringAccount=true;
+    DB.restoreBannedAccount().then(newName=>{
+      _restoringAccount=false;
+      if(newName){
+        ME=DB.currentUser();
+        toast(`Welcome back! Your account is restored as @${newName} — change it anytime in Settings.`);
+        if(view.page==='homePage'||view.page==='chatPage')goHome();
+      }
+    }).catch(e=>{_restoringAccount=false;console.warn('account restore failed',e)});
+    return; // let the restore write land and re-trigger onChange before doing anything else
+  }
   if(view.page==='homePage')refreshBadge();
   applyStyleIfChanged();
   DB.ensureDmMemberships();
