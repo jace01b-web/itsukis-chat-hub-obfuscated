@@ -427,10 +427,19 @@ input[type=color]{display:none!important}
 .imgs.n1 img{max-height:320px;height:auto;object-fit:contain}
 .imgs:not(.n1) img{aspect-ratio:1;}
 .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:1000;display:flex;align-items:center;justify-content:center}
-.lightbox img{max-width:92vw;max-height:88vh;border-radius:8px}
-.lb-btn{position:absolute;background:rgba(255,255,255,.12);color:#fff;width:44px;height:44px;border-radius:50%;font-size:20px}
-.lb-close{top:20px;right:20px}.lb-prev{left:20px;top:50%}.lb-next{right:20px;top:50%}
-.lb-count{position:absolute;bottom:20px;color:#fff;font-size:13px}
+.lightbox img{max-width:min(92vw,calc(100vw - 116px));max-height:88vh;border-radius:8px}
+/* Fixed straight to the viewport (not just absolute within .lightbox) so
+   these never drift with the image's own size/position or get caught by
+   any ancestor's transform/filter — the close button always ends up in
+   the true top-right corner, and the arrows always sit dead-center on
+   the left/right edges instead of "off" the image or stacked on it.
+   env(safe-area-inset-*) keeps them clear of notches/home-indicators. */
+.lb-btn{position:fixed;z-index:2;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.12);color:#fff;width:44px;height:44px;border-radius:50%;font-size:20px}
+.lb-close{top:calc(env(safe-area-inset-top,0px) + 20px);right:calc(env(safe-area-inset-right,0px) + 20px)}
+.lb-prev{left:calc(env(safe-area-inset-left,0px) + 12px);top:50%;transform:translateY(-50%)}
+.lb-next{right:calc(env(safe-area-inset-right,0px) + 12px);top:50%;transform:translateY(-50%)}
+.lb-count{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);transform:translateX(-50%);color:#fff;font-size:13px;z-index:2}
 
 /* Composer */
 .composer{position:relative;z-index:2;padding:12px 16px;border-top:1px solid var(--border);background:var(--ui-panel);backdrop-filter:blur(var(--ui-blur));-webkit-backdrop-filter:blur(var(--ui-blur))}
@@ -624,8 +633,34 @@ input[type=color]{display:none!important}
 .tag{font-size:10px;background:var(--accent2);color:#fff;padding:1px 6px;border-radius:8px;font-weight:700}
 .tag.owner{background:#ffb84d;color:#3a2400}
 /* Profile card */
-.pf-banner{height:92px;position:relative}
-.pf-x{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.28);color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;transition:.15s}
+.pf-banner{height:92px;position:relative;overflow:hidden}
+.pf-banner.banner-anim::after,.acc-banner-preview.banner-anim::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.25) 50%,transparent 65%);background-size:220% 100%;
+  animation:bannerSheen 4s ease-in-out infinite}
+@keyframes bannerSheen{0%{background-position:170% 0}100%{background-position:-70% 0}}
+.pf-x{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.28);color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;transition:.15s;z-index:2}
+/* Banner color editor (Account modal) */
+.acc-banner-preview{height:92px;border-radius:16px;position:relative;overflow:hidden;margin:2px 0 14px;box-shadow:0 8px 22px rgba(0,0,0,.28);transition:background .35s ease}
+.banner-swatches{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:2px 0 4px}
+.banner-swatch{position:relative;width:100%;aspect-ratio:1/1;border-radius:50%;border:2px solid transparent;cursor:pointer;
+  transition:transform .15s ease,box-shadow .15s ease;animation:swatchIn .3s ease backwards}
+.banner-swatch:hover{transform:scale(1.14)}
+.banner-swatch.sel{border-color:#fff;box-shadow:0 0 0 3px rgba(124,108,255,.5),0 4px 14px rgba(0,0,0,.4);transform:scale(1.1)}
+/* Avatar cropper: circular window with a drag-to-pan, scroll/slider-to-zoom
+   image inside. clamp() in JS keeps the image always covering the square the
+   circle is inscribed in, so there's never a gap at the edges. */
+.crop-modal{max-width:360px;text-align:center}
+.crop-stage{position:relative;width:260px;height:260px;margin:14px auto 4px;border-radius:50%;overflow:hidden;
+  background:#000;cursor:grab;touch-action:none;box-shadow:0 0 0 3px rgba(255,255,255,.12),0 14px 34px rgba(0,0,0,.4)}
+.crop-stage:active{cursor:grabbing}
+.crop-stage img{position:absolute;top:50%;left:50%;transform-origin:center;user-select:none;pointer-events:none;max-width:none}
+#cropZoom{width:100%;margin-top:14px}
+.banner-swatch .bsw-check{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;
+  font-size:13px;font-weight:800;opacity:0;transform:scale(.5);transition:.15s ease;text-shadow:0 1px 3px rgba(0,0,0,.55)}
+.banner-swatch.sel .bsw-check{opacity:1;transform:scale(1)}
+@keyframes swatchIn{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:scale(1)}}
+.banner-custom-row{display:flex;align-items:center;gap:10px;margin-top:12px}
+.banner-custom-row .cpick{max-width:210px}
 .pf-x:hover{background:rgba(0,0,0,.45)}
 .pf-meta-row{display:flex;gap:8px;margin-top:16px}
 .pf-meta-chip{flex:1;min-width:0;background:var(--ui-panel2);backdrop-filter:blur(var(--ui-blur));-webkit-backdrop-filter:blur(var(--ui-blur));border:1px solid var(--border);border-radius:12px;padding:8px 12px;transition:.15s}
@@ -733,8 +768,12 @@ input[type=color]{display:none!important}
 /* soft light washing in from the top-left, like light hitting glass —
    pinned to z-index:-1 inside an isolated stacking context so it never
    sits on top of real content or on top of absolutely-positioned
-   children like .modal-x */
-.sidebar::before,.topbar::before,.composer::before,.card::before,.modal::before,.opt::after{
+   children like .modal-x. NOT .opt — its ::after is already its own
+   hover-only diagonal shine sweep (see .opt:after below); reusing it here
+   used to clobber that sweep's background/position, leaving a stray
+   always-on glow blob on the home-menu cards instead of a clean hover-only
+   streak. */
+.sidebar::before,.topbar::before,.composer::before,.card::before,.modal::before{
   content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;
   background:radial-gradient(140% 60% at 15% -10%,var(--glass-sheen),transparent 60%);opacity:.55
 }
@@ -748,8 +787,12 @@ input[type=color]{display:none!important}
   transition:background .28s var(--glass-spring),border-color .28s var(--glass-spring),transform .28s var(--glass-spring),box-shadow .28s var(--glass-spring)
 }
 /* .modal-x is already position:absolute (positioned) for its own placement;
-   the rest need position:relative so the shimmer sweep below is contained. */
-.btn.sec,.icon-btn,.menu-btn,.sb-head .back,.music-controls button,.cp-eye,.lb-btn,.tab-mini button{position:relative;overflow:hidden}
+   the rest need position:relative so the shimmer sweep below is contained.
+   .lb-btn is the one exception: it must stay position:fixed (set above, in
+   the lightbox rules) so it's pinned to the true viewport corners instead of
+   its in-flow flex position — so it's deliberately left out of this list. */
+.btn.sec,.icon-btn,.menu-btn,.sb-head .back,.music-controls button,.cp-eye,.tab-mini button{position:relative;overflow:hidden}
+.lb-btn{overflow:hidden}
 .modal-x{overflow:hidden}
 .btn.sec::after,.icon-btn::after,.menu-btn::after,.modal-x::after,.sb-head .back::after,.music-controls button::after,.cp-eye::after,.lb-btn::after,.tab-mini button::after{
   content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;
@@ -849,7 +892,7 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
    any background hue instead of shifting color via a blend mode. Same
    z-index:-1 / isolation trick as the static sheen, so it stays behind
    real content. */
-.sidebar::after,.topbar::after,.composer::after,.card::after,.modal::after{
+.sidebar::after,.topbar::after,.composer::after,.card::after,.modal::after,.gc-card::after{
   content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;
   background:radial-gradient(circle 220px at var(--px) var(--py),rgba(255,255,255,.16),transparent 72%);
   /* --glow-op is driven by JS from the pointer's distance to this panel (see the
@@ -864,7 +907,7 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
    as alive rather than a flat painted highlight. Off for anyone who's
    asked their system to reduce motion. */
 @media (prefers-reduced-motion: no-preference){
-  .sidebar::before,.topbar::before,.composer::before,.card::before,.modal::before,.opt::after{
+  .sidebar::before,.topbar::before,.composer::before,.card::before,.modal::before{
     animation:glassBreathe 7s ease-in-out infinite
   }
 }
@@ -3084,6 +3127,19 @@ function cpNormHex(v){v=String(v||'').trim().replace(/^#/,'');
   if(/^[0-9a-f]{3}$/i.test(v))v=v.split('').map(c=>c+c).join('');
   return/^[0-9a-f]{6}$/i.test(v)?'#'+v.toLowerCase():null}
 
+// Curated single-tap banner presets — vivid, banner-friendly hues.
+const BANNER_PRESETS=['#7c6cff','#ff6cb4','#ff5d73','#ffb84d','#ffd166','#4cd6a0',
+                      '#10b981','#4cc9f0','#3b82f6','#c77dff','#f72585','#64748b'];
+// One picked color -> a two-stop gradient with a little automatic depth, so a
+// flat color swatch still reads as a proper banner instead of a solid block.
+function bannerGradientColors(hex){
+  const base=cpNormHex(hex)||safeColor(hex,'#7c6cff');
+  const[h,s,v]=cpRgbToHsv(...cpHexToRgb(base));
+  const h2=(h+32)%360,s2=Math.max(0,Math.min(1,s*.9)),v2=Math.max(0,Math.min(1,v*1.15+.06));
+  return[base,cpRgbToHex(...cpHsvToRgb(h2,s2,v2))];
+}
+function bannerGradCss(hex){const[c1,c2]=bannerGradientColors(hex);return`linear-gradient(135deg,${c1},${c2})`}
+
 function enhanceColors(scope){
   scope.querySelectorAll('input[type=color]').forEach(inp=>{
     if(inp._cp)return;inp._cp=1;
@@ -3448,11 +3504,17 @@ function modalGameHubs(){
     <div class="field" style="margin-top:14px"><input id="ghSearch" placeholder="Search game hubs..." autocomplete="off"></div>
     <div class="hub-list" id="ghList"><div class="empty">Loading game hubs...</div></div>
   </div></div>`;
-  const closeModal=()=>{if($('#modalRoot'))$('#modalRoot').innerHTML=''};
-  $('#ghX').onclick=closeModal;
-  $('#ghBg').onclick=e=>{if(e.target.id==='ghBg')closeModal()};
+  $('#ghX').onclick=closeGameHubs;
+  $('#ghBg').onclick=e=>{if(e.target.id==='ghBg')closeGameHubs()};
   $('#ghSearch').oninput=()=>{_hubQuery=$('#ghSearch').value.trim().toLowerCase();renderHubList()};
   loadHubs();
+}
+// Plays the same fade/scale-down exit the rest of the modals use (see
+// .modal-bg.closing) instead of yanking the panel out instantly.
+function closeGameHubs(){
+  const bg=$('#ghBg');if(!bg){if($('#modalRoot'))$('#modalRoot').innerHTML='';return}
+  bg.classList.add('closing');
+  setTimeout(()=>{if($('#modalRoot'))$('#modalRoot').innerHTML=''},200);
 }
 async function loadHubs(){
   if(_hubData){renderHubList();return}
@@ -3481,7 +3543,7 @@ function renderHubList(){
     row.innerHTML=`<div class="hub-ic" style="background:${c.bg};color:${c.fg}">${esc((h.icon||h.name.slice(0,2)).toString().slice(0,4))}</div>
       <div class="nm"><div class="hub-nm">${esc(h.name)}</div>${h.desc?`<div class="hub-desc">${esc(h.desc)}</div>`:''}</div>
       <div class="hub-arrow">↗</div>`;
-    row.onclick=()=>{if($('#modalRoot'))$('#modalRoot').innerHTML='';launchHub(h)};
+    row.onclick=()=>{closeGameHubs();launchHub(h)};
     box.appendChild(row);
   });
 }
@@ -3696,6 +3758,7 @@ function openUserProfile(id){
     const muteMs=muted?DB.muteRemainingMs(id):0;
     const av=avatarHtml(u,name,'width:88px;height:88px;font-size:34px;border:4px solid var(--panel)');
     const accent=safeColor(u.settings&&u.settings.meBubble,'#7c6cff');
+    const bannerBase=safeColor(u.settings&&u.settings.bannerColor,accent);
     const joined=u.createdAt?new Date(u.createdAt).toLocaleDateString(undefined,{month:'short',year:'numeric'}):null;
 
     const iBlocked=!isMe&&DB.isBlocked(ME.id,id);
@@ -3735,7 +3798,7 @@ function openUserProfile(id){
     const statusText=deleted?'Account deleted':(online?'Online now':'Offline');
 
     root.innerHTML=`<div class="modal-bg"><div class="modal pf-card" style="max-width:340px;padding:0;overflow:hidden">
-      <div class="pf-banner" style="background:linear-gradient(135deg,${accent},var(--accent2))">
+      <div class="pf-banner banner-anim" style="background:${bannerGradCss(bannerBase)}">
         <button class="pf-x" id="pfClose" title="Close">✕</button>
       </div>
       <div style="padding:0 24px 24px;margin-top:-46px">
@@ -4430,6 +4493,27 @@ $('#fileIn').onchange=async e=>{
   }
   renderPreviews();
 };
+// Iteratively shrinks dimensions/quality until the encoded data URL is safely
+// under the database's per-field size limit. RTDB rejects oversized writes
+// outright (PERMISSION_DENIED, indistinguishable client-side from an auth
+// problem) — so we can't just trust one pass at fixed max/q. Mutates and
+// returns the canvas's own data URL, or null if it still won't fit.
+// Shared by compressImage and the avatar cropper below.
+function shrinkCanvasToLimit(c,q){
+  let dims={w:c.width,h:c.height},quality=q,out=c.toDataURL('image/jpeg',quality);
+  let attempts=0;
+  while(out.length>CFG.MAX_IMG_DATAURL_CHARS&&attempts<8){
+    attempts++;
+    if(quality>0.5){quality=Math.max(0.5,quality-0.12)}
+    else{dims={w:Math.max(1,Math.round(dims.w*0.8)),h:Math.max(1,Math.round(dims.h*0.8))};
+      const c2=document.createElement('canvas');c2.width=dims.w;c2.height=dims.h;
+      c2.getContext('2d').drawImage(c,0,0,dims.w,dims.h);
+      c.width=dims.w;c.height=dims.h;c.getContext('2d').drawImage(c2,0,0);
+    }
+    out=c.toDataURL('image/jpeg',quality);
+  }
+  return out.length>CFG.MAX_IMG_DATAURL_CHARS?null:out;
+}
 function compressImage(file,max=1280,q=.82){
   return new Promise((res,rej)=>{
     const r=new FileReader();
@@ -4439,23 +4523,8 @@ function compressImage(file,max=1280,q=.82){
         const s=Math.min(1,max/Math.max(img.width,img.height));
         const c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.width*s));c.height=Math.max(1,Math.round(img.height*s));
         c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-        // Iteratively shrink dimensions/quality until the encoded data URL is safely
-        // under the database's per-field size limit. RTDB rejects oversized writes
-        // outright (PERMISSION_DENIED, indistinguishable client-side from an auth
-        // problem) — so we can't just trust one pass at fixed max/q like before.
-        let dims={w:c.width,h:c.height},quality=q,out=c.toDataURL('image/jpeg',quality);
-        let attempts=0;
-        while(out.length>CFG.MAX_IMG_DATAURL_CHARS&&attempts<8){
-          attempts++;
-          if(quality>0.5){quality=Math.max(0.5,quality-0.12)}
-          else{dims={w:Math.max(1,Math.round(dims.w*0.8)),h:Math.max(1,Math.round(dims.h*0.8))};
-            const c2=document.createElement('canvas');c2.width=dims.w;c2.height=dims.h;
-            c2.getContext('2d').drawImage(c,0,0,dims.w,dims.h);
-            c.width=dims.w;c.height=dims.h;c.getContext('2d').drawImage(c2,0,0);
-          }
-          out=c.toDataURL('image/jpeg',quality);
-        }
-        if(out.length>CFG.MAX_IMG_DATAURL_CHARS){rej(new Error('Image is still too large after compression — try a smaller photo.'));return}
+        const out=shrinkCanvasToLimit(c,q);
+        if(!out){rej(new Error('Image is still too large after compression — try a smaller photo.'));return}
         res(out);
       };
       img.onerror=()=>rej(new Error('Could not read that image file.'));
@@ -4464,6 +4533,89 @@ function compressImage(file,max=1280,q=.82){
     r.onerror=()=>rej(new Error('Could not read that image file.'));
     r.readAsDataURL(file);
   });
+}
+// ---------- Avatar cropper ----------
+// Circular drag-to-pan / scroll-to-zoom cropper shown right after picking a
+// profile picture, so people can frame it before it saves instead of getting
+// whatever square crop the browser happened to give the source photo.
+function openAvatarCropper(file){
+  const url=URL.createObjectURL(file);
+  const root=$('#modalRoot');
+  const STAGE=260;
+  root.innerHTML=`<div class="modal-bg" id="cropBg"><div class="modal crop-modal">
+    <h2>Crop picture</h2>
+    <div class="hint">Drag to reposition, scroll or use the slider to zoom.</div>
+    <div class="crop-stage" id="cropStage"><img id="cropImg" src="${url}" draggable="false" alt=""></div>
+    <input type="range" id="cropZoom" min="1" max="3" step="0.01" value="1">
+    <div class="err" id="cropErr"></div>
+    <div class="actions"><button class="btn sec" id="cropCancel">Cancel</button><button class="btn" id="cropSave">Save</button></div>
+  </div></div>`;
+  const stage=$('#cropStage'),img=$('#cropImg'),zoomEl=$('#cropZoom');
+  const st={baseScale:1,natW:0,natH:0,x:0,y:0,scale:1};
+  const clamp=()=>{
+    const w=st.natW*st.scale,h=st.natH*st.scale;
+    const maxX=Math.max(0,(w-STAGE)/2),maxY=Math.max(0,(h-STAGE)/2);
+    st.x=Math.max(-maxX,Math.min(maxX,st.x));
+    st.y=Math.max(-maxY,Math.min(maxY,st.y));
+  };
+  const paint=()=>{img.style.transform=`translate(calc(-50% + ${st.x}px), calc(-50% + ${st.y}px)) scale(${st.scale})`};
+  img.onload=()=>{
+    st.natW=img.naturalWidth;st.natH=img.naturalHeight;
+    // cover the square the circle is inscribed in, at zoom=1
+    st.baseScale=STAGE/Math.max(1,Math.min(st.natW,st.natH));
+    st.scale=st.baseScale;st.x=0;st.y=0;
+    img.style.width=st.natW+'px';img.style.height=st.natH+'px';
+    clamp();paint();
+  };
+  img.onerror=()=>{$('#cropErr').textContent='Could not read that image file.'};
+  let dragging=false,startX=0,startY=0,ox=0,oy=0;
+  const down=e=>{
+    dragging=true;
+    const p=e.touches?e.touches[0]:e;startX=p.clientX;startY=p.clientY;ox=st.x;oy=st.y;
+    e.preventDefault();
+  };
+  const move=e=>{
+    if(!dragging)return;
+    const p=e.touches?e.touches[0]:e;
+    st.x=ox+(p.clientX-startX);st.y=oy+(p.clientY-startY);
+    clamp();paint();
+  };
+  const up=()=>{dragging=false};
+  const wheel=e=>{
+    e.preventDefault();
+    const v=Math.max(1,Math.min(3,parseFloat(zoomEl.value)-e.deltaY*0.0015));
+    zoomEl.value=v;st.scale=st.baseScale*v;clamp();paint();
+  };
+  stage.addEventListener('pointerdown',down);
+  window.addEventListener('pointermove',move);
+  window.addEventListener('pointerup',up);
+  stage.addEventListener('wheel',wheel,{passive:false});
+  zoomEl.oninput=()=>{st.scale=st.baseScale*parseFloat(zoomEl.value);clamp();paint()};
+  const teardown=()=>{
+    stage.removeEventListener('pointerdown',down);
+    window.removeEventListener('pointermove',move);
+    window.removeEventListener('pointerup',up);
+    URL.revokeObjectURL(url);
+  };
+  $('#cropCancel').onclick=()=>{teardown();openAccount()};
+  $('#cropBg').onclick=e=>{if(e.target.id==='cropBg'){teardown();openAccount()}};
+  $('#cropSave').onclick=async()=>{
+    $('#cropErr').textContent='';
+    try{
+      const w=st.natW*st.scale,h=st.natH*st.scale;
+      const tlX=STAGE/2+st.x-w/2,tlY=STAGE/2+st.y-h/2;
+      const srcX=Math.max(0,-tlX/st.scale),srcY=Math.max(0,-tlY/st.scale);
+      const srcSize=Math.min(STAGE/st.scale,st.natW-srcX,st.natH-srcY);
+      const c=document.createElement('canvas');c.width=480;c.height=480;
+      c.getContext('2d').drawImage(img,srcX,srcY,srcSize,srcSize,0,0,480,480);
+      const out=shrinkCanvasToLimit(c,.9);
+      if(!out)throw new Error('Image is still too large after compression — try a smaller photo.');
+      teardown();
+      await DB.updateSettings(ME.id,{avatar:out});
+      ME=DB.currentUser();
+      openAccount(); // re-render with the new picture + Remove button
+    }catch(e){$('#cropErr').textContent='Could not save: '+(e.code||e.message)}
+  };
 }
 function renderPreviews(){
   const p=$('#previews');p.innerHTML='';
@@ -4948,7 +5100,9 @@ function openAccount(){
   ME=DB.currentUser();
   const wait=ME.lastNameChange+CFG.NAME_CHANGE_MS-Date.now();
   const can=wait<=0;
-  $('#modalRoot').innerHTML=`<div class="modal-bg"><div class="modal">
+  const root=$('#modalRoot');
+  let bannerChosen=safeColor(ME.settings&&ME.settings.bannerColor,safeColor(ME.settings&&ME.settings.meBubble,'#7c6cff'));
+  root.innerHTML=`<div class="modal-bg"><div class="modal">
     <h2>👤 Account</h2>
     <div class="hint">User ID: <b>#${ME.id}</b> · Sign-in: ${ME.provider} ${ME.email?'· '+esc(ME.email):''}</div>
     <div class="section-h">Profile picture</div>
@@ -4960,6 +5114,16 @@ function openAccount(){
       </div>
     </div>
     <div class="err" id="acAvErr"></div>
+    <div class="section-h">🎨 Profile banner</div>
+    <div class="acc-banner-preview banner-anim" id="acBanner" style="background:${bannerGradCss(bannerChosen)}"></div>
+    <div class="banner-swatches" id="acBannerSwatches">
+      ${BANNER_PRESETS.map((c,i)=>`<button type="button" class="banner-swatch${c===bannerChosen?' sel':''}" data-c="${c}" style="background:${c};animation-delay:${(i*.03).toFixed(2)}s" title="${c}"><span class="bsw-check">✓</span></button>`).join('')}
+    </div>
+    <div class="banner-custom-row">
+      <div class="field" style="flex:1;margin:0"><label>Custom color</label><input type="color" id="acBannerCustom" value="${bannerChosen}"></div>
+      <button class="btn sec small" id="acBannerSave" style="margin-top:18px">Save banner</button>
+    </div>
+    <div class="err" id="acBannerErr"></div>
     <div class="section-h">Change username</div>
     <div class="field"><label>New username (1-20 chars: 0-9 a-z A-Z . _ -)</label><input id="acName" maxlength="20" value="${esc(ME.username)}"></div>
     <div class="hint">${can?'You can change your username now (once every 7 days).':`Next change available in ${Math.ceil(wait/86400000)} day(s).`}</div>
@@ -4976,16 +5140,11 @@ function openAccount(){
   </div></div>`;
   $('#acClose').onclick=()=>$('#modalRoot').innerHTML='';
   $('#acSignOut').onclick=()=>doSignOut();
-  $('#acAvFile').onchange=async()=>{
+  $('#acAvFile').onchange=()=>{
     const f=$('#acAvFile').files[0];if(!f)return;
     $('#acAvErr').textContent='';
     if(!f.type.startsWith('image/')){$('#acAvErr').textContent='Only images are allowed.';return}
-    try{
-      const dataUrl=await compressImage(f,480,.85);
-      await DB.updateSettings(ME.id,{avatar:dataUrl});
-      ME=DB.currentUser();
-      openAccount(); // re-render with the new picture + Remove button
-    }catch(e){$('#acAvErr').textContent='Could not save: '+(e.code||e.message)}
+    openAvatarCropper(f);
   };
   if($('#acAvRemove'))$('#acAvRemove').onclick=async()=>{
     try{
@@ -4994,6 +5153,25 @@ function openAccount(){
       openAccount();
     }catch(e){$('#acAvErr').textContent='Could not remove: '+(e.code||e.message)}
   };
+  const acBanner=$('#acBanner'),acCustom=$('#acBannerCustom');
+  const paintBanner=()=>{
+    acBanner.style.background=bannerGradCss(bannerChosen);
+    root.querySelectorAll('.banner-swatch').forEach(b=>b.classList.toggle('sel',b.dataset.c===bannerChosen));
+  };
+  root.querySelectorAll('.banner-swatch').forEach(b=>{
+    b.onclick=()=>{bannerChosen=b.dataset.c;acCustom.value=bannerChosen;paintBanner()};
+  });
+  acCustom.addEventListener('input',()=>{bannerChosen=acCustom.value;paintBanner()});
+  $('#acBannerSave').onclick=async()=>{
+    const b=$('#acBannerSave');b.disabled=true;b.textContent='Saving...';$('#acBannerErr').textContent='';
+    try{
+      await DB.updateSettings(ME.id,{bannerColor:bannerChosen});
+      ME=DB.currentUser();
+      toast('Banner saved!');
+      b.disabled=false;b.textContent='Save banner';
+    }catch(e){b.disabled=false;b.textContent='Save banner';$('#acBannerErr').textContent='Could not save: '+(e.code||e.message)}
+  };
+  enhanceColors(root);
   $('#acSave').onclick=async()=>{
     const b=$('#acSave');b.disabled=true;$('#acErr').textContent='';
     try{
@@ -5231,7 +5409,7 @@ function renderChatLight(keepFriends){
    light would actually be visible from. rAF-throttled so it stays cheap
    even with several panels on screen at once. */
 (function(){
-  const GLASS='.sidebar,.topbar,.composer,.card,.modal';
+  const GLASS='.sidebar,.topbar,.composer,.card,.modal,.gc-card';
   const RADIUS=220; // px — matches the radial-gradient's own circle radius
   let raf=null,pending=null;
   function distToRect(x,y,r){
