@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-09-27.7">
+<meta name="build-version" content="2026-09-27.8">
 <title>Itsukis Chat Hub</title>
 <link rel="icon" type="image/png" href="https://aniitsukicoded.github.io/backups/icon.png">
 <style>
@@ -511,19 +511,19 @@ input[type=color]{display:none!important}
 .gc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 @media (max-width:620px){.gc-grid{grid-template-columns:1fr 1fr}}
 @media (max-width:420px){.gc-grid{grid-template-columns:1fr}}
-/* Neutral glass tiles — a thin, low-tint pane so the blurred backdrop (whatever's
-   behind the modal) reads through as glass rather than a flat gray/mauve card.
-   Saturation is pushed up to compensate for stacking two blur passes (modal + tile),
-   which otherwise washes color out. Just a big icon and a name underneath it. */
+/* Glass tiles for the Global Chat / Rooms / Announcements picker — same panel/blur
+   variables as every other glass surface in the app (--ui-panel2, --ui-blur), so this
+   picks up the Interface tab's transparency slider exactly like the sidebar, topbar,
+   home tiles, etc. do. */
 .gc-card{position:relative;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;
-  background:rgba(255,255,255,calc(var(--ui-alpha) * .024));
-  backdrop-filter:blur(calc(var(--ui-blur) + 4px)) saturate(240%);-webkit-backdrop-filter:blur(calc(var(--ui-blur) + 4px)) saturate(240%);
-  border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:42px 18px;min-height:210px;
+  background:var(--ui-panel2);
+  backdrop-filter:blur(var(--ui-blur)) saturate(150%);-webkit-backdrop-filter:blur(var(--ui-blur)) saturate(150%);
+  border:1px solid var(--border);border-radius:24px;padding:42px 18px;min-height:210px;
   transition:transform .22s cubic-bezier(.2,.9,.3,1.2),border-color .2s ease,background .2s ease,box-shadow .2s ease;
   transform:translateZ(0);will-change:transform;-webkit-mask-image:-webkit-radial-gradient(white,black)}
 .gc-card::before{content:'';position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .2s ease;
   background:radial-gradient(120% 60% at 50% -12%,rgba(255,255,255,.14),transparent 65%)}
-.gc-card:hover{transform:translate3d(0,-4px,0) scale(1.015);border-color:rgba(255,255,255,.24);background:rgba(255,255,255,calc(var(--ui-alpha) * .1));
+.gc-card:hover{transform:translate3d(0,-4px,0) scale(1.015);border-color:rgba(124,108,255,.55);background:var(--ui-panel);
   box-shadow:0 16px 38px rgba(0,0,0,.3)}
 .gc-card:hover::before{opacity:1}
 .gc-card:active{transform:translate3d(0,-1px,0) scale(.98)}
@@ -534,22 +534,28 @@ input[type=color]{display:none!important}
 .gc-card:hover .gc-ic{transform:scale(1.06)}
 .gc-card h3{position:relative;font-size:17px;font-weight:700;margin:0;color:rgba(255,255,255,.94)}
 
-/* ===== Itsukis Chat picker — liquid glass ===== */
-.gc-overlay{background:rgba(0,0,0,.14);backdrop-filter:blur(0px) saturate(100%);-webkit-backdrop-filter:blur(0px) saturate(100%);
+/* ===== Itsukis Chat picker — liquid glass =====
+   The overlay behind the modal only dims the page a little (plus a very light blur so
+   the sliver of background around the modal's edges doesn't look razor-sharp) — it does
+   NOT do its own heavy blur/saturate pass. The actual "glass" look — blur amount, tint,
+   and how see-through it is — lives entirely on .gc-modal / .gc-card below, driven by
+   the same --ui-panel/--ui-blur variables (and so the same Settings ▸ Interface slider)
+   as every other glass surface in the app. Stacking a second heavy blur here on top of
+   that used to muddy the real background down to flat grey instead of proper liquid
+   glass — this way there's exactly one blur pass, so it reads as glass again. */
+.gc-overlay{background:rgba(5,5,15,.42);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
   animation:gcOverlayIn .38s ease forwards}
 .gc-overlay.closing{animation:gcOverlayOut .26s cubic-bezier(.4,0,1,1) forwards}
-@keyframes gcOverlayIn{from{opacity:0;backdrop-filter:blur(0px) saturate(100%);-webkit-backdrop-filter:blur(0px) saturate(100%)}
-  to{opacity:1;backdrop-filter:blur(26px) saturate(150%);-webkit-backdrop-filter:blur(26px) saturate(150%)}}
-@keyframes gcOverlayOut{from{opacity:1;backdrop-filter:blur(26px) saturate(150%);-webkit-backdrop-filter:blur(26px) saturate(150%)}
-  to{opacity:0;backdrop-filter:blur(0px) saturate(100%);-webkit-backdrop-filter:blur(0px) saturate(100%)}}
+@keyframes gcOverlayIn{from{opacity:0}to{opacity:1}}
+@keyframes gcOverlayOut{from{opacity:1}to{opacity:0}}
 
-/* True glass panel: no tint color of its own — just blur+saturate of whatever
-   is behind it, plus a faint neutral white sheen for specular highlight. Kept
-   very low-alpha so the actual background shows through instead of a gray/mauve
-   flat card; saturate is pushed up to keep that background's color from washing out. */
-.gc-modal{background:rgba(255,255,255,calc(var(--ui-alpha) * .03));
-  backdrop-filter:blur(calc(var(--ui-blur) + 12px)) saturate(240%);-webkit-backdrop-filter:blur(calc(var(--ui-blur) + 12px)) saturate(240%);
-  border:1px solid rgba(255,255,255,.2);border-radius:28px;
+/* True glass panel, tied to the same Interface-tab variables as .sidebar/.topbar/.opt/
+   etc, so its transparency and blur amount move together with the rest of the app
+   instead of using its own hand-tuned (and, stacked with the overlay above, effectively
+   flat-grey) alpha. */
+.gc-modal{background:var(--ui-panel);
+  backdrop-filter:blur(var(--ui-blur)) saturate(150%);-webkit-backdrop-filter:blur(var(--ui-blur)) saturate(150%);
+  border:1px solid var(--border);border-radius:28px;
   box-shadow:0 26px 70px rgba(0,0,0,.45),0 2px 8px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.25),inset 0 0 40px rgba(255,255,255,.02);
   animation:gcModalIn .5s cubic-bezier(.2,1.28,.32,1) forwards;transform-origin:center}
 .gc-modal::before{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;
