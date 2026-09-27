@@ -357,8 +357,8 @@ input[type=color]{display:none!important}
    DM) so switching feels like a soft transition instead of a hard swap. */
 @keyframes roomSwitchIn{0%{opacity:0;transform:translateY(10px) scale(.99);filter:blur(5px)}100%{opacity:1;transform:none;filter:blur(0)}}
 .messages.room-switch{animation:roomSwitchIn .38s var(--glass-spring)}
-.msg{display:flex;flex-direction:column;gap:0;max-width:78%;animation:msgIn .18s ease;position:relative}
-.msg.me{align-self:flex-end;align-items:flex-end}
+.msg{display:flex;flex-direction:column;gap:0;max-width:78%;animation:msgIn .46s var(--glass-spring,cubic-bezier(.16,1,.3,1)) both;position:relative;transform-origin:bottom center;will-change:transform,opacity}
+.msg.me{align-self:flex-end;align-items:flex-end;animation-name:msgInMe}
 /* Avatar sits beside msg-body (meta + bubble stacked, exactly like before) —
    keeping that original nesting is what lets .msg-body's own content (meta
    line vs bubble) determine the message's shrink-to-fit width safely.
@@ -368,7 +368,17 @@ input[type=color]{display:none!important}
    detached/floating whenever the bubble's height changed after the fact). */
 .msg-row{display:flex;gap:12px;align-items:flex-end;width:100%}
 .msg.me .msg-row{flex-direction:row-reverse}
-@keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* Bubble rises in with a soft spring — a touch of scale and a gentle sideways
+   drift (toward the edge that message's side actually sits on) reads as much
+   more "alive" than a flat fade, without being bouncy or slow. Split into two
+   directions so an incoming message doesn't drift the same way as one of mine. */
+@keyframes msgIn{0%{opacity:0;transform:translateY(20px) scale(.94) translateX(-8px)}55%{opacity:1}100%{opacity:1;transform:none}}
+@keyframes msgInMe{0%{opacity:0;transform:translateY(20px) scale(.94) translateX(8px)}55%{opacity:1}100%{opacity:1;transform:none}}
+/* A soft ring that blooms outward from a message the instant it truly arrives
+   live (a send/receive) and fades — NOT replayed for the initial history load,
+   so opening a room doesn't pulse fifty bubbles at once. */
+@keyframes msgPop{0%{box-shadow:0 0 0 0 rgba(124,108,255,.5)}100%{box-shadow:0 0 0 18px rgba(124,108,255,0)}}
+.msg.msg-live .bubble{animation:msgPop .7s cubic-bezier(.16,1,.3,1)}
 .msg .meta{font-size:13px;font-weight:600;color:var(--muted);margin:2px 6px 6px;text-shadow:0 1px 3px rgba(0,0,0,.6);line-height:1.1}
 .msg .meta [data-more-btn]:hover{color:var(--danger);text-decoration:underline}
 .msg.me .meta{text-align:right}
@@ -4017,10 +4027,18 @@ function senderSig(m){
   const rx=DB.reactionsFor(view.roomKey,m.id).map(r=>r.emoji+':'+r.ids.join(',')).sort().join('|');
   return resolved+'|'+name+'|'+avatar+'|'+(m.text||'')+'|'+(m.editedAt||0)+'|'+rx;
 }
-function appendMsgRow(box,m,lastDay){
+function appendMsgRow(box,m,lastDay,live){
   const day=new Date(m.at).toDateString();
   if(day!==lastDay){const d=document.createElement('div');d.className='date-sep';d.textContent=day;box.appendChild(d)}
   const el=msgEl(m);
+  // `live` marks a message that's genuinely just arriving (sent or received
+  // in real time) rather than one being painted as part of loading history —
+  // only those get the extra "just landed" glow, cleaned up once it's done
+  // so it never risks replaying later (e.g. if this node is ever reused).
+  if(live){
+    el.classList.add('msg-live');
+    el.addEventListener('animationend',()=>el.classList.remove('msg-live'),{once:true});
+  }
   box.appendChild(el);
   fitAvatarToRow(el);
   renderedNodes.set(m.id,{el,sig:senderSig(m)});
@@ -4047,6 +4065,18 @@ function patchResolvedSenders(list){
       renderedNodes.set(m.id,{el:fresh,sig});
     }
   });
+}
+// Animates the message list down to its newest content instead of snapping
+// there — used specifically for "a new message just arrived while we're
+// already at (or sticking to) the bottom", so the already-visible bubbles
+// glide up smoothly together with the new one fading in, rather than the
+// view jumping first and the message popping in after. Respects a reduced-
+// motion preference by falling back to an instant jump.
+const _reduceMotion=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function smoothScrollToBottom(box){
+  if(_reduceMotion){box.scrollTop=box.scrollHeight;return}
+  try{box.scrollTo({top:box.scrollHeight,behavior:'smooth'})}
+  catch(_){box.scrollTop=box.scrollHeight}
 }
 /* Keep a freshly-opened chat pinned to its newest message.
    A single scrollTop=scrollHeight is not enough: images decode after layout and grow the
@@ -4130,9 +4160,13 @@ function renderMessages(key){
     const newOnes=list.slice(keptCount);
     if(newOnes.length){
       let lastDay=keptCount>0?new Date(list[keptCount-1].at).toDateString():'';
-      newOnes.forEach(m=>{lastDay=appendMsgRow(box,m,lastDay)});
+      newOnes.forEach(m=>{lastDay=appendMsgRow(box,m,lastDay,true)});
       if(autoScroll||atBottom){
-        box.scrollTop=box.scrollHeight;
+        // Smooth-glide the view down to the new message instead of snapping —
+        // the previously-visible bubbles glide up out of the way together
+        // rather than jumping, which is what makes the arrival read as one
+        // continuous motion instead of two separate, jarring changes.
+        smoothScrollToBottom(box);
         box.querySelectorAll('.msg:nth-last-child(-n+3) img').forEach(img=>{
           if(!img.complete)img.addEventListener('load',()=>{box.scrollTop=box.scrollHeight},{once:true});
         });
