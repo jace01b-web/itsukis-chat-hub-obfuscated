@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-09-27.2">
+<meta name="build-version" content="2026-09-27.3">
 <title>Itsukis Chat Hub</title>
 <style>
 :root{
@@ -3792,6 +3792,16 @@ function renderChat(){
   renderMain();
 }
 function addHTML(parent,html){const t=document.createElement('template');t.innerHTML=html.trim();parent.appendChild(t.content)}
+// Plays the shared modal-close animation (.modal-bg.closing — see the
+// "===== Modals =====" CSS block) before actually clearing the modal root,
+// instead of yanking the dialog away instantly. Safe to call even if the
+// modal was already closed/replaced by something else in the meantime.
+function closeModalAnimated(root,after){
+  const bg=root&&root.querySelector('.modal-bg');
+  if(!bg){if(root)root.innerHTML='';if(after)after();return}
+  bg.classList.add('closing');
+  setTimeout(()=>{if(root.querySelector('.modal-bg')===bg)root.innerHTML='';if(after)after()},200);
+}
 function sbItem(ic,name,active,fn,badge,profileUser,leaveFn){
   const d=document.createElement('div');
   d.className='sb-item'+(active?' active':'');
@@ -5245,26 +5255,29 @@ function openSettings(fromChat){
     }catch(_){$$('#fileTxt').textContent='❌ Could not load that image'}
     preview();
   };
-  const closeRevert=()=>{if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();root.innerHTML='';applyStyle(document.documentElement,ME.settings);refitAllAvatars();MusicPlayer.applyPrefs(ME.settings.music)};
+  const closeRevert=()=>{if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();closeModalAnimated(root,()=>{applyStyle(document.documentElement,ME.settings);refitAllAvatars();MusicPlayer.applyPrefs(ME.settings.music)})};
   $$('#sCancel').onclick=closeRevert;
   $$('#sReset').onclick=()=>{
     Object.assign(s,{meBubble:'#7c6cff',meText:'#ffffff',radius:16,font:'system',size:15,bold:false,italic:false,bgType:'gradient',bgColor:'#2a1f5c',bgColor2:'#7c2f66',bgImage:'',bgFit:'cover',bgBlur:0,bgDim:30,uiOpacity:50,uiBlur:18,autoScrollBottom:true,filterLocal:true,pings:{everyone:true,sound:true,desktop:false},music:{enabled:true,volume:15,shuffle:true}});
     if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();
     MusicPlayer.setBackground(false);
-    root.innerHTML='';
     DB.updateSettings(ME.id,s).catch(()=>{});
-    ME=DB.currentUser();applyStyle(document.documentElement,s);refitAllAvatars();MusicPlayer.applyPrefs(s.music);toast('Settings reset.');
+    ME=DB.currentUser();
+    closeModalAnimated(root,()=>{applyStyle(document.documentElement,s);refitAllAvatars();MusicPlayer.applyPrefs(s.music);toast('Settings reset.')});
   };
   $$('#sSave').onclick=async()=>{
     read();
     const b=$$('#sSave');b.disabled=true;b.textContent='Saving...';
     try{
       await DB.updateSettings(ME.id,s);
-      ME=DB.currentUser();if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();root.innerHTML='';applyStyle(document.documentElement,ME.settings);MusicPlayer.applyPrefs(ME.settings.music);toast('Saved!');
-      // Re-render the message list immediately so a filter toggle change (or any other
-      // setting affecting how messages are displayed) applies to already-loaded messages
-      // right away, instead of waiting for the next unrelated re-render.
-      if(typeof renderChat==='function')renderChat();
+      ME=DB.currentUser();if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();
+      closeModalAnimated(root,()=>{
+        applyStyle(document.documentElement,ME.settings);MusicPlayer.applyPrefs(ME.settings.music);toast('Saved!');
+        // Re-render the message list immediately so a filter toggle change (or any other
+        // setting affecting how messages are displayed) applies to already-loaded messages
+        // right away, instead of waiting for the next unrelated re-render.
+        if(typeof renderChat==='function')renderChat();
+      });
     }catch(e){
       b.disabled=false;b.textContent='Save';
       $$('#sErr').textContent='Could not save: '+(e.code||e.message)+(/PERMISSION/i.test(e.code||e.message)?' — publish the updated database rules.':'');
@@ -5317,7 +5330,7 @@ function openAccount(){
     <div class="section-h">Session</div>
     <button class="btn sec" style="width:100%" id="acSignOut"><span style="margin-right:6px">🚪</span>Sign Out</button>
   </div></div>`;
-  $('#acClose').onclick=()=>$('#modalRoot').innerHTML='';
+  $('#acClose').onclick=()=>closeModalAnimated(root);
   $('#acSignOut').onclick=()=>doSignOut();
   $('#acAvFile').onchange=()=>{
     const f=$('#acAvFile').files[0];if(!f)return;
@@ -5358,7 +5371,7 @@ function openAccount(){
       const before=ME.username;
       await DB.renameUser(ME.id,nv);
       ME=DB.currentUser();
-      if(ME.username===before){b.disabled=false;$('#modalRoot').innerHTML='';return}
+      if(ME.username===before){b.disabled=false;closeModalAnimated(root);return}
       $('#modalRoot').innerHTML=`<div class="modal-bg"><div class="modal" style="max-width:380px;text-align:center">
         <div style="font-size:42px;margin-bottom:6px">✅</div><h2>Username changed</h2>
         <div class="hint">You're now <b style="color:var(--text)">${esc(ME.username)}</b>. Refreshing in 1 second...</div></div></div>`;
@@ -5369,7 +5382,7 @@ function openAccount(){
     try{
       await DB.setPassword($('#acPw').value);
       toast('Password set. You can now sign in with your username too.');
-      $('#modalRoot').innerHTML='';
+      closeModalAnimated(root);
     }catch(e){$('#acPwErr').textContent=e.message}
   };
 }
