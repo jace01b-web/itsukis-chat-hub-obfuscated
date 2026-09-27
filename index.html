@@ -4074,18 +4074,29 @@ function renderMessages(key){
   const list=DB.messages(key);
   const ids=list.map(m=>m.id);
   const autoScroll=ME.settings.autoScrollBottom!==false;
-  // Only "append new messages" when the room hasn't changed, we already have
-  // something rendered, and every previously-rendered id is still there in the
-  // same order (i.e. this update is purely new messages, not a switch/deletion).
-  const isAppendOnly=!roomChanged&&renderedIds.length>0&&ids.length>=renderedIds.length
-    &&renderedIds.every((id,i)=>ids[i]===id);
   const atBottom=roomChanged?true:(box.scrollHeight-box.scrollTop-box.clientHeight<80);
 
-  if(roomChanged||!isAppendOnly){
-    // Full rebuild: entering/switching a room, or the list changed in a
-    // non-append way (e.g. a message was unsent). Always land at the bottom
-    // when it's a fresh room, instead of wherever the old room happened to
-    // leave the scrollbar.
+  // How much of what's already on screen can we keep untouched? Two shapes are
+  // common and both avoid tearing the list down: a plain append (nothing lost),
+  // and the "sliding window" shape a busy room hits once its history passes the
+  // server's 300-message cap — the oldest visible message ages out of the query
+  // at the very same moment a new one arrives. That used to fail the old
+  // "every id still lines up" check and fall through to a full rebuild on
+  // basically every message in an active room, which is what made the whole
+  // conversation flash/re-animate for an instant each time. `drop` is how many
+  // of the previously-rendered ids fell off the front this update (0 for a
+  // plain append); -1 means neither shape fits (room switch, an edit that
+  // reshuffled the list, a deletion in the middle) and we do fall back to a
+  // full rebuild for those.
+  let drop=-1;
+  if(!roomChanged&&renderedIds.length&&ids.length){
+    const at=renderedIds.indexOf(ids[0]);
+    if(at!==-1&&renderedIds.slice(at).every((id,i)=>ids[i]===id))drop=at;
+  }
+
+  if(roomChanged||drop===-1){
+    // Full rebuild: entering/switching a room, or the list changed in a way
+    // that isn't a simple append or window-slide (e.g. a message was unsent).
     // If we're staying in the same room and the reader has scrolled up (e.g. a message
     // was unsent, or the full history replaced the quick preview), keep their place
     // instead of yanking them down.
@@ -4100,10 +4111,25 @@ function renderMessages(key){
       box.scrollTop=prevTop+Math.max(0,box.scrollHeight-prevH);
     }else pinToBottom(box);
   }else{
+    // Trim any aged-out messages off the top first — without touching anything
+    // still on screen, and without yanking a reader who's scrolled up into
+    // history around, since removing nodes above the viewport shortens the
+    // page above them.
+    if(drop>0){
+      const prevH=box.scrollHeight;
+      const keepEl=renderedNodes.get(renderedIds[drop])?.el;
+      if(keepEl)while(box.firstChild&&box.firstChild!==keepEl)box.removeChild(box.firstChild);
+      renderedIds.slice(0,drop).forEach(id=>renderedNodes.delete(id));
+      if(!atBottom){
+        const delta=prevH-box.scrollHeight;
+        if(delta>0)box.scrollTop=Math.max(0,box.scrollTop-delta);
+      }
+    }
     // Append-only: just add the new rows, leaving existing bubbles untouched...
-    const newOnes=list.slice(renderedIds.length);
+    const keptCount=renderedIds.length-drop;
+    const newOnes=list.slice(keptCount);
     if(newOnes.length){
-      let lastDay=new Date(list[renderedIds.length-1].at).toDateString();
+      let lastDay=keptCount>0?new Date(list[keptCount-1].at).toDateString():'';
       newOnes.forEach(m=>{lastDay=appendMsgRow(box,m,lastDay)});
       if(autoScroll||atBottom){
         box.scrollTop=box.scrollHeight;
