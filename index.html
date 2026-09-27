@@ -591,6 +591,14 @@ input[type=color]{display:none!important}
 .modal.wide .actions{position:sticky;bottom:-28px;margin:16px -28px -28px;padding:14px 28px;background:linear-gradient(to top,var(--ui-panel) 70%,transparent);border-radius:0 0 22px 22px;z-index:3}
 .modal.wide .preview-box{position:sticky;top:-28px;z-index:3;margin-top:8px}
 .set-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ver-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.ver-stat label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px}
+.ver-pill{font-size:12.5px;font-weight:700;padding:6px 9px;border-radius:9px;background:var(--bg2);border:1px solid var(--border);word-break:break-all;line-height:1.3}
+.ver-pill.ok{color:#7ee0a8;border-color:rgba(126,224,168,.4);background:rgba(126,224,168,.1)}
+.ver-pill.warn{color:#ffcf7e;border-color:rgba(255,207,126,.4);background:rgba(255,207,126,.1)}
+.ver-pill.unknown{color:var(--muted)}
+.hint.bad{color:var(--danger)}
+@media (max-width:520px){.ver-stats{grid-template-columns:1fr}}
 .preview-box{position:relative;overflow:hidden;background:var(--bg2);border-radius:16px;padding:16px;margin:12px 0 18px;min-height:130px;border:1px solid var(--border);isolation:isolate}
 .preview-box .pv-bg{position:absolute;inset:-30px;z-index:-2;background-size:cover;background-position:center}
 .preview-box .pv-dim{position:absolute;inset:0;z-index:-1;background:#000}
@@ -2728,21 +2736,29 @@ function checkPingNotifications(){
 // nudged to refresh instead of silently running stale code indefinitely.
 const MY_BUILD=document.querySelector('meta[name="build-version"]')?.content||'';
 let updatePending=false;
-async function checkForUpdate(){
-  if(updatePending||!MY_BUILD)return;
-  if(!/^https?:$/.test(location.protocol)||window.opener)return; // launcher/blob/about:blank windows: nothing to re-fetch, and reload would blank the page
+// Re-fetches this page (bypassing cache) and pulls out the build-version meta tag it's
+// actually serving right now — i.e. what's really deployed, as opposed to MY_BUILD (what
+// this tab happened to load with) or appVersion/current (whatever an owner last typed).
+// Shared by the soft poller below and by the Moderation > Version control panel, so the
+// panel can show an owner what's genuinely live before they pin it as canonical.
+async function fetchDeployedBuild(){
+  if(!/^https?:$/.test(location.protocol)||window.opener)return null; // launcher/blob/about:blank windows: nothing to re-fetch
   try{
     const res=await fetch(location.pathname+location.search+(location.search?'&':'?')+'_v='+Date.now(),{cache:'no-store'});
-    if(!res.ok)return;
+    if(!res.ok)return null;
     const html=await res.text();
     const m=html.match(/<meta\s+name=["']build-version["']\s+content=["']([^"']+)["']/i);
-    const latest=m&&m[1];
-    if(latest&&latest!==MY_BUILD){
-      updatePending=true;
-      toast('A new version is available — refreshing…');
-      setTimeout(()=>location.reload(),1800);
-    }
-  }catch(_){/* offline, or the file:// / hosting setup blocks this — silently retry later */}
+    return m?m[1]:null;
+  }catch(_){return null;/* offline, or the file:// / hosting setup blocks this */}
+}
+async function checkForUpdate(){
+  if(updatePending||!MY_BUILD)return;
+  const latest=await fetchDeployedBuild();
+  if(latest&&latest!==MY_BUILD){
+    updatePending=true;
+    toast('A new version is available — refreshing…');
+    setTimeout(()=>location.reload(),1800);
+  }
 }
 setInterval(checkForUpdate,120000);                 // poll every 2 minutes
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkForUpdate()});
@@ -2750,19 +2766,42 @@ window.addEventListener('focus',checkForUpdate);
 /* ---------- Forced update: owner-pinned version, enforced for everyone ---------- */
 // checkForUpdate() above is a soft nudge that only fires once a *new file* is actually
 // deployed and gets re-fetched. This is the owner-controlled companion: appVersion/current
-// in the database (see Moderation > 🚀 Version) is a version label an owner explicitly
+// in the database (see Moderation > 🚀 Version control) is a version label an owner explicitly
 // pinned as canonical. Every signed-in client compares its own MY_BUILD against that
 // live value and, if they don't match, reloads — so an owner can force stragglers on old
 // cached tabs onto the current build right now, without waiting for the 2-minute poll.
 let forcedUpdatePending=false;
+const FORCED_VER_KEY='forcedVerAttempt';
 function checkForcedVersion(){
   if(forcedUpdatePending||!MY_BUILD||!APP_VERSION_LOADED)return;
   const cur=APP_VERSION_CACHE&&APP_VERSION_CACHE.current;
-  if(!cur||cur===MY_BUILD)return;
+  if(!cur||cur===MY_BUILD){try{sessionStorage.removeItem(FORCED_VER_KEY)}catch(_){}return}
   if(!/^https?:$/.test(location.protocol)||window.opener)return; // nothing sane to reload into
+  // Loop guard: a reload can only ever fix this if a build matching `cur` is actually
+  // deployed. If an owner pinned a version that never got deployed (typo, or pushed the
+  // label before the new file went live), MY_BUILD will keep disagreeing forever and this
+  // would otherwise reload the tab every couple seconds, indefinitely, for every visitor.
+  // Cap it at a few tries per target version, then stop and show a static notice instead.
+  let attempts=0;
+  try{
+    const rec=JSON.parse(sessionStorage.getItem(FORCED_VER_KEY)||'null');
+    if(rec&&rec.v===cur)attempts=rec.n||0;
+  }catch(_){}
+  if(attempts>=3){showForcedVersionStuck(cur);return}
+  try{sessionStorage.setItem(FORCED_VER_KEY,JSON.stringify({v:cur,n:attempts+1}));}catch(_){}
   forcedUpdatePending=true;
   toast('The server owners pushed an update — refreshing…');
   setTimeout(()=>location.reload(),1800);
+}
+let forcedVerStuckEl=null;
+function showForcedVersionStuck(target){
+  if(forcedVerStuckEl)return;
+  const bg=document.createElement('div');
+  bg.style.cssText='position:fixed;left:12px;right:12px;bottom:12px;z-index:99998;max-width:520px;margin:0 auto;background:#3a2410;border:1px solid #6b4a1a;color:#ffdca8;border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.45;box-shadow:0 8px 24px rgba(0,0,0,.4);display:flex;gap:10px;align-items:center;flex-wrap:wrap';
+  bg.innerHTML=`<div style="flex:1;min-width:200px">⚠️ The owners pinned version "${esc(target)}", but this tab still can't reach it after a few tries — it may not be deployed yet, or you're stuck on a stale cache.</div><button class="btn sec small" id="stuckReloadBtn" style="flex-shrink:0">Try again</button>`;
+  document.body.appendChild(bg);
+  forcedVerStuckEl=bg;
+  bg.querySelector('#stuckReloadBtn').onclick=()=>{try{sessionStorage.removeItem(FORCED_VER_KEY)}catch(_){}location.reload()};
 }
 // Soft two-note "bell" chime for pings: a bright note followed by a gentle
 // perfect-fifth-down resolve, each with its own quick attack + smooth decay
@@ -5241,14 +5280,22 @@ function openSettings(fromChat){
       </div>
       <div class="set-card">
         <div class="section-h" style="margin-top:0">🚀 Version control</div>
-        <div class="set-grid">
-          <div class="field"><label>Server's pinned version</label><div id="modVerPinned" style="font-weight:600;font-size:14px;padding-top:4px">…</div></div>
-          <div class="field"><label>Version to push</label><input type="text" id="modVerInput" maxlength="60" value="${esc(MY_BUILD)}"></div>
+        <div class="ver-stats" id="verStats">
+          <div class="ver-stat"><label>Your build</label><div class="ver-pill" id="verMyBuild">${esc(MY_BUILD)||'unknown'}</div></div>
+          <div class="ver-stat"><label>Pinned version</label><div class="ver-pill" id="modVerPinned">…</div></div>
+          <div class="ver-stat"><label>Latest deployed</label><div class="ver-pill" id="verLatestDeployed">checking…</div></div>
         </div>
+        <div class="field" style="margin-top:14px"><label>Version to push</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="modVerInput" maxlength="60" value="${esc(MY_BUILD)}" style="flex:1">
+            <button class="btn sec small" id="modVerUseLatest" type="button" style="flex-shrink:0;white-space:nowrap" disabled>Use latest deployed</button>
+          </div>
+        </div>
+        <div class="hint bad hidden" id="modVerWarn" style="margin-top:6px"></div>
         <div class="actions" style="justify-content:flex-start;margin-top:10px">
           <button class="btn" id="modVerGo">Force everyone onto this version</button>
         </div>
-        <div class="hint" style="margin-top:8px">Pins this label as the site's canonical version. Every signed-in client compares its own build against it live and auto-refreshes if it doesn't match — this is how you kick everyone off an old cached tab right after deploying. Defaults to the build you're on right now.</div>
+        <div class="hint" style="margin-top:8px">Pins this label as the site's canonical version. Every signed-in client compares its own build against it live and auto-refreshes if it doesn't match — this is how you kick everyone off an old cached tab right after deploying. Make sure the new file is actually live first: pushing a version nobody's build matches yet will leave clients (including yours) retrying for a few seconds before they give up and show a "stuck" notice instead of reloading forever.</div>
         <div class="section-h" style="margin-top:16px;font-size:13px">History</div>
         <div id="modVerHistory" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto"></div>
       </div>`:''}
@@ -5357,7 +5404,7 @@ function openSettings(fromChat){
     const pinnedEl=$$('#aboutPinned'),hintEl=$$('#aboutHint');
     if(!pinnedEl)return;
     const cur=APP_VERSION_CACHE&&APP_VERSION_CACHE.current;
-    pinnedEl.textContent=cur||'not set';
+    pinnedEl.textContent=cur||'not pinned yet';
     if(!cur)hintEl.textContent='';
     else if(cur===MY_BUILD)hintEl.textContent="You're up to date.";
     else hintEl.innerHTML='You\'re on an older version — this tab will refresh itself shortly, or you can <a href="#" id="aboutRefreshNow">refresh now</a>.';
@@ -5366,10 +5413,22 @@ function openSettings(fromChat){
   renderAboutTab();
   let renderVerHistory=null;
   if(isOwner(ME.id)){
+    let latestDeployed=undefined; // undefined = not checked yet, null = checked but couldn't tell
+    const setPill=(el,text,cls)=>{if(!el)return;el.textContent=text;el.className='ver-pill'+(cls?' '+cls:'')};
+    const updateWarning=()=>{
+      const warn=$$('#modVerWarn'),input=$$('#modVerInput');
+      if(!warn||!input)return;
+      const v=input.value.trim();
+      if(!v||v===MY_BUILD||(latestDeployed&&v===latestDeployed)){warn.classList.add('hidden');return}
+      warn.classList.remove('hidden');
+      warn.textContent='⚠️ This doesn\'t match your build or the latest detected deploy — clients (including yours) won\'t find a match until a build with that label actually goes live.';
+    };
     renderVerHistory=function(){
-      const box=$$('#modVerPinned'),list=$$('#modVerHistory');
-      if(!box)return;
-      box.textContent=(APP_VERSION_CACHE&&APP_VERSION_CACHE.current)||'not set';
+      const pinnedEl=$$('#modVerPinned'),myEl=$$('#verMyBuild'),list=$$('#modVerHistory');
+      if(!pinnedEl)return;
+      const cur=APP_VERSION_CACHE&&APP_VERSION_CACHE.current;
+      setPill(pinnedEl,cur||'not set',cur?(cur===MY_BUILD?'ok':'warn'):'unknown');
+      setPill(myEl,MY_BUILD||'unknown',cur?(cur===MY_BUILD?'ok':'warn'):'');
       const hist=DB.versionHistory();
       list.innerHTML=hist.length?'':'<div class="hint">No version has been pushed yet.</div>';
       hist.forEach(h=>{
@@ -5378,14 +5437,28 @@ function openSettings(fromChat){
         row.innerHTML=`<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">${esc(h.version)}</div><div class="hint" style="margin-top:2px">${new Date(h.at).toLocaleString()} · by #${h.by}</div></div>`;
         list.appendChild(row);
       });
+      updateWarning();
     }
     renderVerHistory();
+    // Check what's actually deployed right now (independent of the DB-pinned version),
+    // so the owner isn't pushing blind — see fetchDeployedBuild() near checkForUpdate().
+    fetchDeployedBuild().then(v=>{
+      latestDeployed=v;
+      const el=$$('#verLatestDeployed'),useBtn=$$('#modVerUseLatest');
+      if(el)setPill(el,v||'could not check',v?(v===MY_BUILD?'ok':'warn'):'unknown');
+      if(useBtn&&v){useBtn.disabled=false;useBtn.onclick=()=>{$$('#modVerInput').value=v;updateWarning()}}
+      updateWarning();
+    });
+    $$('#modVerInput')&&$$('#modVerInput').addEventListener('input',updateWarning);
     $$('#modVerGo')&&($$('#modVerGo').onclick=async()=>{
-      const v=$$('#modVerInput').value;
+      const v=$$('#modVerInput').value.trim();
+      if(!v){toast('Enter a version label','bad');return}
+      const mismatch=v!==MY_BUILD&&!(latestDeployed&&v===latestDeployed);
+      if(mismatch&&!confirm('"'+v+'" doesn\'t match your current build'+(latestDeployed?' or the latest detected deploy':'')+'. Every signed-in client (including yours) will keep retrying and reloading until a build with that exact label is actually live, then fall back to a "stuck" notice instead of looping forever. Push it anyway?'))return;
       const btn=$$('#modVerGo');btn.disabled=true;
       try{
         await DB.forceVersion(v);
-        toast('Version "'+v.trim()+'" pushed — everyone will be moved onto it.');
+        toast('Version "'+v+'" pushed — everyone will be moved onto it.');
         renderVerHistory();renderAboutTab();
       }catch(err){toast(err.message,'bad')}
       finally{btn.disabled=false}
