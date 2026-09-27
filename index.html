@@ -2576,21 +2576,20 @@ function pingToast(m,key,sender){
    Fires a native browser Notification for an incoming ping or DM, but only
    while you're not actually looking at that exact conversation — tab hidden
    or unfocused ("not online"), or you're elsewhere in the app (a different
-   room, the home screen, Game Hubs, settings, etc). The browser is asked for
-   permission automatically (once per session, the moment you're signed in)
-   rather than waiting on a settings toggle; Settings > Pings > "Desktop
-   notifications" just lets you opt back out afterward. NOTIFY_SINCE keeps
-   this from replaying old unread pings/DMs as a notification storm the
-   moment the tab loads or you sign in. */
+   room, the home screen, Game Hubs, settings, etc).
+   Permission is ONLY ever requested from inside the Settings > Pings >
+   "Desktop notifications" toggle's own click handler (see below) — never
+   automatically on page load or sign-in. That used to be the bug: asking for
+   permission the moment you signed in wasn't a real user gesture, so browsers
+   silently ignored or auto-blocked the prompt, permission stayed stuck on
+   "default" forever, and notifications simply never fired even though the
+   setting itself was on. Now the toggle is the only path to a permission
+   prompt: flip it on and, if needed, the browser asks right then; flip it off
+   and it's just a preference change, no browser prompt involved.
+   NOTIFY_SINCE keeps this from replaying old unread pings/DMs as a
+   notification storm the moment the tab loads or you sign in. */
 const NOTIFY_SINCE=Date.now();
 const _notifiedMsgIds=new Set();
-let _notifyPermAsked=false;
-function maybeAskNotifyPermission(){
-  if(_notifyPermAsked||typeof Notification==='undefined')return;
-  if(Notification.permission!=='default')return;
-  _notifyPermAsked=true;
-  Notification.requestPermission().catch(()=>{});
-}
 function _viewingRoom(key){
   return view.page==='chatPage'&&view.roomKey===key&&document.visibilityState==='visible'&&document.hasFocus();
 }
@@ -5308,13 +5307,22 @@ function openSettings(fromChat){
   // Background play is a per-device choice kept in localStorage (no database field / rule change needed).
   $$('#sMusicBg').addEventListener('change',e=>MusicPlayer.setBackground(e.target.checked));
   // Flipping this on has to ask the browser for permission right here, inside the click
-  // handler — browsers require a real user gesture for the prompt to show at all.
+  // handler — browsers require a real user gesture for the prompt to reliably show at all,
+  // and this is the ONLY place in the app permission is ever requested (see the notes above
+  // checkPingNotifications). Turning it off never touches browser permission at all.
   $$('#sPd').addEventListener('change',e=>{
-    if(!e.target.checked)return;
-    if(typeof Notification==='undefined'){e.target.checked=false;toast('Your browser does not support notifications.','bad');return}
-    if(Notification.permission==='granted')return;
-    if(Notification.permission==='denied'){e.target.checked=false;toast('Notifications are blocked for this site in your browser settings.','bad');return}
-    Notification.requestPermission().then(p=>{if(p!=='granted'){e.target.checked=false;toast('Notifications were not allowed.','bad')}});
+    if(!e.target.checked)return;                 // turning off: just a preference change
+    if(typeof Notification==='undefined'){e.target.checked=false;preview();toast('Your browser does not support notifications.','bad');return}
+    if(Notification.permission==='granted')return;        // already have it — nothing to ask
+    if(Notification.permission==='denied'){                // previously blocked — auto turn back off
+      e.target.checked=false;preview();
+      toast('Notifications are blocked for this site in your browser settings.','bad');
+      return;
+    }
+    // permission is 'default' — genuinely ask; auto-revert the toggle if they decline
+    Notification.requestPermission().then(p=>{
+      if(p!=='granted'){e.target.checked=false;preview();toast('Notifications were not allowed.','bad')}
+    });
   });
   root.querySelectorAll('input,select').forEach(i=>i.addEventListener('input',preview));
   $$('#sBgI').onchange=async e=>{
@@ -5589,7 +5597,6 @@ DB.onChange(()=>{
   if(view.page==='homePage')refreshBadge();
   applyStyleIfChanged();
   DB.ensureDmMemberships();
-  maybeAskNotifyPermission();
   checkPingNotifications();
   if(view.page==='chatPage'){
     // avoid rebuilding modal/inputs; just refresh lists and messages
