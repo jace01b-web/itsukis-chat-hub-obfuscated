@@ -634,10 +634,16 @@ input[type=color]{display:none!important}
 .tag.owner{background:#ffb84d;color:#3a2400}
 /* Profile card */
 .pf-banner{height:92px;position:relative;overflow:hidden}
-.pf-banner.banner-anim::after,.acc-banner-preview.banner-anim::after{content:'';position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.25) 50%,transparent 65%);background-size:220% 100%;
+/* A single narrow band sweeping across, not a repeating background-position
+   tween — it holds fully off-screen (clipped by the banner's own
+   overflow:hidden) both before and after the sweep, so the loop resets
+   invisibly instead of visibly snapping back like the old background-position
+   version did. */
+.pf-banner.banner-anim::after,.acc-banner-preview.banner-anim::after{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;pointer-events:none;
+  background:linear-gradient(115deg,transparent,rgba(255,255,255,.25),transparent);
+  transform:skewX(-20deg);
   animation:bannerSheen 4s ease-in-out infinite}
-@keyframes bannerSheen{0%{background-position:170% 0}100%{background-position:-70% 0}}
+@keyframes bannerSheen{0%,20%{left:-60%}55%,100%{left:130%}}
 .pf-x{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.28);color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;transition:.15s;z-index:2}
 /* Banner color editor (Account modal) */
 .acc-banner-preview{height:92px;border-radius:16px;position:relative;overflow:hidden;margin:2px 0 14px;box-shadow:0 8px 22px rgba(0,0,0,.28);transition:background .35s ease}
