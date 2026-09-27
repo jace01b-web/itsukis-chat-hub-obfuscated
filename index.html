@@ -6,8 +6,9 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-09-27.3">
+<meta name="build-version" content="2026-09-27.5">
 <title>Itsukis Chat Hub</title>
+<link rel="icon" type="image/png" href="https://aniitsukicoded.github.io/backups/icon.png">
 <style>
 :root{
   --bg:#0b0c1a; --bg2:#14152b; --panel:#1a1c38; --panel2:#23264a;
@@ -1189,10 +1190,10 @@ console.error=function(...a){_capture(...a);_origConsoleError.apply(console,a)};
   // on mobile, or in a popup, these checks give false positives (window size gaps, paused
   // debugger, console formatting) and the old code reloaded the page in a loop, which is
   // what left it stuck on the loading screen or turned VUS OS black.
+  let framed=false;try{framed=window.self!==window.top}catch(_){framed=true}
   const mobile=/Android|iPhone|iPad|iPod|Mobile|CrOS/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent));
-  if(mobile)return;
-  // Keyboard/right-click blocking only (no reload, so it can never loop — safe even when
-  // framed or opened via window.open/a launcher, since nothing here can retrigger a loop).
+  if(framed||mobile||window.opener)return;
+  // Keyboard/right-click blocking only (no reload, so it can never loop)
   function hit(e){
     const k=(e.key||'').toLowerCase();
     const bad = e.key==='F12' ||
@@ -1605,6 +1606,11 @@ const DB=(()=>{
       ids.forEach(f=>watchPreview(dmKey(myId,f)));
     });
     listen('sentRequests/'+myId,v=>{C.friendReqOut[myId]=Object.keys(v||{}).map(t=>({from:myId,to:Number(t),status:'pending'}))});
+    // Always preview Global & Announcements too (readable by anyone signed in), so an
+    // @everyone/@me ping landing there can still be noticed — and desktop-notified — even
+    // while I'm not currently looking at that room.
+    watchPreview(CFG.GLOBAL_ROOM);
+    watchPreview(CFG.ANNOUNCEMENTS_ROOM);
     // Blocking: my own blocked list, and the mirror list of who has blocked me (blockedBy/myId/*
     // is written by whoever blocks me, so I can filter their messages and they can filter mine).
     listen('blocked/'+myId,v=>{C.blocked[myId]=v?Object.keys(v).map(Number):[]});
@@ -2511,7 +2517,7 @@ const DB=(()=>{
     uiOpacity:50,uiBlur:18,
     autoScrollBottom:true,
     filterLocal:true,
-    pings:{everyone:true,sound:true,desktop:false},
+    pings:{everyone:true,sound:true,desktop:true},
     music:{enabled:true,volume:15,shuffle:true}
   }}
   function authMsg(e){
@@ -2564,6 +2570,56 @@ function pingToast(m,key,sender){
   if(sender&&!sender.deleted)mk('pt-hint','Tap to view profile');
   t.onclick=()=>{t.remove();if(sender&&!sender.deleted)openUserProfile(m.senderId)};
   $('#toasts').appendChild(t);setTimeout(()=>t.remove(),9000);
+}
+
+/* ---------- Desktop notifications for pings & DMs ----------
+   Fires a native browser Notification for an incoming ping or DM, but only
+   while you're not actually looking at that exact conversation — tab hidden
+   or unfocused ("not online"), or you're elsewhere in the app (a different
+   room, the home screen, Game Hubs, settings, etc). The browser is asked for
+   permission automatically (once per session, the moment you're signed in)
+   rather than waiting on a settings toggle; Settings > Pings > "Desktop
+   notifications" just lets you opt back out afterward. NOTIFY_SINCE keeps
+   this from replaying old unread pings/DMs as a notification storm the
+   moment the tab loads or you sign in. */
+const NOTIFY_SINCE=Date.now();
+const _notifiedMsgIds=new Set();
+let _notifyPermAsked=false;
+function maybeAskNotifyPermission(){
+  if(_notifyPermAsked||typeof Notification==='undefined')return;
+  if(Notification.permission!=='default')return;
+  _notifyPermAsked=true;
+  Notification.requestPermission().catch(()=>{});
+}
+function _viewingRoom(key){
+  return view.page==='chatPage'&&view.roomKey===key&&document.visibilityState==='visible'&&document.hasFocus();
+}
+function checkPingNotifications(){
+  if(!ME||!ME.settings.pings||!ME.settings.pings.desktop)return;
+  if(typeof Notification==='undefined'||Notification.permission!=='granted')return;
+  const keys=[CFG.GLOBAL_ROOM,CFG.ANNOUNCEMENTS_ROOM,
+    ...DB.myRooms(ME.id).map(r=>r.id),
+    ...DB.friends(ME.id).map(f=>DB.dmKey(ME.id,f))];
+  keys.forEach(key=>{
+    const isDM=String(key).startsWith('dm_');
+    (DB.messages(key)||[]).forEach(m=>{
+      if(m.senderId===ME.id||m.at<=NOTIFY_SINCE||_notifiedMsgIds.has(m.id))return;
+      _notifiedMsgIds.add(m.id);
+      const pinged=(m.pings||[]).includes(ME.id)||((m.pings||[]).includes('everyone')&&ME.settings.pings.everyone);
+      if(!isDM&&!pinged)return;                 // only pings & DMs — never every ordinary message
+      if(_viewingRoom(key))return;               // already looking right at it — the in-app toast/sound covers this
+      const sender=DB.getUser(m.senderId);
+      const name=sender&&!sender.deleted?displayUsername(sender.username):'Someone';
+      try{
+        const n=new Notification(name,{
+          icon:'https://aniitsukicoded.github.io/backups/icon.png',
+          silent:true,                          // no sound — the in-chat ping chime already covers that
+          tag:'itsuki-'+key                     // collapse a burst of messages from the same conversation into one
+        });
+        n.onclick=()=>n.close();                // just dismiss it — no navigation
+      }catch(_){}
+    });
+  });
 }
 
 /* ---------- Auto-update: keep everyone on the latest deployed version ---------- */
@@ -4963,6 +5019,13 @@ function openSettings(fromChat){
           <div style="font-weight:600;font-size:14px">Play sound on ping</div>
           <label class="switch"><input type="checkbox" id="sPs" ${s.pings.sound?'checked':''}><span class="slider"></span></label>
         </div>
+        <div class="toggle-row" style="margin-top:14px">
+          <div>
+            <div style="font-weight:600;font-size:14px">Desktop notifications</div>
+            <div class="hint" style="margin-top:2px">Silent notifications with the sender's name when you're pinged or DMed elsewhere.</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="sPd" ${s.pings.desktop?'checked':''}><span class="slider"></span></label>
+        </div>
       </div>
     </div>
 
@@ -5222,7 +5285,7 @@ function openSettings(fromChat){
     s.uiOpacity=+$$('#sUiO').value;s.uiBlur=+$$('#sUiB').value;
     s.autoScrollBottom=$$('#sAutoScroll').checked;
     s.filterLocal=$$('#sFilterLocal').checked;
-    s.pings={everyone:$$('#sPe').checked,sound:$$('#sPs').checked,desktop:false};
+    s.pings={everyone:$$('#sPe').checked,sound:$$('#sPs').checked,desktop:$$('#sPd').checked};
     s.music={enabled:$$('#sMusicOn').checked,volume:musicWidgetVolume(),shuffle:s.music&&s.music.shuffle!==false};
   }
   function readouts(){
@@ -5244,6 +5307,15 @@ function openSettings(fromChat){
   });
   // Background play is a per-device choice kept in localStorage (no database field / rule change needed).
   $$('#sMusicBg').addEventListener('change',e=>MusicPlayer.setBackground(e.target.checked));
+  // Flipping this on has to ask the browser for permission right here, inside the click
+  // handler — browsers require a real user gesture for the prompt to show at all.
+  $$('#sPd').addEventListener('change',e=>{
+    if(!e.target.checked)return;
+    if(typeof Notification==='undefined'){e.target.checked=false;toast('Your browser does not support notifications.','bad');return}
+    if(Notification.permission==='granted')return;
+    if(Notification.permission==='denied'){e.target.checked=false;toast('Notifications are blocked for this site in your browser settings.','bad');return}
+    Notification.requestPermission().then(p=>{if(p!=='granted'){e.target.checked=false;toast('Notifications were not allowed.','bad')}});
+  });
   root.querySelectorAll('input,select').forEach(i=>i.addEventListener('input',preview));
   $$('#sBgI').onchange=async e=>{
     const f=e.target.files[0];if(!f)return;
@@ -5258,7 +5330,7 @@ function openSettings(fromChat){
   const closeRevert=()=>{if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();closeModalAnimated(root,()=>{applyStyle(document.documentElement,ME.settings);refitAllAvatars();MusicPlayer.applyPrefs(ME.settings.music)})};
   $$('#sCancel').onclick=closeRevert;
   $$('#sReset').onclick=()=>{
-    Object.assign(s,{meBubble:'#7c6cff',meText:'#ffffff',radius:16,font:'system',size:15,bold:false,italic:false,bgType:'gradient',bgColor:'#2a1f5c',bgColor2:'#7c2f66',bgImage:'',bgFit:'cover',bgBlur:0,bgDim:30,uiOpacity:50,uiBlur:18,autoScrollBottom:true,filterLocal:true,pings:{everyone:true,sound:true,desktop:false},music:{enabled:true,volume:15,shuffle:true}});
+    Object.assign(s,{meBubble:'#7c6cff',meText:'#ffffff',radius:16,font:'system',size:15,bold:false,italic:false,bgType:'gradient',bgColor:'#2a1f5c',bgColor2:'#7c2f66',bgImage:'',bgFit:'cover',bgBlur:0,bgDim:30,uiOpacity:50,uiBlur:18,autoScrollBottom:true,filterLocal:true,pings:{everyone:true,sound:true,desktop:true},music:{enabled:true,volume:15,shuffle:true}});
     if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();
     MusicPlayer.setBackground(false);
     DB.updateSettings(ME.id,s).catch(()=>{});
@@ -5517,6 +5589,8 @@ DB.onChange(()=>{
   if(view.page==='homePage')refreshBadge();
   applyStyleIfChanged();
   DB.ensureDmMemberships();
+  maybeAskNotifyPermission();
+  checkPingNotifications();
   if(view.page==='chatPage'){
     // avoid rebuilding modal/inputs; just refresh lists and messages
     const keepFriends=view.mode==='dms'&&view.dmView==='friends';
