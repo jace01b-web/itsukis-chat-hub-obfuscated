@@ -472,15 +472,16 @@ input[type=color]{display:none!important}
 .modal{position:relative}
 .modal-x{position:absolute;top:16px;right:16px;width:32px;height:32px;border-radius:10px;background:var(--ui-panel2);color:var(--muted);font-size:15px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border)}
 .modal-x:hover{color:var(--text);background:var(--panel2)}
-.gc-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.gc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media (max-width:620px){.gc-grid{grid-template-columns:1fr 1fr}}
 @media (max-width:420px){.gc-grid{grid-template-columns:1fr}}
 /* Neutral glass tiles — a thin, low-tint pane so the blurred backdrop (whatever's
    behind the modal) reads through as glass rather than a flat gray/mauve card.
    Saturation is pushed up to compensate for stacking two blur passes (modal + tile),
    which otherwise washes color out. Just a big icon and a name underneath it. */
 .gc-card{position:relative;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;
-  background:rgba(255,255,255,.025);
-  backdrop-filter:blur(22px) saturate(220%);-webkit-backdrop-filter:blur(22px) saturate(220%);
+  background:rgba(255,255,255,.012);
+  backdrop-filter:blur(22px) saturate(240%);-webkit-backdrop-filter:blur(22px) saturate(240%);
   border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:42px 18px;min-height:210px;
   transition:transform .22s cubic-bezier(.2,.9,.3,1.2),border-color .2s ease,background .2s ease,box-shadow .2s ease;
   transform:translateZ(0);will-change:transform;-webkit-mask-image:-webkit-radial-gradient(white,black)}
@@ -498,7 +499,7 @@ input[type=color]{display:none!important}
 .gc-card h3{position:relative;font-size:17px;font-weight:700;margin:0;color:rgba(255,255,255,.94)}
 
 /* ===== Itsukis Chat picker — liquid glass ===== */
-.gc-overlay{background:rgba(0,0,0,.28);backdrop-filter:blur(0px) saturate(100%);-webkit-backdrop-filter:blur(0px) saturate(100%);
+.gc-overlay{background:rgba(0,0,0,.14);backdrop-filter:blur(0px) saturate(100%);-webkit-backdrop-filter:blur(0px) saturate(100%);
   animation:gcOverlayIn .38s ease forwards}
 .gc-overlay.closing{animation:gcOverlayOut .26s cubic-bezier(.4,0,1,1) forwards}
 @keyframes gcOverlayIn{from{opacity:0;backdrop-filter:blur(0px) saturate(100%);-webkit-backdrop-filter:blur(0px) saturate(100%)}
@@ -510,8 +511,8 @@ input[type=color]{display:none!important}
    is behind it, plus a faint neutral white sheen for specular highlight. Kept
    very low-alpha so the actual background shows through instead of a gray/mauve
    flat card; saturate is pushed up to keep that background's color from washing out. */
-.gc-modal{background:rgba(255,255,255,.03);
-  backdrop-filter:blur(30px) saturate(220%);-webkit-backdrop-filter:blur(30px) saturate(220%);
+.gc-modal{background:rgba(255,255,255,.015);
+  backdrop-filter:blur(30px) saturate(240%);-webkit-backdrop-filter:blur(30px) saturate(240%);
   border:1px solid rgba(255,255,255,.2);border-radius:28px;
   box-shadow:0 26px 70px rgba(0,0,0,.45),0 2px 8px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.25),inset 0 0 40px rgba(255,255,255,.02);
   animation:gcModalIn .5s cubic-bezier(.2,1.28,.32,1) forwards;transform-origin:center}
@@ -532,7 +533,8 @@ input[type=color]{display:none!important}
 .gc-modal .modal-x:hover{background:rgba(255,255,255,.2);color:#fff;transform:rotate(90deg)}
 .gc-modal h2{font-size:19px;font-weight:700;letter-spacing:.01em;color:rgba(255,255,255,.92)}
 .gc-modal .hint{color:var(--muted);font-size:13px}
-.gc-modal .gc-grid{grid-template-columns:1fr 1fr;gap:10px;margin-top:0}
+.gc-modal .gc-grid{grid-template-columns:repeat(3,1fr);gap:10px;margin-top:0}
+@media (max-width:620px){.gc-modal .gc-grid{grid-template-columns:1fr 1fr}}
 @media (max-width:420px){.gc-modal .gc-grid{grid-template-columns:1fr}}
 .gc-modal{padding:22px}
 
@@ -1052,6 +1054,7 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
       <div class="messages" id="messages"></div>
       <div class="banned-banner hidden" id="bannedBanner">🚫 Your account has been banned. You can still view chat, but you can't send messages, change settings, or do anything else.</div>
       <div class="banned-banner hidden" id="mutedBanner" style="background:#3a3410;border-color:#6b5d1a;color:#ffe9a8"></div>
+      <div class="banned-banner hidden" id="announceBanner" style="background:#132a3a;border-color:#1f4a63;color:#a8d4ff">📢 Only the owner can post here — you can view announcements but not send messages.</div>
       <div class="composer">
         <div class="compose-context" id="composeContext">
           <div class="cc-bar"></div>
@@ -1172,6 +1175,7 @@ const CFG={
   MAX_IMG_DATAURL_CHARS:700000,
   MIN_PW:6,
   GLOBAL_ROOM:'global',
+  ANNOUNCEMENTS_ROOM:'announcements',
   NUKE_MSGS:3,          // this many messages...
   NUKE_WINDOW_MS:1000,  // ...within this window triggers anti-nuke
   OWNER_IDS:[], // no longer used for permission checks — kept empty; owner status now comes live from owners/$id===1 in the database (see C.owners / isOwner()). Populate owners/$id there from your own backend, not here.
@@ -2143,7 +2147,7 @@ const DB=(()=>{
     // account, which already does a full cross-path cascade delete on ban.
     async searchUserMessages(userId){
       userId=Number(userId);
-      const keys=['global',...C.myRoomIds.filter(id=>C.rooms[id]),
+      const keys=['global','announcements',...C.myRoomIds.filter(id=>C.rooms[id]),
         ...(C.friends[myId]||[]).map(f=>dmKey(myId,f))];
       const results=[];
       await Promise.all(keys.map(async key=>{
@@ -3469,6 +3473,8 @@ function openChat(mode,section){
     if(section==='rooms'){
       const myRooms=DB.myRooms(ME.id);
       view.roomKey=myRooms.length?myRooms[0].id:null;
+    }else if(section==='announcements'){
+      view.roomKey=CFG.ANNOUNCEMENTS_ROOM;
     }else{
       view.roomKey=CFG.GLOBAL_ROOM;
     }
@@ -3484,7 +3490,7 @@ function openChat(mode,section){
 }
 // Home screen "Itsukis Chat" tile: ask Global Chat vs Rooms instead of assuming Global Chat.
 function modalGlobalChoice(){
-  $('#modalRoot').innerHTML=`<div class="modal-bg gc-overlay" id="gcBg"><div class="modal gc-modal" style="max-width:560px;text-align:center">
+  $('#modalRoot').innerHTML=`<div class="modal-bg gc-overlay" id="gcBg"><div class="modal gc-modal" style="max-width:760px;text-align:center">
     <div class="gc-grid">
       <button class="gc-card gc-global" id="gcGlobal">
         <div class="gc-ic">🌐</div>
@@ -3494,12 +3500,17 @@ function modalGlobalChoice(){
         <div class="gc-ic">🚪</div>
         <h3>Rooms</h3>
       </button>
+      <button class="gc-card gc-announcements" id="gcAnnouncements">
+        <div class="gc-ic">📢</div>
+        <h3>Announcements</h3>
+      </button>
     </div>
   </div></div>`;
   const close=(after)=>{const bg=$('#gcBg');if(!bg){if(after)after();return}bg.classList.add('closing');setTimeout(()=>{if($('#modalRoot'))$('#modalRoot').innerHTML='';if(after)after()},240)};
   $('#gcBg').onclick=e=>{if(e.target.id==='gcBg')close()};
   $('#gcGlobal').onclick=()=>close(()=>openChat('global','global'));
   $('#gcRooms').onclick=()=>close(()=>openChat('global','rooms'));
+  $('#gcAnnouncements').onclick=()=>close(()=>openChat('global','announcements'));
 }
 $('#menuBtn').onclick=()=>$('#sidebar').classList.toggle('open');
 
@@ -3612,11 +3623,17 @@ function updateMuteLock(){
   if(_muteLockTimer){clearTimeout(_muteLockTimer);_muteLockTimer=null}
   if(!ME)return;
   const mutedBanner=$('#mutedBanner');
-  const input=$('#msgIn'),sendBtn=$('#sendBtn'),attachBtn=$('#attachBtn');
+  const announceBanner=$('#announceBanner');
+  const input=$('#msgIn'),sendBtn=$('#sendBtn'),attachBtn=$('#attachBtn'),emojiBtn=$('#emojiBtn');
   const muted=DB.isMuted(ME.id);
+  // Announcements: only the owner can post — everyone else can view but the
+  // composer stays locked, same idea as a mute but scoped to this one channel.
+  const announceLocked=view.roomKey===CFG.ANNOUNCEMENTS_ROOM&&!isOwner(ME.id);
   if(mutedBanner)mutedBanner.classList.toggle('hidden',!muted);
-  [input,sendBtn,attachBtn].forEach(el=>{if(el)el.disabled=muted});
-  if(input)input.placeholder=muted?'You are muted — you can\'t send messages right now':'Message... use @ to ping';
+  if(announceBanner)announceBanner.classList.toggle('hidden',!announceLocked);
+  const locked=muted||announceLocked;
+  [input,sendBtn,attachBtn,emojiBtn].forEach(el=>{if(el)el.disabled=locked});
+  if(input)input.placeholder=muted?'You are muted — you can\'t send messages right now':(announceLocked?'Only the owner can post announcements':'Message... use @ to ping');
   if(!muted)return;
   const remaining=DB.muteRemainingMs(ME.id);
   if(mutedBanner)mutedBanner.textContent='🔇 You are muted for '+fmtMuteRemaining(remaining)+'. You can still view chat, but you can\'t send messages until the timeout ends.';
@@ -3723,6 +3740,7 @@ function renderOnlinePill(isGlobalSection){
   const key=view.roomKey;
   let ids,label;
   if(key===CFG.GLOBAL_ROOM){ids=DB.presenceIds();label='Online in Global Chat'}
+  else if(key===CFG.ANNOUNCEMENTS_ROOM){ids=DB.presenceIds();label='Online in Announcements'}
   else if(key&&String(key).startsWith('dm_')){ids=DB.presenceIds();label='Online in this DM'}
   else if(key){ids=DB.presenceIds();label='Online in this room'}
   else if(isGlobalSection){ids=DB.onlineIds();label='Online now'}
@@ -3921,6 +3939,7 @@ function renderMain(){
   DB.markRead(ME.id,key);refreshBadge();
   let title='';let headerAv='';
   if(key===CFG.GLOBAL_ROOM)title='🌍 Global Chat';
+  else if(key===CFG.ANNOUNCEMENTS_ROOM)title='📢 Announcements';
   else if(key.startsWith('dm_')){
     const [,a,b]=key.split('_').map(Number);const other=a===ME.id?b:a;
     const ou=DB.getUser(other);
@@ -4383,7 +4402,7 @@ msgIn.addEventListener('keydown',e=>{
 function hilite(){[...$('#mentionPop').children].forEach((c,i)=>c.classList.toggle('sel',i===view.mentionSel))}
 function mentionCandidates(){
   const key=view.roomKey;let ids=[];
-  if(key===CFG.GLOBAL_ROOM)ids=DB.allUsers().map(u=>u.id);
+  if(key===CFG.GLOBAL_ROOM||key===CFG.ANNOUNCEMENTS_ROOM)ids=DB.allUsers().map(u=>u.id);
   else if(key?.startsWith('dm_'))ids=key.split('_').slice(1).map(Number);
   else ids=DB.getRoom(key)?.members||[];
   return ids.filter(i=>i!==ME.id).map(i=>DB.getUser(i)).filter(Boolean);
@@ -4430,6 +4449,7 @@ function send(){
   const text=expandShortcodes(msgIn.value.trim()).slice(0,CFG.MAX_MSG);
   if(!view.roomKey)return;
   if(DB.isBanned(ME.id)){toast('Your account has been banned.','bad');return}
+  if(view.roomKey===CFG.ANNOUNCEMENTS_ROOM&&!isOwner(ME.id)){toast('Only the owner can post announcements.','bad');return}
 
   if(view.editingId){
     if(!text){toast('Message can\'t be empty.','bad');return}
@@ -5001,6 +5021,7 @@ function openSettings(fromChat){
   }
   function keyLabel(key){
     if(key===CFG.GLOBAL_ROOM)return '🌍 Global Chat';
+    if(key===CFG.ANNOUNCEMENTS_ROOM)return '📢 Announcements';
     if(key.startsWith('dm_')){
       const [,a,b]=key.split('_').map(Number);const other=a===ME.id?b:a;
       const u=DB.getUser(other);
