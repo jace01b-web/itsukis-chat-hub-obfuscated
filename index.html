@@ -480,14 +480,14 @@ input[type=color]{display:none!important}
    Saturation is pushed up to compensate for stacking two blur passes (modal + tile),
    which otherwise washes color out. Just a big icon and a name underneath it. */
 .gc-card{position:relative;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;
-  background:rgba(255,255,255,.012);
-  backdrop-filter:blur(22px) saturate(240%);-webkit-backdrop-filter:blur(22px) saturate(240%);
+  background:rgba(255,255,255,calc(var(--ui-alpha) * .024));
+  backdrop-filter:blur(calc(var(--ui-blur) + 4px)) saturate(240%);-webkit-backdrop-filter:blur(calc(var(--ui-blur) + 4px)) saturate(240%);
   border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:42px 18px;min-height:210px;
   transition:transform .22s cubic-bezier(.2,.9,.3,1.2),border-color .2s ease,background .2s ease,box-shadow .2s ease;
   transform:translateZ(0);will-change:transform;-webkit-mask-image:-webkit-radial-gradient(white,black)}
 .gc-card::before{content:'';position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .2s ease;
   background:radial-gradient(120% 60% at 50% -12%,rgba(255,255,255,.14),transparent 65%)}
-.gc-card:hover{transform:translate3d(0,-4px,0) scale(1.015);border-color:rgba(255,255,255,.24);background:rgba(255,255,255,.05);
+.gc-card:hover{transform:translate3d(0,-4px,0) scale(1.015);border-color:rgba(255,255,255,.24);background:rgba(255,255,255,calc(var(--ui-alpha) * .1));
   box-shadow:0 16px 38px rgba(0,0,0,.3)}
 .gc-card:hover::before{opacity:1}
 .gc-card:active{transform:translate3d(0,-1px,0) scale(.98)}
@@ -511,8 +511,8 @@ input[type=color]{display:none!important}
    is behind it, plus a faint neutral white sheen for specular highlight. Kept
    very low-alpha so the actual background shows through instead of a gray/mauve
    flat card; saturate is pushed up to keep that background's color from washing out. */
-.gc-modal{background:rgba(255,255,255,.015);
-  backdrop-filter:blur(30px) saturate(240%);-webkit-backdrop-filter:blur(30px) saturate(240%);
+.gc-modal{background:rgba(255,255,255,calc(var(--ui-alpha) * .03));
+  backdrop-filter:blur(calc(var(--ui-blur) + 12px)) saturate(240%);-webkit-backdrop-filter:blur(calc(var(--ui-blur) + 12px)) saturate(240%);
   border:1px solid rgba(255,255,255,.2);border-radius:28px;
   box-shadow:0 26px 70px rgba(0,0,0,.45),0 2px 8px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.25),inset 0 0 40px rgba(255,255,255,.02);
   animation:gcModalIn .5s cubic-bezier(.2,1.28,.32,1) forwards;transform-origin:center}
@@ -1056,6 +1056,7 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
       <div class="banned-banner hidden" id="mutedBanner" style="background:#3a3410;border-color:#6b5d1a;color:#ffe9a8"></div>
       <div class="banned-banner hidden" id="announceBanner" style="background:#132a3a;border-color:#1f4a63;color:#a8d4ff">📢 Only the owner can post here — you can view announcements but not send messages.</div>
       <div class="composer">
+        <div class="typing-bar" id="typingBar"></div>
         <div class="compose-context" id="composeContext">
           <div class="cc-bar"></div>
           <div class="cc-body"><div class="cc-label" id="ccLabel"></div><div class="cc-text" id="ccText"></div></div>
