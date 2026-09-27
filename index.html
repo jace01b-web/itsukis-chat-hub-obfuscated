@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-09-22.4">
+<meta name="build-version" content="2026-09-27.1">
 <title>Itsukis Chat Hub</title>
 <style>
 :root{
@@ -349,8 +349,17 @@ input[type=color]{display:none!important}
 .tb-center{display:flex;justify-content:center;align-items:center;min-width:0}
 .tb-right{display:flex;align-items:center;justify-content:flex-end;gap:10px;min-width:0}
 .topbar h2{font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.menu-btn{display:none;background:var(--ui-panel2);width:36px;height:36px;border-radius:10px}
-.menu-btn.force-show{display:flex;align-items:center;justify-content:center}
+.menu-btn-wrap{display:none;position:relative;flex:none}
+.menu-btn-wrap.force-show{display:inline-flex}
+.menu-btn{background:var(--ui-panel2);width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+/* Unread badge riding the top-right corner of the menu/back button. Kept
+   in the DOM at all times (rather than toggled with .hidden/display:none)
+   so the pop-in scale actually animates instead of snapping in. */
+.mb-badge{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;padding:0 4px;border-radius:9px;
+  background:linear-gradient(135deg,var(--accent2),#ff3d7f);color:#fff;font-size:10px;font-weight:800;line-height:16px;text-align:center;
+  box-shadow:0 2px 6px rgba(0,0,0,.4),0 0 0 2px var(--bg);pointer-events:none;
+  transform:scale(0);opacity:0;transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .2s ease}
+.mb-badge.show{transform:scale(1);opacity:1}
 .sidebar.gc-hide{display:none}
 .messages{position:relative;z-index:1;flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:6px}
 /* Played once whenever the active room/chat changes (Global Chat, a room, a
@@ -634,12 +643,24 @@ input[type=color]{display:none!important}
 .toast.ping-rich .pt-where{font-size:12px;color:var(--accent2);font-weight:600;margin-bottom:4px}
 .toast.ping-rich .pt-text{font-size:13.5px;color:var(--text);opacity:.9;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
 .toast.ping-rich .pt-hint{font-size:11px;color:var(--muted);margin-top:5px}
-.typing-bar{height:18px;font-size:12.5px;color:var(--muted);padding:0 8px 3px;display:flex;align-items:center;gap:7px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.typing-bar{height:18px;font-size:12.5px;color:var(--muted);padding:0 8px 3px;display:flex;align-items:center;gap:7px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+  opacity:0;transform:translateY(4px);transition:opacity .22s ease,transform .22s ease}
+.typing-bar.show{opacity:1;transform:none}
 .typing-bar b{color:var(--text);font-weight:600}
-.typing-dots{display:inline-flex;gap:3px}
-.typing-dots i{width:5px;height:5px;border-radius:50%;background:var(--accent2);animation:typedot 1.2s infinite ease-in-out}
-.typing-dots i:nth-child(2){animation-delay:.15s}.typing-dots i:nth-child(3){animation-delay:.3s}
-@keyframes typedot{0%,60%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+.typing-dots{display:inline-flex;align-items:center;gap:4px}
+.typing-dots i{width:5px;height:5px;border-radius:50%;background:var(--accent2);
+  box-shadow:0 0 5px rgba(255,108,180,.65);
+  animation:typedot 1.15s cubic-bezier(.45,0,.55,1) infinite}
+.typing-dots i:nth-child(2){animation-delay:.16s}
+.typing-dots i:nth-child(3){animation-delay:.32s}
+/* A dot rises and brightens on its turn, then settles back — the delayed
+   siblings above turn this into a left-to-right wave instead of three dots
+   blinking in place. Runs continuously (see the draw() diffing below) so
+   the wave never stutters or restarts while the same person keeps typing. */
+@keyframes typedot{
+  0%,80%,100%{transform:translateY(0) scale(.7);opacity:.35}
+  40%{transform:translateY(-4.5px) scale(1);opacity:1}
+}
 .toast.bad{border-left-color:var(--danger)}
 @keyframes slide{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
 .tag{font-size:10px;background:var(--accent2);color:#fff;padding:1px 6px;border-radius:8px;font-weight:700}
@@ -737,7 +758,7 @@ input[type=color]{display:none!important}
     background:rgba(0,0,0,0);backdrop-filter:blur(0px);-webkit-backdrop-filter:blur(0px);
     transition:background .38s var(--glass-spring),backdrop-filter .38s var(--glass-spring),-webkit-backdrop-filter .38s var(--glass-spring)}
   .chat-layout:has(.sidebar.open:not(.gc-hide))::before{background:rgba(0,0,0,.35);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
-  .menu-btn{display:block}
+  .menu-btn-wrap{display:inline-flex}
   .msg{max-width:92%}
   .msg-row .avatar{width:38px;height:38px;font-size:14px}
   .set-grid{grid-template-columns:1fr}
@@ -1040,7 +1061,10 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
     <section class="main">
       <div class="topbar">
         <div class="tb-left">
-          <button class="menu-btn" id="menuBtn">☰</button>
+          <div class="menu-btn-wrap" id="menuBtnWrap">
+            <button class="menu-btn" id="menuBtn"><span id="menuBtnIcon">☰</span></button>
+            <span class="mb-badge" id="menuBtnBadge"></span>
+          </div>
           <h2 id="chatTitle"></h2>
         </div>
         <div class="tb-center">
@@ -1553,6 +1577,9 @@ const DB=(()=>{
     listen('userRooms/'+myId,v=>{
       C.myRoomIds=Object.keys(v||{});
       C.myRoomIds.forEach(watchRoom);
+      // also preview each room's last 30 messages so unread badges work for
+      // rooms I'm not currently looking at (mirrors the DM preview below)
+      C.myRoomIds.forEach(watchPreview);
     });
     // watch each friend's DM (latest 30 msgs) so unread badges work while another chat is open
     listen('friends/'+myId,v=>{
@@ -2439,6 +2466,14 @@ const DB=(()=>{
         n+=(C.messages[k]||[]).filter(m=>m.senderId!==uid&&m.at>last).length;
       });
       return n+Object.keys(C.friendReqIn).length;
+    },
+    unreadRooms(uid){
+      let n=0;
+      (C.myRoomIds||[]).forEach(id=>{
+        const last=C.lastRead[id]||0;
+        n+=(C.messages[id]||[]).filter(m=>m.senderId!==uid&&m.at>last).length;
+      });
+      return n;
     },
     // called by the UI so a friendship created by the other person becomes a DM on this side too
     async ensureDmMemberships(){
@@ -3678,7 +3713,7 @@ function renderChat(){
   const globalOnly=g&&view.section!=='rooms';
   $('#sbTitle').textContent=g?'Itsukis Chat':'Itsuki DMs';
   renderOnlinePill(g);
-  const sidebar=$('#sidebar'),menuBtn=$('#menuBtn');
+  const sidebar=$('#sidebar'),menuBtn=$('#menuBtn'),menuBtnWrap=$('#menuBtnWrap'),menuBtnIcon=$('#menuBtnIcon'),menuBtnBadge=$('#menuBtnBadge');
   sidebar.classList.toggle('gc-hide',globalOnly);
   // When the sidebar is hidden (Global Chat, no room switcher), its online
   // pill goes with it — so show a copy in the topbar instead, otherwise the
@@ -3689,11 +3724,17 @@ function renderChat(){
     // No sidebar to switch rooms from — repurpose the topbar button as a
     // permanent back-to-menu control (shown even on desktop, since the
     // sidebar's own back arrow is gone).
-    menuBtn.textContent='←';menuBtn.title='Home';menuBtn.classList.add('force-show');
+    menuBtnIcon.textContent='←';menuBtn.title='Home';menuBtnWrap.classList.add('force-show');
     menuBtn.onclick=()=>{view.roomKey=null;view.section=null;DB.watchMessages(null);goHome()};
+    // No sidebar visible here to show unread DMs/rooms — so the only way to
+    // know is a badge riding the back arrow itself.
+    const totalUnread=DB.unreadDMs(ME.id)+DB.unreadRooms(ME.id);
+    menuBtnBadge.textContent=totalUnread>99?'99+':totalUnread;
+    menuBtnBadge.classList.toggle('show',totalUnread>0);
   }else{
-    menuBtn.textContent='☰';menuBtn.title='';menuBtn.classList.remove('force-show');
+    menuBtnIcon.textContent='☰';menuBtn.title='';menuBtnWrap.classList.remove('force-show');
     menuBtn.onclick=()=>sidebar.classList.toggle('open');
+    menuBtnBadge.classList.remove('show');
   }
   const list=$('#sbList'),foot=$('#sbFoot');list.innerHTML='';foot.innerHTML='';
 
@@ -3703,13 +3744,16 @@ function renderChat(){
     addHTML(list,`<div class="sb-section">My Rooms</div>`);
     const rooms=DB.myRooms(ME.id);
     if(!rooms.length)addHTML(list,`<div class="hint" style="padding:6px 10px">No rooms yet.</div>`);
-    rooms.forEach(r=>list.appendChild(sbItem('🔒',r.name,view.roomKey===r.id,()=>selectRoom(r.id),null,null,()=>{
+    rooms.forEach(r=>{
+      const unread=DB.messages(r.id).filter(m=>m.senderId!==ME.id&&m.at>(ME.lastRead[r.id]||0)).length;
+      list.appendChild(sbItem('🔒',r.name,view.roomKey===r.id,()=>selectRoom(r.id),unread,null,()=>{
       modalLeaveRoomConfirm(r,async()=>{
         await DB.leaveRoom(ME.id,r.id);
         if(view.roomKey===r.id){view.roomKey=null}
         render();renderChat();
       });
-    })));
+    }));
+    });
     foot.innerHTML=`<button class="btn small" id="newRoom">+ Create</button><button class="btn sec small" id="joinRoom">Join</button>`;
     $('#newRoom').onclick=modalCreateRoom;$('#joinRoom').onclick=modalJoinRoom;
   }else if(g){
@@ -5472,21 +5516,36 @@ function renderChatLight(keepFriends){
 (function(){
   const STALE=6000,PUSH=3000;
   const bar=$('#typingBar');
-  let watchKey=null,unsub=null,typers={},lastPush=0,myKey=null;
+  let watchKey=null,unsub=null,typers={},lastPush=0,myKey=null,lastSig=null,clearT=null;
   const now=()=>Date.now()+(SKEW||0);
+  function hide(){
+    if(lastSig===null)return;
+    lastSig=null;bar.classList.remove('show');
+    clearTimeout(clearT);
+    // let the fade-out transition finish before wiping the content, instead
+    // of yanking it away mid-fade
+    clearT=setTimeout(()=>{if(!bar.classList.contains('show'))bar.innerHTML=''},220);
+  }
   function draw(){
     if(!bar)return;
-    if(!ME||!watchKey){bar.innerHTML='';return}
+    if(!ME||!watchKey){hide();return}
     const t=now();
-    const ids=Object.keys(typers).map(Number).filter(id=>id!==ME.id&&Number(typers[id])&&t-Number(typers[id])<STALE);
-    if(!ids.length){bar.innerHTML='';return}
+    const ids=Object.keys(typers).map(Number).filter(id=>id!==ME.id&&Number(typers[id])&&t-Number(typers[id])<STALE).sort((a,b)=>a-b);
+    if(!ids.length){hide();return}
     const nm=ids.map(id=>{const u=DB.getUser(id);return u&&!u.deleted?displayUsername(u.username):'Someone'});
+    const sig=ids.join(',')+'|'+nm.join(',');
+    // Same set of typers as last draw: leave the DOM alone so the dot-wave
+    // animation (and the CSS entrance transition) keep running smoothly
+    // instead of restarting from frame zero every second.
+    if(sig===lastSig){bar.classList.add('show');return}
+    lastSig=sig;clearTimeout(clearT);
     let html;
     if(nm.length===1)html=`<b>${esc(nm[0])}</b> is typing`;
     else if(nm.length===2)html=`<b>${esc(nm[0])}</b> and <b>${esc(nm[1])}</b> are typing`;
     else if(nm.length===3)html=`<b>${esc(nm[0])}</b>, <b>${esc(nm[1])}</b> and <b>${esc(nm[2])}</b> are typing`;
     else html='Several people are typing';
     bar.innerHTML=`<span class="typing-dots"><i></i><i></i><i></i></span><span>${html}</span>`;
+    requestAnimationFrame(()=>bar.classList.add('show'));
   }
   function watch(key){
     if(unsub){try{unsub()}catch(_){}unsub=null}
