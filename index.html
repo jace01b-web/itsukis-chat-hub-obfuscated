@@ -1189,10 +1189,10 @@ console.error=function(...a){_capture(...a);_origConsoleError.apply(console,a)};
   // on mobile, or in a popup, these checks give false positives (window size gaps, paused
   // debugger, console formatting) and the old code reloaded the page in a loop, which is
   // what left it stuck on the loading screen or turned VUS OS black.
-  let framed=false;try{framed=window.self!==window.top}catch(_){framed=true}
   const mobile=/Android|iPhone|iPad|iPod|Mobile|CrOS/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent));
-  if(framed||mobile||window.opener)return;
-  // Keyboard/right-click blocking only (no reload, so it can never loop)
+  if(mobile)return;
+  // Keyboard/right-click blocking only (no reload, so it can never loop — safe even when
+  // framed or opened via window.open/a launcher, since nothing here can retrigger a loop).
   function hit(e){
     const k=(e.key||'').toLowerCase();
     const bad = e.key==='F12' ||
