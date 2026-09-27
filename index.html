@@ -1352,6 +1352,14 @@ function isOwner(id){return OWNERS_CACHE[Number(id)]===1}
 let MODS_CACHE={};
 let MODS_LOADED=false;
 function isMod(id){return MODS_CACHE[Number(id)]===1}
+// Live cache of appVersion/, populated by a listener started in DB.startListeners().
+// appVersion/current is the version label an owner has pinned as canonical (usually
+// the build-version they're currently running, right after deploying it) and
+// appVersion/history/$at is an append-only log of every time an owner has done that.
+// The client never enforces anything just by rendering this — every write is still
+// independently checked server-side (owners/.write only), this is just the live view.
+let APP_VERSION_CACHE=null;
+let APP_VERSION_LOADED=false;
 // Timeout durations mods are allowed to use, in minutes (must match the rules' allow-list
 // in muted/$id/.validate exactly, or a mod's mute attempt gets rejected server-side).
 const MOD_MUTE_OPTS=[[5,'5 minutes'],[60,'1 hour'],[360,'6 hours'],[720,'12 hours'],[1440,'1 day']];
@@ -1586,6 +1594,7 @@ const DB=(()=>{
     listen('muted',v=>{C.muted=v||{};if(typeof updateMuteLock==='function')updateMuteLock();});
     listen('owners',v=>{OWNERS_CACHE=v||{};OWNERS_LOADED=true;checkBanLock(myId,C.banned);});
     listen('mods',v=>{MODS_CACHE=v||{};MODS_LOADED=true;});
+    listen('appVersion',v=>{APP_VERSION_CACHE=v||null;APP_VERSION_LOADED=true;checkForcedVersion();});
     listen('dmMembers',v=>C.dmMembers=v||{});
     listen('friendRequests/'+myId,v=>C.friendReqIn=v||{});
     listen('lastRead/'+myId,v=>C.lastRead=v||{});
@@ -2369,6 +2378,32 @@ const DB=(()=>{
       if(filterNames!=null)upd.filterNames=!!filterNames;
       await update(R('modSettings'),upd);
     },
+    /* --- Version history / forced updates --- */
+    // The build this tab is actually running, from the <meta name="build-version"> tag
+    // baked into the deployed index.html — never taken from the database.
+    myBuildVersion(){return MY_BUILD},
+    // Live view of appVersion/ (current + history), or null before the first snapshot arrives.
+    versionState(){return APP_VERSION_CACHE},
+    versionHistory(){
+      const h=(APP_VERSION_CACHE&&APP_VERSION_CACHE.history)||{};
+      return Object.values(h).sort((a,b)=>b.at-a.at);
+    },
+    // Pins `version` as canonical in the database and logs it to history/. Every other
+    // signed-in client is watching appVersion/current live and reloads once it disagrees
+    // with its own build (see checkForcedVersion() above) — this is what "force everyone
+    // onto the current version" actually does; there's no separate broadcast needed.
+    async forceVersion(version){
+      if(!isOwner(myId))throw new Error('Only owners can force a version update.');
+      version=String(version||'').trim();
+      if(!version)throw new Error('Enter a version label.');
+      if(version.length>60)throw new Error('Version label is too long.');
+      const at=Date.now()+SKEW;
+      const upd={};
+      upd['appVersion/current']=version;
+      upd['appVersion/updatedAt']=at;
+      upd['appVersion/history/'+at]={version,at,by:myId};
+      await update(ref(rtdb),upd);
+    },
     async sendMessage(key,{senderId,text,images,pings,replyTo}){
       if(DB.isBanned(senderId))throw new Error('Your account has been banned.');
       if(DB.isMuted(senderId)){
@@ -2702,6 +2737,23 @@ async function checkForUpdate(){
 setInterval(checkForUpdate,120000);                 // poll every 2 minutes
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkForUpdate()});
 window.addEventListener('focus',checkForUpdate);
+/* ---------- Forced update: owner-pinned version, enforced for everyone ---------- */
+// checkForUpdate() above is a soft nudge that only fires once a *new file* is actually
+// deployed and gets re-fetched. This is the owner-controlled companion: appVersion/current
+// in the database (see Moderation > 🚀 Version) is a version label an owner explicitly
+// pinned as canonical. Every signed-in client compares its own MY_BUILD against that
+// live value and, if they don't match, reloads — so an owner can force stragglers on old
+// cached tabs onto the current build right now, without waiting for the 2-minute poll.
+let forcedUpdatePending=false;
+function checkForcedVersion(){
+  if(forcedUpdatePending||!MY_BUILD||!APP_VERSION_LOADED)return;
+  const cur=APP_VERSION_CACHE&&APP_VERSION_CACHE.current;
+  if(!cur||cur===MY_BUILD)return;
+  if(!/^https?:$/.test(location.protocol)||window.opener)return; // nothing sane to reload into
+  forcedUpdatePending=true;
+  toast('The server owners pushed an update — refreshing…');
+  setTimeout(()=>location.reload(),1800);
+}
 // Soft two-note "bell" chime for pings: a bright note followed by a gentle
 // perfect-fifth-down resolve, each with its own quick attack + smooth decay
 // and a touch of lowpassed shimmer, so it reads as pleasant rather than a
@@ -5002,6 +5054,7 @@ function openSettings(fromChat){
       <button data-t="ping">🔔 Pings</button>
       <button data-t="music">🎵 Music</button>
       <button data-t="filter">🚫 Filter</button>
+      <button data-t="about">ℹ️ About</button>
       ${(isOwner(ME.id)||isMod(ME.id))?'<button data-t="mod">🛡️ Moderation</button>':''}
     </div>
 
@@ -5118,6 +5171,17 @@ function openSettings(fromChat){
       <div class="hint">Server-wide username filtering is controlled separately by the server owners.</div>
     </div>
 
+    <div data-p="about" class="hidden">
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">ℹ️ Version</div>
+        <div class="set-grid">
+          <div class="field"><label>You're running</label><div style="font-weight:600;font-size:14px;padding-top:4px">${esc(MY_BUILD)||'unknown'}</div></div>
+          <div class="field"><label>Server's pinned version</label><div id="aboutPinned" style="font-weight:600;font-size:14px;padding-top:4px">…</div></div>
+        </div>
+        <div class="hint" id="aboutHint" style="margin-top:8px"></div>
+      </div>
+    </div>
+
     ${(isOwner(ME.id)||isMod(ME.id))?`<div data-p="mod" class="hidden">
       ${isOwner(ME.id)?`<div class="set-card">
         <div class="section-h" style="margin-top:0">🛡️ Content filter</div>
@@ -5139,6 +5203,19 @@ function openSettings(fromChat){
           <button class="btn sec" id="modUnbanGo">Unban</button>
         </div>
         <div class="hint" style="margin-top:8px">Banned accounts show as "Deleted User", reserve their old username so it can't be taken while banned, and can't send messages, change settings, or do anything else — but they stay signed in so they can't ban-evade by making a new account. Unbanning gives them a new generated username (which they can change anytime) and frees their old one for reuse.</div>
+      </div>
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">🚀 Version control</div>
+        <div class="set-grid">
+          <div class="field"><label>Server's pinned version</label><div id="modVerPinned" style="font-weight:600;font-size:14px;padding-top:4px">…</div></div>
+          <div class="field"><label>Version to push</label><input type="text" id="modVerInput" maxlength="60" value="${esc(MY_BUILD)}"></div>
+        </div>
+        <div class="actions" style="justify-content:flex-start;margin-top:10px">
+          <button class="btn" id="modVerGo">Force everyone onto this version</button>
+        </div>
+        <div class="hint" style="margin-top:8px">Pins this label as the site's canonical version. Every signed-in client compares its own build against it live and auto-refreshes if it doesn't match — this is how you kick everyone off an old cached tab right after deploying. Defaults to the build you're on right now.</div>
+        <div class="section-h" style="margin-top:16px;font-size:13px">History</div>
+        <div id="modVerHistory" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto"></div>
       </div>`:''}
       <div class="set-card">
         <div class="section-h" style="margin-top:0">🔇 Mute a user</div>
@@ -5238,7 +5315,47 @@ function openSettings(fromChat){
       renderMusicWidget();
       musicUnsub=MusicPlayer.on(renderMusicWidget);
     }
+    if(b.dataset.t==='about')renderAboutTab();
+    if(b.dataset.t==='mod'&&isOwner(ME.id)&&typeof renderVerHistory==='function')renderVerHistory();
   });
+  function renderAboutTab(){
+    const pinnedEl=$$('#aboutPinned'),hintEl=$$('#aboutHint');
+    if(!pinnedEl)return;
+    const cur=APP_VERSION_CACHE&&APP_VERSION_CACHE.current;
+    pinnedEl.textContent=cur||'not set';
+    if(!cur)hintEl.textContent='';
+    else if(cur===MY_BUILD)hintEl.textContent="You're up to date.";
+    else hintEl.innerHTML='You\'re on an older version — this tab will refresh itself shortly, or you can <a href="#" id="aboutRefreshNow">refresh now</a>.';
+    $$('#aboutRefreshNow')&&($$('#aboutRefreshNow').onclick=e=>{e.preventDefault();location.reload();});
+  }
+  renderAboutTab();
+  let renderVerHistory=null;
+  if(isOwner(ME.id)){
+    renderVerHistory=function(){
+      const box=$$('#modVerPinned'),list=$$('#modVerHistory');
+      if(!box)return;
+      box.textContent=(APP_VERSION_CACHE&&APP_VERSION_CACHE.current)||'not set';
+      const hist=DB.versionHistory();
+      list.innerHTML=hist.length?'':'<div class="hint">No version has been pushed yet.</div>';
+      hist.forEach(h=>{
+        const row=document.createElement('div');
+        row.className='list-row';
+        row.innerHTML=`<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">${esc(h.version)}</div><div class="hint" style="margin-top:2px">${new Date(h.at).toLocaleString()} · by #${h.by}</div></div>`;
+        list.appendChild(row);
+      });
+    }
+    renderVerHistory();
+    $$('#modVerGo')&&($$('#modVerGo').onclick=async()=>{
+      const v=$$('#modVerInput').value;
+      const btn=$$('#modVerGo');btn.disabled=true;
+      try{
+        await DB.forceVersion(v);
+        toast('Version "'+v.trim()+'" pushed — everyone will be moved onto it.');
+        renderVerHistory();renderAboutTab();
+      }catch(err){toast(err.message,'bad')}
+      finally{btn.disabled=false}
+    });
+  }
   if(isOwner(ME.id)||isMod(ME.id)){
     $$('#modFilterNames')&&$$('#modFilterNames').addEventListener('change',e=>{
       DB.setFilterSettings({filterNames:e.target.checked}).catch(err=>toast(err.message,'bad'));
