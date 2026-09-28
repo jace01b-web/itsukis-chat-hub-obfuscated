@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-09-27.93">
+<meta name="build-version" content="2026-09-27.13">
 <title>Itsukis Chat Hub</title>
 <link rel="icon" type="image/png" href="https://aniitsukicoded.github.io/backups/icon.png">
 <style>
@@ -344,7 +344,7 @@ input[type=color]{display:none!important}
 .online-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px}
 .online-row:hover{background:var(--ui-panel2)}
 .online-row .dot{width:8px;height:8px;border-radius:50%;background:#3ddc73;box-shadow:0 0 6px #3ddc73;flex-shrink:0}
-.online-row .nm{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.online-row .nm{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:12px 16px;margin:-12px -16px}
 .online-row .idv{font-size:12px;color:var(--text-dim,#89a);opacity:.8}
 .sb-title{font-weight:700}
 .sb-list{flex:1;overflow-y:auto;padding:10px}
@@ -1081,15 +1081,33 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
 /* Custom (role/flair) colored usernames — applied when the owner-level
    "custom usernames with roles" setting is on. Kept separate from the small
    emoji badges above: these color the NAME TEXT itself. */
-.flair-name{font-weight:700}
-.flair-name.flair-gold{color:#e6a91f}
-.flair-name.flair-rainbow{background:linear-gradient(90deg,#ff5fc0,#ffd84d,#5aa9ff,#4cd6a0,#ff5fc0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flairHue2 5s linear infinite}
-.flair-name.flair-crown{color:#8b78ff}
-.flair-name.flair-neon{color:#27d8f0;text-shadow:0 0 6px rgba(39,216,240,.6)}
-.flair-name.flair-lucky{color:#22a95e}
-.flair-name.flair-ice{color:#5aa9ff;text-shadow:0 0 5px rgba(90,169,255,.5)}
-.flair-name.flair-fire{color:#ff5a1f;text-shadow:0 0 5px rgba(255,90,31,.5)}
-@keyframes flairHue2{to{background-position:300% 0}}
+/* ---- Flair-colored usernames ----
+   Seamless loop: every gradient starts and ends on the SAME color, is exactly one tile wide
+   (background-size:200%), and the animation travels exactly one tile (200% -> 0), so the
+   last frame equals the first and there is no visible snap. Padding + negative margin give
+   the glyphs room so descenders / glow are never cut off by the clip box. */
+.flair-name{display:inline-block;font-weight:700;letter-spacing:.01em;line-height:1.25;padding:.06em .12em .16em;margin:-.06em -.12em -.16em;
+  background-size:200% 100%;background-repeat:repeat-x;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
+  animation:nmFlow var(--nm-dur,6s) linear infinite;will-change:background-position}
+.flair-name.flair-gold{--nm-dur:6s;background-image:linear-gradient(90deg,#f0b429 0%,#ffe9a0 25%,#fff6cf 50%,#ffe9a0 75%,#f0b429 100%)}
+.flair-name.flair-rainbow{--nm-dur:5s;background-image:linear-gradient(90deg,#ff5fc0 0%,#ffd84d 20%,#4cd6a0 40%,#5aa9ff 60%,#b07cff 80%,#ff5fc0 100%)}
+.flair-name.flair-crown{--nm-dur:6s;background-image:linear-gradient(90deg,#7a63ff 0%,#b9abff 25%,#ece7ff 50%,#b9abff 75%,#7a63ff 100%)}
+.flair-name.flair-neon{--nm-dur:5s;background-image:linear-gradient(90deg,#27d8f0 0%,#8cf6ff 25%,#7dffe1 50%,#8cf6ff 75%,#27d8f0 100%)}
+.flair-name.flair-lucky{--nm-dur:6s;background-image:linear-gradient(90deg,#22a95e 0%,#8dffb8 25%,#c9ffdc 50%,#8dffb8 75%,#22a95e 100%)}
+.flair-name.flair-ice{--nm-dur:6s;background-image:linear-gradient(90deg,#5aa9ff 0%,#a9dcff 25%,#ffffff 50%,#a9dcff 75%,#5aa9ff 100%)}
+.flair-name.flair-fire{--nm-dur:3.6s;background-image:linear-gradient(90deg,#ff3d2e 0%,#ff7a1f 25%,#ffd166 50%,#ff7a1f 75%,#ff3d2e 100%)}
+/* glow lives on a pseudo-free wrapper-safe property: soft text glow that is NOT clipped */
+.flair-name.flair-gold{filter:drop-shadow(0 0 4px rgba(240,180,41,.45))}
+.flair-name.flair-rainbow{filter:drop-shadow(0 0 4px rgba(150,120,255,.4))}
+.flair-name.flair-crown{filter:drop-shadow(0 0 4px rgba(139,120,255,.5))}
+.flair-name.flair-neon{filter:drop-shadow(0 0 5px rgba(39,216,240,.7))}
+.flair-name.flair-lucky{filter:drop-shadow(0 0 4px rgba(34,169,94,.5))}
+.flair-name.flair-ice{filter:drop-shadow(0 0 4px rgba(124,196,255,.55))}
+.flair-name.flair-fire{filter:drop-shadow(0 0 4px rgba(255,90,31,.6))}
+/* exactly one full tile of travel => perfect loop */
+@keyframes nmFlow{from{background-position:0% 0}to{background-position:-200% 0}}
+@keyframes flairHue2{from{background-position:0% 0}to{background-position:-200% 0}}
+@keyframes nmShift{from{background-position:0% 0}to{background-position:-200% 0}}
 
 /* spin modal */
 .spin-modal{max-width:440px;text-align:center;padding:26px 22px 22px}
@@ -1129,6 +1147,52 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
 @keyframes cfxFall{0%{opacity:1;transform:translate3d(0,0,0) rotate(0)}100%{opacity:0;transform:translate3d(var(--dx),105vh,0) rotate(var(--r))}}
 @media (prefers-reduced-motion:reduce){.spin-wheel{transition:none!important}.flair-rainbow{animation:none}}
 
+
+/* ===== Role titles + profile role pills (Legend = perm VIP, Star = 24h VIP) ===== */
+/* ---- VIP tiers: the WHOLE name (title + username) is ONE unit ----
+   Glow is drawn by the pill (box-shadow) and never by filter on clipped text, and the username
+   box has vertical/horizontal padding so nothing is sliced. Text shine is a seamless 200% tile. */
+.nm-wrap{display:inline-flex;align-items:center;gap:8px;max-width:100%;vertical-align:middle;padding:2px 12px 2px 9px;border-radius:999px;position:relative;isolation:isolate;line-height:1.3}
+.nm-wrap .nm-title{display:inline-flex;align-items:center;gap:5px;font-weight:900;white-space:nowrap;letter-spacing:.07em;text-transform:uppercase;font-size:.7em;flex:none}
+.nm-wrap .nm-title .nm-ic{font-size:1.2em;line-height:1;letter-spacing:0}
+/* soft divider instead of a hard 1px line */
+.nm-wrap .nm-title::after{content:'';display:block;width:1px;height:1.15em;margin-left:4px;border-radius:1px;background:linear-gradient(to bottom,transparent,currentColor,transparent);opacity:.7}
+.nm-wrap .nm-user{display:inline-block;font-weight:800;min-width:0;max-width:100%;white-space:nowrap;
+  padding:.08em .14em .2em;margin:-.08em -.14em -.2em;line-height:1.25;overflow:visible}
+/* ---- Legend (permanent VIP) ---- */
+.nm-wrap.tier-legend{color:#ffd45a;
+  background:linear-gradient(100deg,rgba(255,196,55,.20),rgba(255,236,160,.30) 50%,rgba(255,196,55,.20));
+  box-shadow:inset 0 0 0 1px rgba(255,208,100,.55),inset 0 1px 0 rgba(255,246,205,.35),0 0 12px rgba(255,190,50,.30)}
+.nm-wrap.tier-legend .nm-title{text-shadow:0 0 8px rgba(255,190,50,.6)}
+.nm-wrap.tier-legend .nm-user:not(.flair-name){
+  background-image:linear-gradient(90deg,#ffbf2b 0%,#ffe27a 25%,#ffffff 50%,#ffe27a 75%,#ffbf2b 100%);
+  background-size:200% 100%;background-repeat:repeat-x;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
+  animation:nmFlow 4.8s linear infinite}
+/* ---- Star (24h VIP) ---- */
+.nm-wrap.tier-star{color:#ffab52;
+  background:linear-gradient(100deg,rgba(255,150,60,.17),rgba(255,214,160,.26) 50%,rgba(255,150,60,.17));
+  box-shadow:inset 0 0 0 1px rgba(255,168,84,.5),inset 0 1px 0 rgba(255,236,210,.28),0 0 10px rgba(255,150,50,.26)}
+.nm-wrap.tier-star .nm-title{text-shadow:0 0 7px rgba(255,150,50,.55)}
+.nm-wrap.tier-star .nm-user:not(.flair-name){
+  background-image:linear-gradient(90deg,#ff9440 0%,#ffc98c 25%,#fff4e0 50%,#ffc98c 75%,#ff9440 100%);
+  background-size:200% 100%;background-repeat:repeat-x;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
+  animation:nmFlow 6s linear infinite}
+/* flair inside a VIP pill: same seamless flow, no extra clipping */
+.nm-wrap .nm-user.flair-name{text-shadow:none}
+@media (prefers-reduced-motion:reduce){.nm-wrap *,.flair-name{animation:none!important}}
+.pf-roles{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.pf-role{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid var(--border);background:rgba(255,255,255,.06);color:var(--text)}
+.pf-role.vip-perm{color:#3a2a00;background:linear-gradient(135deg,#ffe98a,#ffbf2e);border-color:rgba(255,200,80,.7)}
+.pf-role.vip-day{color:#3a2a00;background:linear-gradient(135deg,#ffd9a0,#ffb347);border-color:rgba(255,170,60,.7)}
+.pf-role.fl-gold{border-color:rgba(230,169,31,.6);color:#e6a91f}
+.pf-role.fl-rainbow{border-color:rgba(90,169,255,.6);color:#5aa9ff}
+.pf-role.fl-crown{border-color:rgba(139,120,255,.6);color:#8b78ff}
+.pf-role.fl-neon{border-color:rgba(39,216,240,.6);color:#27d8f0}
+.pf-role.fl-lucky{border-color:rgba(34,169,94,.6);color:#22a95e}
+.pf-role.fl-ice{border-color:rgba(63,134,245,.6);color:#3f86f5}
+.pf-role.fl-fire{border-color:rgba(255,74,15,.6);color:#ff4a0f}
+.pf-role.fl-confetti{border-color:rgba(255,95,192,.6);color:#ff5fc0}
+.pf-vip-timer{display:inline-block;margin-top:8px;font-size:11.5px;font-weight:800;padding:3px 10px;border-radius:999px;color:#3a2a00;background:linear-gradient(135deg,#ffd75e,#ffb31a)}
 </style>
 </head>
 <body>
@@ -4139,6 +4203,41 @@ function vipBadgeHTML(id){
   }catch(_){}
   return h?' '+h:'';
 }
+
+// Whole-name rendering: the VIP tier (permanent => Legend, live 24h => Star) styles the
+// title AND the username together. A flair (if any) still colors the username itself.
+function vipTierOf(id){
+  try{
+    const v=DB.vipInfo(id);
+    if(!v||v.kind==='owner')return null;
+    if(v.kind==='perm')return{cls:'tier-legend',ic:'\u{1F451}',label:'Legend',tip:'Permanent VIP'};
+    if(v.kind==='day')return{cls:'tier-star',ic:'\u{1F31E}',label:'Star',tip:'24-hour VIP'};
+  }catch(_){}
+  return null;
+}
+function vipTitleHTML(id){return ''} // kept for compatibility; titles are now built in fullNameHTML
+function fullNameHTML(id,escapedName){
+  const t=vipTierOf(id);
+  if(!t)return styledNameHTML(id,escapedName);
+  const p=nameStylePreset(id);
+  const user=p?'<span class="nm-user flair-name flair-'+p+'">'+escapedName+'</span>':'<span class="nm-user">'+escapedName+'</span>';
+  return '<span class="nm-wrap '+t.cls+'" title="'+t.tip+'"><span class="nm-title"><span class="nm-ic">'+t.ic+'</span>'+t.label+'</span>'+user+'</span>';
+}
+// Role pills for the profile card (VIP tier, live flair, permanent roles, confetti).
+function profileRolesHTML(id){
+  let out='';
+  try{
+    const v=DB.vipInfo(id);
+    if(v&&v.kind==='perm')out+='<span class="pf-role vip-perm">\u{1F48E} VIP \u00B7 Forever</span>';
+    else if(v&&v.kind==='day')out+='<span class="pf-role vip-day">\u{1F31E} VIP \u2014 1 Day</span>';
+    const live=DB.flairOf(id),roles=DB.rolesOf(id);
+    const seen={};
+    if(live&&VIP_FLAIRS[live]){seen[live]=1;out+='<span class="pf-role fl-'+live+'">'+VIP_FLAIRS[live].e+' '+VIP_FLAIRS[live].n+'</span>'}
+    NAME_STYLE_PRESETS.forEach(p=>{if(roles[p]===true&&!seen[p]&&VIP_FLAIRS[p]){seen[p]=1;out+='<span class="pf-role fl-'+p+'">'+VIP_FLAIRS[p].e+' '+VIP_FLAIRS[p].n+'</span>'}});
+    if(roles.confetti===true)out+='<span class="pf-role fl-confetti">\u{1F389} Confetti Blast</span>';
+  }catch(_){}
+  return out?'<div class="pf-roles">'+out+'</div>':'';
+}
 function fmtDur(ms){
   ms=Math.max(0,ms);const h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),s=Math.floor(ms%60000/1000);
   if(h>0)return h+'h '+String(m).padStart(2,'0')+'m';
@@ -4575,7 +4674,7 @@ function openOnlineModal(label,ids){
   const rows=ids.map(id=>{
     const u=DB.getUser(id);
     const nm=u?displayUsername(u.username):'Loading…';
-    const nmHTML=u?styledNameHTML(id,esc(nm)):esc(nm);
+    const nmHTML=u?fullNameHTML(id,esc(nm)):esc(nm);
     return`<div class="online-row" data-open-profile="${id}"><span class="dot"></span><span class="nm">${nmHTML}</span><span class="idv">#${id}</span></div>`;
   }).join('')||`<div class="hint" style="padding:10px">No one is online right now.</div>`;
   root.innerHTML=`<div class="modal-bg"><div class="modal" style="max-width:380px">
@@ -4586,6 +4685,27 @@ function openOnlineModal(label,ids){
   $('#onlineModalClose').onclick=()=>{root.innerHTML=''};
   root.querySelector('.modal-bg').onclick=e=>{if(e.target===e.currentTarget)root.innerHTML=''};
   root.querySelectorAll('[data-open-profile]').forEach(el=>{el.style.cursor='pointer';el.onclick=()=>openUserProfile(Number(el.dataset.openProfile))});
+}
+
+function modalGiveVip(id,name){
+  const root=$('#modalRoot');
+  root.innerHTML=`<div class="modal-bg"><div class="modal" style="max-width:340px">
+    <h2 style="margin-bottom:8px">Give VIP to ${esc(name)}?</h2>
+    <div class="hint" style="margin-bottom:12px">Legend = forever. Star = 24 hours.</div>
+    <div class="row" style="flex-direction:column;gap:8px">
+      <button class="btn" id="gvPerm">\u{1F451} Forever (Legend)</button>
+      <button class="btn sec" id="gv24">\u{1F31E} 24 hours (Star)</button>
+      <button class="btn sec" id="gvCancel">Cancel</button>
+    </div></div></div>`;
+  const done=()=>{root.innerHTML='';openUserProfile(id)};
+  const give=async kind=>{
+    try{await DB.giveVip(id,kind);toast(name+' given VIP ('+(kind==='perm'?'forever':'24 hours')+').');done()}
+    catch(e){toast(e.message,'bad')}
+  };
+  $('#gvPerm').onclick=()=>give('perm');
+  $('#gv24').onclick=()=>give('24h');
+  $('#gvCancel').onclick=done;
+  root.querySelector('.modal-bg').onclick=e=>{if(e.target===e.currentTarget)root.innerHTML=''};
 }
 
 // Click-through profile card: username, avatar, online state, user ID, friend status/actions.
@@ -4660,6 +4780,15 @@ function openUserProfile(id){
       modHtml=`<button class="btn sec small" id="pfMute">🔇 Mute</button>`;
     }
 
+    // 24h VIP countdown + owner-only Give/Remove VIP controls on the card
+    const vInfo=deleted?null:DB.vipInfo(id);
+    const vipTimerHTML=(vInfo&&vInfo.kind==='day')?`<div><span class="pf-vip-timer">VIP \u00B7 ${fmtDur(vInfo.until-(Date.now()+SKEW))} left</span></div>`:'';
+    if(!isMe&&!deleted&&iAmOwner&&!owner){
+      const hasVip=!!(vInfo&&vInfo.kind!=='owner');
+      modHtml+=hasVip
+        ?`<button class="btn sec small" id="pfVipRemove">Remove VIP</button>`
+        :`<button class="btn sec small" id="pfVipGive">\u{1F48E} Give VIP</button>`;
+    }
     const statusDot=deleted?'':`<span style="width:9px;height:9px;border-radius:50%;flex:none;${online?'background:#3ddc73;box-shadow:0 0 6px #3ddc73':'background:var(--muted)'}"></span>`;
     const statusText=deleted?'Account deleted':(online?'Online now':'Offline');
 
@@ -4670,7 +4799,7 @@ function openUserProfile(id){
       <div style="padding:0 24px 24px;margin-top:-46px">
         <div style="position:relative;width:fit-content">${av}${online&&!deleted?'<span style="position:absolute;bottom:4px;right:4px;width:18px;height:18px;border-radius:50%;background:#3ddc73;box-shadow:0 0 8px #3ddc73;border:3px solid var(--panel)"></span>':''}</div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap">
-          <h2 style="margin:0;font-size:20px">${deleted?esc(name):styledNameHTML(id,esc(name))}</h2>
+          <h2 style="margin:0;font-size:20px">${deleted?esc(name):fullNameHTML(id,esc(name))}</h2>
           ${owner?'<span class="tag owner">Owner</span>':''}
           ${mod&&!owner?'<span class="tag" style="background:var(--accent)">Mod</span>':''}
           ${banned?'<span class="tag" style="background:var(--danger)">Banned</span>':''}
@@ -4678,6 +4807,8 @@ function openUserProfile(id){
         <div style="display:flex;align-items:center;gap:6px;margin-top:6px;color:var(--muted);font-size:13px">
           ${statusDot}<span>${statusText}</span>
         </div>
+        ${deleted?'':profileRolesHTML(id)}
+        ${vipTimerHTML}
         ${muted?`<div class="hint" style="color:var(--danger);margin-top:4px">Muted for ${Math.ceil(muteMs/60000)} more min</div>`:''}
 
         <div class="pf-meta-row">
@@ -4733,6 +4864,11 @@ function openUserProfile(id){
     };
     if(el2('pfUnblock'))el2('pfUnblock').onclick=()=>{
       DB.unblockUser(ME.id,id).then(()=>{toast(name+' unblocked.');render();renderChat()}).catch(e=>toast(e.message,'bad'));
+    };
+    if(el2('pfVipGive'))el2('pfVipGive').onclick=()=>{root.innerHTML='';modalGiveVip(id,name)};
+    if(el2('pfVipRemove'))el2('pfVipRemove').onclick=async()=>{
+      try{await DB.removeVip(id);toast('VIP removed from '+name+'.');render()}
+      catch(e){toast(e.message,'bad')}
     };
     if(el2('pfBan'))el2('pfBan').onclick=()=>{root.innerHTML='';modalBanConfirm(id,name)};
     if(el2('pfMute'))el2('pfMute').onclick=()=>{root.innerHTML='';modalMuteConfirm(id,name)};
@@ -5077,7 +5213,7 @@ function msgEl(m){
   }
   const myAv=mine?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${av}</span>`:'';
   const reactionsHTML=reactionRowHTML(m.id);
-  el.innerHTML=`${replyRefHTML}<div class="msg-row">${mine?myAv:avClickable}<div class="msg-body"><div class="meta">${mine?'':(sender&&!sender.deleted?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${styledNameHTML(m.senderId,esc(name))}</span>`:esc(name))+' · '}${time}${editedTag}${vipBadgeHTML(m.senderId)}${isOwner(m.senderId)?' <span class="tag owner">#'+m.senderId+'</span>':''}${DB.isMuted(m.senderId)?' <span class="tag" style="background:#555;color:#fff">muted</span>':''}</div>
+  el.innerHTML=`${replyRefHTML}<div class="msg-row">${mine?myAv:avClickable}<div class="msg-body"><div class="meta">${mine?'':(sender&&!sender.deleted?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${fullNameHTML(m.senderId,esc(name))}</span>`:esc(name))+' · '}${time}${editedTag}${isOwner(m.senderId)?' <span class="tag owner">#'+m.senderId+'</span>':''}${DB.isMuted(m.senderId)?' <span class="tag" style="background:#555;color:#fff">muted</span>':''}</div>
     <div class="bubble${pinged?' pinged':''}${(!m.text&&m.images&&m.images.length)?' img-only':''}"${bStyle}><div class="msg-hover-bar">${copyBtn}${editBtn}${delBtn}${reactBtn}${replyBtn}</div>${fmtText(displayMsgText(m.text))}${imagesHTML(m.images)}</div>${reactionsHTML}</div></div>`;
   el.querySelectorAll('.imgs img').forEach((img,i)=>img.onclick=()=>openLightbox(m.images,i));
   wireReactions(el,m);
