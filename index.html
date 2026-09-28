@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-09-27.13">
+<meta name="build-version" content="2026-09-27.15">
 <title>Itsukis Chat Hub</title>
 <link rel="icon" type="image/png" href="https://aniitsukicoded.github.io/backups/icon.png">
 <style>
@@ -1180,6 +1180,56 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
 /* flair inside a VIP pill: same seamless flow, no extra clipping */
 .nm-wrap .nm-user.flair-name{text-shadow:none}
 @media (prefers-reduced-motion:reduce){.nm-wrap *,.flair-name{animation:none!important}}
+
+/* ===== Give VIP picker ===== */
+.gv-modal{max-width:400px;padding:0;overflow:hidden}
+.gv-head{position:relative;padding:22px 24px 18px;display:flex;align-items:center;gap:14px;
+  background:radial-gradient(120% 140% at 0% 0%,rgba(255,196,86,.20),transparent 60%),linear-gradient(180deg,rgba(255,255,255,.04),transparent);
+  border-bottom:1px solid var(--border)}
+.gv-head .gv-av{flex:none;position:relative}
+.gv-head .gv-av::after{content:'💎';position:absolute;right:-6px;bottom:-6px;font-size:16px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;background:var(--panel);border:1px solid rgba(255,206,110,.55);box-shadow:0 0 12px rgba(255,190,50,.45)}
+.gv-head .gv-t{min-width:0}
+.gv-head .gv-k{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#ffcf6a}
+.gv-head .gv-n{font-size:19px;font-weight:800;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gv-head .gv-id{font-size:12px;color:var(--muted);margin-top:1px}
+.gv-x{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.07);color:var(--text);font-size:13px;display:flex;align-items:center;justify-content:center;transition:.15s}
+.gv-x:hover{background:rgba(255,255,255,.14)}
+.gv-body{padding:18px 24px 22px}
+.gv-lbl{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:10px;letter-spacing:.02em}
+.gv-opts{display:flex;flex-direction:column;gap:10px}
+.gv-opt{position:relative;display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:14px 16px;border-radius:16px;
+  background:rgba(255,255,255,.04);border:1.5px solid var(--border);color:var(--text);transition:transform .15s,border-color .15s,background .15s,box-shadow .15s;cursor:pointer}
+.gv-opt:hover{transform:translateY(-1px);background:rgba(255,255,255,.07)}
+.gv-opt:focus-visible{outline:2px solid #ffd97a;outline-offset:2px}
+.gv-opt .gv-ic{flex:none;width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:24px;background:rgba(255,255,255,.06);border:1px solid var(--border)}
+.gv-opt .gv-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.gv-opt .gv-tt{font-weight:800;font-size:15px}
+.gv-opt .gv-ds{font-size:12.5px;color:var(--muted)}
+.gv-opt .gv-ck{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:12px;color:transparent;transition:.15s}
+.gv-opt.on .gv-ck{color:#2a1c00;border-color:transparent}
+.gv-opt[data-k="perm"].on{border-color:rgba(255,208,100,.85);background:linear-gradient(100deg,rgba(255,196,55,.16),rgba(255,236,160,.08));box-shadow:0 0 0 3px rgba(255,196,55,.13),0 10px 28px -12px rgba(255,190,50,.55)}
+.gv-opt[data-k="perm"].on .gv-ic{background:linear-gradient(135deg,#ffe27a,#ffb300);border-color:transparent;box-shadow:0 0 16px rgba(255,190,50,.5)}
+.gv-opt[data-k="perm"].on .gv-ck{background:linear-gradient(135deg,#ffe27a,#ffb300)}
+.gv-opt[data-k="24h"].on{border-color:rgba(255,168,84,.85);background:linear-gradient(100deg,rgba(255,150,60,.15),rgba(255,214,160,.07));box-shadow:0 0 0 3px rgba(255,150,60,.12),0 10px 28px -12px rgba(255,150,50,.5)}
+.gv-opt[data-k="24h"].on .gv-ic{background:linear-gradient(135deg,#ffd08a,#ff9440);border-color:transparent;box-shadow:0 0 16px rgba(255,150,50,.45)}
+.gv-opt[data-k="24h"].on .gv-ck{background:linear-gradient(135deg,#ffd08a,#ff9440)}
+.gv-prev{margin-top:16px;padding:12px 16px;border-radius:14px;background:rgba(0,0,0,.22);border:1px dashed var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.gv-prev .gv-pl{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);flex:none}
+.gv-prev .gv-pn{min-width:0;display:flex;justify-content:flex-end;overflow:hidden;padding:8px 10px;margin:-8px -10px}
+.gv-actions{display:flex;gap:10px;margin-top:18px}
+.gv-actions .btn{flex:1;padding:13px 16px}
+.gv-actions .gv-cancel{flex:0 0 auto;padding:13px 20px}
+.gv-go{background:linear-gradient(135deg,#ffd45a,#f0a010)!important;color:#2a1c00!important;box-shadow:0 8px 22px rgba(240,160,16,.38)!important}
+.gv-go[data-k="24h"]{background:linear-gradient(135deg,#ffc98c,#ff8f3a)!important;box-shadow:0 8px 22px rgba(255,143,58,.36)!important}
+.gv-go:disabled{opacity:.6;cursor:progress}
+
+/* meta line: name + time on one baseline; the VIP pill sits inline without being clipped */
+.msg .meta{display:flex;flex-wrap:wrap;align-items:center;gap:0 5px;line-height:1.35;min-height:26px}
+.msg.me .meta{justify-content:flex-end}
+/* slightly smaller pill inside chat rows so VIP and plain names give the same row height */
+.msg .meta .nm-wrap{font-size:12.5px;padding-top:1px;padding-bottom:1px;margin:-1px 0}
+.msg .meta .nm-sep{opacity:.7}
 .pf-roles{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .pf-role{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid var(--border);background:rgba(255,255,255,.06);color:var(--text)}
 .pf-role.vip-perm{color:#3a2a00;background:linear-gradient(135deg,#ffe98a,#ffbf2e);border-color:rgba(255,200,80,.7)}
@@ -4689,23 +4739,64 @@ function openOnlineModal(label,ids){
 
 function modalGiveVip(id,name){
   const root=$('#modalRoot');
-  root.innerHTML=`<div class="modal-bg"><div class="modal" style="max-width:340px">
-    <h2 style="margin-bottom:8px">Give VIP to ${esc(name)}?</h2>
-    <div class="hint" style="margin-bottom:12px">Legend = forever. Star = 24 hours.</div>
-    <div class="row" style="flex-direction:column;gap:8px">
-      <button class="btn" id="gvPerm">\u{1F451} Forever (Legend)</button>
-      <button class="btn sec" id="gv24">\u{1F31E} 24 hours (Star)</button>
-      <button class="btn sec" id="gvCancel">Cancel</button>
-    </div></div></div>`;
-  const done=()=>{root.innerHTML='';openUserProfile(id)};
-  const give=async kind=>{
-    try{await DB.giveVip(id,kind);toast(name+' given VIP ('+(kind==='perm'?'forever':'24 hours')+').');done()}
-    catch(e){toast(e.message,'bad')}
+  const u=DB.getUser(id);
+  const av=u?avatarHtml(u,name,'width:52px;height:52px;font-size:20px;border:3px solid var(--panel)'):'';
+  const current=DB.vipInfo(id);
+  const OPTS=[
+    {k:'perm',ic:'\u{1F451}',tt:'Legend',ds:'Permanent VIP. Never expires.'},
+    {k:'24h', ic:'\u{1F31E}',tt:'Star',  ds:'24-hour VIP. Counts down from now.'}
+  ];
+  let sel=(current&&current.kind==='day')?'perm':'24h';   // sensible default: upgrade a Star, otherwise start with Star
+  const prevName=k=>{
+    const t=k==='perm'?{cls:'tier-legend',ic:'\u{1F451}',label:'Legend'}:{cls:'tier-star',ic:'\u{1F31E}',label:'Star'};
+    const p=nameStylePreset(id);
+    const user=p?'<span class="nm-user flair-name flair-'+p+'">'+esc(name)+'</span>':'<span class="nm-user">'+esc(name)+'</span>';
+    return '<span class="nm-wrap '+t.cls+'"><span class="nm-title"><span class="nm-ic">'+t.ic+'</span>'+t.label+'</span>'+user+'</span>';
   };
-  $('#gvPerm').onclick=()=>give('perm');
-  $('#gv24').onclick=()=>give('24h');
+  root.innerHTML=`<div class="modal-bg"><div class="modal gv-modal" role="dialog" aria-modal="true" aria-label="Give VIP">
+    <button class="gv-x" id="gvX" title="Close" aria-label="Close">\u2715</button>
+    <div class="gv-head">
+      <div class="gv-av">${av}</div>
+      <div class="gv-t">
+        <div class="gv-k">Give VIP</div>
+        <div class="gv-n">${esc(name)}</div>
+        <div class="gv-id">User #${id}${current&&current.kind==='perm'?' \u00B7 already Legend':(current&&current.kind==='day'?' \u00B7 currently Star':'')}</div>
+      </div>
+    </div>
+    <div class="gv-body">
+      <div class="gv-lbl">Choose a tier</div>
+      <div class="gv-opts" role="radiogroup">
+        ${OPTS.map(o=>`<button type="button" class="gv-opt" data-k="${o.k}" role="radio" aria-checked="false">
+          <span class="gv-ic">${o.ic}</span>
+          <span class="gv-tx"><span class="gv-tt">${o.tt}</span><span class="gv-ds">${o.ds}</span></span>
+          <span class="gv-ck">\u2713</span></button>`).join('')}
+      </div>
+      <div class="gv-prev"><span class="gv-pl">Preview</span><span class="gv-pn" id="gvPrev"></span></div>
+      <div class="gv-actions">
+        <button class="btn sec gv-cancel" id="gvCancel" type="button">Cancel</button>
+        <button class="btn gv-go" id="gvGo" type="button"></button>
+      </div>
+    </div></div></div>`;
+  const opts=[...root.querySelectorAll('.gv-opt')],go=$('#gvGo'),prev=$('#gvPrev');
+  const paint=()=>{
+    opts.forEach(o=>{const on=o.dataset.k===sel;o.classList.toggle('on',on);o.setAttribute('aria-checked',on)});
+    prev.innerHTML=prevName(sel);
+    go.dataset.k=sel;
+    go.textContent=sel==='perm'?'\u{1F451} Make Legend':'\u{1F31E} Give Star (24h)';
+  };
+  opts.forEach(o=>o.onclick=()=>{sel=o.dataset.k;paint()});
+  paint();
+  const done=()=>{root.innerHTML='';openUserProfile(id)};
+  go.onclick=async()=>{
+    go.disabled=true;
+    try{await DB.giveVip(id,sel);toast(name+' is now '+(sel==='perm'?'a Legend (forever)':'a Star (24 hours)')+'.');done()}
+    catch(e){toast(e.message,'bad');go.disabled=false}
+  };
   $('#gvCancel').onclick=done;
+  $('#gvX').onclick=()=>{root.innerHTML=''};
   root.querySelector('.modal-bg').onclick=e=>{if(e.target===e.currentTarget)root.innerHTML=''};
+  const onKey=e=>{if(e.key==='Escape'&&root.querySelector('.gv-modal')){root.innerHTML='';document.removeEventListener('keydown',onKey)}};
+  document.addEventListener('keydown',onKey);
 }
 
 // Click-through profile card: username, avatar, online state, user ID, friend status/actions.
@@ -5212,8 +5303,15 @@ function msgEl(m){
     </div>`;
   }
   const myAv=mine?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${av}</span>`:'';
+  // Everyone's name is shown, including your own. Others: "Name · time" (left side). Yours: "time · Name"
+  // so the name sits next to your avatar on the right, and the hover/edit controls don't move.
+  const nameSpan=(sender&&!sender.deleted)
+    ?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${fullNameHTML(m.senderId,esc(name))}</span>`
+    :esc(name);
+  const nameHTML=mine?'':nameSpan+'<span class="nm-sep">·</span>';
+  const nameAfter=mine?'<span class="nm-sep">·</span>'+nameSpan:'';
   const reactionsHTML=reactionRowHTML(m.id);
-  el.innerHTML=`${replyRefHTML}<div class="msg-row">${mine?myAv:avClickable}<div class="msg-body"><div class="meta">${mine?'':(sender&&!sender.deleted?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${fullNameHTML(m.senderId,esc(name))}</span>`:esc(name))+' · '}${time}${editedTag}${isOwner(m.senderId)?' <span class="tag owner">#'+m.senderId+'</span>':''}${DB.isMuted(m.senderId)?' <span class="tag" style="background:#555;color:#fff">muted</span>':''}</div>
+  el.innerHTML=`${replyRefHTML}<div class="msg-row">${mine?myAv:avClickable}<div class="msg-body"><div class="meta">${nameHTML}${time}${editedTag}${isOwner(m.senderId)?' <span class="tag owner">#'+m.senderId+'</span>':''}${DB.isMuted(m.senderId)?' <span class="tag" style="background:#555;color:#fff">muted</span>':''}${nameAfter}</div>
     <div class="bubble${pinged?' pinged':''}${(!m.text&&m.images&&m.images.length)?' img-only':''}"${bStyle}><div class="msg-hover-bar">${copyBtn}${editBtn}${delBtn}${reactBtn}${replyBtn}</div>${fmtText(displayMsgText(m.text))}${imagesHTML(m.images)}</div>${reactionsHTML}</div></div>`;
   el.querySelectorAll('.imgs img').forEach((img,i)=>img.onclick=()=>openLightbox(m.images,i));
   wireReactions(el,m);
