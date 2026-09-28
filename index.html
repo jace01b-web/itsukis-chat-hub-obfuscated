@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-09-27.15">
+<meta name="build-version" content="2026-09-28.1">
 <title>Itsukis Chat Hub</title>
 <link rel="icon" type="image/png" href="https://aniitsukicoded.github.io/backups/icon.png">
 <style>
@@ -698,7 +698,7 @@ input[type=color]{display:none!important}
 .toast.bad{border-left-color:var(--danger)}
 @keyframes slide{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
 .tag{font-size:10px;background:var(--accent2);color:#fff;padding:1px 6px;border-radius:8px;font-weight:700}
-.tag.owner{background:#ffb84d;color:#3a2400}
+.tag.owner{background:linear-gradient(135deg,#ffb3cd,#ff4f8b);color:#3a0a1f}
 /* Profile card */
 .pf-banner{height:92px;position:relative;overflow:hidden}
 /* A single narrow band sweeping across, not a repeating background-position
@@ -1168,6 +1168,20 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
   background-image:linear-gradient(90deg,#ffbf2b 0%,#ffe27a 25%,#ffffff 50%,#ffe27a 75%,#ffbf2b 100%);
   background-size:200% 100%;background-repeat:repeat-x;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
   animation:nmFlow 4.8s linear infinite}
+/* ---- Owner: same pill as Legend/Star, in rose ---- */
+.nm-wrap.tier-owner{color:#ff7fab;
+  background:linear-gradient(100deg,rgba(255,70,125,.26),rgba(255,160,195,.36) 50%,rgba(255,70,125,.26));
+  box-shadow:inset 0 0 0 1px rgba(255,110,158,.7),inset 0 1px 0 rgba(255,225,236,.4),0 0 14px rgba(255,70,125,.4)}
+.nm-wrap.tier-owner{padding:3px 12px 3px 11px;gap:9px;align-items:center}
+.nm-wrap.tier-owner .nm-title{text-shadow:0 0 8px rgba(255,80,135,.7);line-height:1;align-items:center;gap:6px}
+.nm-wrap.tier-owner .nm-title .nm-ic{display:inline-flex;align-items:center;justify-content:center;line-height:1}
+.nm-wrap.tier-owner .nm-title::after{margin-left:3px}
+.nm-wrap.tier-owner .nm-user{line-height:1.15;padding:.14em .14em;margin:-.14em}
+.pf-role.owner-role{padding:4px 11px;gap:6px;line-height:1}
+.nm-wrap.tier-owner .nm-user:not(.flair-name){
+  background-image:linear-gradient(90deg,#ff6b9d 0%,#ff9dc0 25%,#fff0f5 50%,#ff9dc0 75%,#ff6b9d 100%);
+  background-size:200% 100%;background-repeat:repeat-x;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
+  animation:nmFlow 4.5s linear infinite}
 /* ---- Star (24h VIP) ---- */
 .nm-wrap.tier-star{color:#ffab52;
   background:linear-gradient(100deg,rgba(255,150,60,.17),rgba(255,214,160,.26) 50%,rgba(255,150,60,.17));
@@ -1233,6 +1247,7 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
 .pf-roles{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .pf-role{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid var(--border);background:rgba(255,255,255,.06);color:var(--text)}
 .pf-role.vip-perm{color:#3a2a00;background:linear-gradient(135deg,#ffe98a,#ffbf2e);border-color:rgba(255,200,80,.7)}
+.pf-role.owner-role{color:#3a0a1f;background:linear-gradient(135deg,#ffc9dc,#ff4f8b);border-color:rgba(255,110,158,.75)}
 .pf-role.vip-day{color:#3a2a00;background:linear-gradient(135deg,#ffd9a0,#ffb347);border-color:rgba(255,170,60,.7)}
 .pf-role.fl-gold{border-color:rgba(230,169,31,.6);color:#e6a91f}
 .pf-role.fl-rainbow{border-color:rgba(90,169,255,.6);color:#5aa9ff}
@@ -1243,6 +1258,169 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
 .pf-role.fl-fire{border-color:rgba(255,74,15,.6);color:#ff4a0f}
 .pf-role.fl-confetti{border-color:rgba(255,95,192,.6);color:#ff5fc0}
 .pf-vip-timer{display:inline-block;margin-top:8px;font-size:11.5px;font-weight:800;padding:3px 10px;border-radius:999px;color:#3a2a00;background:linear-gradient(135deg,#ffd75e,#ffb31a)}
+
+/* ===== AUTH REVAMP: brand + live chat preview on the left, form on the right ===== */
+#authPage{padding:24px 20px}
+#authPage::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(46% 56% at var(--b1x) var(--b1y),var(--b1c),transparent 70%),radial-gradient(42% 50% at var(--b2x) var(--b2y),var(--b2c),transparent 70%)}
+.auth-shell{position:relative;width:100%;max-width:440px;margin:auto;display:grid;gap:56px;align-items:center}
+.auth-hero{display:none}
+#authPage .auth-card{max-width:440px;margin:0;padding:32px 32px 26px;border-radius:28px}
+#authPage .auth-mobile-brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:22px}
+#authPage .auth-mobile-brand .logo{font-size:22px;margin:0}
+.auth-mark{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 6px 18px rgba(124,108,255,.4)}
+.auth-mark svg{width:19px;height:19px}
+@media(min-width:960px){
+  .auth-shell{max-width:1040px;grid-template-columns:minmax(0,1fr) 440px}
+  .auth-hero{display:block}
+  #authPage .auth-mobile-brand{display:none}
+}
+@media(max-width:480px){#authPage .auth-card{padding:26px 20px 22px;border-radius:24px}}
+
+/* hero */
+.auth-hero .logo{font-size:68px;line-height:1.02;letter-spacing:-.04em;margin:0 0 16px;text-align:left}
+.auth-hero .lede{font-size:19px;line-height:1.5;color:var(--muted);margin:0}
+.auth-preview{margin-top:44px;max-width:420px;display:flex;flex-direction:column;gap:18px;
+  -webkit-mask-image:linear-gradient(#000 72%,transparent);mask-image:linear-gradient(#000 72%,transparent)}
+.pv-row{display:flex;align-items:flex-end;gap:10px;opacity:0;animation:pvIn .7s var(--glass-spring,cubic-bezier(.16,1,.3,1)) forwards;animation-delay:calc(.3s + var(--i)*.5s)}
+@keyframes pvIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+.pv-av{width:34px;height:34px;flex:none;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:14px;color:#fff;background:var(--g);box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.pv-col{display:flex;flex-direction:column;gap:5px;min-width:0}
+.pv-meta{font-size:13px;line-height:1.3}
+.pv-meta .nm-wrap{font-size:16px}
+.pv-name{font-weight:700;color:var(--text);opacity:.9;padding-left:2px}
+.pv-bub{background:rgba(255,255,255,.075);border:1px solid var(--border);border-radius:18px 18px 18px 5px;padding:10px 14px;font-size:14px;line-height:1.45;color:var(--text);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.pv-typing{display:flex;gap:5px;align-items:center;padding:13px 15px}
+.pv-typing i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:pvDot 1.2s ease-in-out infinite}
+.pv-typing i:nth-child(2){animation-delay:.15s}.pv-typing i:nth-child(3){animation-delay:.3s}
+@keyframes pvDot{0%,60%,100%{opacity:.35;transform:none}30%{opacity:1;transform:translateY(-3px)}}
+
+/* card header + tab-driven copy */
+.auth-head h1{font-size:27px;font-weight:800;letter-spacing:-.025em;line-height:1.15;margin:0 0 7px}
+.auth-head p{font-size:14px;line-height:1.5;color:var(--muted);margin:0}
+.auth-card[data-tab="in"] .only-up,.auth-card[data-tab="up"] .only-in{display:none}
+#authPage .card>.hint{text-align:left}
+
+/* sliding tab thumb */
+#authPage .tabs{position:relative;gap:0;padding:4px;margin:22px 0 22px;border-radius:15px}
+#authPage .tabs::before{content:'';position:absolute;top:4px;bottom:4px;left:4px;width:calc(50% - 4px);border-radius:11px;
+  background:linear-gradient(135deg,var(--accent),#5a4bff);box-shadow:0 4px 14px rgba(124,108,255,.42);
+  transition:transform .55s cubic-bezier(.3,1.2,.4,1)}
+.auth-card[data-thumb="up"] .tabs::before{transform:translateX(100%)}
+#authPage .tabs button{position:relative;z-index:1;background:none;box-shadow:none;padding:11px;font-size:14px;transition:color .25s}
+#authPage .tabs button.active{background:none;box-shadow:none;color:#fff}
+#authPage .tabs button:focus-visible{outline:2px solid var(--accent2);outline-offset:1px}
+
+/* fields */
+#authPage .field{margin-bottom:16px}
+#authPage .field label{font-size:13px;font-weight:600;color:#d3d5f2;justify-content:flex-start;gap:8px;align-items:baseline}
+.lbl-note{margin-left:auto;font-size:11.5px;font-weight:500;color:var(--muted)}
+.ipt{position:relative}
+.ipt .ic{position:absolute;left:14px;top:50%;width:17px;height:17px;margin-top:-8.5px;fill:none;stroke:var(--muted);stroke-width:1.8;pointer-events:none;transition:stroke .2s}
+.ipt:focus-within .ic{stroke:var(--accent)}
+#authPage .ipt input{width:100%;padding:13px 14px 13px 42px;border-radius:14px;font-size:15px}
+#authPage .ipt:has(.pw-toggle) input{padding-right:46px}
+#authPage .field .hint:empty{display:none}
+#authPage input:-webkit-autofill{-webkit-text-fill-color:var(--text);caret-color:var(--text);box-shadow:0 0 0 40px #14152b inset!important;transition:background-color 9999s}
+.pw-toggle{position:absolute;right:6px;top:50%;margin-top:-17px;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:none;color:var(--muted);transition:background .2s,color .2s}
+.pw-toggle:hover{background:rgba(255,255,255,.08);color:var(--text)}
+.pw-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:0}
+.pw-toggle svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8}
+.pw-toggle .slash{display:none}
+.pw-toggle[aria-pressed="true"] .slash{display:block}
+
+/* errors */
+#authPage .err{min-height:0;margin:0 0 14px;padding:10px 13px;border-radius:12px;font-size:13px;line-height:1.45;color:#ffc0c9;
+  background:rgba(255,93,115,.12);border:1px solid rgba(255,93,115,.34);animation:authShake .38s}
+#authPage .err:empty{display:none}
+@keyframes authShake{20%{transform:translateX(-5px)}45%{transform:translateX(4px)}70%{transform:translateX(-2px)}}
+
+/* buttons + footer */
+#authPage .btn-block{width:100%;display:flex;align-items:center;justify-content:center;gap:10px}
+#authPage form .btn-block{padding:13px 20px;font-size:15px;border-radius:14px}
+#authPage .gbtn{padding:12px 20px;border-radius:14px;font-size:14px}
+#authPage .divider{margin:18px 0}
+.auth-note{margin-top:12px;text-align:center}
+.auth-switch{margin:20px 0 0;text-align:center;font-size:13.5px;color:var(--muted)}
+.linkbtn{background:none;padding:0;font:inherit;font-weight:700;color:#bdb5ff;transition:color .15s}
+.linkbtn:hover{color:#fff;text-decoration:underline;text-underline-offset:3px}
+.linkbtn:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.auth-card[data-tab="in"] .auth-switch.only-up,.auth-card[data-tab="up"] .auth-switch.only-in{display:none}
+@media (prefers-reduced-motion:reduce){
+  .pv-row{animation:none;opacity:1}.pv-typing i{animation:none;opacity:.7}
+  #authPage .tabs::before{transition:none}#authPage .err{animation:none}
+}
+
+
+/* ===== AUTH MOTION =====
+   Tab switch: old content slides out (JS), new form slides in a short way while its fields rise in one by one,
+   the tab thumb springs across and the card eases to its new height.
+   Opening: #authPage.intro (added by JS whenever the page appears) plays a one-time entrance. */
+#authPage{--E:cubic-bezier(.22,1,.36,1)}
+.auth-card[data-tab="in"]{--dx:-26px}
+.auth-card[data-tab="up"]{--dx:26px}
+@keyframes authSlide{from{transform:translateX(var(--dx,24px))}to{transform:none}}
+@keyframes authRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+#authPage #formIn,#authPage #formUp{animation:authSlide .6s var(--E) both}
+#authPage form>*{animation:authRise .6s var(--E) both;animation-delay:calc(70ms + var(--n,0)*55ms)}
+#authPage form>*:nth-child(1){--n:0}#authPage form>*:nth-child(2){--n:1}#authPage form>*:nth-child(3){--n:2}
+#authPage form>*:nth-child(4){--n:3}#authPage form>*:nth-child(5){--n:4}#authPage form>*:nth-child(6){--n:5}
+#authPage .auth-head>*,#authPage .auth-switch{animation:authRise .55s var(--E) both}
+#authPage .auth-head p{animation-delay:.06s}
+#authPage .auth-switch{animation-delay:.25s}
+
+/* opening sequence */
+@keyframes authGlow{from{opacity:0}to{opacity:1}}
+@keyframes authLine{from{transform:translateY(112%)}to{transform:none}}
+@keyframes authCard{from{opacity:0;transform:translateY(38px) scale(.96)}to{opacity:1;transform:none}}
+.auth-hero .logo{background:none;line-height:1.02}
+.auth-hero .logo .ln{display:block;overflow:hidden;padding:.07em 0 .1em;margin:-.07em 0 -.1em}
+.auth-hero .logo .ln>span{display:inline-block;background:linear-gradient(120deg,var(--accent) 10%,var(--accent2) 110%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+#authPage.intro::before{animation:authGlow 1.6s ease both}
+#authPage.intro .logo .ln>span{animation:authLine 1s var(--E) both}
+#authPage.intro .logo .ln:nth-child(1)>span{animation-delay:.12s}
+#authPage.intro .logo .ln:nth-child(2)>span{animation-delay:.26s}
+#authPage.intro .lede{animation:authRise .9s var(--E) .55s both}
+#authPage.intro .auth-card{animation:authCard 1s var(--E) .15s both}
+#authPage.intro .auth-mobile-brand{animation:authRise .8s var(--E) .45s both}
+#authPage.intro .pv-row{animation-delay:calc(.85s + var(--i)*.5s)}
+#authPage.intro .auth-head>*{animation-delay:.5s}
+#authPage.intro .auth-head p{animation-delay:.58s}
+#authPage.intro .tabs{animation:authRise .8s var(--E) .62s both}
+#authPage.intro form>*{animation-delay:calc(.7s + var(--n,0)*60ms)}
+#authPage.intro .divider,#authPage.intro .gbtn,#authPage.intro .auth-switch{animation:authRise .8s var(--E) 1.05s both}
+@media (prefers-reduced-motion:reduce){
+  #authPage *,#authPage::before{animation:none!important}
+  #authPage .pv-row{opacity:1}
+}
+
+/* ===== AUTH BACKGROUND MOTION =====
+   The two ambient glows behind the page and the spotlight inside the card slide to a different
+   arrangement for Sign In vs Sign Up (violet-led -> pink-led), and a soft light sweeps across
+   the glass in the direction of the switch. All driven by registered custom properties. */
+@property --b1x{syntax:'<percentage>';initial-value:16%;inherits:true}
+@property --b1y{syntax:'<percentage>';initial-value:20%;inherits:true}
+@property --b2x{syntax:'<percentage>';initial-value:88%;inherits:true}
+@property --b2y{syntax:'<percentage>';initial-value:84%;inherits:true}
+@property --b1c{syntax:'<color>';initial-value:rgba(124,108,255,.30);inherits:true}
+@property --b2c{syntax:'<color>';initial-value:rgba(255,108,180,.22);inherits:true}
+@property --sx{syntax:'<percentage>';initial-value:24%;inherits:true}
+@property --spot{syntax:'<color>';initial-value:rgba(124,108,255,.24);inherits:true}
+@property --sw{syntax:'<percentage>';initial-value:-40%;inherits:false}
+#authPage{--b1x:16%;--b1y:20%;--b2x:88%;--b2y:84%;--b1c:rgba(124,108,255,.32);--b2c:rgba(255,108,180,.20);--sx:24%;--spot:rgba(124,108,255,.24);
+  transition:--b1x 1.2s var(--E),--b1y 1.2s var(--E),--b2x 1.2s var(--E),--b2y 1.2s var(--E),--b1c 1.2s var(--E),--b2c 1.2s var(--E),--sx 1s var(--E),--spot 1s var(--E)}
+#authPage[data-mood="up"]{--b1x:34%;--b1y:78%;--b2x:80%;--b2y:14%;--b1c:rgba(124,108,255,.20);--b2c:rgba(255,108,180,.36);--sx:76%;--spot:rgba(255,108,180,.24)}
+#authPage .auth-card{background-image:
+  linear-gradient(105deg,transparent calc(var(--sw) - 14%),rgba(255,255,255,.11) var(--sw),transparent calc(var(--sw) + 14%)),
+  radial-gradient(72% 44% at var(--sx) -8%,var(--spot),transparent 72%)}
+@keyframes authSweepR{from{--sw:-30%}to{--sw:130%}}
+@keyframes authSweepL{from{--sw:130%}to{--sw:-30%}}
+@keyframes authPulse{
+  0%,100%{box-shadow:var(--glass-shadow),var(--glass-inset),0 0 0 0 rgba(150,130,255,0),0 0 0 rgba(124,108,255,0)}
+  35%{box-shadow:var(--glass-shadow),var(--glass-inset),0 0 0 1px rgba(170,150,255,.5),0 0 46px rgba(124,108,255,.32)}}
+.auth-card.sw-r{animation:authPulse 1s ease,authSweepR 1s var(--E)}
+.auth-card.sw-l{animation:authPulse 1s ease,authSweepL 1s var(--E)}
+@media (prefers-reduced-motion:reduce){#authPage{transition:none}}
 </style>
 </head>
 <body>
@@ -1261,40 +1439,149 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
 
 <!-- ============ AUTH ============ -->
 <div id="authPage" class="page hidden">
-  <div class="card">
-    <div class="logo">Itsukis Chat Hub</div>
-    <div class="hint">Chat globally, in rooms, or privately.</div>
-    <div class="tabs">
-      <button id="tabIn" class="active">Sign In</button>
-      <button id="tabUp">Sign Up</button>
-    </div>
+  <div class="auth-shell">
 
-    <form id="formIn" autocomplete="on">
-      <div class="field"><label>Username or Email</label><input id="inId" required autocomplete="username"></div>
-      <div class="field"><label>Password</label><input id="inPw" type="password" required autocomplete="current-password"></div>
-      <div class="err" id="inErr"></div>
-      <button class="btn" style="width:100%" type="submit">Sign In</button>
-      <div class="hint" style="margin-top:10px;text-align:center">Trouble signing in with your username? Try your email instead.</div>
-    </form>
-
-    <form id="formUp" class="hidden" autocomplete="off">
-      <div class="field">
-        <label>Username (1-20 chars: 0-9 a-z A-Z . _ -)</label>
-        <input id="upUser" maxlength="20" required>
-        <span class="hint" id="upUserHint"></span>
+    <section class="auth-hero">
+      <div class="logo" aria-label="Itsukis Chat Hub"><span class="ln"><span>Itsukis</span></span><span class="ln"><span>Chat Hub</span></span></div>
+      <p class="lede">Chat globally, in rooms, or privately.</p>
+      <div class="auth-preview" aria-hidden="true">
+        <div class="pv-row" style="--i:0"><span class="pv-av" style="--g:linear-gradient(135deg,#ff6cb4,#ff3f7f)">S</span>
+          <div class="pv-col"><div class="pv-meta"><span class="nm-wrap tier-owner"><span class="nm-title"><span class="nm-ic">🔱</span>Owner</span><span class="nm-user">Suki</span></span></div>
+          <div class="pv-bub">Welcome in — grab a room or hop into global.</div></div></div>
+        <div class="pv-row" style="--i:1"><span class="pv-av" style="--g:linear-gradient(135deg,#ffd45a,#e09a1f);color:#3a2a00">K</span>
+          <div class="pv-col"><div class="pv-meta"><span class="nm-wrap tier-legend"><span class="nm-title"><span class="nm-ic">👑</span>Legend</span><span class="nm-user">Kai</span></span></div>
+          <div class="pv-bub">Just landed VIP on the daily spin 🎉</div></div></div>
+        <div class="pv-row" style="--i:2"><span class="pv-av" style="--g:linear-gradient(135deg,#7c6cff,#5a4bff)">M</span>
+          <div class="pv-col"><div class="pv-meta"><span class="pv-name">Mika</span></div>
+          <div class="pv-bub">Making a private room for tonight. Code incoming!</div></div></div>
+        <div class="pv-row" style="--i:3"><span class="pv-av" style="--g:linear-gradient(135deg,#4cd6a0,#2a9d78);color:#06281d">R</span>
+          <div class="pv-bub pv-typing"><i></i><i></i><i></i></div></div>
       </div>
-      <div class="field"><label>Email (optional, lets you sign in with email)</label><input id="upEmail" type="email"></div>
-      <div class="field"><label>Password</label><input id="upPw" type="password" required autocomplete="new-password"></div>
-      <div class="field"><label>Confirm Password</label><input id="upPw2" type="password" required autocomplete="new-password"></div>
-      <div class="err" id="upErr"></div>
-      <button class="btn" style="width:100%" type="submit">Create Account</button>
-    </form>
+    </section>
 
-    <div class="divider">or</div>
-    <button class="btn sec" style="width:100%" id="googleBtn">Continue with Google</button>
-    
+    <div class="card auth-card" id="authCard" data-tab="in" data-thumb="in">
+      <div class="auth-mobile-brand"><span class="auth-mark"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 3C6.9 3 3 6.6 3 11c0 2.3 1 4.3 2.7 5.8-.2 1.3-.8 2.6-1.7 3.6-.2.2 0 .6.3.6 2 0 3.7-.8 4.9-1.7.9.2 1.8.3 2.8.3 5.1 0 9-3.6 9-8S17.1 3 12 3z"/></svg></span><span class="logo">Itsukis Chat Hub</span></div>
+      <div class="auth-head">
+        <h1 class="only-in">Welcome back</h1><p class="only-in">Sign in to pick up where you left off.</p>
+        <h1 class="only-up">Create your account</h1><p class="only-up">Choose a username and you're in. It takes a few seconds.</p>
+      </div>
+
+      <div class="tabs" role="tablist">
+        <button id="tabIn" class="active" type="button" role="tab">Sign In</button>
+        <button id="tabUp" type="button" role="tab">Sign Up</button>
+      </div>
+
+      <form id="formIn" autocomplete="on">
+        <div class="field"><label for="inId">Username or email</label>
+          <div class="ipt"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-1a5 5 0 0 0-5-5H9a5 5 0 0 0-5 5v1"/><circle cx="12" cy="7.5" r="4"/></svg><input id="inId" required autocomplete="username" autocapitalize="off" spellcheck="false"></div></div>
+        <div class="field"><label for="inPw">Password</label>
+          <div class="ipt"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="3"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg><input id="inPw" type="password" required autocomplete="current-password"><button type="button" class="pw-toggle" data-for="inPw" aria-label="Show password" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/><path class="slash" d="M4 4l16 16"/></svg></button></div></div>
+        <div class="err" id="inErr" role="alert"></div>
+        <button class="btn btn-block" type="submit">Sign In</button>
+        <div class="hint auth-note">Trouble signing in with your username? Try your email instead.</div>
+      </form>
+
+      <form id="formUp" class="hidden" autocomplete="off">
+        <div class="field"><label for="upUser">Username <span class="lbl-note">1–20 chars · a-z 0-9 . _ -</span></label>
+          <div class="ipt"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-1a5 5 0 0 0-5-5H9a5 5 0 0 0-5 5v1"/><circle cx="12" cy="7.5" r="4"/></svg><input id="upUser" maxlength="20" required autocapitalize="off" spellcheck="false"></div>
+          <span class="hint" id="upUserHint"></span></div>
+        <div class="field"><label for="upEmail">Email <span class="lbl-note">optional · lets you sign in with email</span></label>
+          <div class="ipt"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg><input id="upEmail" type="email"></div></div>
+        <div class="field"><label for="upPw">Password</label>
+          <div class="ipt"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="3"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg><input id="upPw" type="password" required autocomplete="new-password"><button type="button" class="pw-toggle" data-for="upPw" aria-label="Show password" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/><path class="slash" d="M4 4l16 16"/></svg></button></div></div>
+        <div class="field"><label for="upPw2">Confirm password</label>
+          <div class="ipt"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="3"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg><input id="upPw2" type="password" required autocomplete="new-password"><button type="button" class="pw-toggle" data-for="upPw2" aria-label="Show password" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/><path class="slash" d="M4 4l16 16"/></svg></button></div></div>
+        <div class="err" id="upErr" role="alert"></div>
+        <button class="btn btn-block" type="submit">Create Account</button>
+      </form>
+
+      <div class="divider">or</div>
+      <button class="btn sec btn-block gbtn" type="button" id="googleBtn"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg><span>Continue with Google</span></button>
+
+      <p class="auth-switch only-in">New here? <button type="button" class="linkbtn" data-go="up">Create an account</button></p>
+      <p class="auth-switch only-up">Already have an account? <button type="button" class="linkbtn" data-go="in">Sign in</button></p>
+    </div>
   </div>
 </div>
+<script>
+(function(){
+  var card=document.getElementById('authCard'),page=document.getElementById('authPage'),
+      up=document.getElementById('tabUp'),inb=document.getElementById('tabIn');
+  if(!card||!up||!inb)return;
+  var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var EASE='cubic-bezier(.22,1,.36,1)',prevH=card.offsetHeight,busy=false,pass=false,queued=null;
+  if(window.ResizeObserver)new ResizeObserver(function(){if(!card.__anim)prevH=card.offsetHeight}).observe(card);
+
+  /* card glides between the two forms' heights */
+  function glide(from){
+    var h=card.offsetHeight;
+    if(reduce||!card.animate||!from||Math.abs(h-from)<2){prevH=h;return}
+    if(card.__anim)card.__anim.cancel();
+    card.style.overflow='hidden';
+    var a=card.__anim=card.animate([{height:from+'px'},{height:h+'px'}],{duration:560,easing:EASE});
+    var done=function(){if(card.__anim===a){card.__anim=null;card.style.overflow='';prevH=card.offsetHeight}};
+    a.onfinish=done;a.oncancel=done;
+  }
+  var lastFlash=0,flashT;
+  function flash(dir){
+    if(reduce)return;
+    lastFlash=Date.now();
+    card.classList.remove('sw-r','sw-l');void card.offsetWidth;
+    card.classList.add(dir>0?'sw-r':'sw-l');
+    clearTimeout(flashT);flashT=setTimeout(function(){card.classList.remove('sw-r','sw-l')},1100);
+  }
+  /* runs after ANY tab change (our click path or the app's own authTab() calls) */
+  function sync(){
+    var t=up.classList.contains('active')?'up':'in';
+    card.dataset.thumb=t;page.dataset.mood=t;
+    if(card.dataset.tab===t)return;
+    var from=prevH;card.dataset.tab=t;glide(from);
+    if(Date.now()-lastFlash>700)flash(t==='up'?1:-1);
+  }
+  new MutationObserver(sync).observe(up,{attributes:true,attributeFilter:['class']});sync();
+
+  function apply(btn){pass=true;btn.click();pass=false}
+  /* outgoing content slides away first, then the app's own handler swaps forms and the new ones flow in */
+  function go(want){
+    if(busy){queued=want;return}
+    if(want===card.dataset.tab)return;
+    var btn=want==='up'?up:inb;
+    if(reduce||!card.animate){apply(btn);return}
+    busy=true;card.dataset.thumb=want;page.dataset.mood=want;
+    var dir=want==='up'?1:-1;flash(dir);
+    var outs=[].slice.call(card.querySelectorAll('#formIn,#formUp,.auth-head>*,.auth-switch')).filter(function(el){return el.offsetParent!==null});
+    var anims=outs.map(function(el){
+      var f=el.tagName==='FORM';
+      return el.animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateX('+(-dir*(f?28:12))+'px)'}],
+        {duration:f?210:180,easing:'cubic-bezier(.5,0,.85,.35)',fill:'forwards'});
+    });
+    setTimeout(function(){apply(btn);anims.forEach(function(a){a.cancel()});busy=false;if(queued){var q=queued;queued=null;go(q)}},210);
+  }
+  card.addEventListener('click',function(e){
+    if(pass)return;
+    var g=e.target.closest('[data-go]'),tb=e.target.closest('#tabIn,#tabUp');
+    var want=g?g.dataset.go:(tb?(tb.id==='tabUp'?'up':'in'):null);
+    if(!want)return;
+    e.stopPropagation();e.preventDefault();go(want);
+  },true);
+  card.addEventListener('click',function(e){
+    var t=e.target.closest('.pw-toggle');
+    if(t){var i=document.getElementById(t.dataset.for),show=i.type==='password';
+      i.type=show?'text':'password';t.setAttribute('aria-pressed',show?'true':'false');
+      t.setAttribute('aria-label',show?'Hide password':'Show password');i.focus()}
+  });
+
+  /* opening animation: plays every time the auth page appears (first visit, or after signing out) */
+  var introT;
+  function intro(){if(reduce)return;page.classList.add('intro');clearTimeout(introT);introT=setTimeout(function(){page.classList.remove('intro')},4500)}
+  function watch(){
+    var shown=!page.classList.contains('hidden');
+    if(shown&&!page.__shown){page.__shown=true;intro()}
+    else if(!shown){page.__shown=false;if(page.classList.contains('intro'))page.classList.remove('intro')}
+  }
+  new MutationObserver(watch).observe(page,{attributes:true,attributeFilter:['class']});watch();
+})();
+</script>
 
 <!-- ============ HOME ============ -->
 <div id="homePage" class="page hidden">
@@ -4259,7 +4546,8 @@ function vipBadgeHTML(id){
 function vipTierOf(id){
   try{
     const v=DB.vipInfo(id);
-    if(!v||v.kind==='owner')return null;
+    if(!v)return null;
+    if(v.kind==='owner')return{cls:'tier-owner',ic:'\u{1F531}',label:'Owner',tip:'Server owner'};
     if(v.kind==='perm')return{cls:'tier-legend',ic:'\u{1F451}',label:'Legend',tip:'Permanent VIP'};
     if(v.kind==='day')return{cls:'tier-star',ic:'\u{1F31E}',label:'Star',tip:'24-hour VIP'};
   }catch(_){}
@@ -4278,7 +4566,8 @@ function profileRolesHTML(id){
   let out='';
   try{
     const v=DB.vipInfo(id);
-    if(v&&v.kind==='perm')out+='<span class="pf-role vip-perm">\u{1F48E} VIP \u00B7 Forever</span>';
+    if(v&&v.kind==='owner')out+='<span class="pf-role owner-role">\u{1F531} Owner</span>';
+    else if(v&&v.kind==='perm')out+='<span class="pf-role vip-perm">\u{1F48E} VIP \u00B7 Forever</span>';
     else if(v&&v.kind==='day')out+='<span class="pf-role vip-day">\u{1F31E} VIP \u2014 1 Day</span>';
     const live=DB.flairOf(id),roles=DB.rolesOf(id);
     const seen={};
@@ -4891,7 +5180,6 @@ function openUserProfile(id){
         <div style="position:relative;width:fit-content">${av}${online&&!deleted?'<span style="position:absolute;bottom:4px;right:4px;width:18px;height:18px;border-radius:50%;background:#3ddc73;box-shadow:0 0 8px #3ddc73;border:3px solid var(--panel)"></span>':''}</div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap">
           <h2 style="margin:0;font-size:20px">${deleted?esc(name):fullNameHTML(id,esc(name))}</h2>
-          ${owner?'<span class="tag owner">Owner</span>':''}
           ${mod&&!owner?'<span class="tag" style="background:var(--accent)">Mod</span>':''}
           ${banned?'<span class="tag" style="background:var(--danger)">Banned</span>':''}
         </div>
