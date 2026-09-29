@@ -6,7 +6,9 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-09-29.1">
+<meta name="build-version" content="2026-09-29.2">
+<script>/* Anti-lag: per-device choice, OFF unless explicitly switched on. Runs before first paint so there is no flash of the heavy visuals. */
+try{if(localStorage.getItem('ich.antiLag')==='1')document.documentElement.classList.add('anti-lag')}catch(_){}</script>
 <title>Itsukis Chat Hub</title>
 <link rel="icon" type="image/png" href="https://aniitsukicoded.github.io/backups/icon.png">
 <style>
@@ -1616,6 +1618,52 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
 .ad-copy{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.16);color:#e6e2ff}
 .ad-user.ok{background:linear-gradient(135deg,rgba(76,214,160,.5),rgba(46,160,120,.4))}
 @media(prefers-reduced-motion:reduce){.ad-ring,.ad-mega,.ad-yours,.ad-contact{animation:none!important}.ad-contact{opacity:1}}
+
+/* ===================================================================
+   ANTI-LAG MODE (Settings > Interface > Performance) — OFF by default.
+   Everything lives under html.anti-lag, so with it off none of this
+   applies and the normal look is untouched. The :not(#_al) trick just
+   bumps specificity so these win over the existing !important glass rules.
+   =================================================================== */
+/* solid-ish panels + no blur/glass shadows (the custom properties drive most of the UI) */
+html.anti-lag{
+  --ui-alpha:.94!important;--ui-blur:0px!important;
+  --glass-sheen:transparent;
+  --glass-shadow:0 6px 16px rgba(0,0,0,.28);
+  --glass-inset:0 0 0 0 transparent;
+}
+/* 1) the big one: backdrop blur/saturation on every surface (each one re-blurs whatever moves behind it) */
+html.anti-lag *:not(#_al),html.anti-lag *:not(#_al)::before,html.anti-lag *:not(#_al)::after{
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+}
+/* 2) drop-shadow / blur filters, including the ones inside entrance keyframes (the page background's own blur is left alone) */
+html.anti-lag *:not(#_al):not(.layer),html.anti-lag *:not(#_al):not(.layer)::before,html.anti-lag *:not(#_al):not(.layer)::after{
+  filter:none!important;
+}
+/* 3) glass sheens, pointer glints and hover shimmer sweeps */
+html.anti-lag .sidebar::before,html.anti-lag .topbar::before,html.anti-lag .composer::before,html.anti-lag .card::before,html.anti-lag .modal::before,
+html.anti-lag .sidebar::after,html.anti-lag .topbar::after,html.anti-lag .composer::after,html.anti-lag .card::after,html.anti-lag .modal::after,html.anti-lag .gc-card::after,
+html.anti-lag .btn.sec::after,html.anti-lag .icon-btn::after,html.anti-lag .menu-btn::after,html.anti-lag .modal-x::after,html.anti-lag .sb-head .back::after,
+html.anti-lag .music-controls button::after,html.anti-lag .cp-eye::after,html.anti-lag .lb-btn::after,html.anti-lag .tab-mini button::after{
+  display:none!important;
+}
+/* 4) ambient / looping decoration (loading spinners, typing dots and one-shot message entrances are kept) */
+html.anti-lag .np-eq i,html.anti-lag .spinner-glow,html.anti-lag .sess-ic,html.anti-lag .music-note.spin,
+html.anti-lag .pf-banner.banner-anim::after,html.anti-lag .acc-banner-preview.banner-anim::after,
+html.anti-lag .vip-ring,html.anti-lag .vip-sheen,html.anti-lag .vip-sparks,html.anti-lag .vip-gem,html.anti-lag .vip-gem::before,html.anti-lag .vip-title,
+html.anti-lag .flair-rainbow,html.anti-lag .flair-name,html.anti-lag .nm-wrap .nm-user,
+html.anti-lag .tqq-side,html.anti-lag .tqq-glow,html.anti-lag .tqq-card,html.anti-lag .tqq-card::before,html.anti-lag .tqq-img img,html.anti-lag .tqq-img::after,
+html.anti-lag .tqq-petal,html.anti-lag .tqq-spark,html.anti-lag .tqq-title,html.anti-lag .tqq-title b,html.anti-lag .tqq-badge i,
+html.anti-lag .tqq-join,html.anti-lag .tqq-join svg,html.anti-lag .tqq-join::after,
+html.anti-lag .gh-teaser::before,html.anti-lag .gh-ic,html.anti-lag .gh-track,html.anti-lag .gha-lock-ic,
+html.anti-lag .ad-ring,html.anti-lag .ad-mega,html.anti-lag .np{
+  animation:none!important;
+}
+html.anti-lag .vip-sparks,html.anti-lag .tqq-petal,html.anti-lag .tqq-spark,html.anti-lag .tqq-glow,html.anti-lag .cfx{display:none!important}
+html.anti-lag .flair-name,html.anti-lag .nm-wrap .nm-user{will-change:auto}
+html.anti-lag .msg .bubble,html.anti-lag .msg-live .bubble{box-shadow:none!important}
+/* flip freeze: while the class is being swapped, no transition/animation runs, so toggling is one clean repaint instead of hundreds of tweens */
+html.al-switch *,html.al-switch *::before,html.al-switch *::after{transition:none!important}
 </style>
 </head>
 <body>
@@ -5015,6 +5063,7 @@ function openSpin(){
 }
 function burstConfetti(n){
   if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  if(document.documentElement.classList.contains('anti-lag'))return;
   const host=document.createElement('div');host.className='cfx';
   const cols=['#ff5fc0','#ffd84d','#5aa9ff','#4cd6a0','#ff7a45','#a78bfa'];
   for(let i=0;i<n;i++){
@@ -6473,6 +6522,31 @@ function applyStyle(target=document.documentElement,s=ME.settings){
 
 $('#settingsBtn').onclick=()=>openSettings(true);
 
+/* ===== Anti-lag mode (per device, OFF by default) =====
+   Kept in localStorage like "keep playing in the background": lag is a property of the
+   device, not the account, and it needs no database-rule change. The <head> script applies
+   it before first paint; this just flips it live. The swap is deferred to a frame and wrapped
+   in .al-switch (transitions frozen) so turning it on or off is one clean repaint, not a stutter. */
+const AntiLag=(function(){
+  const KEY='ich.antiLag',de=document.documentElement;
+  function on(){return de.classList.contains('anti-lag')}
+  function apply(v){
+    v=!!v;if(on()===v)return;
+    de.classList.add('al-switch');
+    requestAnimationFrame(()=>{
+      de.classList.toggle('anti-lag',v);
+      requestAnimationFrame(()=>requestAnimationFrame(()=>de.classList.remove('al-switch')));
+    });
+  }
+  function set(v){
+    try{localStorage.setItem(KEY,v?'1':'0')}catch(_){}
+    apply(v);
+  }
+  // keep other open tabs in step
+  window.addEventListener('storage',e=>{if(e.key===KEY)apply(e.newValue==='1')});
+  return{on,set};
+})();
+
 function openSettings(fromChat){
   ME=DB.currentUser();
   const orig={...ME.settings,pings:{...ME.settings.pings}};
@@ -6553,6 +6627,16 @@ function openSettings(fromChat){
         <div class="section-h" style="margin-top:0">Scrolling</div>
         <div class="field" style="margin-bottom:0"><label style="justify-content:flex-start;gap:8px"><input type="checkbox" id="sAutoScroll" ${s.autoScrollBottom!==false?'checked':''}> Auto-scroll to the newest message</label></div>
         <div class="hint">Jumps you to the bottom when you open a chat and whenever a new message arrives. Turn off to stay where you're reading.</div>
+      </div>
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">⚡ Performance</div>
+        <div class="toggle-row" style="margin-bottom:0">
+          <div>
+            <div style="font-weight:600;font-size:14px">Anti-lag mode</div>
+            <div class="hint" style="margin-top:2px">Off by default. Turns off the liquid-glass blur, glows, shimmer and looping effects, and makes panels more solid. Everything still works — it just draws far less. Saved on this device only, and it takes over from the UI opacity/blur sliders while on.</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="sAntiLag" ${AntiLag.on()?'checked':''}><span class="slider"></span></label>
+        </div>
       </div>
     </div>
 
@@ -6994,6 +7078,8 @@ function openSettings(fromChat){
   });
   // Background play is a per-device choice kept in localStorage (no database field / rule change needed).
   $$('#sMusicBg').addEventListener('change',e=>MusicPlayer.setBackground(e.target.checked));
+  // Anti-lag is per device too (localStorage); applied instantly and never part of the Save payload.
+  $$('#sAntiLag').addEventListener('change',e=>AntiLag.set(e.target.checked));
   // Flipping this on has to ask the browser for permission right here, inside the click
   // handler — browsers require a real user gesture for the prompt to reliably show at all,
   // and this is the ONLY place in the app permission is ever requested (see the notes above
@@ -7424,6 +7510,7 @@ function renderChatLight(keepFriends){
     });
   }
   function point(e){
+    if(document.documentElement.classList.contains('anti-lag'))return;   // anti-lag: no pointer glints
     const cx=e.touches?e.touches[0].clientX:e.clientX;
     const cy=e.touches?e.touches[0].clientY:e.clientY;
     pending={x:cx,y:cy};
