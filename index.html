@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-09-29.6">
+<meta name="build-version" content="2026-09-30.1">
 <script>/* Anti-lag: per-device choice, OFF unless explicitly switched on. Runs before first paint so there is no flash of the heavy visuals. */
 try{if(localStorage.getItem('ich.antiLag')==='1')document.documentElement.classList.add('anti-lag')}catch(_){}</script>
 <title>Itsukis Chat Hub</title>
@@ -1482,12 +1482,12 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
 .tqq-join:active{transform:translateY(-1px) scale(.98)}
 .tqq-alt{display:inline-block;margin-top:10px;font-size:12px;color:var(--muted);text-decoration:none;word-break:break-all;transition:color .2s ease;animation:tqqRise .7s ease 1.4s both}
 .tqq-alt:hover{color:#bdb5ff;text-decoration:underline}
-@media(min-width:1240px) and (min-height:620px){
+@media(min-width:1240px) and (min-height:460px){
   .tqq-side{position:absolute;left:28px;top:76px;bottom:24px;width:272px;max-width:none;margin:0;display:flex;align-items:center;pointer-events:none}
   .tqq-card{pointer-events:auto}
 }
 /* stacked layout (promo sits under the menu): keep the top reachable when the page is taller than the screen */
-@media(max-width:1239px),(max-height:619px){
+@media(max-width:1239px),(max-height:459px){
   #homePage{justify-content:safe center;padding-top:84px}
   #homePage .home-wrap{margin:0 auto}
 }
@@ -1670,10 +1670,10 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
 .extras.open .ex-chev{transform:rotate(180deg);opacity:1}
 
 /* body unrolls with grid-rows (0fr -> 1fr): smooth auto-height, no JS measuring */
-.extras-menu{display:grid;grid-template-rows:0fr;visibility:hidden;transition:grid-template-rows .55s var(--ex-ease),visibility 0s linear .55s}
-.extras.open .extras-menu{grid-template-rows:1fr;visibility:visible;transition:grid-template-rows .6s var(--ex-ease),visibility 0s}
-.ex-inner{min-height:0;overflow:hidden;width:var(--ex-open-w);padding:0 12px;opacity:0;transition:opacity .18s ease,padding .5s var(--ex-ease)}
-.extras.open .ex-inner{opacity:1;padding:2px 12px 14px;transition:opacity .35s ease .1s,padding .5s var(--ex-ease)}
+.extras-menu{display:block;height:0;overflow:hidden;visibility:hidden;transition:height .5s var(--ex-ease),visibility 0s linear .5s}
+.extras.open .extras-menu{height:var(--ex-h,auto);visibility:visible;transition:height .6s var(--ex-ease),visibility 0s}
+.ex-inner{width:var(--ex-open-w);padding:2px 12px 14px;opacity:0;transform:translateY(-6px);transition:opacity .16s ease,transform .3s var(--ex-ease)}
+.extras.open .ex-inner{opacity:1;transform:none;transition:opacity .35s ease .1s,transform .5s var(--ex-ease) .05s}
 .ex-cap{display:flex;align-items:center;gap:10px;font-size:10.5px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);padding:6px 4px 10px}
 .ex-cap i{flex:1;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.22),transparent)}
 
@@ -1724,9 +1724,8 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
 @keyframes exIn{from{opacity:0;transform:translateY(16px) scale(.95)}to{opacity:1;transform:none}}
 @media(max-width:600px){.extras{left:16px}}
 @media (prefers-reduced-motion:reduce){
-  .extras,.ex-shell::before,.extras.open .ex-cap,.extras.open .ex-item,.extras.open .ex-note,.extras.open .ex-ic::before{animation:none}
-  .extras.open .ex-timer .pr{animation:none;stroke-dashoffset:0}
-  .ex-shell,.extras-menu,.ex-inner,.ex-item,.ex-chev,.ex-ic,.ex-go,.ex-grid rect,.ex-shell::after{transition:none}
+  /* keep the open/close morph (it's user-triggered and short); only drop the looping ambient bits */
+  .ex-shell::before,.extras.open .ex-ic::before,.extras.open .ex-clock{animation:none}
 }
 /* anti-lag: solid shell, no blur, no orbiting ring / lamp / spotlight */
 html.anti-lag .extras{--ex-bg:rgb(24,25,42)}
@@ -2212,7 +2211,7 @@ html.al-switch *,html.al-switch *::before,html.al-switch *::after{transition:non
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import{initializeAuth,indexedDBLocalPersistence,browserLocalPersistence as _bLP,browserSessionPersistence,inMemoryPersistence,browserPopupRedirectResolver,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signInWithPopup,GoogleAuthProvider,signOut as fbSignOut,sendEmailVerification,sendPasswordResetEmail,deleteUser,linkWithCredential,EmailAuthProvider,setPersistence,browserLocalPersistence}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import{initializeAppCheck,ReCaptchaEnterpriseProvider}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js";
-import{getDatabase,ref,onValue,get,set,update,remove,push,runTransaction,query,orderByChild,orderByValue,equalTo,limitToLast,serverTimestamp,onDisconnect,enableLogging}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import{getDatabase,ref,onValue,get,set,update,remove,push,runTransaction,query,orderByChild,orderByValue,equalTo,limitToLast,limitToFirst,endAt,serverTimestamp,onDisconnect,enableLogging}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 // TEMP DIAGNOSTIC: prints the exact rule-evaluation reason for every denied write to the
 // browser console (e.g. "Permission denied ... at /messages/global/-Ab.../text").
 // Safe to leave on temporarily; remove enableLogging(true) once writes are confirmed fixed.
@@ -2341,6 +2340,7 @@ const FILTER_RE=new RegExp(FILTER_WORDS.map(w=>'('+_wordPat(w)+')').join('|'),'g
 function containsProfanity(str){if(!str)return false;FILTER_RE.lastIndex=0;return FILTER_RE.test(String(str).normalize('NFKC'))}
 function censorText(str){if(!str)return str;return String(str).normalize('NFKC').replace(FILTER_RE,m=>'*'.repeat(m.length))}
 let MODSET={filterEnabled:true,filterNames:true,customNames:true};
+let MODSET_LOADED=false;   // retention/cleanup must never run off the built-in default before the real value has arrived
 function filterMsgEnabled(){return MODSET.filterEnabled!==false}       // owner-controlled, server-side default (affects what's stored/shown to everyone)
 function filterNamesOn(){return MODSET.filterNames!==false}
 // Owner toggle: when on (default), a user holding a decorative role/flair gets a
@@ -2421,12 +2421,13 @@ const rtdb=getDatabase(fbApp);
 const R=p=>ref(rtdb,p);
 let SKEW=0;
 onValue(ref(rtdb,'.info/serverTimeOffset'),s=>{SKEW=Number(s.val())||0});
-onValue(R('modSettings'),s=>{MODSET={filterEnabled:true,filterNames:true,customNames:true,...(s.val()||{})};if(typeof render==='function')try{render()}catch(_){}if(typeof renderChat==='function')try{renderChat()}catch(_){}});
+onValue(R('modSettings'),s=>{MODSET={filterEnabled:true,filterNames:true,customNames:true,...(s.val()||{})};MODSET_LOADED=true;if(typeof render==='function')try{render()}catch(_){}if(typeof renderChat==='function')try{renderChat()}catch(_){}});
 // Live cache of owners/, kept in sync by a listener started in DB.startListeners().
 // owners/$id === 1 means that numeric user id is an owner; 0 or missing means not.
 // This is populated from your backend (Admin SDK) — the client never writes to it
 // (rules: owners/.write is always false), it only reads the live value.
 let OWNERS_CACHE={};
+let BANNED_LOADED=false; // banned/ has delivered its first real snapshot (C.banned starts as {} — NOT the same as "nobody is banned")
 let OWNERS_LOADED=false; // true only after the first live snapshot of owners/ has arrived —
 // isOwner() can return a false negative for a real owner before this, since OWNERS_CACHE
 // starts empty. Anything that can auto-ban/auto-punish (like the anti-nuke heuristic)
@@ -2546,7 +2547,7 @@ function hideKickOverlay(){
 
 const DB=(()=>{
   // live cache
-  const C={users:{},usernames:{},rooms:{},roomMembers:{},dmMembers:{},friends:{},friendReqIn:{},friendReqOut:{},lastRead:{},messages:{},myRoomIds:[],online:0,onlineIds:[],presenceIds:[],banned:{},muted:{},blocked:{},blockedBy:{},reactions:{},vip:{},flair:{},roles:{},lastSpin:0};
+  const C={users:{},usernames:{},rooms:{},roomMembers:{},dmMembers:{},friends:{},friendReqIn:{},friendReqOut:{},lastRead:{},pingSeen:{},messages:{},myRoomIds:[],online:0,onlineIds:[],presenceIds:[],banned:{},muted:{},blocked:{},blockedBy:{},reactions:{},vip:{},flair:{},roles:{},lastSpin:0};
   let myId=null,myUid=null,ready=false;
   const listeners=new Set();
   const unsubs=[];         // base listeners
@@ -2682,13 +2683,13 @@ const DB=(()=>{
   }
 
   function startListeners(){
-    stopAll();
+    stopAll();BANNED_LOADED=false;
     presenceRef=R('onlineUsers/'+myId);
     claimSession();watchSession();
     listen('users',v=>C.users=v||{});
     listen('usernames',v=>C.usernames=v||{});
     listen('banned',v=>{
-      C.banned=v||{};
+      C.banned=v||{};BANNED_LOADED=true;
       checkBanLock(myId,C.banned);
     });
     listen('muted',v=>{C.muted=v||{};if(typeof updateMuteLock==='function')updateMuteLock();});
@@ -2702,6 +2703,7 @@ const DB=(()=>{
     listen('lastSpin/'+myId,v=>{C.lastSpin=Number(v)||0;if(typeof refreshSpinUI==='function'){try{refreshSpinUI()}catch(_){}}});
     listen('friendRequests/'+myId,v=>C.friendReqIn=v||{});
     listen('lastRead/'+myId,v=>C.lastRead=v||{});
+    listen('pingSeen/'+myId,v=>{C.pingSeen=v||{}});
     // Rooms: rather than trying to read the whole 'rooms'/'roomMembers' trees (which
     // security rules almost never allow for a giant shared list), keep a small
     // per-user index of which room IDs I'm in, then watch just those rooms.
@@ -2766,6 +2768,29 @@ const DB=(()=>{
     },()=>{});
   }
   // The message listener follows whichever chat is open
+  let pruning=false;
+  async function pruneBatch(key,limit,days){
+    // one extra minute of margin so clock skew can never make the server reject a whole batch
+    const cutoff=Date.now()+SKEW-days*864e5-60000;
+    const snap=await get(query(R('messages/'+key),orderByChild('at'),endAt(cutoff),limitToFirst(limit)));
+    if(!snap.exists())return 0;
+    const msgs={},rx={};let n=0;
+    snap.forEach(c=>{msgs['messages/'+key+'/'+c.key]=null;rx['reactions/'+key+'/'+c.key]=null;n++});
+    // reactions first (their rule checks the message still exists), best-effort; then the messages themselves
+    try{await update(ref(rtdb),rx)}catch(_){}
+    await update(ref(rtdb),msgs);
+    return n;
+  }
+  const MSG_LIMIT=100,MSG_STEP=100,msgLimit={};
+  function attachMsgListener(key){
+    if(msgUnsub){msgUnsub();msgUnsub=null}
+    const q=query(R('messages/'+key),orderByChild('at'),limitToLast(msgLimit[key]||MSG_LIMIT));
+    msgUnsub=onValue(q,s=>{
+      const arr=[];s.forEach(c=>{arr.push({...c.val(),id:c.key})});
+      C.messages[key]=arr.map(m=>({...m,images:m.images||[],pings:m.pings||[],text:m.text||''}));
+      if(ready)emit();
+    },err=>console.warn('messages denied',key,err.code));
+  }
   function watchMessages(key){
     // VIP Lounge: don't even attach the listener unless I qualify (the rules would just deny it).
     if(key===CFG.VIP_ROOM&&!DB.vipInfo(myId))key=null;
@@ -2783,12 +2808,8 @@ const DB=(()=>{
     msgKey=key;
     if(!key){if(ready)emit();return}
     rejoinScopedPresence();
-    const q=query(R('messages/'+key),orderByChild('at'),limitToLast(300));
-    msgUnsub=onValue(q,s=>{
-      const arr=[];s.forEach(c=>{arr.push({...c.val(),id:c.key})});
-      C.messages[key]=arr.map(m=>({...m,images:m.images||[],pings:m.pings||[],text:m.text||''}));
-      if(ready)emit();
-    },err=>console.warn('messages denied',key,err.code));
+    msgLimit[key]=MSG_LIMIT;           // every fresh open starts light: only the newest messages
+    attachMsgListener(key);
     // Reactions live at their own top-level path (reactions/$key/$msgId/$emoji/$userId)
     // rather than under messages/$key/$msgId, since the message rules only let the
     // ORIGINAL SENDER edit their own message — reactions need to be addable by anyone
@@ -3128,6 +3149,14 @@ const DB=(()=>{
       emit();
       return userView(id);
     },
+    // Saves ONE settings key without re-uploading the whole settings blob (which can carry a large
+    // background image) — used for small toggles like anti-lag.
+    async setSettingKey(id,key,val){
+      const cur=C.users[id]||{};
+      C.users[id]={...cur,settings:{...(cur.settings||{}),[key]:val}};emit();
+      try{await set(R('users/'+id+'/settings/'+key),val)}
+      catch(e){console.error('setting save failed',key,e);throw e}
+    },
     async updateSettings(id,patch){
       const cur=C.users[id]||{};
       const merged={...(cur.settings||{}),...patch};
@@ -3407,8 +3436,11 @@ const DB=(()=>{
     },
     async unbanUser(id){
       if(!isOwner(myId))throw new Error('Only owners can unban.');
-      await remove(R('banned/'+id)).catch(()=>{});
-      delete C.banned[id];checkBanLock(myId,C.banned); // update local state immediately; don't wait on the listener round-trip
+      // An unban is now an EXPLICIT record (banned/$id = false) instead of the flag simply vanishing.
+      // A missing flag is what a client sees before banned/ has loaded, so "missing" must never be
+      // read as "unbanned" — that misreading is what silently un-froze banned accounts.
+      await set(R('banned/'+id),false);
+      C.banned[id]=false;checkBanLock(myId,C.banned); // update local state immediately; don't wait on the listener round-trip
       // NOTE: this is deliberately all an owner CAN do here. users/$id only lets an owner
       // write it in the exact "ban" shape (deleted:true, username:'Deleted User') — there's
       // no rule letting an owner set someone else's username or clear their `deleted` flag,
@@ -3420,6 +3452,78 @@ const DB=(()=>{
       // fires automatically on their client once banned/$id is gone.
     },
     isBanned(id){return!!C.banned&&!!C.banned[id]},
+    /* --- Automatic cleanup of old data ---
+       Messages older than modSettings/retentionDays (default 7, 0 = keep forever) are deleted. The database
+       RULES enforce that only messages past that age can be deleted by someone who isn't the sender/an
+       owner, so a client can never wipe recent chat. Every signed-in client trims a small batch in the chats
+       it can see; owners trim faster. Also clears this account's used-up send-rate slots and stale ping marks. */
+    retentionDays(){
+      if(!MODSET_LOADED)return 0;                      // not known yet => do nothing
+      const v=MODSET.retentionDays;
+      return typeof v==='number'?v:7;
+    },
+    async pruneRun(opts){
+      opts=opts||{};
+      if(pruning||myId==null||DB.isBanned(myId)||!ready)return{deleted:0,busy:true};
+      pruning=true;let total=0;
+      try{
+        // 1) this account's used-up rate slots (one is left behind by every message ever sent)
+        try{
+          const rs=await get(R('rate/'+myId));
+          if(rs.exists()){
+            const cut=Date.now()+SKEW-600000,upd={};let n=0;
+            rs.forEach(c=>{if(n<450&&Number(c.val())<cut){upd['rate/'+myId+'/'+c.key]=null;n++}});
+            if(n)await update(ref(rtdb),upd);
+          }
+        }catch(_){}
+        const days=DB.retentionDays();
+        // 2) ping "seen" marks for messages that no longer exist
+        try{
+          const seen=C.pingSeen||{},cut=Date.now()+SKEW-((days||14)+2)*864e5,upd={};let n=0;
+          Object.keys(seen).forEach(k=>{if(n<450&&Number(seen[k])<cut){upd['pingSeen/'+myId+'/'+k]=null;n++}});
+          if(n){await update(ref(rtdb),upd);n&&Object.keys(upd).forEach(p=>{delete C.pingSeen[p.split('/').pop()]})}
+        }catch(_){}
+        // 3) old messages
+        if(days>0){
+          const per=opts.aggressive?40:25,perKey=opts.aggressive?(opts.maxBatches||60):1;
+          const keys=[CFG.GLOBAL_ROOM];
+          if(isOwner(myId)||DB.vipInfo(myId))keys.push(CFG.VIP_ROOM);
+          (C.myRoomIds||[]).forEach(r=>keys.push(r));
+          (C.friends[myId]||[]).forEach(f=>keys.push(dmKey(myId,f)));
+          for(const key of keys){
+            for(let b=0;b<perKey;b++){
+              const n=await pruneBatch(key,per,days);
+              total+=n;if(opts.onProgress)opts.onProgress(total,key);
+              if(n<per)break;
+              if(opts.aggressive)await sleep(450);
+            }
+          }
+        }
+      }catch(e){console.warn('cleanup failed',e.code||e.message)}
+      finally{pruning=false}
+      return{deleted:total};
+    },
+    async setRetention(days){
+      if(!isOwner(myId))throw new Error('Only owners can change this.');
+      days=Math.round(Number(days));
+      if(!(days===0||(days>=1&&days<=365)))throw new Error('Pick 0 (keep forever) or 1–365 days.');
+      await update(R('modSettings'),{retentionDays:days});
+    },
+    /* --- Older history, loaded only when you scroll up to it --- */
+    canLoadOlder(key){return key===msgKey&&(C.messages[key]||[]).length>=(msgLimit[key]||MSG_LIMIT)&&(msgLimit[key]||MSG_LIMIT)<1500},
+    loadOlder(key){
+      if(!DB.canLoadOlder(key))return false;
+      msgLimit[key]=(msgLimit[key]||MSG_LIMIT)+MSG_STEP;
+      attachMsgListener(key);return true;
+    },
+    /* --- Pings marked as read (synced across devices) --- */
+    pingSeenMap(){return C.pingSeen||{}},
+    async savePingsSeen(map){
+      const ids=Object.keys(map||{});if(!ids.length||myId==null)return;
+      const upd={};ids.forEach(k=>{upd['pingSeen/'+myId+'/'+k]=map[k]});
+      C.pingSeen=C.pingSeen||{};ids.forEach(k=>C.pingSeen[k]=map[k]);
+      await update(ref(rtdb),upd);
+    },
     // Self-service repair for a just-unbanned account: only the account's own auth can
     // rewrite its username (the security rules don't let an owner do this on someone
     // else's behalf), so this runs on that user's own client right after sign-in once
@@ -3427,15 +3531,20 @@ const DB=(()=>{
     // Frees whatever old username was reserved at ban time and issues a fresh generated
     // one (UnbannedUserXXXXXX) that they're free to change any time in Settings.
     needsUnbanRestore(){
-      const id=myId;if(id==null)return false;
+      const id=myId;if(id==null||!BANNED_LOADED||!OWNERS_LOADED)return false;   // never decide before the ban list is really known
       const u=C.users[id];
-      return!!u&&u.deleted===true&&u.username==='Deleted User'&&!(C.banned&&C.banned[id]);
+      // only an explicit unban (banned/$id === false) qualifies; a missing flag never does
+      return!!u&&u.deleted===true&&u.username==='Deleted User'&&!!C.banned&&C.banned[id]===false;
     },
     async restoreBannedAccount(){
       const id=myId;if(id==null)return null;
       const u=C.users[id];
       if(!u||u.username!=='Deleted User'||u.deleted!==true)return null; // nothing to restore
-      if(C.banned&&C.banned[id])return null;                           // still banned
+      // Ask the SERVER (not the local cache) and insist on an explicit unban record, both now and again
+      // right before writing. The old version only looked at C.banned, which is empty for the first
+      // moments after sign-in — so a banned account reloading the page could "restore" itself.
+      const confirmUnbanned=async()=>{try{const b=await get(R('banned/'+id));return b.val()===false}catch(_){return false}};
+      if(!(await confirmUnbanned()))return null;
       // Find whatever username(s) still point at me from before the ban, so they can be freed.
       let oldKeys=[];
       try{
@@ -3451,6 +3560,7 @@ const DB=(()=>{
         tries++;
       }while(!free&&tries<8);
       if(!free)throw new Error('Could not find an available name to restore your account with. Try again in a moment.');
+      if(!(await confirmUnbanned()))return null;   // re-check after all the awaits above
       const email=u.email||(newKey+FAKE);
       const stamp=Date.now()+SKEW;
       const patch={};
@@ -3667,6 +3777,41 @@ const DB=(()=>{
         throw new Error(e.code==='PERMISSION_DENIED'?'Could not delete that message.':'Delete failed ('+(e.code||e.message)+')');
       }
     },
+    // Fast bulk delete for the admin panel. Removes everything from the local cache in
+    // one go (single re-render, so the UI never stutters), then sends the deletes to the
+    // database as multi-path updates in parallel chunks instead of one awaited request
+    // per message. If a chunk is rejected it falls back to per-message removes for just
+    // that chunk so one bad message can't block the rest. Returns {ok,fail}.
+    async deleteMessagesBulk(items){
+      items=(items||[]).filter(x=>x&&x.key&&x.id);
+      if(!items.length)return{ok:0,fail:0};
+      const gone=new Set(items.map(x=>x.key+'|'+x.id));
+      const touched=new Set();
+      items.forEach(x=>{
+        const arr=C.messages[x.key];
+        if(arr&&arr.some(m=>gone.has(x.key+'|'+m.id))){
+          C.messages[x.key]=arr.filter(m=>!gone.has(x.key+'|'+m.id));
+          touched.add(x.key);
+        }
+      });
+      if(touched.has(msgKey))emit();
+      const CHUNK=200;
+      const chunks=[];
+      for(let i=0;i<items.length;i+=CHUNK)chunks.push(items.slice(i,i+CHUNK));
+      let ok=0,fail=0;
+      await Promise.all(chunks.map(async chunk=>{
+        const upd={};
+        chunk.forEach(x=>{upd['messages/'+x.key+'/'+x.id]=null});
+        try{
+          await update(ref(rtdb),upd);
+          ok+=chunk.length;
+        }catch(e){
+          const res=await Promise.all(chunk.map(x=>remove(R('messages/'+x.key+'/'+x.id)).then(()=>true,()=>false)));
+          res.forEach(r=>r?ok++:fail++);
+        }
+      }));
+      return{ok,fail};
+    },
     // Edit the text of one of MY OWN messages in place. Only the text (and an
     // editedAt marker) can change — sender, timestamp, images and reply target
     // are all fixed by the database rules, so this can't be abused to alter
@@ -3701,9 +3846,7 @@ const DB=(()=>{
       if(!key)return 0;
       const arr=C.messages[key]||[];
       const targets=arr.filter(m=>Number(m.senderId)===Number(userId));
-      for(const m of targets){
-        try{await remove(R('messages/'+key+'/'+m.id))}catch(e){/* keep going; rules will reject others' the same way */}
-      }
+      await DB.deleteMessagesBulk(targets.map(m=>({key,id:m.id})));
       return targets.length;
     },
     messages(key){
@@ -3794,17 +3937,55 @@ function toast(msg,type=''){
 }
 
 // Readable ping toast: who pinged you, where, and a preview of the message. Click it to open their profile.
+/* Pings are tracked by message id (persisted per account on this device), never by list length.
+   The old length-based check re-fired old pings whenever history grew above what was on screen
+   (preview -> full list) and missed new ones once a room hit its 300-message window. Now a ping
+   is shown live at most once, and is marked read as soon as it has been seen in its chat. */
+const PING_SEEN_MAX=500;
+let _pingSeen=null,_pingSeenFor=null,_pingQueue={},_pingFlushT=0;
+function pingSeenSet(){   // fast local cache (this device); the account copy in the database is merged in by pingSeen()
+  if(!ME)return new Set();
+  if(_pingSeenFor!==ME.id||!_pingSeen){
+    _pingSeenFor=ME.id;
+    try{_pingSeen=new Set(JSON.parse(localStorage.getItem('ich.pingSeen.'+ME.id)||'[]'))}catch(_){_pingSeen=new Set()}
+  }
+  return _pingSeen;
+}
+function pingSeen(id){
+  if(pingSeenSet().has(id))return true;
+  const db=DB.pingSeenMap();
+  if(db&&db[id]){pingSeenSet().add(id);return true}   // seen on another device
+  return false;
+}
+function markPingSeen(m){
+  if(!ME||!m||!m.id)return;
+  const st=pingSeenSet();if(st.has(m.id))return;
+  st.add(m.id);
+  while(st.size>PING_SEEN_MAX)st.delete(st.values().next().value);
+  try{localStorage.setItem('ich.pingSeen.'+ME.id,JSON.stringify([...st]))}catch(_){}
+  // and save it to the account (batched) so every other device knows it's read too
+  _pingQueue[m.id]=Number(m.at)||Date.now();
+  clearTimeout(_pingFlushT);
+  _pingFlushT=setTimeout(()=>{const q=_pingQueue;_pingQueue={};DB.savePingsSeen(q).catch(()=>{})},900);
+}
 function pingToast(m,key,sender){
+  // never stack two toasts for the same message, and keep at most 3 ping toasts on screen
+  const host=$('#toasts');
+  if(host.querySelector('.ping-rich[data-mid="'+m.id+'"]'))return;
+  const live=host.querySelectorAll('.ping-rich');
+  for(let i=0;i<=live.length-3;i++)live[i].remove();
   const name=sender&&!sender.deleted?displayUsername(sender.username):'Someone';
   const where=key===CFG.GLOBAL_ROOM?'in Global chat':(String(key).startsWith('dm_')?'in a DM':'in a room');
   const raw=(m.text||'').replace(/\s+/g,' ').trim();
   const prev=raw?(raw.length>90?raw.slice(0,90)+'…':raw):((m.images&&m.images.length)?'[sent an image]':'');
-  const t=document.createElement('div');t.className='toast ping ping-rich';
+  const t=document.createElement('div');t.className='toast ping ping-rich';t.dataset.mid=m.id;
   const mk=(c,tx)=>{const d=document.createElement('div');d.className=c;d.textContent=tx;t.appendChild(d)};
   mk('pt-title','@ '+name+' pinged you');mk('pt-where',where);if(prev)mk('pt-text',prev);
   if(sender&&!sender.deleted)mk('pt-hint','Tap to view profile');
   t.onclick=()=>{t.remove();if(sender&&!sender.deleted)openUserProfile(m.senderId)};
-  $('#toasts').appendChild(t);setTimeout(()=>t.remove(),9000);
+  // already reading that chat => it's been seen, so the toast only lingers briefly
+  const viewing=view.page==='chatPage'&&view.roomKey===key;
+  $('#toasts').appendChild(t);setTimeout(()=>t.remove(),viewing?4500:9000);
 }
 
 /* ---------- Desktop notifications for pings & DMs ----------
@@ -3842,6 +4023,7 @@ function checkPingNotifications(){
       const pinged=(m.pings||[]).includes(ME.id)||((m.pings||[]).includes('everyone')&&ME.settings.pings.everyone);
       if(!isDM&&!pinged)return;                 // only pings & DMs — never every ordinary message
       if(_viewingRoom(key))return;               // already looking right at it — the in-app toast/sound covers this
+      if(pinged&&pingSeen(m.id))return;          // already seen in its chat
       const sender=DB.getUser(m.senderId);
       const name=sender&&!sender.deleted?displayUsername(sender.username):'Someone';
       try{
@@ -5239,16 +5421,36 @@ async function doSpin(){
   const jitter=(Math.random()-.5)*16;
   const mid=idx*30+15+jitter;
   const d=(((-(mid+_wheelRot))%360)+360)%360;
+  const startRot=_wheelRot;
   _wheelRot=_wheelRot+360*6+d;
   const wheel=$('#spinWheel');
-  if(wheel){wheel.style.transition='transform 5.2s cubic-bezier(.12,.72,.14,1)';wheel.style.transform='rotate('+_wheelRot+'deg)'}
+  // Drive the spin with the Web Animations API instead of a CSS transition. A CSS transition gets
+  // silently skipped on machines with "reduce motion"/animations turned off (common on Chromebooks and
+  // desktops) or by any transition:none override, which is why it only spun on phones. An explicit
+  // animation always plays. (Reduced-motion users get a shorter spin instead of none, so the result still reads.)
+  const slow=!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const dur=slow?5200:2600;
+  if(wheel){
+    const fin='rotate('+_wheelRot+'deg)';
+    wheel.style.transition='none';
+    wheel.style.transform='rotate('+startRot+'deg)';
+    void wheel.offsetWidth;
+    if(wheel.animate){
+      const an=wheel.animate([{transform:'rotate('+startRot+'deg)'},{transform:fin}],{duration:dur,easing:'cubic-bezier(.12,.72,.14,1)',fill:'forwards'});
+      wheel.style.transform=fin;
+      an.onfinish=()=>{try{an.cancel()}catch(_){}};
+    }else{
+      wheel.style.transition='transform '+(dur/1000)+'s cubic-bezier(.12,.72,.14,1)';
+      wheel.style.transform=fin;
+    }
+  }
   setTimeout(()=>{
     _spinBusy=false;setSpinBtn();refreshSpinUI();
     const r2=$('#spinRes');
     if(r2){r2.className='spin-res win';r2.innerHTML='<span class="sr-e">'+prize.e+'</span><div><b>'+prize.name+'</b><span>'+prize.msg+'</span></div>'}
     if(prize.id!=='none'&&prize.id!=='close')burstConfetti(prize.id==='vipperm'?140:(prize.id==='confetti'?110:60));
     if(prize.id==='vip1'||prize.id==='vipperm')toast('VIP unlocked. Open VIP Chat from the chat menu.');
-  },5400);
+  },dur+200);
 }
 
 $('#menuBtn').onclick=()=>$('#sidebar').classList.toggle('open');
@@ -5932,6 +6134,7 @@ function renderMessages(key){
   const ids=list.map(m=>m.id);
   const autoScroll=ME.settings.autoScrollBottom!==false;
   const atBottom=roomChanged?true:(box.scrollHeight-box.scrollTop-box.clientHeight<80);
+  let liveRows=[];   // rows appended live this pass (used for ping toasts)
 
   // How much of what's already on screen can we keep untouched? Two shapes are
   // common and both avoid tearing the list down: a plain append (nothing lost),
@@ -5985,6 +6188,7 @@ function renderMessages(key){
     // Append-only: just add the new rows, leaving existing bubbles untouched...
     const keptCount=renderedIds.length-drop;
     const newOnes=list.slice(keptCount);
+    liveRows=newOnes;
     if(newOnes.length){
       let lastDay=keptCount>0?new Date(list[keptCount-1].at).toDateString():'';
       newOnes.forEach(m=>{lastDay=appendMsgRow(box,m,lastDay,true)});
@@ -6006,19 +6210,18 @@ function renderMessages(key){
   }
   renderedKey=key;renderedIds=ids;
 
-  // ping detection for new messages
-  const prev=lastCount[key]??list.length;
-  if(list.length>prev){
-    list.slice(prev).forEach(m=>{
-      if(m.senderId===ME.id)return;
-      const pinged=m.pings.includes(ME.id)||(m.pings.includes('everyone')&&ME.settings.pings.everyone);
-      if(pinged){
-        const s=DB.getUser(m.senderId);
-        pingToast(m,key,s);
-        if(ME.settings.pings.sound)beep();
-      }
-    });
-  }
+  // ping detection: every ping on screen counts as seen (marked read); only rows that just arrived
+  // live (the append-only path above) and that we haven't shown before get a toast + chime.
+  const liveIds=new Set(liveRows.map(m=>m.id));
+  list.forEach(m=>{
+    if(m.senderId===ME.id)return;
+    const pinged=m.pings.includes(ME.id)||(m.pings.includes('everyone')&&ME.settings.pings.everyone);
+    if(!pinged||pingSeen(m.id))return;
+    markPingSeen(m);
+    if(!liveIds.has(m.id)||m.at<=NOTIFY_SINCE)return;   // history / already-there: seen silently, no repeat toast
+    pingToast(m,key,DB.getUser(m.senderId));
+    if(ME.settings.pings.sound)beep();
+  });
   lastCount[key]=list.length;
 }
 
@@ -6658,13 +6861,14 @@ function applyStyle(target=document.documentElement,s=ME.settings){
 
 $('#settingsBtn').onclick=()=>openSettings(true);
 
-/* ===== Anti-lag mode (per device, OFF by default) =====
-   Kept in localStorage like "keep playing in the background": lag is a property of the
-   device, not the account, and it needs no database-rule change. The <head> script applies
-   it before first paint; this just flips it live. The swap is deferred to a frame and wrapped
-   in .al-switch (transitions frozen) so turning it on or off is one clean repaint, not a stutter. */
+/* ===== Anti-lag mode (saved to the ACCOUNT, OFF by default) =====
+   The choice lives in users/$id/settings/antiLag so it follows you to every device. localStorage is
+   only a fast cache: the <head> script reads it before first paint (no flash of the heavy visuals),
+   then once the account loads, sync() makes the account value win. Flipping it is deferred to a frame
+   with transitions frozen (.al-switch) so it's a single clean repaint, not a stutter. */
 const AntiLag=(function(){
   const KEY='ich.antiLag',de=document.documentElement;
+  let migrated=false;
   function on(){return de.classList.contains('anti-lag')}
   function apply(v){
     v=!!v;if(on()===v)return;
@@ -6674,13 +6878,24 @@ const AntiLag=(function(){
       requestAnimationFrame(()=>requestAnimationFrame(()=>de.classList.remove('al-switch')));
     });
   }
+  function cache(v){try{localStorage.setItem(KEY,v?'1':'0')}catch(_){}}
   function set(v){
-    try{localStorage.setItem(KEY,v?'1':'0')}catch(_){}
-    apply(v);
+    v=!!v;cache(v);apply(v);
+    if(typeof ME!=='undefined'&&ME&&ME.id!=null)DB.setSettingKey(ME.id,'antiLag',v).catch(()=>{});
   }
-  // keep other open tabs in step
+  // called on every DB change once signed in
+  function sync(){
+    if(typeof ME==='undefined'||!ME||!ME.settings)return;
+    const v=ME.settings.antiLag;
+    if(typeof v==='boolean'){
+      if(v!==on()){cache(v);apply(v)}
+    }else if(on()&&!migrated){
+      // account has no value yet but this device was already running anti-lag: adopt it into the account once
+      migrated=true;DB.setSettingKey(ME.id,'antiLag',true).catch(()=>{});
+    }
+  }
   window.addEventListener('storage',e=>{if(e.key===KEY)apply(e.newValue==='1')});
-  return{on,set};
+  return{on,set,sync};
 })();
 
 function openSettings(fromChat){
@@ -6769,7 +6984,7 @@ function openSettings(fromChat){
         <div class="toggle-row" style="margin-bottom:0">
           <div>
             <div style="font-weight:600;font-size:14px">Anti-lag mode</div>
-            <div class="hint" style="margin-top:2px">Off by default. Turns off the liquid-glass blur, glows, shimmer and looping effects, and makes panels more solid. Everything still works — it just draws far less. Saved on this device only, and it takes over from the UI opacity/blur sliders while on.</div>
+            <div class="hint" style="margin-top:2px">Off by default. Turns off the liquid-glass blur, glows, shimmer and looping effects, and makes panels more solid. Everything still works — it just draws far less. Saved to your account, so it follows you to all your devices, and it takes over from the UI opacity/blur sliders while on.</div>
           </div>
           <label class="switch"><input type="checkbox" id="sAntiLag" ${AntiLag.on()?'checked':''}><span class="slider"></span></label>
         </div>
@@ -6878,6 +7093,15 @@ function openSettings(fromChat){
           <button class="btn sec" id="modVipRemoveGo">Remove VIP</button>
         </div>
         <div class="hint" style="margin-top:8px">Grants access to the VIP Lounge directly, without needing the daily spin. "Forever" never expires; "24 hours" counts down from now the same as a spin win.</div>
+      </div>
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">🧹 Message cleanup</div>
+        <div class="field"><label>Delete messages older than</label>
+          <select id="modRetention">${[[0,'Never (keep everything)'],[1,'1 day'],[3,'3 days'],[7,'7 days (default)'],[14,'14 days'],[30,'30 days']].map(([v,l])=>`<option value="${v}"${(typeof MODSET.retentionDays==='number'?MODSET.retentionDays:7)===v?' selected':''}>${l}</option>`).join('')}</select></div>
+        <div class="actions" style="justify-content:flex-start;margin-top:10px">
+          <button class="btn" id="modPruneGo" type="button">Clean up now</button>
+        </div>
+        <div class="hint" id="modPruneStat" style="margin-top:8px">Runs automatically in the background too. Deletes old messages (and their reactions) in Global, VIP and any chat you're in — this shrinks your database and makes chats load faster. Announcements are never auto-deleted.</div>
       </div>
       <div class="set-card">
         <div class="section-h" style="margin-top:0">🔨 Ban a user</div>
@@ -7105,6 +7329,18 @@ function openSettings(fromChat){
       if(!id){toast('Enter a user ID','bad');return}
       try{await DB.unbanUser(id);toast('User #'+id+' unbanned — they\'ll get a fresh username next time they sign in.')}catch(err){toast(err.message,'bad')}
     });
+    $$('#modRetention')&&($$('#modRetention').onchange=async e=>{
+      try{await DB.setRetention(+e.target.value);toast(+e.target.value?'Messages older than '+e.target.value+' day(s) will be cleaned up.':'Automatic cleanup is off.')}
+      catch(err){toast(err.message,'bad')}
+    });
+    $$('#modPruneGo')&&($$('#modPruneGo').onclick=async()=>{
+      const btn=$$('#modPruneGo'),st=$$('#modPruneStat');
+      if(!DB.retentionDays()){toast('Pick an age above first (cleanup is set to Never).','bad');return}
+      btn.disabled=true;btn.textContent='Cleaning…';
+      const r=await DB.pruneRun({aggressive:true,maxBatches:400,onProgress:n=>{if(st)st.textContent='Deleted '+n+' old message(s) so far…'}});
+      btn.disabled=false;btn.textContent='Clean up now';
+      if(st)st.textContent=r.busy?'Another cleanup is already running — try again in a moment.':'Done. Deleted '+r.deleted+' old message(s).';
+    });
     $$('#modMuteGo')&&($$('#modMuteGo').onclick=async()=>{
       const id=+$$('#modMuteId').value;
       if(!id){toast('Enter a user ID','bad');return}
@@ -7175,9 +7411,8 @@ function openSettings(fromChat){
       if(!confirm('Delete all '+results.length+' message(s) from #'+userId+'? This removes them for everyone and cannot be undone.'))return;
       allBtn.disabled=true;allBtn.textContent='Deleting…';
       let ok=0,fail=0;
-      for(const r of results){
-        try{await DB.deleteMessage(r.key,r.id);ok++}catch(e){fail++}
-      }
+      try{const res=await DB.deleteMessagesBulk(results.map(r=>({key:r.key,id:r.id})));ok=res.ok;fail=res.fail}
+      catch(e){fail=results.length}
       toast(fail?`Deleted ${ok}, ${fail} failed.`:`Deleted ${ok} message(s).`,fail?'bad':undefined);
       renderModDelResults(resBox,userId,[]);
     };
@@ -7191,6 +7426,7 @@ function openSettings(fromChat){
     s.bgBlur=+$$('#sBlur').value;s.bgDim=+$$('#sDim').value;
     s.uiOpacity=+$$('#sUiO').value;s.uiBlur=+$$('#sUiB').value;
     s.autoScrollBottom=$$('#sAutoScroll').checked;
+    s.antiLag=AntiLag.on();   // keep the Save payload in step with the toggle (it saves itself instantly)
     s.filterLocal=$$('#sFilterLocal').checked;
     s.pings={everyone:$$('#sPe').checked,sound:$$('#sPs').checked,desktop:$$('#sPd').checked};
     s.music={enabled:$$('#sMusicOn').checked,volume:musicWidgetVolume(),shuffle:s.music&&s.music.shuffle!==false};
@@ -7214,7 +7450,7 @@ function openSettings(fromChat){
   });
   // Background play is a per-device choice kept in localStorage (no database field / rule change needed).
   $$('#sMusicBg').addEventListener('change',e=>MusicPlayer.setBackground(e.target.checked));
-  // Anti-lag is per device too (localStorage); applied instantly and never part of the Save payload.
+  // Anti-lag is an account setting (synced across devices); applied instantly and saved straight away.
   $$('#sAntiLag').addEventListener('change',e=>AntiLag.set(e.target.checked));
   // Flipping this on has to ask the browser for permission right here, inside the click
   // handler — browsers require a real user gesture for the prompt to reliably show at all,
@@ -7504,12 +7740,31 @@ function renderFriends(){
 // A just-unbanned account still shows "Deleted User" until it repairs its own profile —
 // only its own auth can do that (see DB.restoreBannedAccount). This runs it once, the
 // moment that account's client notices the ban is gone, and hands them a fresh username.
-let _restoringAccount=false;
+/* ---------- Cleanup scheduler + "load older" on scroll ---------- */
+let _cleanupStarted=false;
+function startCleanupLoop(){
+  if(_cleanupStarted||!ME)return;_cleanupStarted=true;
+  const run=()=>{if(document.visibilityState==='visible'&&ME)DB.pruneRun({aggressive:DB.isOwner(ME.id),maxBatches:DB.isOwner(ME.id)?25:1}).catch(()=>{})};
+  setTimeout(run,45000);
+  setInterval(run,12*60*1000);
+}
+(function(){
+  const box=document.getElementById('messages');if(!box)return;
+  let busy=false;
+  box.addEventListener('scroll',()=>{
+    if(busy||box.scrollTop>180||typeof view==='undefined'||view.page!=='chatPage'||!view.roomKey)return;
+    if(!DB.canLoadOlder(view.roomKey))return;
+    busy=true;DB.loadOlder(view.roomKey);setTimeout(()=>{busy=false},1200);
+  },{passive:true});
+})();
+let _restoringAccount=false,_lastRestoreTry=0;
 DB.onChange(()=>{
   ME=DB.currentUser();
   if(!ME){if(view.page&&view.page!=='authPage'&&!DB.needsProfile()&&!DB.isLoggedIn())show('authPage');return}
-  if(!_restoringAccount&&DB.needsUnbanRestore()){
-    _restoringAccount=true;
+  if(typeof AntiLag!=='undefined')AntiLag.sync();        // cross-device: account setting wins
+  if(typeof startCleanupLoop==='function')startCleanupLoop();
+  if(!_restoringAccount&&Date.now()-_lastRestoreTry>30000&&DB.needsUnbanRestore()){
+    _restoringAccount=true;_lastRestoreTry=Date.now();
     DB.restoreBannedAccount().then(newName=>{
       _restoringAccount=false;
       if(newName){
@@ -7619,6 +7874,7 @@ function renderChatLight(keepFriends){
   const items=()=>[...menu.querySelectorAll('[role="menuitem"]')];
   function setOpen(v,focus){
     if(box.classList.contains('open')===v)return;
+    if(v){const inn=menu.firstElementChild;if(inn)menu.style.setProperty('--ex-h',inn.offsetHeight+'px')}   // explicit target so the height can animate
     box.classList.toggle('open',v);
     btn.setAttribute('aria-expanded',v?'true':'false');
     menu.setAttribute('aria-hidden',v?'false':'true');
