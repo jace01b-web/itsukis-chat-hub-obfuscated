@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-09-30.1">
+<meta name="build-version" content="2026-09-30.2">
 <script>/* Anti-lag: per-device choice, OFF unless explicitly switched on. Runs before first paint so there is no flash of the heavy visuals. */
 try{if(localStorage.getItem('ich.antiLag')==='1')document.documentElement.classList.add('anti-lag')}catch(_){}</script>
 <title>Itsukis Chat Hub</title>
@@ -6276,7 +6276,9 @@ function msgEl(m){
     const bg=safeColor(ss&&ss.meBubble,'#7c6cff'),fg=safeColor(ss&&ss.meText,'#ffffff');
     bStyle=` style="background:${hexToRgba(bg,.5)};color:${fg}"`;
   }
-  const canDelete=mine;
+  // You can delete your own messages. Owners can delete anyone's; mods can delete anyone's
+  // except an owner's (the database rules enforce the same thing).
+  const canDelete=mine||isOwner(ME.id)||(isMod(ME.id)&&!isOwner(m.senderId));
   const canEdit=mine&&!!m.text;
   // Discord-style hover bar: a reply arrow starts a reply, edit (own
   // messages only) is a pencil. Deleting stays inline in the meta line
@@ -6285,9 +6287,8 @@ function msgEl(m){
   const reactBtn=`<button data-react-btn title="Add reaction">😊</button>`;
   const copyBtn=m.text?`<button data-copy-btn title="Copy message">📋</button>`:'';
   const editBtn=canEdit?`<button data-edit-btn title="Edit message">✏️</button>`:'';
-  // Delete control lives inline in the meta line of your OWN messages only — no
-  // floating/absolutely-positioned button, so it can't drift onto another message.
-  // Owners deleting someone else's message use the moderation panel instead.
+  // Delete button sits in the hover bar: on your own messages, and on everyone's for
+  // owners and mods (mods can't delete owners' messages).
   const delBtn=canDelete?`<button data-more-btn title="Delete message" class="hb-danger">🗑️</button>`:'';
   const editedTag=(m.editedAt&&m.text)?`<span class="edited-tag">(edited)</span>`:'';
   let replyRefHTML='';
