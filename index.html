@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-09-30.2">
+<meta name="build-version" content="2026-09-30.5">
 <script>/* Anti-lag: per-device choice, OFF unless explicitly switched on. Runs before first paint so there is no flash of the heavy visuals. */
 try{if(localStorage.getItem('ich.antiLag')==='1')document.documentElement.classList.add('anti-lag')}catch(_){}</script>
 <title>Itsukis Chat Hub</title>
@@ -2292,7 +2292,15 @@ const CFG={
   NUKE_MSGS:3,          // this many messages...
   NUKE_WINDOW_MS:1000,  // ...within this window triggers anti-nuke
   OWNER_IDS:[], // no longer used for permission checks — kept empty; owner status now comes live from owners/$id===1 in the database (see C.owners / isOwner()). Populate owners/$id there from your own backend, not here.
-  SEND_COOLDOWN_MS:1500
+  SEND_COOLDOWN_MS:1500,
+  // --- NSFW image detection (Nyckel) ---
+  NSFW_ENABLED:true,
+  NYCKEL_FUNCTION_ID:'wyv22067tq24vkn5',
+  NYCKEL_CLIENT_ID:'p3752er2dbapnm9gxuqzk57o5w0jpbj3',
+  NYCKEL_CLIENT_SECRET:'tkgbj7q6exahzgpi93kzv1jkwiz6d7c1s7w35ywp3jlmupoo6iamqj8r1we08ks6',   // <-- paste your Nyckel client secret here (see note: it is visible to anyone who views the page source)
+  NSFW_MIN_CONFIDENCE:0.6,   // flag when the NSFW label's confidence is at least this
+  NSFW_LABEL_REGEX:/nsfw|explicit|porn|adult|unsafe|sexual|nude/i,   // labels that count as NSFW
+  NSFW_SAFE_REGEX:/^(sfw|safe|not|non|no\b|clean)/i                 // labels that are explicitly safe (wins over the regex above)
 };
 /* ---------- Emoji picker data (message composer) ---------- */
 const QUICK_REACT=['👍','❤️','😂','😮','😢','🔥'];
@@ -2439,6 +2447,71 @@ function isOwner(id){return OWNERS_CACHE[Number(id)]===1}
 let MODS_CACHE={};
 let MODS_LOADED=false;
 function isMod(id){return MODS_CACHE[Number(id)]===1}
+
+/* ---------- NSFW image detection (Nyckel) ----------
+   Two layers: (1) before an image message is sent, the sender's client scans it and blocks
+   it if flagged; (2) owner and mod clients scan images in incoming messages and delete
+   flagged ones automatically (covers anyone using a modified client). Fails open: if the
+   scan service errors or isn't configured, images go through unchanged. */
+const NSFW={
+  _tok:null,_tokExp:0,_tokP:null,_warned:false,seen:new Set(),
+  on(){return !!(CFG.NSFW_ENABLED&&CFG.NYCKEL_FUNCTION_ID&&CFG.NYCKEL_CLIENT_ID&&CFG.NYCKEL_CLIENT_SECRET)},
+  async token(){
+    if(NSFW._tok&&Date.now()<NSFW._tokExp-60000)return NSFW._tok;
+    if(NSFW._tokP)return NSFW._tokP;
+    NSFW._tokP=(async()=>{
+      const r=await fetch('https://www.nyckel.com/connect/token',{method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:new URLSearchParams({grant_type:'client_credentials',client_id:CFG.NYCKEL_CLIENT_ID,client_secret:CFG.NYCKEL_CLIENT_SECRET})});
+      if(!r.ok)throw new Error('token '+r.status);
+      const j=await r.json();
+      NSFW._tok=j.access_token;NSFW._tokExp=Date.now()+(Number(j.expires_in)||3600)*1000;
+      return NSFW._tok;
+    })();
+    try{return await NSFW._tokP}finally{NSFW._tokP=null}
+  },
+  // -> {flagged,label,conf} or null if the scan couldn't run
+  async scan(dataUrl){
+    if(!NSFW.on())return null;
+    try{
+      const call=async()=>fetch('https://www.nyckel.com/v1/functions/'+CFG.NYCKEL_FUNCTION_ID+'/invoke',{method:'POST',
+        headers:{'Authorization':'Bearer '+await NSFW.token(),'Content-Type':'application/json'},
+        body:JSON.stringify({data:dataUrl})});
+      let r=await call();
+      if(r.status===401){NSFW._tok=null;r=await call()}
+      if(!r.ok)throw new Error('invoke '+r.status);
+      const j=await r.json();
+      const label=String(j.labelName||''),conf=Number(j.confidence);
+      const flagged=CFG.NSFW_LABEL_REGEX.test(label)&&!CFG.NSFW_SAFE_REGEX.test(label)&&(!(conf>=0)||conf>=CFG.NSFW_MIN_CONFIDENCE);
+      console.debug('[nsfw]',label,conf,flagged);
+      return{flagged,label,conf};
+    }catch(e){
+      if(!NSFW._warned){NSFW._warned=true;console.warn('NSFW scan unavailable (images allowed through):',e.message)}
+      return null;
+    }
+  },
+  // true if ANY of the images is flagged
+  async anyFlagged(images){
+    const rs=await Promise.all((images||[]).map(i=>NSFW.scan(i)));
+    return rs.some(r=>r&&r.flagged);
+  },
+  // Owner/mod clients: delete recent messages that contain a flagged image.
+  async sweep(key,arr){
+    if(!NSFW.on()||!ME||!(isOwner(ME.id)||isMod(ME.id)))return;
+    const cutoff=Date.now()+SKEW-10*60000;
+    for(const m of arr){
+      if(!m.images||!m.images.length||m.at<cutoff||NSFW.seen.has(key+'|'+m.id))continue;
+      if(isOwner(m.senderId))continue;   // mods can't delete owners' messages; owners are trusted
+      NSFW.seen.add(key+'|'+m.id);
+      NSFW.anyFlagged(m.images).then(bad=>{
+        if(!bad)return;
+        DB.deleteMessage(key,m.id).then(()=>toast('Removed a flagged image and muted the sender for 1 hour.')).catch(()=>{});
+        // every detection = 1 hour mute (mods can't mute mods/owners; that just errors and is ignored)
+        DB.muteUser(m.senderId,3600000).catch(()=>{});
+      });
+    }
+  }
+};
 // Live cache of appVersion/, populated by a listener started in DB.startListeners().
 // appVersion/current is the version label an owner has pinned as canonical (usually
 // the build-version they're currently running, right after deploying it) and
@@ -2765,6 +2838,7 @@ const DB=(()=>{
       if(key===msgKey)return;               // the full listener owns the open chat
       const arr=[];s.forEach(c=>{arr.push({...c.val(),id:c.key,images:c.val().images||[],pings:c.val().pings||[],text:c.val().text||''})});
       C.messages[key]=arr;if(ready)emit();
+      NSFW.sweep(key,arr);
     },()=>{});
   }
   // The message listener follows whichever chat is open
@@ -2789,6 +2863,7 @@ const DB=(()=>{
       const arr=[];s.forEach(c=>{arr.push({...c.val(),id:c.key})});
       C.messages[key]=arr.map(m=>({...m,images:m.images||[],pings:m.pings||[],text:m.text||''}));
       if(ready)emit();
+      NSFW.sweep(key,C.messages[key]);
     },err=>console.warn('messages denied',key,err.code));
   }
   function watchMessages(key){
@@ -3582,6 +3657,13 @@ const DB=(()=>{
        preset MOD_MUTE_OPTS durations, and never against an owner or another mod — the
        rules enforce both of those independently, this is just so a compromised/hostile
        client gets a clear error instead of a confusing PERMISSION_DENIED. */
+    // NSFW penalty applied by the offender's own client when the pre-send scan blocks an
+    // image: a 1-hour self-mute. The database rules allow a user to mute themselves (never
+    // to lift a mute), so it is enforced server-side like any other mute.
+    async selfMuteNsfw(){
+      if(isOwner(myId))return;
+      await set(R('muted/'+myId),Date.now()+SKEW+3600000);
+    },
     async muteUser(id,durationMs){
       if(!isOwner(myId)&&!isMod(myId))throw new Error('Only owners and mods can mute.');
       if(isOwner(id))throw new Error('Owners cannot be muted.');
@@ -3774,7 +3856,7 @@ const DB=(()=>{
       }catch(e){
         // roll back on failure
         if(before&&arr&&!arr.find(x=>x.id===msgId)){arr.push(before);arr.sort((a,b)=>a.at-b.at);if(key===msgKey)emit()}
-        throw new Error(e.code==='PERMISSION_DENIED'?'Could not delete that message.':'Delete failed ('+(e.code||e.message)+')');
+        throw new Error(e.code==='PERMISSION_DENIED'?((isMod(myId)&&!isOwner(myId))?'Permission denied. The database rules need the mod-delete update (messages > $msg > .write).':'Could not delete that message.'):'Delete failed ('+(e.code||e.message)+')');
       }
     },
     // Fast bulk delete for the admin panel. Removes everything from the local cache in
@@ -6575,7 +6657,8 @@ function extractPings(text){
   return[...out];
 }
 let _lastSendAt=0;
-function send(){
+let _sendScanning=false;
+async function send(){
   const msgLimit=view.roomKey===CFG.ANNOUNCEMENTS_ROOM?Infinity:CFG.MAX_MSG;
   const text=expandShortcodes(msgIn.value.trim()).slice(0,msgLimit);
   if(!view.roomKey)return;
@@ -6592,6 +6675,19 @@ function send(){
   }
 
   if(!text&&!view.pending.length)return;
+  if(view.pending.length&&NSFW.on()){
+    if(_sendScanning)return;
+    _sendScanning=true;
+    toast('Checking image'+(view.pending.length===1?'':'s')+'…');
+    let bad=false;
+    try{bad=await NSFW.anyFlagged(view.pending)}finally{_sendScanning=false}
+    if(bad){
+      view.pending=[];renderPreviews();
+      DB.selfMuteNsfw().catch(()=>{});
+      toast('Image blocked: NSFW content isn\'t allowed. You are muted for 1 hour.','bad');
+      return;
+    }
+  }
   _lastSendAt=Date.now();
   const replyTo=view.replyingTo?{id:view.replyingTo.id,senderId:view.replyingTo.senderId,preview:replyPreviewText(view.replyingTo)}:null;
   DB.sendMessage(view.roomKey,{senderId:ME.id,text,images:view.pending.slice(),pings:extractPings(text),replyTo})
