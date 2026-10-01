@@ -3596,6 +3596,33 @@ const DB=(()=>{
       emit();
       return{id,oldName:u.username,newName};
     },
+    /* HALLOWEEN:START ===== Owner-only: set someone's Halloween Pass level (use lookupUserForRename to find them by ID or username) =====
+       Writes halloween/claimed/<id> (the level they OWN, which is what grants the roles/badges/effects to everyone who sees them).
+       When raising, their logged-in minutes are also lifted to that level's requirement so their own pass screen matches
+       (otherwise it would show "Owned" on levels their time hasn't reached). Level 0 removes the pass rewards entirely.
+       Allowed by the existing owner branch of halloween/claimed and halloween/progress rules, so no rules change is needed. */
+    async ownerSetHalloweenLevel(id,level){
+      if(!isOwner(myId))throw new Error('Only owners can change Halloween Pass levels.');
+      id=Number(id);level=Math.floor(Number(level));
+      const u=C.users[id];
+      if(!Number.isFinite(id)||!u)throw new Error('That account isn\'t loaded. Look it up again.');
+      if(u.deleted===true||u.username==='Deleted User')throw new Error('Deleted accounts can\'t be given pass levels.');
+      if(!Number.isFinite(level)||level<0||level>HW.N)throw new Error('Level must be between 0 and '+HW.N+'.');
+      const patch={};
+      patch['halloween/claimed/'+id]=level>0?level:null;
+      if(level>0){
+        const need=hwCum(level);let mins=0;
+        try{const sn=await get(R('halloween/progress/'+id));if(sn.exists())mins=Number((sn.val()||{}).mins)||0}catch(_){}
+        if(mins<need)patch['halloween/progress/'+id]={mins:need,last:serverTimestamp()};
+      }
+      try{await update(ref(rtdb),patch)}
+      catch(e){throw new Error(e.code==='PERMISSION_DENIED'?'Database refused the change. Make sure the Halloween rules block is published.':'Could not set level: '+(e.code||e.message))}
+      const cl={...(window.HW_CLAIMED||{})};if(level>0)cl[id]=level;else delete cl[id];
+      window.HW_CLAIMED=cl;
+      if(typeof hwRefresh==='function'){try{hwRefresh()}catch(_){}}
+      return{id,username:u.username,level};
+    },
+    /* HALLOWEEN:END */
     // Saves ONE settings key without re-uploading the whole settings blob (which can carry a large
     // background image) — used for small toggles like anti-lag.
     async setSettingKey(id,key,val){
@@ -8012,6 +8039,24 @@ function openSettings(fromChat){
         </div>
         <div class="hint" style="margin-top:8px">Look the person up by ID or exact username and check it's the right account before renaming. Names set here can include spaces (normal signups and self-renames can't). Usernames can never be duplicated, and their old username is freed for anyone to use right away. They keep signing in with the same password/email — just with the new name — and the normal 7-day self-rename cooldown starts over. Banned accounts and other owners can't be renamed.</div>
       </div>`:''}
+      ${isOwner(ME.id)?`<div class="set-card">
+        <div class="section-h" style="margin-top:0">🎃 Halloween Pass level</div>
+        <div class="field"><label>Find the account (user ID or username)</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="modHwQ" placeholder="e.g. 42 or their username" autocomplete="off" spellcheck="false" style="flex:1">
+            <button class="btn sec small" id="modHwFind" type="button" style="flex-shrink:0">Look up</button>
+          </div>
+        </div>
+        <div id="modHwResults" style="margin-top:10px"></div>
+        <div id="modHwForm" class="hidden" style="margin-top:12px">
+          <div class="field"><label>Set pass level (0-${HW.N}, 0 removes it)</label>
+            <input type="number" id="modHwLevel" min="0" max="${HW.N}" step="1" autocomplete="off"></div>
+          <div class="actions" style="justify-content:flex-start;margin-top:10px">
+            <button class="btn" id="modHwGo" type="button">Set level</button>
+          </div>
+        </div>
+        <div class="hint" style="margin-top:8px">Look the person up by ID or exact username, check it's the right account, then set their level. It's pre-filled with one level above their current one. They instantly get every reward up to that level (badges, name effects, titles), and their logged-in time is raised to match when you level them up. Setting a lower level takes rewards away (their time is left alone, so they can re-claim what they've actually earned).</div>
+      </div>`:''}
       <div class="set-card">
         <div class="section-h" style="margin-top:0">🔇 Mute a user</div>
         <div class="set-grid">
@@ -8274,6 +8319,51 @@ function openSettings(fromChat){
           resBox.innerHTML=`<div class="hint">Done — #${r.id} is now <b>${esc(r.newName)}</b>. "${esc(r.oldName)}" is available again.</div>`;
         }catch(err){toast(err.message,'bad')}
         finally{btn.disabled=false;btn.textContent='Change username'}
+      };
+    }
+    if($$('#modHwFind')){
+      let hwTarget=null;
+      const resBox=$$('#modHwResults'),form=$$('#modHwForm'),lvIn=$$('#modHwLevel'),qIn=$$('#modHwQ');
+      const pick=m=>{
+        hwTarget=m;
+        const L=hwLevel(m.id);
+        const cls=[m.owner?'owner':'',m.banned?'banned':'',m.deleted?'deleted':''].filter(Boolean).join(', ');
+        resBox.innerHTML=`<div class="list-row" style="align-items:center">${avatarHtml(m.user,m.username)}<div style="flex:1;min-width:0;margin-left:10px"><div class="nm" style="word-break:break-word">${esc(m.username)} <span class="hint">#${m.id}</span></div>${cls?`<div class="hint">${cls}</div>`:''}<div class="hint">🎃 Pass level ${L} / ${HW.N}${L?' · '+esc(HW_R[L-1][0]+' '+HW_R[L-1][1]):''}</div></div></div>`;
+        if(m.deleted){form.classList.add('hidden');resBox.insertAdjacentHTML('beforeend','<div class="hint bad" style="margin-top:6px">Deleted accounts can\'t be given pass levels.</div>');return}
+        form.classList.remove('hidden');lvIn.value=Math.min(HW.N,L+1);
+      };
+      const find=async()=>{
+        hwTarget=null;form.classList.add('hidden');
+        resBox.innerHTML='<div class="hint">Searching…</div>';
+        let found;
+        try{found=await DB.lookupUserForRename(qIn.value)}
+        catch(err){resBox.innerHTML=`<div class="hint" style="color:var(--danger)">${esc(err.message||'Lookup failed')}</div>`;return}
+        if(!found.length){resBox.innerHTML='<div class="empty">No account found with that ID or username.</div>';return}
+        if(found.length===1){pick(found[0]);return}
+        resBox.innerHTML='<div class="hint" style="margin-bottom:6px">Two accounts match — pick the right one:</div>';
+        found.forEach(m=>{
+          const row=document.createElement('div');row.className='list-row';row.style.cursor='pointer';
+          row.innerHTML=`${avatarHtml(m.user,m.username)}<div style="flex:1;min-width:0;margin-left:10px"><div class="nm">${esc(m.username)} <span class="hint">#${m.id}</span></div></div><button class="btn small" type="button">Select</button>`;
+          row.querySelector('button').onclick=()=>pick(m);
+          resBox.appendChild(row);
+        });
+      };
+      $$('#modHwFind').onclick=find;
+      qIn.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();find()}});
+      lvIn.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$$('#modHwGo').click()}});
+      $$('#modHwGo').onclick=async()=>{
+        if(!hwTarget){toast('Look up an account first.','bad');return}
+        const t=hwTarget,lv=Math.floor(Number(lvIn.value)),cur=hwLevel(t.id);
+        if(!Number.isFinite(lv)||lv<0||lv>HW.N){toast('Level must be between 0 and '+HW.N+'.','bad');return}
+        if(lv===cur){toast(t.username+' is already level '+cur+'.','bad');return}
+        if(!confirm((lv>cur?'Level up':'Lower')+' "'+t.username+'" (#'+t.id+') on the Halloween Pass from level '+cur+' to level '+lv+'?'))return;
+        const btn=$$('#modHwGo');btn.disabled=true;btn.textContent='Saving…';
+        try{
+          const r=await DB.ownerSetHalloweenLevel(t.id,lv);
+          toast('🎃 '+r.username+' (#'+r.id+') is now Halloween Pass level '+r.level+'.');
+          pick(t);
+        }catch(err){toast(err.message,'bad')}
+        finally{btn.disabled=false;btn.textContent='Set level'}
       };
     }
     $$('#modDelSearch')&&($$('#modDelSearch').onclick=async()=>{
