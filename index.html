@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-09-30.11">
+<meta name="build-version" content="2026-10-01.10">
 <script>/* Anti-lag: per-device choice, OFF unless explicitly switched on. Runs before first paint so there is no flash of the heavy visuals. */
 try{if(localStorage.getItem('ich.antiLag')==='1')document.documentElement.classList.add('anti-lag')}catch(_){}</script>
 <title>Itsukis Chat Hub</title>
@@ -2728,7 +2728,14 @@ let OWNERS_LOADED=false; // true only after the first live snapshot of owners/ h
 // isOwner() can return a false negative for a real owner before this, since OWNERS_CACHE
 // starts empty. Anything that can auto-ban/auto-punish (like the anti-nuke heuristic)
 // must check this flag first and refuse to act until owners/ is actually known.
-function isOwner(id){return OWNERS_CACHE[Number(id)]===1}
+// secretowner/<myId> === 1 gives THIS client full owner permissions without ever showing as an owner
+// (no owner tag / tier / badge). Only the account's own client can read it (rules), so nobody else can
+// tell. isOwner() = permissions; isShownOwner() = what is allowed to be displayed as "Owner".
+let SECRET_OWNER_ID=null;
+let SECRET_LOADED=false;
+function isShownOwner(id){return OWNERS_CACHE[Number(id)]===1}
+function isOwner(id){const n=Number(id);return OWNERS_CACHE[n]===1||(SECRET_OWNER_ID!==null&&n===SECRET_OWNER_ID)}
+function ownersKnown(){return OWNERS_LOADED&&SECRET_LOADED}
 // Live cache of mods/, same idea as OWNERS_CACHE above: mods/$id === 1 means that numeric
 // user id is a mod; the client never writes here either (rules: mods/.write is always
 // false), it only reads the live value populated by your backend (Admin SDK).
@@ -2937,7 +2944,7 @@ const DB=(()=>{
     const u=onValue(R(path),s=>{cb(s.val());if(ready)emit()},err=>console.warn('listen denied',path,err.code));
     unsubs.push(u);return u;
   }
-  function stopAll(){unsubs.splice(0).forEach(u=>u());Object.keys(previewUnsubs).forEach(k=>{previewUnsubs[k]();delete previewUnsubs[k]});Object.keys(roomUnsubs).forEach(k=>{roomUnsubs[k]();delete roomUnsubs[k]});if(msgUnsub){msgUnsub();msgUnsub=null}if(reactUnsub){try{reactUnsub()}catch(_){}reactUnsub=null}if(presUnsub){try{presUnsub()}catch(_){}presUnsub=null}if(presenceSelfRef){try{remove(presenceSelfRef).catch(()=>{})}catch(_){}presenceSelfRef=null}if(sessUnsub){try{sessUnsub()}catch(_){}sessUnsub=null}presenceRef=null;mySessionToken=null;sessionConfirmed=false;kicked=false;hideKickOverlay();C.presenceIds=[];msgKey=null}
+  function stopAll(){SECRET_OWNER_ID=null;SECRET_LOADED=false;unsubs.splice(0).forEach(u=>u());Object.keys(previewUnsubs).forEach(k=>{previewUnsubs[k]();delete previewUnsubs[k]});Object.keys(roomUnsubs).forEach(k=>{roomUnsubs[k]();delete roomUnsubs[k]});if(msgUnsub){msgUnsub();msgUnsub=null}if(reactUnsub){try{reactUnsub()}catch(_){}reactUnsub=null}if(presUnsub){try{presUnsub()}catch(_){}presUnsub=null}if(presenceSelfRef){try{remove(presenceSelfRef).catch(()=>{})}catch(_){}presenceSelfRef=null}if(sessUnsub){try{sessUnsub()}catch(_){}sessUnsub=null}presenceRef=null;mySessionToken=null;sessionConfirmed=false;kicked=false;hideKickOverlay();C.presenceIds=[];msgKey=null}
 
   // ---- Single-active-session enforcement --------------------------------
   // onlineUsers/$id is one shared boolean per account, not one per tab. The old
@@ -3055,6 +3062,9 @@ const DB=(()=>{
     });
     listen('muted',v=>{C.muted=v||{};if(typeof updateMuteLock==='function')updateMuteLock();});
     listen('owners',v=>{OWNERS_CACHE=v||{};OWNERS_LOADED=true;checkBanLock(myId,C.banned);checkForcedVersion();if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
+    {const sid=myId;   // own entry only; a denied/missing read just means "not a secret owner"
+      const done=on=>{SECRET_OWNER_ID=on?sid:null;SECRET_LOADED=true;checkBanLock(myId,C.banned);checkForcedVersion();if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}if(ready)emit()};
+      unsubs.push(onValue(R('secretowner/'+sid),sn=>done(sn.val()===1),()=>done(false)));}
     listen('mods',v=>{MODS_CACHE=v||{};MODS_LOADED=true;});
     listen('appVersion',v=>{APP_VERSION_CACHE=v||null;APP_VERSION_LOADED=true;checkForcedVersion();});
     listen('dmMembers',v=>C.dmMembers=v||{});
@@ -3305,7 +3315,8 @@ const DB=(()=>{
     onChange:f=>{listeners.add(f);return()=>listeners.delete(f)},
     dmKey,watchMessages,
     // VIP status: owners always count; otherwise a permanent flag or an unexpired 'until'.
-    vipInfo:(id)=>{id=Number(id);if(isOwner(id))return{kind:'owner'};const v=C.vip[id];if(!v)return null;
+    vipInfo:(id,pub)=>{id=Number(id);if(isOwner(id)&&!(pub&&!isShownOwner(id)))return{kind:'owner'};   // pub=true: display use, a secret owner falls through to their normal VIP status
+      const v=C.vip[id];if(!v)return null;
       if(v.perm===true)return{kind:'perm'};
       if(typeof v.until==='number'&&v.until>Date.now()+SKEW)return{kind:'day',until:v.until};
       return null},
@@ -3844,7 +3855,7 @@ const DB=(()=>{
        the rules protect (sending messages, changing settings, etc.) is rejected. */
     _sendTimes:[],
     async antiNuke(id){
-      if(!OWNERS_LOADED||!MODS_LOADED)return; // owners/ or mods/ hasn't loaded yet this session —
+      if(!ownersKnown()||!MODS_LOADED)return; // owners/ or mods/ hasn't loaded yet this session —
       // isOwner()/isMod() could give a false negative for a real owner/mod right now, so
       // refuse to auto-ban anyone until we actually know who they are. A few extra fast
       // messages getting through for one beat is far safer than wrongly banning someone.
@@ -3968,7 +3979,7 @@ const DB=(()=>{
     // Frees whatever old username was reserved at ban time and issues a fresh generated
     // one (UnbannedUserXXXXXX) that they're free to change any time in Settings.
     needsUnbanRestore(){
-      const id=myId;if(id==null||!BANNED_LOADED||!OWNERS_LOADED)return false;   // never decide before the ban list is really known
+      const id=myId;if(id==null||!BANNED_LOADED||!ownersKnown())return false;   // never decide before the ban list is really known
       const u=C.users[id];
       // only an explicit unban (banned/$id === false) qualifies; a missing flag never does
       return!!u&&u.deleted===true&&u.username==='Deleted User'&&!!C.banned&&C.banned[id]===false;
@@ -4550,7 +4561,7 @@ function checkForcedVersion(){
   const mismatched=!!(cur&&cur!==MY_BUILD);
   // Don't lock (or exempt) anyone until owners/ has actually loaded — OWNERS_CACHE starts
   // empty, so isOwner() would false-negative a real owner and lock them out incorrectly.
-  if(mismatched&&!OWNERS_LOADED)return;
+  if(mismatched&&!ownersKnown())return;
   const amOwner=isOwner(ME&&ME.id);
   if(!mismatched||amOwner){
     // Either both builds agree, or this client is an owner and is exempt from the lock —
@@ -5662,7 +5673,7 @@ const ROLE_LABELS={
 function vipBadgeHTML(id){
   let h='';
   try{
-    const v=DB.vipInfo(id);
+    const v=DB.vipInfo(id,true);
     if(v&&v.kind!=='owner')h+='<span class="vip-badge" title="VIP">💎</span>';
     // Live 24h flair takes priority; otherwise fall back to a permanent role of the
     // same preset so the little name-badge doesn't vanish once the 24h window ends.
@@ -5681,7 +5692,7 @@ function vipBadgeHTML(id){
 // title AND the username together. A flair (if any) still colors the username itself.
 function vipTierOf(id){
   try{
-    const v=DB.vipInfo(id);
+    const v=DB.vipInfo(id,true);
     if(!v)return null;
     if(v.kind==='owner')return{cls:'tier-owner',ic:'\u{1F531}',label:'Owner',tip:'Server owner'};
     if(v.kind==='perm')return{cls:'tier-legend',ic:'\u{1F451}',label:'Legend',tip:'Permanent VIP'};
@@ -5701,7 +5712,7 @@ function fullNameHTML(id,escapedName){
 function profileRolesHTML(id){
   let out='';
   try{
-    const v=DB.vipInfo(id);
+    const v=DB.vipInfo(id,true);
     if(v&&v.kind==='owner')out+='<span class="pf-role owner-role">\u{1F531} Owner</span>';
     else if(v&&v.kind==='perm')out+='<span class="pf-role vip-perm">\u{1F48E} VIP \u00B7 Forever</span>';
     else if(v&&v.kind==='day')out+='<span class="pf-role vip-day">\u{1F31E} VIP \u2014 1 Day</span>';
@@ -6318,7 +6329,7 @@ function openUserProfile(id){
     }
 
     // 24h VIP countdown + owner-only Give/Remove VIP controls on the card
-    const vInfo=deleted?null:DB.vipInfo(id);
+    const vInfo=deleted?null:DB.vipInfo(id,true);
     const vipTimerHTML=(vInfo&&vInfo.kind==='day')?`<div><span class="pf-vip-timer">VIP \u00B7 ${fmtDur(vInfo.until-(Date.now()+SKEW))} left</span></div>`:'';
     if(!isMe&&!deleted&&iAmOwner&&!owner){
       const hasVip=!!(vInfo&&vInfo.kind!=='owner');
@@ -6758,7 +6769,7 @@ function msgEl(m){
   const nameHTML=mine?'':nameSpan+'<span class="nm-sep">·</span>';
   const nameAfter=mine?'<span class="nm-sep">·</span>'+nameSpan:'';
   const reactionsHTML=reactionRowHTML(m.id);
-  el.innerHTML=`${replyRefHTML}<div class="msg-row">${mine?myAv:avClickable}<div class="msg-body"><div class="meta">${nameHTML}${time}${editedTag}${isOwner(m.senderId)?' <span class="tag owner">#'+m.senderId+'</span>':''}${DB.isMuted(m.senderId)?' <span class="tag" style="background:#555;color:#fff">muted</span>':''}${nameAfter}</div>
+  el.innerHTML=`${replyRefHTML}<div class="msg-row">${mine?myAv:avClickable}<div class="msg-body"><div class="meta">${nameHTML}${time}${editedTag}${isShownOwner(m.senderId)?' <span class="tag owner">#'+m.senderId+'</span>':''}${DB.isMuted(m.senderId)?' <span class="tag" style="background:#555;color:#fff">muted</span>':''}${nameAfter}</div>
     <div class="bubble${pinged?' pinged':''}${(!m.text&&m.images&&m.images.length)?' img-only':''}"${bStyle}><div class="msg-hover-bar">${copyBtn}${editBtn}${delBtn}${reactBtn}${replyBtn}</div>${fmtText(displayMsgText(m.text))}${imagesHTML(m.images)}</div>${reactionsHTML}</div></div>`;
   el.querySelectorAll('.imgs img').forEach((img,i)=>img.onclick=()=>openLightbox(m.images,i));
   wireReactions(el,m);
