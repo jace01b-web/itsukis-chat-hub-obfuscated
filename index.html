@@ -3523,6 +3523,7 @@ const DB=(()=>{
     },
     async updateSettings(id,patch){
       const cur=C.users[id]||{};
+      patch={...patch};delete patch.hwTheme;   // hwTheme is only written by setSettingKey (Halloween toggle); a stale snapshot must not overwrite it
       const merged={...(cur.settings||{}),...patch};
       // Avatar lives only in the public `style` node, never in `settings` (it's
       // deliberately stripped out below before every settings save) — so it can
@@ -7379,6 +7380,7 @@ function hwWant(){
 }
 function hwSetTheme(v){
   try{localStorage.setItem(HW.K,v?'1':'0')}catch(_){}
+  if(ME){ME.settings=ME.settings||{};ME.settings.hwTheme=v}   /* keep the in-memory copy fresh: hwWant() reads it first, a stale value made the theme flip back off */
   if(ME&&ME.id!=null)DB.setSettingKey(ME.id,'hwTheme',v).catch(()=>{});
   hwSync();
 }
