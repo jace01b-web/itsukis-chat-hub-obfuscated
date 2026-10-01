@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-09-30.5">
+<meta name="build-version" content="2026-09-30.7">
 <script>/* Anti-lag: per-device choice, OFF unless explicitly switched on. Runs before first paint so there is no flash of the heavy visuals. */
 try{if(localStorage.getItem('ich.antiLag')==='1')document.documentElement.classList.add('anti-lag')}catch(_){}</script>
 <title>Itsukis Chat Hub</title>
@@ -1777,6 +1777,64 @@ html.anti-lag .flair-name,html.anti-lag .nm-wrap .nm-user{will-change:auto}
 html.anti-lag .msg .bubble,html.anti-lag .msg-live .bubble{box-shadow:none!important}
 /* flip freeze: while the class is being swapped, no transition/animation runs, so toggling is one clean repaint instead of hundreds of tweens */
 html.al-switch *,html.al-switch *::before,html.al-switch *::after{transition:none!important}
+
+/* ---------- Rules modal (anime style) ---------- */
+#rulesBtn{margin-right:6px}
+@media (max-width:620px){#rulesBtn .rb-t{display:none}}
+.rules-modal{max-width:560px;padding:0;overflow-y:auto;background:linear-gradient(180deg,#1d1a3f 0%,var(--panel) 38%);border-color:rgba(255,160,220,.28)}
+.rules-hero{position:relative;overflow:hidden;padding:30px 24px 22px;text-align:center;
+  background:radial-gradient(circle at 20% 20%,rgba(255,150,210,.55),transparent 55%),radial-gradient(circle at 85% 30%,rgba(124,108,255,.65),transparent 55%),linear-gradient(135deg,#ff6cb4 0%,#9a6cff 55%,#5fb4ff 100%);
+  border-bottom:1px solid rgba(255,255,255,.25)}
+.rules-hero::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.07) 0 2px,transparent 2px 14px);pointer-events:none}
+.rules-hero>*{position:relative;z-index:1}
+.rules-mascot{width:84px;height:84px;display:block;margin:0 auto 6px;filter:drop-shadow(0 8px 14px rgba(60,20,90,.45));animation:rlBob 3s ease-in-out infinite}
+.rules-hero h2{margin:0;font-size:26px;letter-spacing:.3px;color:#fff;text-shadow:0 3px 14px rgba(70,20,110,.55)}
+.rules-jp{margin-top:4px;font-size:13px;font-weight:700;color:#fff;opacity:.92;letter-spacing:2px;text-shadow:0 2px 8px rgba(70,20,110,.5)}
+.rules-sub{margin-top:8px;font-size:13px;color:#fff;opacity:.9}
+.rl-petal{position:absolute;top:-24px;width:12px;height:10px;border-radius:12px 0 12px 0;background:linear-gradient(135deg,#fff,#ffc2e4);opacity:.85;
+  animation:rlFall linear infinite;z-index:0}
+.rl-petal:nth-child(1){left:6%;animation-duration:7s;animation-delay:0s}
+.rl-petal:nth-child(2){left:18%;animation-duration:9s;animation-delay:-3s;transform:scale(.8)}
+.rl-petal:nth-child(3){left:32%;animation-duration:8s;animation-delay:-5s}
+.rl-petal:nth-child(4){left:47%;animation-duration:10s;animation-delay:-1s;transform:scale(.7)}
+.rl-petal:nth-child(5){left:61%;animation-duration:7.5s;animation-delay:-4s}
+.rl-petal:nth-child(6){left:74%;animation-duration:9.5s;animation-delay:-6s;transform:scale(.85)}
+.rl-petal:nth-child(7){left:86%;animation-duration:8.5s;animation-delay:-2s}
+.rl-petal:nth-child(8){left:94%;animation-duration:11s;animation-delay:-7s;transform:scale(.7)}
+@keyframes rlFall{0%{transform:translateY(0) rotate(0deg) translateX(0)}50%{transform:translateY(90px) rotate(180deg) translateX(14px)}100%{transform:translateY(190px) rotate(360deg) translateX(-8px);opacity:0}}
+@keyframes rlBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.rules-body{padding:18px 20px 22px}
+.rule-card{display:flex;gap:13px;align-items:flex-start;margin:0 0 10px;padding:13px 14px;border-radius:16px;
+  background:linear-gradient(135deg,rgba(255,255,255,.055),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.10);
+  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;animation:rlIn .5s cubic-bezier(.16,1.15,.3,1) both}
+.rule-card:hover{transform:translateY(-2px);border-color:rgba(255,160,220,.5);box-shadow:0 8px 22px rgba(255,108,180,.16)}
+.rule-card:nth-child(2){animation-delay:.04s}.rule-card:nth-child(3){animation-delay:.08s}.rule-card:nth-child(4){animation-delay:.12s}
+.rule-card:nth-child(5){animation-delay:.16s}.rule-card:nth-child(6){animation-delay:.20s}.rule-card:nth-child(7){animation-delay:.24s}.rule-card:nth-child(8){animation-delay:.28s}
+@keyframes rlIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+.rule-ic{flex:0 0 42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:21px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 6px 14px rgba(124,108,255,.35)}
+.rule-t{font-weight:800;font-size:15px;color:var(--text);display:flex;gap:8px;align-items:center}
+.rule-n{font-size:11px;font-weight:800;color:#fff;background:rgba(255,255,255,.14);border-radius:8px;padding:1px 7px}
+.rule-d{margin-top:3px;font-size:13px;line-height:1.5;color:var(--muted)}
+.rule-d b{color:#ffd1ea}
+.rule-card.rule-hot{background:linear-gradient(135deg,rgba(255,70,110,.20),rgba(255,108,180,.08));border-color:rgba(255,90,130,.55);box-shadow:0 0 0 1px rgba(255,90,130,.18),0 10px 26px rgba(255,60,110,.18)}
+.rule-card.rule-hot .rule-ic{background:linear-gradient(135deg,#ff4a6e,#ff8a5c);box-shadow:0 6px 16px rgba(255,74,110,.45)}
+.rule-card.rule-hot .rule-d{color:#ffd9e0}
+.rules-foot{margin-top:14px;padding:12px 14px;border-radius:14px;text-align:center;font-size:12.5px;color:var(--muted);background:rgba(124,108,255,.10);border:1px dashed rgba(160,150,255,.35)}
+.rules-foot b{color:var(--text)}
+.rules-ok{width:100%;margin-top:14px;padding:13px;border-radius:14px;font-weight:800;font-size:15px;color:#fff;border:0;cursor:pointer;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 8px 22px rgba(255,108,180,.35);transition:transform .16s ease,box-shadow .16s ease}
+.rules-ok:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(255,108,180,.5)}
+.rules-modal .modal-x{background:rgba(255,255,255,.18);color:#fff;border-color:rgba(255,255,255,.35);z-index:3}
+@media (prefers-reduced-motion:reduce){.rl-petal,.rules-mascot,.rule-card{animation:none!important}}
+
+.rules-agree{display:flex;align-items:center;gap:10px;margin-top:14px;padding:12px 14px;border-radius:14px;cursor:pointer;
+  background:rgba(255,108,180,.10);border:1px solid rgba(255,140,200,.4);font-size:13.5px;font-weight:700;color:var(--text);user-select:none}
+.rules-agree input{flex:0 0 auto}
+.rules-ok:disabled{opacity:.45;cursor:not-allowed;box-shadow:none;transform:none;filter:grayscale(.4)}
+.rules-status{margin-top:14px;padding:11px 14px;border-radius:14px;text-align:center;font-size:13px;font-weight:700;
+  color:#b8ffd8;background:rgba(60,200,130,.12);border:1px solid rgba(90,220,150,.4)}
+.about-rules-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -2150,6 +2208,7 @@ html.al-switch *,html.al-switch *::before,html.al-switch *::after{transition:non
         <div class="tb-right">
           <button class="online-pill hidden" id="topOnlinePill" type="button" title="See who's online" style="margin-left:0"><span class="dot"></span><span id="topOnlinePillText"></span></button>
           <button class="btn small hidden" id="dmFriendBtn"></button>
+          <button class="btn sec small" id="rulesBtn" type="button" title="Server rules">📜 <span class="rb-t">Rules</span></button>
           <button class="btn sec small" id="settingsBtn">⚙️ Settings</button>
         </div>
       </div>
@@ -3660,6 +3719,9 @@ const DB=(()=>{
     // NSFW penalty applied by the offender's own client when the pre-send scan blocks an
     // image: a 1-hour self-mute. The database rules allow a user to mute themselves (never
     // to lift a mute), so it is enforced server-side like any other mute.
+    // Rules agreement, saved per account at rulesAgreed/<id> = {v:<rules version>,at:<time>}
+    async rulesAgreement(){const sn=await get(R('rulesAgreed/'+myId));return sn.exists()?sn.val():null},
+    async agreeRules(v){await set(R('rulesAgreed/'+myId),{v,at:Date.now()+SKEW})},
     async selfMuteNsfw(){
       if(isOwner(myId))return;
       await set(R('muted/'+myId),Date.now()+SKEW+3600000);
@@ -6957,6 +7019,106 @@ function applyStyle(target=document.documentElement,s=ME.settings){
 }
 
 $('#settingsBtn').onclick=()=>openSettings(true);
+/* ---------- Rules ---------- */
+const RULES=[
+  {ic:'🚫',hot:true,t:'No talk about VUS',d:'Any talk about <b>VUS</b> will result in up to a <b>ban</b>.'},
+  {ic:'🌈',t:'No racism',d:'No racism, slurs, or hate speech toward anyone. Everyone is welcome here.'},
+  {ic:'🔞',t:'No NSFW',d:'No NSFW images or messages. Images are scanned automatically: flagged images are deleted and you are <b>muted for 1 hour</b> every time.'},
+  {ic:'💗',t:'Be kind',d:'No harassment, bullying, threats, or targeting people. Disagree politely.'},
+  {ic:'📢',t:'No spam',d:'No flooding, advertising, scams, or sketchy links.'},
+  {ic:'🔒',t:'Protect privacy',d:'Never share anyone\'s personal info (doxxing), and keep your own safe too.'},
+  {ic:'🛡️',t:'Respect staff',d:'Listen to owners and mods. Evading a mute or ban (alt accounts) will get you banned.'},
+  {ic:'✨',t:'And everything else',d:'Use common sense. Staff can act on anything that ruins the vibe, even if it isn\'t listed.'}
+];
+const RULES_VERSION=1;       // bump this number to make everyone re-agree after you change the rules
+let RULES_STATE;              // undefined = not loaded yet, null = never agreed, {v,at} = agreed
+function rulesAgreed(st){return !!(st&&Number(st.v)>=RULES_VERSION)}
+function fmtRulesDate(t){try{return new Date(t).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'})}catch(_){return ''}}
+function modalRules(opts){
+  opts=opts||{};
+  const root=$('#modalRoot');if(!root)return;
+  const force=!!opts.force;
+  const agreed=rulesAgreed(RULES_STATE);
+  const needAgree=force||!agreed;
+  const mascot=`<svg class="rules-mascot" viewBox="0 0 100 100" aria-hidden="true">
+    <path d="M18 44 L22 8 L46 26 Z" fill="#ffe3f2" stroke="#7a3d86" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M82 44 L78 8 L54 26 Z" fill="#ffe3f2" stroke="#7a3d86" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M24 36 L26 18 L38 28 Z" fill="#ff9ccb"/><path d="M76 36 L74 18 L62 28 Z" fill="#ff9ccb"/>
+    <ellipse cx="50" cy="58" rx="36" ry="33" fill="#fff4fa" stroke="#7a3d86" stroke-width="3"/>
+    <ellipse cx="36" cy="58" rx="9" ry="12" fill="#3a2a6e"/><ellipse cx="64" cy="58" rx="9" ry="12" fill="#3a2a6e"/>
+    <ellipse cx="36" cy="58" rx="6" ry="9" fill="#7c6cff"/><ellipse cx="64" cy="58" rx="6" ry="9" fill="#7c6cff"/>
+    <circle cx="39" cy="53" r="3.6" fill="#fff"/><circle cx="67" cy="53" r="3.6" fill="#fff"/>
+    <circle cx="33" cy="63" r="1.6" fill="#fff"/><circle cx="61" cy="63" r="1.6" fill="#fff"/>
+    <ellipse cx="22" cy="70" rx="6" ry="3.6" fill="#ff8fc0" opacity=".7"/><ellipse cx="78" cy="70" rx="6" ry="3.6" fill="#ff8fc0" opacity=".7"/>
+    <path d="M44 72 Q50 79 56 72" fill="none" stroke="#7a3d86" stroke-width="3" stroke-linecap="round"/>
+    <path d="M86 20 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z" fill="#fff"/>
+  </svg>`;
+  const footer=needAgree
+    ?`<label class="rules-agree"><input type="checkbox" id="rulesChk"> I have read the rules and I agree to follow them</label>
+      <button class="rules-ok" id="rulesOk" type="button" disabled>Agree &amp; continue 💖</button>`
+    :`<div class="rules-status">✅ You agreed to these rules${RULES_STATE&&RULES_STATE.at?' on '+fmtRulesDate(RULES_STATE.at):''}</div>
+      <button class="rules-ok" id="rulesOk" type="button">${opts.back?'Back':'Close'} 💖</button>`;
+  root.innerHTML=`<div class="modal-bg" id="rulesBg"><div class="modal rules-modal" role="dialog" aria-modal="true" aria-label="Server rules">
+    ${force?'':'<button class="modal-x" id="rulesX" type="button">✕</button>'}
+    <div class="rules-hero">
+      <i class="rl-petal"></i><i class="rl-petal"></i><i class="rl-petal"></i><i class="rl-petal"></i><i class="rl-petal"></i><i class="rl-petal"></i><i class="rl-petal"></i><i class="rl-petal"></i>
+      ${mascot}
+      <h2>Server Rules</h2>
+      <div class="rules-jp">ルール ✦ ようこそ！</div>
+      <div class="rules-sub">${force?'You need to agree to the rules to keep chatting ✨':'Please read before chatting ✨'}</div>
+    </div>
+    <div class="rules-body">
+      ${RULES.map((r,i)=>`<div class="rule-card${r.hot?' rule-hot':''}"><div class="rule-ic">${r.ic}</div><div><div class="rule-t"><span class="rule-n">#${i+1}</span>${r.t}</div><div class="rule-d">${r.d}</div></div></div>`).join('')}
+      <div class="rules-foot">Breaking the rules can lead to <b>message deletion</b> → <b>mute</b> → <b>ban</b>, depending on how serious it is.</div>
+      ${footer}
+    </div>
+  </div></div>`;
+  const leave=()=>closeModalAnimated(root,opts.back||null);
+  if(!force){
+    $('#rulesX').onclick=leave;
+    $('#rulesBg').onclick=e=>{if(e.target.id==='rulesBg')leave()};
+  }
+  if(!needAgree){$('#rulesOk').onclick=leave;return}
+  const chk=$('#rulesChk'),ok=$('#rulesOk');
+  chk.onchange=()=>{ok.disabled=!chk.checked};
+  ok.onclick=async()=>{
+    if(!chk.checked||ok.disabled)return;
+    ok.disabled=true;ok.textContent='Saving…';
+    try{
+      await DB.agreeRules(RULES_VERSION);
+      RULES_STATE={v:RULES_VERSION,at:Date.now()+SKEW};
+      toast('Thanks for agreeing to the rules! 💖');
+    }catch(e){
+      console.warn('rules agreement not saved',e);
+      toast('Could not save your agreement. You may be asked again next time.','bad');
+    }
+    leave();
+  };
+}
+$('#rulesBtn').onclick=()=>modalRules();
+// Everyone must agree once per account (and again whenever RULES_VERSION goes up). Runs as soon as
+// the app is idle; if the agreement can't be read (offline/rules not published) nobody gets locked out.
+(function(){
+  let tries=0;
+  const t=setInterval(()=>{
+    if(++tries>60){clearInterval(t);return}
+    const root=$('#modalRoot');
+    if(typeof ME==='undefined'||!ME||!root)return;
+    clearInterval(t);
+    if(DB.isBanned(ME.id))return;
+    DB.rulesAgreement().then(st=>{
+      RULES_STATE=st;
+      if(rulesAgreed(st))return;
+      let waits=0;
+      const show=setInterval(()=>{
+        const r=$('#modalRoot');
+        if(++waits>120){clearInterval(show);return}
+        if(r&&!r.innerHTML.trim()){clearInterval(show);modalRules({force:true})}
+      },800);
+    }).catch(e=>console.warn('rules check skipped',e&&e.code||e));
+  },1500);
+})();
+
 
 /* ===== Anti-lag mode (saved to the ACCOUNT, OFF by default) =====
    The choice lives in users/$id/settings/antiLag so it follows you to every device. localStorage is
@@ -7153,6 +7315,13 @@ function openSettings(fromChat){
         </div>
         <div class="hint" id="aboutHint" style="margin-top:8px"></div>
       </div>
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">📜 Server rules</div>
+        <div class="about-rules-row">
+          <div class="hint" id="aboutRulesStatus" style="margin:0">${rulesAgreed(RULES_STATE)?'✅ You agreed to the rules'+(RULES_STATE.at?' on '+esc(fmtRulesDate(RULES_STATE.at)):''):'You haven\'t agreed to the rules yet.'}</div>
+          <button class="btn small" id="aboutRulesBtn" type="button">📜 View rules</button>
+        </div>
+      </div>
     </div>
 
     ${(isOwner(ME.id)||isMod(ME.id))?`<div data-p="mod" class="hidden">
@@ -7334,6 +7503,8 @@ function openSettings(fromChat){
     if(b.dataset.t==='mod'&&isOwner(ME.id)&&typeof renderVerHistory==='function')renderVerHistory();
   });
   function renderAboutTab(){
+    const rb=$$('#aboutRulesBtn');
+    if(rb)rb.onclick=()=>modalRules({back:()=>openSettings(true)});
     const pinnedEl=$$('#aboutPinned'),hintEl=$$('#aboutHint');
     if(!pinnedEl)return;
     const cur=APP_VERSION_CACHE&&APP_VERSION_CACHE.current;
