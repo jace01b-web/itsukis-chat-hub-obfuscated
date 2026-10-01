@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-10-01.11">
+<meta name="build-version" content="2026-10-01.12">
 <script>/* Anti-lag: per-device choice, OFF unless explicitly switched on. Runs before first paint so there is no flash of the heavy visuals. */
 try{if(localStorage.getItem('ich.antiLag')==='1')document.documentElement.classList.add('anti-lag')}catch(_){}</script>
 <title>Itsukis Chat Hub</title>
@@ -3845,9 +3845,9 @@ const DB=(()=>{
     // owner is a member of, and DMs the owner is a member of (their friends'
     // DMs). Rules give clients no way to see conversations they're not part
     // of — even for owners — so this can't reach every conversation on the
-    // whole server; only what this owner's own account has access to. A true
-    // server-wide sweep needs the admin script (ban-user.js) with a service
-    // account, which already does a full cross-path cascade delete on ban.
+    // whole server; only what this owner's own account has access to. Banning
+    // also makes the banned account's own client delete its own messages
+    // everywhere it can see (see purgeUserMessages), so no admin script is needed.
     async searchUserMessages(userId){
       userId=Number(userId);
       const keys=['global','announcements',...C.myRoomIds.filter(id=>C.rooms[id]),
@@ -3904,10 +3904,28 @@ const DB=(()=>{
       // a banned account's old username stays permanently reserved (still pointing
       // at this now-deleted id) so nobody else can ever sign up or rename into it.
       await remove(R('onlineUsers/'+id)).catch(()=>{});
-      // Cascade-deleting every message this user ever sent, across every room/DM,
-      // needs the admin SDK (client rules can only touch one path per write and
-      // can't enumerate "every message anywhere by senderId X" atomically). Run
-      // ban-user.js <id> --ban from the server to do that part.
+      // Cascade-delete this user's messages everywhere THIS owner can reach (global, VIP,
+      // announcements, my rooms/DMs). The banned account's own client wipes the rest
+      // (its own rooms/DMs) the next time it is open — see purgeUserMessages().
+      DB.purgeUserMessages(id).catch(e=>console.warn('ban cleanup failed',e));
+    },
+    // Deletes every message by `userId` in all chats the CURRENT account can read.
+    // Works for an owner (deleting someone else's) and for the banned account itself
+    // (the rules let a sender delete their own messages, banned or not).
+    async purgeUserMessages(userId){
+      userId=Number(userId);
+      const keys=[CFG.GLOBAL_ROOM,'announcements'];
+      if(isOwner(myId)||DB.vipInfo(myId))keys.push(CFG.VIP_ROOM);
+      (C.myRoomIds||[]).filter(r=>C.rooms[r]).forEach(r=>keys.push(r));
+      (C.friends[myId]||[]).forEach(f=>keys.push(dmKey(myId,f)));
+      const items=[];
+      await Promise.all([...new Set(keys)].map(async key=>{
+        let snap=null;
+        try{snap=await get(query(R('messages/'+key),orderByChild('senderId'),equalTo(userId)))}
+        catch(_){try{snap=await get(R('messages/'+key))}catch(__){return}}   // not indexed / not readable
+        snap.forEach(c=>{const v=c.val();if(v&&Number(v.senderId)===userId)items.push({key,id:c.key})});
+      }));
+      return items.length?DB.deleteMessagesBulk(items):{ok:0,fail:0};
     },
     async unbanUser(id){
       if(!isOwner(myId))throw new Error('Only owners can unban.');
@@ -3916,6 +3934,9 @@ const DB=(()=>{
       // read as "unbanned" — that misreading is what silently un-froze banned accounts.
       await set(R('banned/'+id),false);
       C.banned[id]=false;checkBanLock(myId,C.banned); // update local state immediately; don't wait on the listener round-trip
+      // Restore the profile right now (new username, un-delete). If the rules/email prevent it,
+      // the account still repairs itself on its own next sign-in (restoreBannedAccount).
+      try{return await DB.ownerRestoreUnbanned(id)}catch(e){console.warn('owner restore skipped:',e&&(e.code||e.message))}
       // NOTE: this is deliberately all an owner CAN do here. users/$id only lets an owner
       // write it in the exact "ban" shape (deleted:true, username:'Deleted User') — there's
       // no rule letting an owner set someone else's username or clear their `deleted` flag,
@@ -3926,6 +3947,36 @@ const DB=(()=>{
       // OWN auth the next time they sign back in — see restoreBannedAccount() below, which
       // fires automatically on their client once banned/$id is gone.
     },
+    async ownerRestoreUnbanned(id){
+      id=Number(id);if(!isOwner(myId)||isOwner(id))return null;
+      let u=C.users[id];
+      try{const sn=await get(R('users/'+id));if(sn.exists())u=sn.val()}catch(_){}
+      if(!u||u.deleted!==true||u.username!=='Deleted User')return null;
+      if(!u.email)return null;   // no stored login email: the account restores itself on its next sign-in
+      if((await get(R('banned/'+id))).val()!==false)return null;
+      let oldKeys=[];
+      try{const s2=await get(query(R('usernames'),orderByValue(),equalTo(id)));if(s2.exists())oldKeys=Object.keys(s2.val())}catch(_){}
+      let newName,newKey,tries=0,free=false;
+      do{
+        newName='UnbannedUser'+Math.floor(100000+Math.random()*900000);newKey=newName.toLowerCase();
+        try{free=await DB.checkUsernameFree(newName)}catch(_){free=false}
+        tries++;
+      }while(!free&&tries<8);
+      if(!free)throw new Error('no free name');
+      const stamp=Date.now()+SKEW,patch={};
+      patch['users/'+id+'/username']=newName;
+      patch['users/'+id+'/deleted']=null;
+      patch['users/'+id+'/lastNameChange']=stamp;
+      patch['usernames/'+newKey]=id;
+      patch['usernameLogin/'+newKey]={email:u.email};
+      oldKeys.forEach(k=>{patch['usernames/'+k]=null;patch['usernameLogin/'+k]=null});
+      await update(ref(rtdb),patch);
+      const nu={...u,username:newName,lastNameChange:stamp};delete nu.deleted;
+      C.users[id]=nu;C.usernames[newKey]=id;oldKeys.forEach(k=>delete C.usernames[k]);
+      emit();
+      return newName;
+    },
+    async confirmBannedOnServer(id){try{return(await get(R('banned/'+id))).val()===true}catch(_){return false}},
     isBanned(id){return!!C.banned&&!!C.banned[id]},
     /* --- Automatic cleanup of old data ---
        Messages older than modSettings/retentionDays (default 7, 0 = keep forever) are deleted. The database
@@ -6458,7 +6509,7 @@ function openUserProfile(id){
     if(el2('pfBan'))el2('pfBan').onclick=()=>{root.innerHTML='';modalBanConfirm(id,name)};
     if(el2('pfMute'))el2('pfMute').onclick=()=>{root.innerHTML='';modalMuteConfirm(id,name)};
     if(el2('pfUnban'))el2('pfUnban').onclick=async()=>{
-      try{await DB.unbanUser(id);toast(name+' unbanned — they\'ll get a fresh username next time they sign in.');render()}
+      try{await DB.unbanUser(id);toast(name+' unbanned and restored (or restored on their next sign-in).');render()}
       catch(e){toast(e.message,'bad')}
     };
   };
@@ -8094,7 +8145,7 @@ function openSettings(fromChat){
         <div class="actions" style="justify-content:flex-start;margin-top:10px">
           <button class="btn sec" id="modDelSearch">Find messages</button>
         </div>
-        <div class="hint" style="margin-top:8px">Shows this user's messages in Global Chat and in every room or DM <b>your own account</b> is a member of. It can't reach conversations you're not part of — for a true server-wide wipe, use the ban-user.js admin script, which already cascade-deletes everywhere when you ban someone.</div>
+        <div class="hint" style="margin-top:8px">Shows this user's messages in Global Chat and in every room or DM <b>your own account</b> is a member of. It can't reach conversations you're not part of — banning someone also wipes their messages in everything you can reach, and their own client wipes the rest of theirs.</div>
         <div id="modDelResults" style="margin-top:12px"></div>
       </div>`:''}
     </div>`:''}
@@ -8267,7 +8318,7 @@ function openSettings(fromChat){
     $$('#modUnbanGo')&&($$('#modUnbanGo').onclick=async()=>{
       const id=+$$('#modBanId').value;
       if(!id){toast('Enter a user ID','bad');return}
-      try{await DB.unbanUser(id);toast('User #'+id+' unbanned — they\'ll get a fresh username next time they sign in.')}catch(err){toast(err.message,'bad')}
+      try{await DB.unbanUser(id);toast('User #'+id+' unbanned and restored (or restored on their next sign-in).')}catch(err){toast(err.message,'bad')}
     });
     $$('#modRetention')&&($$('#modRetention').onchange=async e=>{
       try{await DB.setRetention(+e.target.value);toast(+e.target.value?'Messages older than '+e.target.value+' day(s) will be cleaned up.':'Automatic cleanup is off.')}
@@ -8787,10 +8838,15 @@ function startCleanupLoop(){
     busy=true;DB.loadOlder(view.roomKey);setTimeout(()=>{busy=false},1200);
   },{passive:true});
 })();
-let _restoringAccount=false,_lastRestoreTry=0;
+let _restoringAccount=false,_lastRestoreTry=0,_selfPurged=false;
 DB.onChange(()=>{
   ME=DB.currentUser();
   if(!ME){if(view.page&&view.page!=='authPage'&&!DB.needsProfile()&&!DB.isLoggedIn())show('authPage');return}
+  // Banned: delete my own messages everywhere I can see (once per load, only after the server confirms the ban).
+  if(!_selfPurged&&DB.isBanned(ME.id)&&!DB.isOwner(ME.id)){
+    _selfPurged=true;
+    DB.confirmBannedOnServer(ME.id).then(ok=>{if(ok)return DB.purgeUserMessages(ME.id);_selfPurged=false}).catch(()=>{_selfPurged=false});
+  }
   if(typeof AntiLag!=='undefined')AntiLag.sync();        // cross-device: account setting wins
   if(typeof startCleanupLoop==='function')startCleanupLoop();
   if(!_restoringAccount&&Date.now()-_lastRestoreTry>30000&&DB.needsUnbanRestore()){
