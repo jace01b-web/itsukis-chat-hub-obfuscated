@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-10-01.10">
+<meta name="build-version" content="2026-10-01.11">
 <script>/* Anti-lag: per-device choice, OFF unless explicitly switched on. Runs before first paint so there is no flash of the heavy visuals. */
 try{if(localStorage.getItem('ich.antiLag')==='1')document.documentElement.classList.add('anti-lag')}catch(_){}</script>
 <title>Itsukis Chat Hub</title>
@@ -4146,6 +4146,14 @@ const DB=(()=>{
     async sendMessage(key,{senderId,text,images,pings,replyTo}){
       if(key===CFG.VIP_ROOM&&!DB.vipInfo(senderId))throw new Error('VIP Chat is for VIP members. Win VIP from the Daily Spin.');
       if(DB.isBanned(senderId))throw new Error('Your account has been banned.');
+      // The local ban list can lag (or not be loaded yet) right after a ban. Ask the server directly so a
+      // banned account is stopped HERE, before the optimistic echo, instead of the message appearing and
+      // then being auto-removed when the database rejects it.
+      if(!BANNED_LOADED&&!isOwner(senderId)){
+        let srvBanned=false;
+        try{srvBanned=(await get(R('banned/'+senderId))).val()===true}catch(_){}
+        if(srvBanned){C.banned[senderId]=true;checkBanLock(myId,C.banned);throw new Error('Your account has been banned.')}
+      }
       if(DB.isMuted(senderId)){
         const secs=Math.ceil(DB.muteRemainingMs(senderId)/1000);
         throw new Error('You are muted for '+secs+'s and cannot send messages.');
@@ -4223,6 +4231,9 @@ const DB=(()=>{
       catch(e){
         C.messages[key]=(C.messages[key]||[]).filter(x=>x!==tmp);emit();
         if(e.code==='PERMISSION_DENIED'){
+          if(!DB.isBanned(senderId)&&!isOwner(senderId)){
+            try{if((await get(R('banned/'+senderId))).val()===true){C.banned[senderId]=true;checkBanLock(myId,C.banned)}}catch(_){}
+          }
           if(DB.isBanned(senderId))throw new Error('Your account has been banned.');
           if(DB.isMuted(senderId))throw new Error('You are muted and cannot send messages right now.');
           // only call it "too fast" if we really did send something a moment ago
@@ -7093,8 +7104,13 @@ async function send(){
   }
   _lastSendAt=Date.now();
   const replyTo=view.replyingTo?{id:view.replyingTo.id,senderId:view.replyingTo.senderId,preview:replyPreviewText(view.replyingTo)}:null;
-  DB.sendMessage(view.roomKey,{senderId:ME.id,text,images:view.pending.slice(),pings:extractPings(text),replyTo})
-    .catch(e=>toast(e.message,'bad'));
+  const _draftImgs=view.pending.slice();
+  DB.sendMessage(view.roomKey,{senderId:ME.id,text,images:_draftImgs,pings:extractPings(text),replyTo})
+    .catch(e=>{
+      toast(e.message,'bad');
+      // Refused (banned): don't make the message vanish — restore the draft so it isn't silently lost.
+      if(/banned/i.test(e.message||'')&&msgIn&&!msgIn.value){msgIn.value=text;$('#cc').textContent=text.length}
+    });
   cancelCompose();
   msgIn.value='';msgIn.style.height='auto';$('#cc').textContent=0;
   view.pending=[];renderPreviews();$('#mentionPop').classList.add('hidden');
