@@ -3485,7 +3485,9 @@ const DB=(()=>{
         const taken=(await get(R('usernames/'+newKey))).val();
         if(taken!=null&&Number(taken)!==Number(id))throw new Error('That username is already taken.');
       }
-      const email=u.email||(oldKey+FAKE);
+      let email=u.email;
+      if(!email){try{email=((await get(R('usernameLogin/'+oldKey))).val()||{}).email}catch(_){}}
+      if(!email)email=oldKey+FAKE;
       const stamp=Date.now()+SKEW;
       // Single atomic multi-path write: claim the new name, update the profile, point the
       // login lookup at the new name, and free the old name+lookup all in one request.
@@ -3512,6 +3514,76 @@ const DB=(()=>{
       C.usernames[newKey]=id;if(newKey!==oldKey)delete C.usernames[oldKey];
       emit();
       return userView(id);
+    },
+    /* --- Owner-only: look up an account (by numeric ID or exact username) and rename it ---
+       Spaces are allowed in names set this way ONLY (normal signup/self-rename still can't use them).
+       The rename is one atomic multi-path write: new name claimed, profile updated, login lookup moved,
+       and every old name pointing at that account freed — so there is never a half-renamed state and the
+       old username is immediately available again. The database rules still refuse duplicates. */
+    async lookupUserForRename(q){
+      if(!isOwner(myId))throw new Error('Only owners can look up accounts to rename.');
+      q=String(q||'').trim();
+      if(!q)throw new Error('Enter a user ID or a username.');
+      const ids=[];
+      const add=async id=>{
+        id=Number(id);if(!Number.isFinite(id)||ids.includes(id))return;
+        if(!C.users[id]){try{const sn=await get(R('users/'+id));if(sn.exists())C.users[id]=sn.val()}catch(_){}}
+        if(C.users[id])ids.push(id);
+      };
+      if(/^[0-9]+$/.test(q))await add(q);
+      let byName=C.usernames[q.toLowerCase()];
+      if(byName==null){try{const sn=await get(R('usernames/'+q.toLowerCase()));if(sn.exists())byName=sn.val()}catch(_){}}
+      if(byName!=null)await add(byName);
+      return ids.map(id=>{
+        const v=userView(id);
+        return{id,username:v.username,user:v,deleted:v.deleted===true,banned:!!(C.banned&&C.banned[id]),owner:isOwner(id)};
+      });
+    },
+    async ownerRenameUser(id,rawName){
+      if(!isOwner(myId))throw new Error('Only owners can change other people\'s usernames.');
+      id=Number(id);
+      const u=C.users[id];
+      if(!u)throw new Error('That account isn\'t loaded. Look it up again.');
+      if(u.deleted===true||u.username==='Deleted User'||(C.banned&&C.banned[id]))throw new Error('Banned/deleted accounts can\'t be renamed. Unban them first.');
+      if(isOwner(id)&&id!==myId)throw new Error('You can\'t rename another owner.');
+      // collapse accidental double spaces, trim the ends, then validate: letters/digits/._- groups separated by single spaces, 1-20 chars
+      const newName=String(rawName||'').replace(/\s+/g,' ').trim();
+      if(!newName)throw new Error('Enter the new username.');
+      if(newName.length>20||!/^[0-9a-zA-Z._-]+( [0-9a-zA-Z._-]+)*$/.test(newName))
+        throw new Error('Usernames are 1-20 chars: 0-9 a-z A-Z . _ - (single spaces allowed between words, none at the ends).');
+      if(!usernameAllowed(newName))throw new Error('The content filter blocks that name. Turn off "Filter usernames too" above if you really want it.');
+      if(newName===u.username)throw new Error('That is already their username.');
+      const newKey=newName.toLowerCase(),oldKey=u.username.toLowerCase();
+      // Duplicate check against the live server index (the rules enforce it again). Their own old name (case change) is fine.
+      if(newKey!==oldKey){
+        const taken=(await get(R('usernames/'+newKey))).val();
+        if(taken!=null&&Number(taken)!==id)throw new Error('That username is already taken'+(C.users[taken]&&C.users[taken].deleted?' (reserved by a banned account).':'.'));
+        if(C.usernames[newKey]!=null&&Number(C.usernames[newKey])!==id)throw new Error('That username is already taken.');
+      }
+      // Every index key currently pointing at this account — all of them get freed.
+      const oldKeys=new Set([oldKey]);
+      Object.keys(C.usernames||{}).forEach(k=>{if(Number(C.usernames[k])===id)oldKeys.add(k)});
+      try{const sn=await get(query(R('usernames'),orderByValue(),equalTo(id)));if(sn.exists())Object.keys(sn.val()).forEach(k=>oldKeys.add(k))}catch(_){}
+      oldKeys.delete(newKey);
+      // Keep the account's real login email (never regenerate it from the new name).
+      let email=u.email;
+      if(!email){try{email=((await get(R('usernameLogin/'+oldKey))).val()||{}).email}catch(_){}}
+      if(!email)email=oldKey+FAKE;
+      const stamp=Date.now()+SKEW;
+      const patch={};
+      patch['users/'+id+'/username']=newName;
+      patch['users/'+id+'/lastNameChange']=stamp;   // also stops them instantly reverting the name for the normal cooldown
+      if(newKey!==oldKey||!C.usernames[newKey]){
+        patch['usernames/'+newKey]=id;
+        patch['usernameLogin/'+newKey]={email};
+      }
+      oldKeys.forEach(k=>{patch['usernames/'+k]=null;patch['usernameLogin/'+k]=null});
+      try{await update(ref(rtdb),patch)}
+      catch(e){throw new Error(e.code==='PERMISSION_DENIED'?'Database refused the rename. Make sure the updated database rules (username section) are published.':'Could not change username: '+(e.code||e.message))}
+      C.users[id]={...u,username:newName,lastNameChange:stamp};
+      C.usernames[newKey]=id;oldKeys.forEach(k=>delete C.usernames[k]);
+      emit();
+      return{id,oldName:u.username,newName};
     },
     // Saves ONE settings key without re-uploading the whole settings blob (which can carry a large
     // background image) — used for small toggles like anti-lag.
@@ -7911,6 +7983,24 @@ function openSettings(fromChat){
         <div class="section-h" style="margin-top:16px;font-size:13px">History</div>
         <div id="modVerHistory" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto"></div>
       </div>`:''}
+      ${isOwner(ME.id)?`<div class="set-card">
+        <div class="section-h" style="margin-top:0">✏️ Change a username</div>
+        <div class="field"><label>Find the account (user ID or username)</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="modRenQ" placeholder="e.g. 42 or their current username" autocomplete="off" spellcheck="false" style="flex:1">
+            <button class="btn sec small" id="modRenFind" type="button" style="flex-shrink:0">Look up</button>
+          </div>
+        </div>
+        <div id="modRenResults" style="margin-top:10px"></div>
+        <div id="modRenForm" class="hidden" style="margin-top:12px">
+          <div class="field"><label>New username (1-20 chars: 0-9 a-z A-Z . _ - and spaces)</label>
+            <input type="text" id="modRenName" maxlength="20" autocomplete="off" spellcheck="false"></div>
+          <div class="actions" style="justify-content:flex-start;margin-top:10px">
+            <button class="btn" id="modRenGo" type="button">Change username</button>
+          </div>
+        </div>
+        <div class="hint" style="margin-top:8px">Look the person up by ID or exact username and check it's the right account before renaming. Names set here can include spaces (normal signups and self-renames can't). Usernames can never be duplicated, and their old username is freed for anyone to use right away. They keep signing in with the same password/email — just with the new name — and the normal 7-day self-rename cooldown starts over. Banned accounts and other owners can't be renamed.</div>
+      </div>`:''}
       <div class="set-card">
         <div class="section-h" style="margin-top:0">🔇 Mute a user</div>
         <div class="set-grid">
@@ -8130,6 +8220,51 @@ function openSettings(fromChat){
       if(!id){toast('Enter a user ID','bad');return}
       try{await DB.unmuteUser(id);toast('User #'+id+' unmuted.')}catch(err){toast(err.message,'bad')}
     });
+    if($$('#modRenFind')){
+      let renTarget=null;
+      const resBox=$$('#modRenResults'),form=$$('#modRenForm'),nameIn=$$('#modRenName'),qIn=$$('#modRenQ');
+      const pick=m=>{
+        renTarget=m;
+        const cls=m=>[m.owner?'owner':'',m.banned?'banned':'',m.deleted?'deleted':''].filter(Boolean).join(', ');
+        resBox.innerHTML=`<div class="list-row" style="align-items:center">${avatarHtml(m.user,m.username)}<div style="flex:1;min-width:0;margin-left:10px"><div class="nm" style="word-break:break-word">${esc(m.username)} <span class="hint">#${m.id}</span></div>${cls(m)?`<div class="hint">${cls(m)}</div>`:''}</div></div>`;
+        if(m.banned||m.deleted){form.classList.add('hidden');resBox.insertAdjacentHTML('beforeend','<div class="hint bad" style="margin-top:6px">Banned/deleted accounts can\'t be renamed. Unban them first.</div>');return}
+        if(m.owner&&m.id!==ME.id){form.classList.add('hidden');resBox.insertAdjacentHTML('beforeend','<div class="hint bad" style="margin-top:6px">You can\'t rename another owner.</div>');return}
+        form.classList.remove('hidden');nameIn.value=m.username;nameIn.focus();nameIn.select();
+      };
+      const find=async()=>{
+        renTarget=null;form.classList.add('hidden');
+        resBox.innerHTML='<div class="hint">Searching…</div>';
+        let found;
+        try{found=await DB.lookupUserForRename(qIn.value)}
+        catch(err){resBox.innerHTML=`<div class="hint" style="color:var(--danger)">${esc(err.message||'Lookup failed')}</div>`;return}
+        if(!found.length){resBox.innerHTML='<div class="empty">No account found with that ID or username.</div>';return}
+        if(found.length===1){pick(found[0]);return}
+        // a number can be one person's ID and another person's username — let the owner choose
+        resBox.innerHTML='<div class="hint" style="margin-bottom:6px">Two accounts match — pick the right one:</div>';
+        found.forEach(m=>{
+          const row=document.createElement('div');row.className='list-row';row.style.cursor='pointer';
+          row.innerHTML=`${avatarHtml(m.user,m.username)}<div style="flex:1;min-width:0;margin-left:10px"><div class="nm">${esc(m.username)} <span class="hint">#${m.id}</span></div></div><button class="btn small" type="button">Select</button>`;
+          row.querySelector('button').onclick=()=>pick(m);
+          resBox.appendChild(row);
+        });
+      };
+      $$('#modRenFind').onclick=find;
+      qIn.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();find()}});
+      nameIn.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$$('#modRenGo').click()}});
+      $$('#modRenGo').onclick=async()=>{
+        if(!renTarget){toast('Look up an account first.','bad');return}
+        const target=renTarget,wanted=nameIn.value;
+        if(!confirm('Change "'+target.username+'" (#'+target.id+') to "'+wanted.replace(/\s+/g,' ').trim()+'"?\n\nTheir old username becomes available to anyone.'))return;
+        const btn=$$('#modRenGo');btn.disabled=true;btn.textContent='Changing…';
+        try{
+          const r=await DB.ownerRenameUser(target.id,wanted);
+          toast('#'+r.id+' renamed: "'+r.oldName+'" → "'+r.newName+'". The old name is now free.');
+          qIn.value='';nameIn.value='';form.classList.add('hidden');renTarget=null;
+          resBox.innerHTML=`<div class="hint">Done — #${r.id} is now <b>${esc(r.newName)}</b>. "${esc(r.oldName)}" is available again.</div>`;
+        }catch(err){toast(err.message,'bad')}
+        finally{btn.disabled=false;btn.textContent='Change username'}
+      };
+    }
     $$('#modDelSearch')&&($$('#modDelSearch').onclick=async()=>{
       const id=+$$('#modDelId').value;
       const resBox=$$('#modDelResults');
