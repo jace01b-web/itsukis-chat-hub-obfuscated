@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-09-30.7">
+<meta name="build-version" content="2026-09-30.11">
 <script>/* Anti-lag: per-device choice, OFF unless explicitly switched on. Runs before first paint so there is no flash of the heavy visuals. */
 try{if(localStorage.getItem('ich.antiLag')==='1')document.documentElement.classList.add('anti-lag')}catch(_){}</script>
 <title>Itsukis Chat Hub</title>
@@ -277,7 +277,7 @@ input[type=color]{display:none!important}
 .divider:before,.divider:after{content:"";flex:1;height:1px;background:var(--border)}
 
 /* ===== HOME (fully centered) ===== */
-#homePage{align-items:center;justify-content:center;padding:24px;overflow-y:auto}
+#homePage{align-items:center;justify-content:center;padding:24px;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable both-edges}   /* gutter reserved up front: entrance animations can no longer make a scrollbar pop in/out and shove everything sideways */
 .home-wrap{max-width:820px;width:100%;margin:auto;display:flex;flex-direction:column;align-items:center;text-align:center}
 .home-head{position:absolute;top:20px;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:0 24px}
 .userchip{display:flex;align-items:center;gap:10px;background:var(--ui-panel);backdrop-filter:blur(var(--ui-blur));-webkit-backdrop-filter:blur(var(--ui-blur));border:1px solid var(--border);padding:7px 16px 7px 7px;border-radius:40px;cursor:pointer;transition:border-color .15s ease,transform .15s ease;font-weight:600;font-size:14px;
@@ -1427,7 +1427,7 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
 /* ===== TQQ FAN SERVER PROMO (main menu, left side) + AUTH GAME HUBS PREVIEW ===== */
 @property --tqq-a{syntax:'<angle>';inherits:false;initial-value:0deg}
 @keyframes tqqSpin{to{--tqq-a:360deg}}
-@keyframes tqqIn{0%{opacity:0;transform:translateX(-70px) scale(.92)}100%{opacity:1;transform:none}}
+@keyframes tqqIn{0%{opacity:0;transform:scale(.94)}100%{opacity:1;transform:none}}   /* fade/scale only: no sliding in from the side */
 @keyframes tqqRise{0%{opacity:0;transform:translateY(14px)}100%{opacity:1;transform:none}}
 @keyframes tqqFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
 @keyframes tqqPulse{0%,100%{opacity:.4;transform:scale(1)}50%{opacity:.75;transform:scale(1.06)}}
@@ -1482,16 +1482,19 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
 .tqq-join:active{transform:translateY(-1px) scale(.98)}
 .tqq-alt{display:inline-block;margin-top:10px;font-size:12px;color:var(--muted);text-decoration:none;word-break:break-all;transition:color .2s ease;animation:tqqRise .7s ease 1.4s both}
 .tqq-alt:hover{color:#bdb5ff;text-decoration:underline}
-@media(min-width:1240px) and (min-height:460px){
+@media(min-width:1300px) and (min-height:560px){
   .tqq-side{position:absolute;left:28px;top:76px;bottom:24px;width:272px;max-width:none;margin:0;display:flex;align-items:center;pointer-events:none}
   .tqq-card{pointer-events:auto}
 }
 /* stacked layout (promo sits under the menu): keep the top reachable when the page is taller than the screen */
-@media(max-width:1239px),(max-height:459px){
-  #homePage{justify-content:safe center;padding-top:84px}
-  #homePage .home-wrap{margin:0 auto}
+@media(max-width:1299px),(max-height:559px){
+  /* The ad sits BELOW the menu and never takes part in centering: the menu block fills exactly one screen (min-height:100% of the
+     padded area) and centres itself inside it, so it is in the same spot with or without the ad. The ad is just a scroll away. */
+  #homePage{justify-content:flex-start;padding-top:84px;overflow-x:hidden}
+  #homePage .home-wrap{margin:0 auto;flex:none;min-height:100%;justify-content:center}
 }
 @media(max-width:480px){.tqq-side{margin-top:22px}}
+@media(max-width:360px){.ad-contact{white-space:normal}}
 
 /* ---- Auth page: Game Hubs preview ---- */
 .auth-col{display:flex;flex-direction:column;gap:14px;min-width:0}
@@ -1835,6 +1838,232 @@ html.al-switch *,html.al-switch *::before,html.al-switch *::after{transition:non
 .rules-status{margin-top:14px;padding:11px 14px;border-radius:14px;text-align:center;font-size:13px;font-weight:700;
   color:#b8ffd8;background:rgba(60,200,130,.12);border:1px solid rgba(90,220,150,.4)}
 .about-rules-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+/* HALLOWEEN:START ===== Halloween event styles. Delete everything between HALLOWEEN:START and HALLOWEEN:END to remove. ===== */
+html.hw-on{--accent:#ff7a1a;--accent2:#a855ff}
+.hw-deco{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;contain:layout paint style}
+.hw-deco *{pointer-events:none}
+.hw-vig{position:absolute;inset:0;background:radial-gradient(120% 80% at 50% 115%,rgba(255,110,20,.16),transparent 55%),radial-gradient(90% 70% at 100% 0,rgba(140,60,255,.16),transparent 60%),radial-gradient(70% 60% at 0 0,rgba(255,120,30,.09),transparent 60%)}
+.hw-moon{position:absolute;top:19vh;right:3%;width:60px;aspect-ratio:1;border-radius:50%;opacity:.55;animation:hwMoon 8s ease-in-out infinite;
+  background:radial-gradient(circle at 30% 30%,#fff8dc,#ffd98a 58%,#e9a24a);box-shadow:0 0 34px 10px rgba(255,190,90,.26),0 0 90px 30px rgba(255,150,40,.12)}
+.hw-moon::before{content:'';position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 62% 38%,rgba(170,110,40,.35) 0 7%,transparent 8%),radial-gradient(circle at 38% 66%,rgba(170,110,40,.3) 0 10%,transparent 11%),radial-gradient(circle at 70% 70%,rgba(170,110,40,.25) 0 5%,transparent 6%)}
+@keyframes hwMoon{50%{transform:translate3d(0,-6px,0)}}
+.hw-web{position:absolute;top:0;width:150px;height:150px;color:rgba(255,255,255,.17)}
+.hw-web.l{left:0}.hw-web.r{right:0;transform:scaleX(-1)}
+.hw-web svg{width:100%;height:100%}
+.hw-sp{position:absolute;top:0;left:var(--x);display:flex;flex-direction:column;align-items:center;transform-origin:top center;animation:hwSwing 4.5s ease-in-out infinite}
+.hw-sp u{display:block;width:1px;height:var(--l);background:rgba(255,255,255,.3)}
+.hw-sp b{font-size:18px;font-weight:400}
+@keyframes hwSwing{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+.hw-bat{position:absolute;left:-70px;top:var(--y);font-size:var(--s);animation:hwBat var(--d) linear var(--t) infinite;opacity:.7;will-change:transform}
+.hw-bat i{display:block;font-style:normal;animation:hwFlap .3s ease-in-out infinite alternate}
+@keyframes hwFlap{from{transform:scale(1,1)}to{transform:scale(.55,1.1)}}
+@keyframes hwBat{0%{transform:translate3d(0,0,0) rotate(-6deg)}25%{transform:translate3d(28vw,-34px,0) rotate(8deg)}50%{transform:translate3d(58vw,20px,0) rotate(-8deg)}75%{transform:translate3d(86vw,-26px,0) rotate(7deg)}100%{transform:translate3d(118vw,6px,0) rotate(-4deg)}}
+.hw-gh{position:absolute;bottom:-60px;left:var(--x);font-size:30px;opacity:0;animation:hwGh var(--d) ease-in-out var(--t) infinite;will-change:transform,opacity}
+@keyframes hwGh{0%{transform:translate3d(0,0,0);opacity:0}12%{opacity:.5}50%{transform:translate3d(36px,-55vh,0)}88%{opacity:.35}100%{transform:translate3d(-24px,-112vh,0);opacity:0}}
+.hw-em{position:absolute;bottom:-10px;left:var(--x);width:var(--s);height:var(--s);border-radius:50%;background:#ffb347;box-shadow:0 0 8px 2px rgba(255,140,40,.7);opacity:0;animation:hwEm var(--d) linear var(--t) infinite}
+@keyframes hwEm{0%{transform:translate3d(0,0,0) scale(1);opacity:0}10%{opacity:.8}100%{transform:translate3d(var(--dx),-95vh,0) scale(.3);opacity:0}}
+.hw-pk{position:absolute;bottom:6px;font-size:34px;line-height:1;opacity:.9;text-shadow:0 0 16px rgba(255,130,20,.8);animation:hwPk 2.8s ease-in-out infinite}
+.hw-pk.l{left:8px}.hw-pk.r{right:8px;animation-delay:-1.4s}
+@keyframes hwPk{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,-4px,0)}}
+.hw-fog{position:absolute;left:-20%;bottom:-40px;width:140%;height:180px;animation:hwFog 26s ease-in-out infinite alternate;will-change:transform;
+  background:radial-gradient(50% 100% at 30% 100%,rgba(200,170,255,.13),transparent 70%),radial-gradient(40% 90% at 72% 100%,rgba(255,170,100,.1),transparent 70%)}
+.hw-fog.f2{animation-duration:36s;animation-direction:alternate-reverse;opacity:.7}
+@keyframes hwFog{from{transform:translate3d(-6%,0,0)}to{transform:translate3d(6%,0,0)}}
+html.anti-lag .hw-bat,html.anti-lag .hw-gh,html.anti-lag .hw-em,html.anti-lag .hw-fog,html.anti-lag .hw-sp{display:none}
+html.anti-lag .hw-deco *,html.anti-lag .hw-name,html.anti-lag .hw-title,html.anti-lag .hw-modal *,html.anti-lag .hw-hero *{animation:none!important}
+@media (max-width:700px){.hw-deco .hw-x{display:none}.hw-web{width:90px;height:90px}.hw-moon{width:42px}.hw-pk{font-size:26px}}
+@media (prefers-reduced-motion:reduce){.hw-deco *,.hw-name,.hw-title,.hw-modal *,.hw-hero *{animation:none!important}}
+
+/* title pills + name effects. Colour/opacity/background-position only: no transforms or size changes, so rows never move. */
+.hw-title{display:inline-flex;align-items:center;gap:4px;margin:-2px 6px -2px 0;padding:2px 8px 2px 6px;border-radius:999px;font-size:.66em;font-weight:900;letter-spacing:.06em;text-transform:uppercase;vertical-align:middle;position:relative;isolation:isolate;white-space:nowrap;line-height:1.15}
+.hw-t-vamp{color:#ffc2cf;background:linear-gradient(100deg,rgba(120,0,25,.7),rgba(220,30,70,.4));box-shadow:inset 0 0 0 1px rgba(255,80,110,.6),0 0 10px rgba(220,20,60,.45);animation:hwBeat 1.8s ease-in-out infinite}
+.hw-t-reaper{color:#d9b8ff;background:linear-gradient(100deg,rgba(12,6,24,.92),rgba(70,30,120,.7));box-shadow:inset 0 0 0 1px rgba(170,110,255,.65),0 0 12px rgba(150,80,255,.5);animation:hwBeat 3.2s ease-in-out infinite}
+.hw-t-horse{color:#2a1000;background:linear-gradient(90deg,#ff8a1f,#ffd23f 50%,#ff8a1f);background-size:200% 100%;box-shadow:0 0 12px rgba(255,140,20,.6);animation:nmFlow 3s linear infinite}
+.hw-t-royal{color:#fff3d6;background:linear-gradient(100deg,#3a1170,#7a2bd6 45%,#ff8a1f);box-shadow:0 0 14px rgba(170,90,255,.5),0 0 22px rgba(255,140,30,.3)}
+.hw-t-royal::before{content:'';position:absolute;inset:-1.5px;border-radius:inherit;padding:1.5px;z-index:-1;animation:vipSpin 3.5s linear infinite;
+  background:conic-gradient(from var(--vipA),transparent 0,#ffd27a 18%,transparent 36%,#c58bff 60%,transparent 80%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+@keyframes hwBeat{0%,100%{opacity:.88}50%{opacity:1}}
+.hw-name{display:inline;filter:drop-shadow(0 0 4px var(--gl,transparent));animation:var(--ex,hwNone) var(--exd,3s) ease-in-out infinite}
+.hw-name.hw-plain{display:inline-block;font-weight:800;background:var(--g);background-size:200% 100%;background-repeat:repeat-x;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;padding:.06em .12em .16em;margin:-.06em -.12em -.16em;
+  animation:nmFlow var(--dur,5s) linear infinite,var(--ex,hwNone) var(--exd,3s) ease-in-out infinite}
+@keyframes hwNone{}
+@keyframes hwGhost{0%,100%{opacity:.72}50%{opacity:1}}
+@keyframes hwFlick{0%,100%,46%,50%,72%{opacity:1}48%{opacity:.45}74%{opacity:.75}}
+@keyframes hwPulse{0%,100%{opacity:.84}50%{opacity:1}}
+.hw-s-web{--g:linear-gradient(90deg,#8e98b4,#eef2ff 25%,#fff 50%,#eef2ff 75%,#8e98b4);--gl:rgba(220,230,255,.5)}
+.hw-s-ghost{--g:linear-gradient(90deg,#9cc4ff,#fff 30%,#d9ecff 60%,#9cc4ff);--gl:rgba(190,220,255,.7);--ex:hwGhost;--exd:3.2s}
+.hw-s-pumpkin{--g:linear-gradient(90deg,#ff6a00,#ffb347 25%,#fff0b0 50%,#ffb347 75%,#ff6a00);--gl:rgba(255,120,0,.65);--dur:4s}
+.hw-s-witch{--g:linear-gradient(90deg,#7d2cff,#c79bff 25%,#7dff5a 50%,#c79bff 75%,#7d2cff);--gl:rgba(150,90,255,.65);--dur:4.5s}
+.hw-s-bone{--g:linear-gradient(90deg,#cfc8b0,#fffdf0 50%,#cfc8b0);--gl:rgba(255,250,220,.4)}
+.hw-s-zombie{--g:linear-gradient(90deg,#4f9a2e,#b8ff7a 50%,#4f9a2e);--gl:rgba(120,220,60,.55);--ex:hwFlick;--exd:4s}
+.hw-s-vamp{--g:linear-gradient(90deg,#a80019,#ff4d6d 40%,#ffd0d8 55%,#ff4d6d 75%,#a80019);--gl:rgba(255,40,80,.65);--ex:hwPulse;--exd:1.8s}
+.hw-s-wolf{--g:linear-gradient(90deg,#8fa0b8,#e8f0ff 50%,#8fa0b8);--gl:rgba(190,210,255,.65);--ex:hwFlick;--exd:5s}
+.hw-s-hell{--g:linear-gradient(90deg,#ff2a1a,#ff8a1f 25%,#ffe066 50%,#ff8a1f 75%,#ff2a1a);--gl:rgba(255,60,20,.8);--dur:2.6s;--ex:hwPulse;--exd:1.2s}
+.hw-s-reaper{--g:linear-gradient(90deg,#7a4dff,#e5d4ff 50%,#7a4dff);--gl:rgba(160,100,255,.75);--dur:4s;--ex:hwFlick;--exd:6s}
+.hw-s-spirit{--g:linear-gradient(90deg,#31e6ff,#9a7bff 30%,#fff 50%,#9a7bff 70%,#31e6ff);--gl:rgba(80,220,255,.7);--ex:hwGhost;--exd:2.6s}
+.hw-s-horse{--g:linear-gradient(90deg,#ff7a00,#ffd23f 50%,#ff7a00);--gl:rgba(255,130,20,.8);--dur:2.4s;--ex:hwPulse;--exd:1.4s}
+.hw-s-lord{--g:linear-gradient(90deg,#5a1fb0,#c46bff 25%,#fff 50%,#c46bff 75%,#5a1fb0);--gl:rgba(170,80,255,.85);--dur:3.5s;--ex:hwPulse;--exd:2.2s}
+.hw-s-royal{--g:linear-gradient(90deg,#ffd27a,#ff9a3c 25%,#c58bff 50%,#ff9a3c 75%,#ffd27a);--gl:rgba(255,190,90,.85);--dur:3s;--ex:hwPulse;--exd:2s}
+.hw-bdg{margin-left:3px;font-size:.85em;white-space:nowrap}
+.pf-role.hw-pf{border-color:rgba(255,130,40,.6);color:#ffb26b;background:rgba(255,120,20,.1)}
+
+/* ===== Halloween skin for the rest of the app (colours, borders and glows only, never sizes or positions) ===== */
+html.hw-on{--accent:#ff7a1a;--accent2:#a855ff;--border:rgba(255,165,90,.15)}
+html.hw-on .bgfx{background:radial-gradient(1100px 680px at 12% -8%,rgba(150,70,255,.34),transparent 58%),radial-gradient(950px 640px at 96% 6%,rgba(255,110,30,.22),transparent 58%),radial-gradient(1000px 720px at 50% 118%,rgba(255,90,20,.20),transparent 62%),linear-gradient(160deg,#0d0714 0%,#170b24 45%,#22101a 100%)}
+html.hw-on ::selection{background:rgba(255,122,26,.45)}
+html.hw-on .btn:not(.sec):not(.danger){background:linear-gradient(135deg,#ff7a1a,#9a3df0);box-shadow:0 6px 18px rgba(255,110,20,.3)}
+html.hw-on .send{background:linear-gradient(135deg,#ff8a1f,#9a3df0);box-shadow:0 4px 14px rgba(255,110,20,.35)}
+html.hw-on #chatPage:not(.vip-mode) .send{background:linear-gradient(135deg,#ff8a1f,#9a3df0)}
+html.hw-on .tabs button.active,html.hw-on .modal-tabs button.active{background:linear-gradient(135deg,#ff7a1a,#9a3df0);box-shadow:0 4px 14px rgba(255,110,20,.35)}
+html.hw-on .logo{filter:drop-shadow(0 0 12px rgba(255,120,20,.3))}
+html.hw-on .opt{border-color:rgba(255,150,60,.2)}
+html.hw-on .opt:hover{border-color:rgba(255,150,60,.75);box-shadow:0 20px 46px rgba(255,110,20,.3)}
+html.hw-on .opt:hover .ic{background:rgba(255,120,20,.26)}
+html.hw-on .userchip:hover,html.hw-on .online-pill:hover{border-color:rgba(255,150,60,.8)}
+html.hw-on .modal{border-color:rgba(255,150,60,.24);box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 50px rgba(255,100,20,.12),inset 0 1px 0 rgba(255,190,120,.16)}
+html.hw-on .modal-bg{background:rgba(14,5,22,.66)}
+html.hw-on .gc-modal{border-color:rgba(255,150,60,.3)}
+html.hw-on .gc-card:not(.gc-vip):hover{border-color:rgba(255,150,60,.65);box-shadow:0 14px 34px rgba(255,110,20,.26)}
+html.hw-on .set-card:hover,html.hw-on .hub-row:hover{border-color:rgba(255,150,60,.5)}
+html.hw-on .field input:focus,html.hw-on .field select:focus,html.hw-on .field textarea:focus{border-color:#ff7a1a;box-shadow:0 0 0 3px rgba(255,122,26,.2)}
+html.hw-on .field label .val{background:rgba(255,122,26,.2)}
+html.hw-on .gh-chip,html.hw-on .gh-teaser,html.hw-on .hub-row,html.hw-on .tqq-card,html.hw-on .tqq-side,html.hw-on .gha-modal{border-color:rgba(255,150,60,.22)}
+html.hw-on .gh-chip:hover,html.hw-on .gh-teaser:hover,html.hw-on .tqq-card:hover{border-color:rgba(255,150,60,.65);box-shadow:0 12px 30px rgba(255,110,20,.22)}
+html.hw-on .hub-arrow,html.hw-on .tqq-title{color:#ffb26b}
+html.hw-on .tqq-glow{opacity:.55;filter:blur(26px) hue-rotate(-60deg)}
+html.hw-on .extras-btn,html.hw-on .ex-shell,html.hw-on .extras-menu{border-color:rgba(255,150,60,.26)}
+html.hw-on .ex-item:hover{border-color:rgba(255,150,60,.55);background:rgba(255,120,20,.1)}
+html.hw-on .auth-card,html.hw-on .auth-shell{border-color:rgba(255,150,60,.24)}
+html.hw-on .auth-preview .pv-bub{border-color:rgba(255,150,60,.2)}
+html.hw-on .topbar{box-shadow:inset 0 -1px 0 rgba(255,140,40,.22)}
+html.hw-on .composer{box-shadow:inset 0 1px 0 rgba(255,140,40,.2)}
+html.hw-on .sidebar{border-right-color:rgba(255,150,60,.18)}
+html.hw-on .toast{border-color:rgba(255,150,60,.25)}
+html.hw-on .rules-hero{background:radial-gradient(90% 140% at 50% -20%,rgba(255,120,20,.28),transparent 65%)}
+html.hw-on .rule-card:hover{border-color:rgba(255,150,60,.45)}
+html.hw-on .spin-modal{box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 60px rgba(255,100,20,.16)}
+html.hw-on .np-fill{background:linear-gradient(90deg,#ff7a1a,#c46bff)}
+html.hw-on *::-webkit-scrollbar-thumb{background:rgba(255,140,50,.45)}
+html.hw-on *::-webkit-scrollbar-thumb:hover{background:rgba(255,150,60,.7)}
+
+/* chat picker hero (sits under the VIP card) */
+.hw-hero{grid-column:1/-1;position:relative;display:flex;align-items:center;gap:20px;width:100%;text-align:left;padding:18px 20px;border-radius:22px;color:var(--text);cursor:pointer;overflow:hidden;isolation:isolate;
+  background:radial-gradient(80% 160% at 6% 50%,rgba(255,120,20,.28),transparent 62%),linear-gradient(100deg,rgba(60,22,6,.6),rgba(34,14,56,.55) 70%),var(--ui-panel2);
+  border:1px solid rgba(255,150,60,.38);box-shadow:0 14px 38px rgba(0,0,0,.35),0 0 40px rgba(255,110,20,.14),inset 0 1px 0 rgba(255,200,140,.25);transition:transform .25s cubic-bezier(.16,1,.3,1),box-shadow .25s,border-color .25s}
+.hw-hero:hover{transform:translate3d(0,-2px,0);border-color:rgba(255,170,80,.7);box-shadow:0 18px 44px rgba(0,0,0,.4),0 0 56px rgba(255,110,20,.3),inset 0 1px 0 rgba(255,200,140,.3)}
+.hw-hero:focus-visible{outline:2px solid #ffb347;outline-offset:3px}
+.hw-hero-ring{position:absolute;inset:0;border-radius:inherit;padding:1.5px;pointer-events:none;z-index:-1;animation:vipSpin 7s linear infinite;
+  background:conic-gradient(from var(--vipA),rgba(255,140,40,0) 0%,#ff9a3c 12%,rgba(255,140,40,0) 32%,rgba(170,90,255,0) 55%,#b57bff 68%,rgba(170,90,255,0) 84%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.hw-hero-sp{position:absolute;inset:0;pointer-events:none;z-index:-1;overflow:hidden;border-radius:inherit}
+.hw-hero-sp i{position:absolute;bottom:-6px;left:var(--x);width:var(--s);height:var(--s);border-radius:50%;background:#ffb347;box-shadow:0 0 8px 2px rgba(255,140,40,.8);opacity:0;animation:hwEm2 var(--d) linear var(--t) infinite}
+@keyframes hwEm2{0%{transform:translate3d(0,0,0);opacity:0}15%{opacity:.9}100%{transform:translate3d(var(--dx),-90px,0) scale(.3);opacity:0}}
+.hw-hero-ic{flex:none;font-size:54px;line-height:1;text-shadow:0 0 22px rgba(255,130,20,.85);animation:hwPk 2.8s ease-in-out infinite}
+.hw-hero-copy{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.hw-hero-t{font-size:22px;font-weight:800;line-height:1.1;background:linear-gradient(100deg,#ffb347,#ff7a1a 35%,#d9b2ff 65%,#ffb347);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:nmFlow 7s linear infinite}
+.hw-hero-s{font-size:12.5px;color:rgba(255,226,196,.75)}
+.hw-hero-bar{height:8px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden;max-width:340px}
+.hw-hero-bar i{display:block;height:100%;width:var(--p);border-radius:inherit;background:linear-gradient(90deg,#ff7a1a,#ffb347);box-shadow:0 0 10px rgba(255,120,20,.7)}
+.hw-hero-go{flex:none;padding:11px 16px;border-radius:14px;font-weight:800;font-size:13.5px;color:#2a1000;background:linear-gradient(135deg,#ffb347,#ff6a00);box-shadow:0 8px 22px rgba(255,110,20,.4),inset 0 1px 0 rgba(255,255,255,.45);position:relative}
+.hw-hero-go b{position:absolute;top:-8px;right:-8px;min-width:22px;height:22px;padding:0 6px;border-radius:99px;display:grid;place-items:center;font-size:12px;color:#fff;background:#a855ff;box-shadow:0 0 12px rgba(168,85,255,.8);animation:hwReady 1.6s ease-in-out infinite}
+@media (max-width:620px){.hw-hero{flex-wrap:wrap;gap:12px;padding:16px}.hw-hero-ic{font-size:42px}.hw-hero-go{width:100%;text-align:center}}
+
+/* home button + pass modal */
+.hw-dot{position:absolute;top:12px;right:12px;z-index:2;pointer-events:none;min-width:22px;height:22px;padding:0 6px;border-radius:99px;display:grid;place-items:center;font-size:12px;font-weight:900;color:#2a1000;background:linear-gradient(135deg,#ffb347,#ff6a00);animation:hwReady 1.6s ease-in-out infinite}
+.modal.hw-modal{max-width:580px;width:calc(100vw - 20px);padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:min(90vh,880px);position:relative;
+  background:linear-gradient(180deg,rgba(30,12,46,.98),rgba(14,8,24,.98));border:1px solid rgba(255,130,40,.4);box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 70px rgba(255,110,20,.22);animation:hwPop .45s cubic-bezier(.16,1,.3,1) both}
+@keyframes hwPop{from{opacity:0;transform:translateY(18px) scale(.94)}}
+.hw-head{position:relative;flex:none;padding:20px 20px 14px;text-align:center;overflow:hidden;background:radial-gradient(90% 140% at 50% -20%,rgba(255,130,30,.42),transparent 65%),radial-gradient(60% 100% at 100% 100%,rgba(150,70,255,.3),transparent 70%)}
+.hw-head .hw-big{display:block;font-size:44px;line-height:1.1;animation:hwPk 2.6s ease-in-out infinite}
+.hw-head h2{font-size:24px;margin:2px 0 2px;background:linear-gradient(90deg,#ff7a1a,#ffd27a,#c58bff,#ff7a1a);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:nmFlow 6s linear infinite}
+.hw-head p{font-size:12.5px;color:var(--muted);max-width:420px;margin:0 auto}
+.hw-x{position:absolute;top:12px;right:12px;z-index:2;width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid var(--border);color:var(--text)}
+.hw-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.hw-stat{padding:9px 6px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,150,60,.25)}
+.hw-stat b{display:block;font-size:17px;color:#ffd9a8;font-variant-numeric:tabular-nums}
+.hw-stat span{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.hw-bar{height:14px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin:14px 0 5px;box-shadow:inset 0 1px 3px rgba(0,0,0,.5)}
+.hw-bar i{display:block;height:100%;width:var(--p);border-radius:inherit;transition:width .7s cubic-bezier(.16,1,.3,1);background:repeating-linear-gradient(135deg,#ff7a1a 0 10px,#ffb347 10px 20px);background-size:28px 28px;animation:hwStripe 1s linear infinite;box-shadow:0 0 14px rgba(255,120,20,.7)}
+@keyframes hwStripe{to{background-position:28px 0}}
+.hw-bar-t{font-size:11.5px;color:var(--muted);display:flex;justify-content:space-between}
+.hw-list{overflow:auto;padding:10px 14px 6px;display:flex;flex-direction:column;gap:8px;flex:1;min-height:0}
+.hw-row{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:16px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);animation:hwRow .4s both;animation-delay:calc(var(--i)*22ms)}
+@keyframes hwRow{from{opacity:0;transform:translateX(-10px)}}
+.hw-row.ready{border-color:rgba(255,160,60,.75);background:linear-gradient(100deg,rgba(255,120,20,.22),rgba(150,70,255,.1));animation:hwRow .4s both,hwReady 1.8s ease-in-out infinite}
+@keyframes hwReady{0%,100%{box-shadow:0 0 6px rgba(255,120,20,.25)}50%{box-shadow:0 0 22px rgba(255,130,30,.6)}}
+.hw-row.done{opacity:.7}.hw-row.lock{opacity:.58}
+.hw-row.big{border-color:rgba(190,120,255,.5);background:linear-gradient(100deg,rgba(150,70,255,.16),rgba(255,255,255,.04))}
+.hw-lv{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:13.5px;background:#2a1640;border:2px solid rgba(255,150,60,.5);color:#ffd9a8}
+.hw-row.done .hw-lv{background:linear-gradient(135deg,#ffb347,#ff6a00);color:#2a1000;border-color:transparent}
+.hw-ic{flex:none;width:32px;text-align:center;font-size:25px}
+.hw-tx{flex:1;min-width:0}
+.hw-tx b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hw-tx span{font-size:11.5px;color:var(--muted)}
+.hw-tag{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:99px;font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#d9b8ff;border:1px solid rgba(170,110,255,.5)}
+.hw-btn{flex:none;padding:8px 14px;border-radius:12px;font-weight:800;font-size:12.5px;color:#2a1000;background:linear-gradient(135deg,#ffb347,#ff6a00);box-shadow:0 6px 16px rgba(255,110,20,.4);transition:transform .15s}
+.hw-btn:hover{transform:scale(1.06)}
+.hw-ok{flex:none;font-size:12px;font-weight:800;color:#ffb26b}
+.hw-foot{flex:none;padding:12px 16px 16px;display:flex;gap:10px;align-items:center;border-top:1px solid rgba(255,255,255,.08)}
+.hw-foot .hw-btn{flex:1;padding:12px;font-size:14px}
+.hw-foot .hw-btn:disabled{opacity:.5;box-shadow:none;transform:none;cursor:not-allowed}
+.hw-pop{position:fixed;top:var(--y);left:var(--x);z-index:950;font-size:26px;pointer-events:none;animation:hwPopUp 1.6s ease-out forwards}
+@keyframes hwPopUp{0%{opacity:1;transform:translate(0,0) scale(.6)}100%{opacity:0;transform:translate(var(--dx),-170px) scale(1.4) rotate(var(--r))}}
+
+/* ---- Halloween first-time guide (shown once per account, flag saved at halloween/intro/<id>) ---- */
+@property --hwiA{syntax:'<angle>';inherits:false;initial-value:0deg}
+@keyframes hwiIn{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:none}}
+@keyframes hwiOut{to{opacity:0;transform:scale(.97)}}
+@keyframes hwiPop{from{opacity:0;transform:translateY(14px) scale(.94)}to{opacity:1;transform:none}}
+@keyframes hwiSpin{to{--hwiA:360deg}}
+@keyframes hwiEm{0%{transform:translate3d(0,0,0) scale(.6);opacity:0}15%{opacity:1}100%{transform:translate3d(var(--dx),-115vh,0) scale(1.1);opacity:0}}
+@keyframes hwiBat{from{transform:translate3d(0,0,0)}to{transform:translate3d(720px,var(--dy),0)}}
+@keyframes hwiGlow{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:.95;transform:scale(1.14)}}
+@keyframes hwiFloat{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-8px) rotate(4deg)}}
+.hwi{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;overflow:hidden;color:var(--text);
+  background:radial-gradient(90% 60% at 50% 0,rgba(255,122,26,.34),transparent 70%),radial-gradient(70% 60% at 100% 100%,rgba(150,70,255,.34),transparent 70%),#0d0616;animation:hwiIn .5s cubic-bezier(.16,1,.3,1) both}
+.hwi.out{animation:hwiOut .3s ease forwards;pointer-events:none}
+.hwi-fx{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.hwi-fx i{position:absolute;bottom:-12px;left:var(--x);width:var(--s);height:var(--s);border-radius:50%;background:#ffb347;box-shadow:0 0 10px 2px rgba(255,140,40,.8);opacity:0;animation:hwiEm var(--d) linear var(--t) infinite}
+.hwi-fx b{position:absolute;left:-50px;top:var(--y);font-size:var(--z);font-weight:400;opacity:.7;animation:hwiBat var(--d) linear var(--t) infinite}
+.hwi-skip,.hw-help{position:absolute;top:12px;z-index:7;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid var(--border);color:var(--text);font-weight:700}
+.hwi-skip{right:12px;padding:6px 13px;font-size:12.5px}
+.hw-help{left:12px;width:32px;height:32px;z-index:2;font-size:15px}
+.hwi-skip:hover,.hw-help:hover{background:rgba(255,150,60,.25)}
+.hwi-stage{position:relative;flex:1;min-height:0;z-index:2}
+.hwi-s{position:absolute;inset:0;overflow-y:auto;padding:52px 20px 10px;display:flex;opacity:0;visibility:hidden;transform:translateX(34px);
+  transition:opacity .35s ease,transform .45s cubic-bezier(.16,1,.3,1),visibility 0s linear .45s}
+.hwi-s.on{opacity:1;visibility:visible;transform:none;transition-delay:0s}
+.hwi-s.prev{transform:translateX(-34px)}
+.hwi-c{margin:auto;width:100%;max-width:480px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.hwi-s.on .hwi-in{animation:hwiPop .55s cubic-bezier(.16,1.1,.3,1) backwards;animation-delay:calc(.08s + var(--n,0)*.09s)}
+.hwi-ring{position:relative;width:118px;height:118px;display:grid;place-items:center}
+.hwi-ring::before{content:'';position:absolute;inset:0;border-radius:50%;padding:2.5px;background:conic-gradient(from var(--hwiA),transparent 0 45%,#ff7a1a 65%,#c58bff 85%,transparent 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:hwiSpin 3.2s linear infinite}
+.hwi-ring::after{content:'';position:absolute;inset:-18px;border-radius:50%;background:radial-gradient(closest-side,rgba(255,122,26,.5),transparent);animation:hwiGlow 3s ease-in-out infinite;z-index:-1}
+.hwi-ring span{font-size:66px;line-height:1;text-shadow:0 0 26px rgba(255,130,20,.9);animation:hwiFloat 3s ease-in-out infinite}
+.hwi-h{font-size:24px;line-height:1.15;font-weight:900;background:linear-gradient(90deg,#ff7a1a,#ffd27a,#c58bff,#ff7a1a);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:nmFlow 5s linear infinite}
+.hwi-p{font-size:13.5px;line-height:1.55;color:rgba(255,236,214,.82);max-width:420px}
+.hwi-chips{display:flex;flex-wrap:wrap;gap:7px;justify-content:center}
+.hwi-chip{padding:6px 12px;border-radius:99px;font-size:12px;font-weight:800;color:#ffd9a8;background:rgba(255,122,26,.14);border:1px solid rgba(255,150,60,.4)}
+.hwi-card{display:flex;gap:12px;align-items:center;text-align:left;width:100%;padding:10px 13px;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,150,60,.25)}
+.hwi-ci{flex:none;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:24px;background:rgba(255,122,26,.18);box-shadow:inset 0 0 0 1px rgba(255,150,60,.3)}
+.hwi-card b{display:block;font-size:14px;margin-bottom:2px;color:#ffe3c2}
+.hwi-card span{font-size:12.3px;line-height:1.45;color:rgba(255,236,214,.78)}
+.hwi-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+.hwi-rw{display:flex;flex-direction:column;gap:3px;min-width:0;text-align:left;padding:9px 11px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
+.hwi-rw small{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#d9b8ff}
+.hwi-rw .nm{font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hwi-nav{position:relative;z-index:3;flex:none;display:flex;align-items:center;gap:10px;padding:12px 16px 16px;border-top:1px solid rgba(255,255,255,.08);background:rgba(13,6,22,.6)}
+.hwi-dots{flex:1;display:flex;justify-content:center;gap:7px}
+.hwi-dots button{width:8px;height:8px;padding:0;border-radius:99px;background:rgba(255,255,255,.25);transition:width .3s ease,background .3s ease}
+.hwi-dots button.on{width:24px;background:linear-gradient(90deg,#ffb347,#ff6a00)}
+.hwi-b{padding:11px 20px;border-radius:13px;font-weight:800;font-size:13.5px;color:#2a1000;background:linear-gradient(135deg,#ffb347,#ff6a00);box-shadow:0 6px 16px rgba(255,110,20,.4);transition:transform .15s ease}
+.hwi-b:hover{transform:scale(1.05)}
+.hwi-b.sec{color:var(--text);background:rgba(255,255,255,.09);box-shadow:none;border:1px solid var(--border)}
+.hwi-b.sec.v{visibility:hidden}
+@media (max-width:420px){.hwi-h{font-size:21px}.hwi-ring{width:98px;height:98px}.hwi-ring span{font-size:54px}.hwi-b{padding:10px 14px}}
+html.anti-lag .hwi *,html.anti-lag .hwi{animation:none!important}
+@media (prefers-reduced-motion:reduce){.hwi *,.hwi{animation:none!important}}
+/* HALLOWEEN:END */
 </style>
 </head>
 <body>
@@ -2832,6 +3061,7 @@ const DB=(()=>{
     listen('vip',v=>{C.vip=v||{};if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
     listen('flair',v=>{C.flair=v||{}});
     listen('roles',v=>{C.roles=v||{};if(typeof refreshSpinUI==='function'){try{refreshSpinUI()}catch(_){}}});
+    /* HALLOWEEN:START */ listen('halloween/claimed',v=>{window.HW_CLAIMED=v||{};if(typeof hwRefresh==='function'){try{hwRefresh()}catch(_){}}});listen('halloween/progress/'+myId,v=>{window.HW_PROG=v||{};window.HW_LOADED=true;if(typeof hwRefresh==='function'){try{hwRefresh()}catch(_){}}});listen('halloween/intro/'+myId,v=>{window.HW_INTRO=Number(v)||0;window.HW_INTRO_LOADED=true;if(typeof hwMaybeIntro==='function'){try{hwMaybeIntro()}catch(_){}}}); /* HALLOWEEN:END */
     listen('lastSpin/'+myId,v=>{C.lastSpin=Number(v)||0;if(typeof refreshSpinUI==='function'){try{refreshSpinUI()}catch(_){}}});
     listen('friendRequests/'+myId,v=>C.friendReqIn=v||{});
     listen('lastRead/'+myId,v=>C.lastRead=v||{});
@@ -7096,6 +7326,284 @@ function modalRules(opts){
   };
 }
 $('#rulesBtn').onclick=()=>modalRules();
+/* HALLOWEEN:START ===== Halloween event: season pass + decorations. Delete everything between HALLOWEEN:START and HALLOWEEN:END (this block, the CSS block and the listener line) to remove the event. =====
+   Progress = minutes logged in and connected (AFK is fine). Level n needs 2n²+13n total minutes (15m for level 1, +4m more per level).
+   Claimed level is stored at halloween/claimed/<id>; everything at or below that level is owned. Server rules: halloween-rules-block.json */
+const HW={S:1790726400000,E:1794096000000,G:604800000,N:30,K:'ich.hwTheme',IV:1};   /* IV = guide version: raise it to show the guide again to everyone (flag lives at halloween/intro/<id>) */   // start 2026-09-30, end 2026-11-08, +7 day claim grace
+const hwNow=()=>Date.now()+(typeof SKEW==='number'?SKEW:0);
+const hwOpen=()=>hwNow()>=HW.S&&hwNow()<=HW.E;
+const hwCanClaim=()=>hwNow()>=HW.S&&hwNow()<=HW.E+HW.G;
+const hwCum=n=>2*n*n+13*n;
+// [emoji, name, kind(b=badge, n=name effect, t=title pill + name effect), fx]
+const HW_R=[
+ ['🍬','Candy Corn','b'],['🕯️','Candlelight','b'],['🦇','Bat Wings','b'],['🍭','Sweet Tooth','b'],['🕸️','Cobweb','n','web'],
+ ['🍫','Trick or Treat','b'],['👻','Friendly Ghost','n','ghost'],['🌙','Harvest Moon','b'],['🎃','Pumpkin Patch','n','pumpkin'],['🕷️','Creeping Spider','b'],
+ ['🧪','Potion Master','b'],['🧙','Witch\'s Brew','n','witch'],['🐈‍⬛','Black Cat','b'],['🔮','Crystal Ball','b'],['🦴','Skeleton Crew','n','bone'],
+ ['🪦','Graveyard Shift','b'],['🧟','Zombie','n','zombie'],['🩸','Blood Moon','b'],['🧛','Vampire','t','vamp'],['🐺','Werewolf','n','wolf'],
+ ['🪄','Hex','b'],['⚰️','Haunted Coffin','b'],['🔥','Hellfire','n','hell'],['😈','Imp','b'],['💀','Grim Reaper','t','reaper'],
+ ['🏚️','Haunted Manor','b'],['🌌','Midnight Spirit','n','spirit'],['🎃','Headless Horseman','t','horse'],['☠️','Lord of the Dead','n','lord'],['👑','Hallow Royalty','t','royal']
+];
+const HW_KIND={b:'Badge',n:'Name effect',t:'Title + effect'};
+const hwLevel=id=>Math.min(HW.N,Math.max(0,Number((window.HW_CLAIMED||{})[id])||0));
+function hwStyleOf(id){
+  const L=hwLevel(id);if(!L)return null;
+  let fx=null,title=null;const bd=[];
+  for(let i=0;i<L;i++){const r=HW_R[i];if(r[2]==='b')bd.push(r[0]);else{fx=r[3];if(r[2]==='t')title=r}}
+  return{fx,title,badges:bd.slice(-1)};
+}
+function hwWrap(id,html,plain){
+  try{
+    const s=hwStyleOf(id);if(!s)return html;
+    const on=(typeof customNamesOn!=='function')||customNamesOn();
+    let out=html;
+    if(on&&s.fx)out='<span class="hw-name hw-s-'+s.fx+(plain?' hw-plain':'')+'">'+html+'</span>';
+    if(on&&s.title)out='<span class="hw-title hw-t-'+s.title[3]+'">'+s.title[0]+' '+s.title[1].split(' ').pop()+'</span>'+out;
+    return out+s.badges.map(b=>'<span class="hw-bdg">'+b+'</span>').join('');
+  }catch(_){return html}
+}
+let _hwIn=false;
+{
+  const oFull=fullNameHTML,oStyled=styledNameHTML,oProf=profileRolesHTML;
+  styledNameHTML=function(id,n){const h=oStyled(id,n);return _hwIn?h:hwWrap(id,h,!nameStylePreset(id))};
+  fullNameHTML=function(id,n){let h;_hwIn=true;try{h=oFull(id,n)}finally{_hwIn=false}return hwWrap(id,h,!vipTierOf(id)&&!nameStylePreset(id))};
+  profileRolesHTML=function(id){
+    const h=oProf(id),L=hwLevel(id);if(!L)return h;
+    const p='<span class="pf-role hw-pf">🎃 Halloween Pass · Lv '+L+'</span>'+HW_R.slice(0,L).filter(r=>r[2]!=='b').map(r=>'<span class="pf-role hw-pf">'+r[0]+' '+r[1]+'</span>').join('');
+    return h?h.replace(/<\/div>\s*$/,p+'</div>'):'<div class="pf-roles">'+p+'</div>';
+  };
+}
+/* ---------- decorations (turn off in Settings → Halloween) ---------- */
+function hwWant(){
+  try{const s=ME&&ME.settings&&ME.settings.hwTheme;if(typeof s==='boolean')return s}catch(_){}
+  try{return localStorage.getItem(HW.K)!=='0'}catch(_){return true}
+}
+function hwSetTheme(v){
+  try{localStorage.setItem(HW.K,v?'1':'0')}catch(_){}
+  if(ME&&ME.id!=null)DB.setSettingKey(ME.id,'hwTheme',v).catch(()=>{});
+  hwSync();
+}
+function hwDeco(on){
+  document.documentElement.classList.toggle('hw-on',on);
+  let d=document.getElementById('hwDeco');
+  if(!on){if(d)d.remove();return}
+  if(d)return;
+  const r=(a,b)=>(a+Math.random()*(b-a)).toFixed(2);
+  const web='<svg viewBox="0 0 120 120"><g fill="none" stroke="currentColor" stroke-width="1"><path d="M0 0L120 0M0 0L0 120M0 0L100 60M0 0L60 100M0 0L115 25M0 0L25 115"/><path d="M0 30Q18 18 30 0M0 55Q32 36 55 0M0 82Q50 58 82 0M0 110Q70 82 110 0"/></g></svg>';
+  let h='<i class="hw-vig"></i><i class="hw-moon"></i><i class="hw-fog"></i><i class="hw-fog f2"></i><div class="hw-web l">'+web+'</div><div class="hw-web r">'+web+'</div>'
+    +'<span class="hw-sp" style="--x:14%;--l:60px"><u></u><b>🕷️</b></span><span class="hw-sp hw-x" style="--x:86%;--l:90px"><u></u><b>🕷️</b></span>';
+  for(let i=0;i<7;i++)h+='<b class="hw-bat'+(i>2?' hw-x':'')+'" style="--y:'+r(6,55)+'vh;--s:'+r(16,28)+'px;--d:'+r(16,30)+'s;--t:-'+r(0,24)+'s"><i>🦇</i></b>';
+  for(let i=0;i<4;i++)h+='<b class="hw-gh'+(i>1?' hw-x':'')+'" style="--x:'+r(4,92)+'%;--d:'+r(20,34)+'s;--t:-'+r(0,30)+'s">👻</b>';
+  for(let i=0;i<16;i++)h+='<i class="hw-em'+(i>7?' hw-x':'')+'" style="--x:'+r(0,100)+'%;--s:'+r(2,5)+'px;--dx:'+r(-60,60)+'px;--d:'+r(9,18)+'s;--t:-'+r(0,16)+'s"></i>';
+  h+='<b class="hw-pk l">🎃</b><b class="hw-pk r hw-x">🎃</b>';
+  d=document.createElement('div');d.id='hwDeco';d.className='hw-deco';d.setAttribute('aria-hidden','true');d.innerHTML=h;
+  document.body.insertBefore(d,document.body.firstChild);   // first child + z-index 0 = sits behind every page and panel, so it can never cover or shift UI
+}
+/* ---------- season pass ---------- */
+function hwProg(){
+  const p=window.HW_PROG||{},m=Math.max(0,Number(p.mins)||0);let lvl=0;
+  while(lvl<HW.N&&hwCum(lvl+1)<=m)lvl++;
+  return{m,lvl,last:Number(p.last)||0};
+}
+const hwFmt=m=>{m=Math.max(0,Math.ceil(m));const h=Math.floor(m/60),x=m%60;return h?h+'h '+String(x).padStart(2,'0')+'m':x+'m'};
+function hwClaimable(){if(!ME)return 0;const{lvl}=hwProg();return Math.max(0,lvl-hwLevel(ME.id))}
+function hwBurst(){
+  if(document.documentElement.classList.contains('anti-lag'))return;
+  const em=['🎃','🦇','👻','🕸️','🍬','💀'];
+  for(let i=0;i<22;i++){const e=document.createElement('b');e.className='hw-pop';e.style.cssText='--x:'+(20+Math.random()*60)+'vw;--y:'+(55+Math.random()*25)+'vh;--dx:'+((Math.random()-.5)*220)+'px;--r:'+((Math.random()-.5)*80)+'deg;animation-delay:'+(Math.random()*.35)+'s';e.textContent=em[i%em.length];document.body.appendChild(e);setTimeout(()=>e.remove(),2200)}
+  if(typeof burstConfetti==='function')burstConfetti(50);
+}
+function hwRowsHTML(){
+  const{m,lvl}=hwProg(),have=ME?hwLevel(ME.id):0;
+  return HW_R.map((r,i)=>{
+    const L=i+1,done=L<=have,ready=!done&&L<=lvl,big=r[2]!=='b';
+    const nm=r[3]?'<span class="hw-name hw-plain hw-s-'+r[3]+'">'+r[1]+'</span>':r[1];
+    const cost=hwCum(L)-hwCum(L-1);
+    const sub=done?'Claimed':ready?'Ready to claim!':'Needs '+hwFmt(hwCum(L)-m)+' more online';
+    const act=done?'<span class="hw-ok">✓ Owned</span>':ready?'<button class="hw-btn" data-l="'+L+'" type="button">Claim</button>':'<span class="hw-ok" style="color:var(--muted)">🔒</span>';
+    return '<div class="hw-row'+(done?' done':ready?' ready':' lock')+(big?' big':'')+'" style="--i:'+i+'"><div class="hw-lv">'+L+'</div><div class="hw-ic">'+r[0]+'</div><div class="hw-tx"><b>'+nm+(big?'<span class="hw-tag">'+HW_KIND[r[2]]+'</span>':'')+'</b><span>'+sub+' · level costs '+hwFmt(cost)+'</span></div>'+act+'</div>';
+  }).join('');
+}
+function hwHeadStatsHTML(){
+  const{m,lvl,last}=hwProg(),next=lvl<HW.N?hwCum(lvl+1)-m:0,span=lvl<HW.N?hwCum(lvl+1)-hwCum(lvl):1;
+  const into=lvl<HW.N?m-hwCum(lvl):span,pct=Math.min(100,Math.round(into/span*100));
+  const extra=(document.hidden||!last)?0:Math.min(59,Math.floor((hwNow()-last)/1000));
+  const t=Math.floor(m/60)+'h '+String(m%60).padStart(2,'0')+'m '+String(Math.max(0,extra)).padStart(2,'0')+'s';
+  return '<div class="hw-stats"><div class="hw-stat"><b>'+lvl+' / '+HW.N+'</b><span>Level</span></div><div class="hw-stat"><b>'+(m/60).toFixed(1)+'</b><span>Hours</span></div><div class="hw-stat"><b id="hwTime">'+t+'</b><span>Time online</span></div></div>'
+    +'<div class="hw-bar"><i style="--p:'+pct+'%"></i></div><div class="hw-bar-t"><span>'+(lvl<HW.N?'Level '+(lvl+1)+' in '+hwFmt(next):'Max level reached! 👑')+'</span><span>'+pct+'%</span></div>';
+}
+let _hwTimer=null;
+function hwRender(){
+  const bg=document.getElementById('hwBg');if(!bg)return;
+  const hs=bg.querySelector('#hwHeadStats'),ls=bg.querySelector('.hw-list');
+  if(hs)hs.innerHTML=hwHeadStatsHTML();
+  if(ls){const y=ls.scrollTop;ls.innerHTML=hwRowsHTML();ls.scrollTop=y}
+  const n=hwClaimable(),b=bg.querySelector('#hwAll');if(b){b.disabled=n<1||!hwCanClaim();b.textContent=n?'🎁 Claim '+n+' reward'+(n>1?'s':''):'Nothing to claim yet'}
+}
+async function hwClaim(L){
+  if(!ME||!hwCanClaim())return;
+  const id=ME.id;L=Math.min(L,hwProg().lvl);
+  if(L<=hwLevel(id))return;
+  try{
+    await set(ref(rtdb,'halloween/claimed/'+id),L);
+    window.HW_CLAIMED={...(window.HW_CLAIMED||{}),[id]:L};
+    hwBurst();toast('🎃 Claimed up to level '+L+': '+HW_R[L-1][1]+'!');hwRender();hwSync();
+  }catch(e){console.warn('halloween claim failed',e);toast('Could not claim: '+((e&&e.message)||'try again'),'bad')}
+}
+function hwModal(){
+  if(!ME||!hwCanClaim())return;
+  const root=document.getElementById('modalRoot');if(!root)return;
+  root.innerHTML='<div class="modal-bg" id="hwBg"><div class="modal hw-modal" role="dialog" aria-modal="true" aria-label="Halloween Season Pass"><button class="hw-help" id="hwHelp" type="button" aria-label="How the Halloween Pass works" title="How it works">?</button><button class="hw-x" id="hwX" type="button" aria-label="Close">✕</button>'
+    +'<div class="hw-head"><span class="hw-big">🎃</span><h2>Halloween Season Pass</h2><p>Spend time online to level up. '+HW.N+' levels of spooky badges, name effects and permanent roles. Every level takes a little longer than the last.</p><div id="hwHeadStats"></div></div>'
+    +'<div class="hw-list"></div><div class="hw-foot"><button class="hw-btn" id="hwAll" type="button" disabled>Nothing to claim yet</button></div></div></div>';
+  const close=()=>{const bg=document.getElementById('hwBg');if(!bg)return;clearInterval(_hwTimer);bg.classList.add('closing');setTimeout(()=>{if(document.getElementById('hwBg'))root.innerHTML=''},220)};
+  document.getElementById('hwBg').onclick=e=>{if(e.target.id==='hwBg')close();const b=e.target.closest&&e.target.closest('.hw-btn[data-l]');if(b)hwClaim(+b.dataset.l)};
+  document.getElementById('hwX').onclick=close;
+  document.getElementById('hwHelp').onclick=()=>hwIntroShow(true);
+  document.getElementById('hwAll').onclick=()=>hwClaim(hwProg().lvl);
+  hwRender();clearInterval(_hwTimer);
+  _hwTimer=setInterval(()=>{const bg=document.getElementById('hwBg');if(!bg){clearInterval(_hwTimer);return}const hs=bg.querySelector('#hwHeadStats');if(hs&&!document.hidden){const t=bg.querySelector('#hwTime');if(t){const{m,last}=hwProg();const ex=last?Math.min(59,Math.max(0,Math.floor((hwNow()-last)/1000))):0;t.textContent=Math.floor(m/60)+'h '+String(m%60).padStart(2,'0')+'m '+String(ex).padStart(2,'0')+'s'}}},1000);
+  hwMaybeIntro();
+}
+/* ---------- first-time guide: shown the first time the pass is opened; the \"seen\" flag is saved to the account (halloween/intro/<id>) so it follows you across devices ---------- */
+const hwIntroKey=()=>'ich.hwIntro.'+(ME&&ME.id);
+function hwIntroSeen(){
+  let loc=0;try{loc=Number(localStorage.getItem(hwIntroKey()))||0}catch(_){}
+  return Math.max(Number(window.HW_INTRO)||0,loc)>=HW.IV;
+}
+async function hwIntroMark(){
+  if(!ME)return;
+  try{localStorage.setItem(hwIntroKey(),String(HW.IV))}catch(_){}
+  if((Number(window.HW_INTRO)||0)>=HW.IV)return;
+  try{await set(ref(rtdb,'halloween/intro/'+ME.id),HW.IV);window.HW_INTRO=HW.IV}
+  catch(e){console.warn('halloween guide flag not saved',e)}
+}
+let _hwiOpen=false;
+function hwMaybeIntro(){
+  if(_hwiOpen||!ME||!document.getElementById('hwBg')||document.querySelector('.hwi'))return;
+  if(!(window.HW_INTRO_LOADED||performance.now()>8000)){setTimeout(hwMaybeIntro,1200);return}   // wait for the saved flag so it never flashes for someone who already saw it
+  if(hwIntroSeen()){if(window.HW_INTRO_LOADED&&(Number(window.HW_INTRO)||0)<HW.IV)hwIntroMark();return}
+  hwIntroShow(false);
+}
+function hwIntroShow(replay){
+  const modal=document.querySelector('#hwBg .hw-modal');if(!modal||_hwiOpen)return;
+  _hwiOpen=true;
+  const D=t=>new Date(t).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  const total=hwCum(HW.N),hrs=(total/60).toFixed(1).replace(/\.0$/,''),days=Math.max(1,Math.round((HW.E-HW.S)/864e5)),perDay=Math.round(total/days);
+  const nB=HW_R.filter(r=>r[2]==='b').length,nN=HW_R.filter(r=>r[2]==='n').length,nT=HW_R.filter(r=>r[2]==='t').length;
+  const lv=ME?hwProg().lvl:0;
+  const prev=(fx,t)=>{const title=t?'<span class="hw-title hw-t-'+fx+'">'+t+'</span>':'';return title+'<span class="hw-name hw-plain hw-s-'+fx+'">YourName</span>'};
+  const rw=(L,kind,fx,t)=>'<div class="hwi-rw hwi-in" style="--n:'+(2+Math.floor(L/6))+'"><small>Lv '+L+' · '+kind+'</small><span class="nm">'+prev(fx,t)+'</span></div>';
+  const card=(i,ic,h,p)=>'<div class="hwi-card hwi-in" style="--n:'+i+'"><div class="hwi-ci">'+ic+'</div><div><b>'+h+'</b><span>'+p+'</span></div></div>';
+  const slides=[
+    '<div class="hwi-ring hwi-in"><span>🎃</span></div><div class="hwi-h hwi-in" style="--n:1">The Halloween Season Pass is here!</div>'
+      +'<div class="hwi-p hwi-in" style="--n:2">Hang out in Itsukis Chat, level up and unlock spooky badges, glowing name effects and permanent roles. No purchase needed. Just be online.</div>'
+      +'<div class="hwi-chips hwi-in" style="--n:3"><span class="hwi-chip">🗓️ '+D(HW.S)+' → '+D(HW.E)+'</span><span class="hwi-chip">🏆 '+HW.N+' levels</span><span class="hwi-chip">🎁 Claim until '+D(HW.E+HW.G)+'</span></div>',
+    '<div class="hwi-h hwi-in">How it works</div>'
+      +card(1,'⏱️','Just be online','You earn 1 minute of progress for every minute you are logged in and connected. No need to click or type, so you can leave it running and go AFK.')
+      +card(2,'📈','Level up','There are '+HW.N+' levels and each takes 4 minutes longer than the last. Level 1 takes '+hwFmt(hwCum(1))+', level '+HW.N+' takes '+hwFmt(hwCum(HW.N)-hwCum(HW.N-1))+'. About '+hrs+' hours in total, roughly '+perDay+' min a day.')
+      +card(3,'🎁','Claim your rewards','Open the pass and tap Claim (or Claim all). Everything up to your level is yours to keep.'),
+    '<div class="hwi-h hwi-in">Spooky rewards</div>'
+      +'<div class="hwi-p hwi-in" style="--n:1">'+nB+' badges, '+nN+' name effects and '+nT+' special titles. Your newest badge, effect and title show next to your name in chat. A few examples:</div>'
+      +'<div class="hwi-grid">'+rw(5,'Cobweb','web')+rw(7,'Ghost','ghost')+rw(12,'Witch','witch')+rw(19,'Title','vamp','🧛 Vampire')+rw(23,'Hellfire','hell')+rw(25,'Title','reaper','💀 Reaper')+rw(28,'Title','horse','🎃 Horseman')+rw(30,'Title','royal','👑 Royalty')+'</div>',
+    '<div class="hwi-h hwi-in">What\'s new</div>'
+      +card(1,'🎃','Halloween theme','Bats, ghosts, fog and cobwebs with an orange and purple look. Turn it off in Settings → Halloween event. It is saved to your account.')
+      +card(2,'🚪','Where is the pass?','Open Itsukis Chat and tap the Halloween Pass banner, or use Settings → Open Halloween Pass.')
+      +card(3,'🔔','Rewards ready','An orange number on the Itsukis Chat button tells you how many rewards are waiting to be claimed.')
+      +card(4,'🐌','Laggy device?','Turn on Anti-lag in Settings to calm the animations.'),
+    '<div class="hwi-ring hwi-in"><span>🕯️</span></div><div class="hwi-h hwi-in" style="--n:1">Your clock is ticking</div>'
+      +'<div class="hwi-p hwi-in" style="--n:2">You are all set. Keep the tab open, stay active and come back to claim your rewards. You can reopen this guide any time with the <b>?</b> button at the top left of the pass.</div>'
+      +'<div class="hwi-chips hwi-in" style="--n:3"><span class="hwi-chip">⭐ You are on level '+lv+' of '+HW.N+'</span></div>'
+  ];
+  const r=(a,b)=>(a+Math.random()*(b-a)).toFixed(1);let fx='';
+  for(let i=0;i<22;i++)fx+='<i style="--x:'+r(2,98)+'%;--s:'+r(2,5)+'px;--dx:'+r(-70,70)+'px;--d:'+r(6,12)+'s;--t:-'+r(0,10)+'s"></i>';
+  for(let i=0;i<4;i++)fx+='<b style="--y:'+r(4,60)+'%;--z:'+r(16,26)+'px;--dy:'+r(-40,40)+'px;--d:'+r(11,19)+'s;--t:-'+r(0,14)+'s">🦇</b>';
+  const el=document.createElement('div');el.className='hwi';el.id='hwi';el.setAttribute('role','dialog');el.setAttribute('aria-label','Halloween Pass guide');
+  el.innerHTML='<div class="hwi-fx" aria-hidden="true">'+fx+'</div><button class="hwi-skip" id="hwiSkip" type="button">'+(replay?'Close':'Skip')+'</button>'
+    +'<div class="hwi-stage">'+slides.map((h,i)=>'<section class="hwi-s'+(i?'':' on')+'"><div class="hwi-c">'+h+'</div></section>').join('')+'</div>'
+    +'<div class="hwi-nav"><button class="hwi-b sec v" id="hwiBack" type="button">Back</button><div class="hwi-dots">'+slides.map((_,i)=>'<button type="button" data-i="'+i+'" aria-label="Page '+(i+1)+'"'+(i?'':' class="on"')+'></button>').join('')+'</div><button class="hwi-b" id="hwiNext" type="button">Next</button></div>';
+  modal.style.minHeight=Math.min(600,Math.round(innerHeight*.9))+'px';   // the guide fills the pass window, so keep it tall enough even if the reward list is short
+  modal.appendChild(el);
+  hwBurst();
+  let cur=0;const ss=[...el.querySelectorAll('.hwi-s')],dots=[...el.querySelectorAll('.hwi-dots button')],nx=el.querySelector('#hwiNext'),bk=el.querySelector('#hwiBack');
+  const go=i=>{
+    i=Math.max(0,Math.min(slides.length-1,i));if(i===cur)return;
+    ss.forEach((x,k)=>{x.classList.toggle('on',k===i);x.classList.toggle('prev',k<i)});
+    dots.forEach((d,k)=>d.classList.toggle('on',k===i));
+    cur=i;bk.classList.toggle('v',i===0);nx.textContent=i===slides.length-1?(replay?'Done':'Let\'s go! 🎃'):'Next';
+  };
+  const key=e=>{
+    if(e.key==='Escape'){e.stopPropagation();e.preventDefault();fin(false)}
+    else if(e.key==='ArrowRight'||e.key==='Enter'){e.stopPropagation();e.preventDefault();nx.click()}
+    else if(e.key==='ArrowLeft'){e.stopPropagation();go(cur-1)}
+  };
+  document.addEventListener('keydown',key,true);
+  function fin(celebrate){
+    document.removeEventListener('keydown',key,true);
+    if(!replay)hwIntroMark();
+    if(celebrate)hwBurst();
+    el.classList.add('out');setTimeout(()=>{el.remove();_hwiOpen=false;modal.style.minHeight=''},300);
+  }
+  nx.onclick=()=>{if(cur===slides.length-1)fin(true);else go(cur+1)};
+  bk.onclick=()=>go(cur-1);
+  el.querySelector('#hwiSkip').onclick=()=>fin(false);
+  dots.forEach(d=>d.onclick=()=>go(+d.dataset.i));
+  nx.focus({preventScroll:true});
+}
+/* ---------- time tracking: +1 minute per minute genuinely online (logged in and connected; no activity needed) ---------- */
+let _hwBusy=false;
+setInterval(async()=>{
+  if(_hwBusy||!ME||!window.HW_LOADED||!hwOpen()||navigator.onLine===false)return;   // online is enough: no activity or visible-tab check, so AFK farming works
+  const p=window.HW_PROG||{};
+  if(hwNow()-(Number(p.last)||0)<56000)return;   // background tabs are throttled to ~1 tick/min, so stay a little under the server's 55 s minimum gap's safety margin
+  _hwBusy=true;
+  try{await set(ref(rtdb,'halloween/progress/'+ME.id),{mins:(Number(p.mins)||0)+1,last:serverTimestamp()})}
+  catch(e){console.warn('halloween progress not saved',e)}
+  finally{_hwBusy=false}
+},15000);
+/* ---------- wiring: chat picker hero, settings card, refresh (nothing here touches layout outside the picker/settings) ---------- */
+function hwSync(){
+  hwDeco(hwOpen()&&hwWant());
+  const gg=document.getElementById('goGlobal');
+  if(gg){
+    const n=(ME&&hwCanClaim())?hwClaimable():0;let d=gg.querySelector('.hw-dot');
+    if(n&&!d){d=document.createElement('span');d.className='hw-dot';gg.appendChild(d)}
+    if(d){if(n)d.textContent=n;else d.remove()}
+  }
+}
+function hwRefresh(){hwSync();hwRender();hwHeroRefresh()}
+window.hwRefresh=hwRefresh;
+setInterval(hwSync,3000);hwSync();
+function hwHeroRefresh(){
+  const h=document.querySelector('#gcBg .hw-hero');if(!h||!ME)return;
+  const{lvl,m}=hwProg(),n=hwClaimable();
+  const pct=lvl>=HW.N?100:Math.min(100,Math.round((m-hwCum(lvl))/(hwCum(lvl+1)-hwCum(lvl))*100));
+  h.querySelector('.hw-hero-s').textContent=(lvl>=HW.N?'Max level reached':'Level '+lvl+' of '+HW.N)+(n?' · '+n+' reward'+(n>1?'s':'')+' ready':' · '+(m/60).toFixed(1)+'h online');
+  h.querySelector('.hw-hero-bar i').style.setProperty('--p',pct+'%');
+  const go=h.querySelector('.hw-hero-go');let b=go.querySelector('b');
+  if(n&&!b){b=document.createElement('b');go.appendChild(b)}if(b){if(n)b.textContent=n;else b.remove()}
+}
+function hwPickerInject(){
+  if(!ME||!hwCanClaim())return;
+  const g=document.querySelector('#gcBg .gc-grid');if(!g||g.querySelector('.hw-hero'))return;
+  const r=(a,b)=>(a+Math.random()*(b-a)).toFixed(1);let sp='';
+  for(let i=0;i<9;i++)sp+='<i style="--x:'+r(4,94)+'%;--s:'+r(2,4)+'px;--dx:'+r(-20,20)+'px;--d:'+r(3,6)+'s;--t:-'+r(0,6)+'s"></i>';
+  const el=document.createElement('button');el.type='button';el.className='hw-hero';el.id='gcHalloween';
+  el.innerHTML='<span class="hw-hero-ring"></span><span class="hw-hero-sp" aria-hidden="true">'+sp+'</span><span class="hw-hero-ic">🎃</span><span class="hw-hero-copy"><span class="hw-hero-t">Halloween Pass</span><span class="hw-hero-s"></span><span class="hw-hero-bar"><i></i></span></span><span class="hw-hero-go">Open Pass</span>';
+  const v=g.querySelector('.vip-hero');if(v)v.insertAdjacentElement('afterend',el);else g.insertAdjacentElement('afterbegin',el);
+  el.onclick=()=>{const bg=document.getElementById('gcBg');if(bg)bg.classList.add('closing');setTimeout(()=>{const mr=document.getElementById('modalRoot');if(mr)mr.innerHTML='';hwModal()},240)};
+  hwHeroRefresh();
+}
+{const o=modalGlobalChoice;modalGlobalChoice=function(){const x=o.apply(this,arguments);try{hwPickerInject()}catch(e){console.warn('halloween picker',e)}return x}}
+function hwSettingsInject(){
+  const a=document.getElementById('sAntiLag');
+  if(!a||document.getElementById('sHwTheme')||!hwCanClaim())return;
+  const c=a.closest('.set-card');if(!c)return;
+  c.insertAdjacentHTML('afterend','<div class="set-card"><div class="section-h" style="margin-top:0">🎃 Halloween event</div><div class="toggle-row" style="margin-bottom:0"><div><div style="font-weight:600;font-size:14px">Halloween theme</div><div class="hint" style="margin-top:2px">Spooky decorations (bats, ghosts, fog, cobwebs) and the orange/purple look across the app. Turn off for the normal look. Your Halloween roles and name effects stay either way. Saved to your account.</div></div><label class="switch"><input type="checkbox" id="sHwTheme" '+(hwWant()?'checked':'')+'><span class="slider"></span></label></div><button class="btn" id="sHwOpen" type="button" style="margin-top:12px;width:100%">🎃 Open Halloween Pass</button></div>');
+  document.getElementById('sHwTheme').addEventListener('change',e=>hwSetTheme(e.target.checked));
+  document.getElementById('sHwOpen').onclick=hwModal;
+}
+{const o=openSettings;openSettings=function(){const x=o.apply(this,arguments);try{hwSettingsInject();setTimeout(hwSettingsInject,250)}catch(e){console.warn('halloween settings',e)}return x}}
+/* HALLOWEEN:END */
 // Everyone must agree once per account (and again whenever RULES_VERSION goes up). Runs as soon as
 // the app is idle; if the agreement can't be read (offline/rules not published) nobody gets locked out.
 (function(){
