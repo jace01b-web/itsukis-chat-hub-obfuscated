@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-10-01.16">
+<meta name="build-version" content="2026-10-01.17">
 <script>/* Anti-lag: per-device choice, OFF unless explicitly switched on. Runs before first paint so there is no flash of the heavy visuals. */
 try{if(localStorage.getItem('ich.antiLag')==='1')document.documentElement.classList.add('anti-lag')}catch(_){}</script>
 <title>Itsukis Chat Hub</title>
@@ -2124,6 +2124,17 @@ html.anti-lag .hwi *,html.anti-lag .hwi{animation:none!important}
 .tagvis-row.off .tv-n{opacity:.55;text-decoration:line-through}
 /* TAG-VISIBILITY:END */
 .pf-pron{margin-top:3px;color:var(--muted);font-size:13px;font-weight:500;overflow-wrap:anywhere}
+/* ===== Profile description + collapsible roles ===== */
+.pf-desc{margin-top:10px;padding:9px 12px;border-radius:12px;background:var(--ui-panel2);border:1px solid var(--border);font-size:13px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;text-align:left}
+.pf-role-more{cursor:pointer;font-weight:700;font-size:12px;padding:4px 11px;border-radius:999px;background:var(--ui-panel2);border:1px dashed var(--border);color:var(--muted);transition:.15s}
+.pf-role-more:hover{border-color:var(--accent);color:var(--text)}
+.pf-roles .pf-role.pf-extra{display:none}
+.pf-roles.expanded .pf-role.pf-extra{display:inline-flex}
+.pf-roles .pf-role-less{display:none}
+.pf-roles.expanded .pf-role-less{display:inline-block}
+.pf-roles.expanded .pf-role-more:not(.pf-role-less){display:none}
+#acDesc{width:100%;min-height:70px;resize:vertical;font:inherit}
+.desc-count{font-size:11px;color:var(--muted);text-align:right;margin:2px 0 8px}
 
 /* ===== Cosmetics picker (sections: Halloween 2026 ...) ===== */
 .cs-modal{max-width:560px;width:calc(100vw - 20px);max-height:min(90vh,820px);display:flex;flex-direction:column;padding:0;overflow:hidden;position:relative}
@@ -3334,7 +3345,7 @@ const DB=(()=>{
     settings.meText=st.text||own.meText||base.meText;
     settings.avatar=st.avatar||(mine?own.avatar:'')||'';
     if(st.radius!=null&&!mine)settings.radius=st.radius;
-    return{...u,pronouns:String(st.pronouns||''),hiddenTags:String(st.hiddenTags||''),id:Number(id),friends:mine?(C.friends[myId]||[]):[],
+    return{...u,pronouns:String(st.pronouns||''),description:String(st.description||''),hiddenTags:String(st.hiddenTags||''),id:Number(id),friends:mine?(C.friends[myId]||[]):[],
       lastRead:mine?C.lastRead:{},settings};
   };
 
@@ -3751,11 +3762,15 @@ const DB=(()=>{
       // `style` node and never in the private `settings` blob. Carried forward unless this patch changes them.
       const pronouns=('pronouns' in patch)?String(patch.pronouns||'').replace(/[\u0000-\u001f\u007f<>]/g,'').replace(/\s+/g,' ').trim().slice(0,30):String((cur.style&&cur.style.pronouns)||'');
       delete merged.pronouns;
+      // Profile description is public too, so it lives in `style` like pronouns. Carried forward unless this patch changes it.
+      const description=('description' in patch)?String(patch.description||'').replace(/[\u0000-\u0009\u000b-\u001f\u007f<>]/g,'').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim().slice(0,150):String((cur.style&&cur.style.description)||'');
+      delete merged.description;
       // TAG-VISIBILITY: hidden tags are public too (everyone's client needs them), so they live in `style` like pronouns.
       const hiddenTags=('hiddenTags' in patch)?String(patch.hiddenTags||'').split(',').filter((t,i,a)=>HIDEABLE_TAGS.indexOf(t)!==-1&&a.indexOf(t)===i).join(','):String((cur.style&&cur.style.hiddenTags)||'');
       delete merged.hiddenTags;
       const style={bubble:merged.meBubble||'#7c6cff',text:merged.meText||'#ffffff',radius:Number(merged.radius)||16,avatar};
       if(pronouns)style.pronouns=pronouns;
+      if(description)style.description=description;
       if(hiddenTags)style.hiddenTags=hiddenTags;       // empty = field omitted, so nothing changes for people who don't use it
       C.users[id]={...cur,settings:merged,style};emit();
       // avatar lives in the public `style` node (above), not `settings` (which is
@@ -6627,6 +6642,7 @@ function openUserProfile(id){
         </div>
         ${deleted?'':profileRolesHTML(id)}
         ${vipTimerHTML}
+        ${(!deleted&&u.description)?`<div class="pf-desc">${esc(u.description)}</div>`:''}
         ${muted?`<div class="hint" style="color:var(--danger);margin-top:4px">Muted for ${Math.ceil(muteMs/60000)} more min</div>`:''}
 
         <div class="pf-meta-row">
@@ -6649,6 +6665,16 @@ function openUserProfile(id){
     </div></div>`;
 
     root.querySelector('.modal-bg').onclick=e=>{if(e.target===e.currentTarget)root.innerHTML=''};
+    // Roles: show the first 4, then a "+X more" chip that reveals the rest (and a button to fold back).
+    {const rw=root.querySelector('.pf-roles');
+     if(rw){const rs=[...rw.querySelectorAll('.pf-role')];
+       if(rs.length>4){
+         rs.slice(4).forEach(r=>r.classList.add('pf-extra'));
+         const more=document.createElement('button');more.type='button';more.className='pf-role-more';more.textContent='+'+(rs.length-4)+' more';
+         const less=document.createElement('button');less.type='button';less.className='pf-role-more pf-role-less';less.textContent='Show less';
+         more.onclick=()=>rw.classList.add('expanded');less.onclick=()=>rw.classList.remove('expanded');
+         rw.appendChild(more);rw.appendChild(less);
+       }}}
     $('#pfClose').onclick=()=>{root.innerHTML=''};
     const copyBtn=$('#pfCopyId');
     if(copyBtn)copyBtn.onclick=()=>{
@@ -9002,6 +9028,11 @@ function openAccount(){
     <div class="pron-chips" id="acPronChips">${['he/him','she/her','they/them','he/they','she/they','any pronouns','ask me'].map(p=>`<button type="button" data-p="${p}">${p}</button>`).join('')}</div>
     <div style="display:flex;gap:8px"><button class="btn sec small" id="acPronSave">Save pronouns</button><button class="btn sec small" id="acPronClear">Clear</button></div>
     <div class="err" id="acPronErr"></div>
+    <div class="section-h">\u{1F4DD} Description</div>
+    <div class="field" style="margin-bottom:0"><label>About you — shown on your profile card (optional)</label><textarea id="acDesc" maxlength="150" placeholder="Tell people a little about yourself...">${esc(ME.description||'')}</textarea></div>
+    <div class="desc-count" id="acDescCount"></div>
+    <div style="display:flex;gap:8px"><button class="btn sec small" id="acDescSave">Save description</button><button class="btn sec small" id="acDescClear">Clear</button></div>
+    <div class="err" id="acDescErr"></div>
     <!-- TAG-VISIBILITY:START -->
     ${(()=>{const own=DB.tagsOwned(ME.id);if(!own.length)return'';const hid=DB.hiddenTagsOf(ME.id);
       const L={owner:['\u{1F531} Owner','Owner name styling, role and #ID tag'],mod:['\u{1F6E1}\uFE0F Mod','Mod tag on your profile card'],vip:['\u{1F48E} VIP','VIP name styling and role'],flair:['\u2728 Flair','Name color and little badge'],confetti:['\u{1F389} Confetti badge','Confetti Blast badge and role']};
@@ -9095,6 +9126,24 @@ function openAccount(){
   $('#acPronSave').onclick=()=>savePron(acPron.value,$('#acPronSave'),'Save pronouns');
   $('#acPronClear').onclick=()=>{acPron.value='';savePron('',$('#acPronClear'),'Clear')};
   acPron.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();e.stopPropagation();$('#acPronSave').click()}});
+  // description
+  const acDesc=$('#acDesc'),acDescCount=$('#acDescCount');
+  const paintDesc=()=>{acDescCount.textContent=acDesc.value.length+'/150'};paintDesc();
+  acDesc.addEventListener('input',paintDesc);
+  const saveDesc=async(val,btn,label)=>{
+    btn.disabled=true;btn.textContent='Saving...';$('#acDescErr').textContent='';
+    try{
+      await DB.updateSettings(ME.id,{description:val});
+      ME=DB.currentUser();
+      acDesc.value=ME.description||'';paintDesc();
+      toast(ME.description?'Description saved!':'Description cleared.');
+    }catch(e){
+      $('#acDescErr').textContent='Could not save: '+(e.code||e.message)+(/PERMISSION/i.test(e.code||e.message)?' \u2014 publish the updated database rules (description).':'');
+    }
+    btn.disabled=false;btn.textContent=label;
+  };
+  $('#acDescSave').onclick=()=>saveDesc(acDesc.value,$('#acDescSave'),'Save description');
+  $('#acDescClear').onclick=()=>{acDesc.value='';saveDesc('',$('#acDescClear'),'Clear')};
   enhanceColors(root);
   $('#acSave').onclick=async()=>{
     const b=$('#acSave');b.disabled=true;$('#acErr').textContent='';
