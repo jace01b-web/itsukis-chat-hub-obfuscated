@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-10-01.17">
+<meta name="build-version" content="2026-10-01.20">
 <script>/* Anti-lag: per-device choice, OFF unless explicitly switched on. Runs before first paint so there is no flash of the heavy visuals. */
 try{if(localStorage.getItem('ich.antiLag')==='1')document.documentElement.classList.add('anti-lag')}catch(_){}</script>
 <title>Itsukis Chat Hub</title>
@@ -676,8 +676,19 @@ input[type=color]{display:none!important}
 .hub-row:hover{border-color:rgba(124,108,255,.5);background:var(--ui-panel2)}
 .hub-ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:none;overflow:hidden}
 .hub-nm{font-weight:700;font-size:14px}
-.hub-desc{font-size:12px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical}
+.hub-desc{font-size:12px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .hub-arrow{color:var(--muted);flex:none;font-size:15px}
+.hub-tabs{display:flex;gap:4px;margin-top:14px;padding:5px;border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.03)}
+.hub-tab{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:7px;padding:11px 6px;border:0;border-radius:13px;background:transparent;color:var(--muted);font-weight:600;font-size:13.5px;font-family:inherit;cursor:pointer;transition:background .2s,color .2s,box-shadow .2s,transform .12s}
+.hub-tab:hover{color:var(--text);background:rgba(255,255,255,.05)}
+.hub-tab:active{transform:scale(.97)}
+.hub-tab .cnt{font-size:11px;font-weight:700;line-height:1;padding:3px 7px;border-radius:7px;background:rgba(255,255,255,.1);color:var(--muted);transition:background .2s,color .2s}
+.hub-tab.on{color:#fff;background:linear-gradient(135deg,rgba(124,108,255,.38),rgba(255,108,180,.22));box-shadow:inset 0 0 0 1px rgba(124,108,255,.55),0 4px 16px rgba(124,108,255,.2)}
+.hub-tab.on .cnt{background:var(--accent);color:#fff}
+.hub-tab.zero:not(.on){opacity:.4}
+.hub-list.swap{animation:hubSwap .22s ease}
+@keyframes hubSwap{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media(max-width:420px){.hub-tab{font-size:12px;gap:5px;padding:10px 3px}.hub-tab .cnt{padding:2px 5px;font-size:10px}}
 .hub-list{max-height:52vh;overflow-y:auto;margin-top:4px}
 .tab-mini{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
 .tab-mini button{background:var(--ui-panel);padding:8px 14px;border-radius:10px;font-size:13px;color:var(--muted);border:1px solid var(--border)}
@@ -2334,15 +2345,75 @@ html.anti-lag .hwi *,html.anti-lag .hwi{animation:none!important}
 </script>
 
 <script>
+/* Shared Game Hubs info. Keys = lowercase hub name from apps.json. Only hubs listed here are shown;
+   n = display name, d = description (overrides apps.json), c/i = optional colour / icon fallback.
+   To add a hub: add it to apps.json, then add one line here. */
+window.HUB_INFO={
+"kbh games":{n:"KBH Games",d:"More browser games to dig through. A few titles may be hit or miss."},
+"reids games":{n:"Reids Games",d:"A solid game collection with some movies mixed in."},
+"greeni":{n:"Greeni",d:"Movies and games together in one place."},
+"polaris hub":{n:"Polaris Hub",d:"One of the biggest libraries here. Loads of games to scroll through."},
+"wither games":{n:"Wither Games",d:"144 hand-picked popular and interesting games."},
+"gn-math":{n:"GN-Math",d:"A well-known game site and a great first stop."},
+"nautilusos":{n:"NautilusOS",d:"A polished, desktop-style interface with games inside."},
+"ultimate game stash":{n:"Ultimate Game Stash",d:"One of the biggest stashes. Use search to find a specific game, like Pokémon Emerald."},
+"sigma os":{n:"Sigma OS",d:"A Windows 11–style desktop with games and apps."},
+"noah's tutoring":{n:"Noah's Tutoring",d:"A big game library. It can be a little laggy while it loads."},
+"noah's tutoring launcher":{n:"Noah's Tutoring Launcher",d:"Same library as Noah's Tutoring, but opens behind a launch button."},
+"lucide":{n:"Lucide",d:"Web proxy for reaching sites that are otherwise blocked. Works well.",c:"orange"},
+"project bugs":{n:"Project Bugs",d:"A Google Sites page packed with games, with thumbnails so they're easy to browse.",c:"purple"},
+"calcsolver":{n:"CalcSolver",d:"Looks like a calculator site. Turn on Code mode, then tap (0) four times to open the game hub.",c:"grey"},
+"mantle":{n:"Mantle",d:"Quality over quantity: modded Minecraft, an AI assistant and a proxy in one app.",c:"red"},
+"fern":{n:"Fern",d:"Another web proxy for opening blocked sites.",c:"lime"},
+"game 'n go games 1":{n:"Game 'N Go Games 1",d:"A game hub that looks and feels like a computer desktop.",c:"cyan"},
+"game 'n go games 2":{n:"Game 'N Go Games 2",d:"Backup mirror of Game 'N Go, handy if the first one is down.",c:"cyan"},
+"zaka":{n:"Zaka",d:"Zaka's web proxy for opening blocked sites.",c:"blue"},
+"bestspark":{n:"BestSpark",d:"A collection of game hubs plus original games made by the community.",c:"lime"},
+"gust":{n:"Gust",d:"Another game hub to try when your usual ones are blocked.",c:"white"},
+"unblockedzone!":{n:"UnblockedZone!",d:"A very popular game site that keeps several mirrors as backups.",c:"red"},
+"idk 10.0":{n:"idk 10.0",d:"A desktop-style game hub with a big selection of games.",c:"purple"},
+"ghost hub cinema":{n:"Ghost Hub Cinema",d:"A collection of movies to browse and watch.",c:"white"}
+};
+
+/* Non-hub sections of apps.json. Same idea: key = lowercase name, only listed items show. */
+window.HUB_INFO_X={
+apps:{
+"basik (chat)":{n:"BaSik",i:"BaSik",c:"blue",d:"Super lightweight text-only chat. No roles, no images, just messages."},
+"statik":{n:"Statik",i:"SK",c:"blue",d:"An Instagram-style feed, but only images and text."},
+"youtube v20":{n:"YouTube V20",i:"YT",c:"rose",d:"A YouTube player with playlists, settings and private + public keys."}
+},
+tools:{
+"ai code editor":{n:"AI Code Editor",c:"violet",d:"Code editor with built-in AI that can replace, add and delete specific lines."},
+"code editor":{n:"Code Editor",c:"blue",d:"Live HTML editor with an instant preview."},
+"about:blank opener":{n:"about:blank Opener",c:"amber",d:"Opens files and sites in an about:blank tab. Some sites block this kind of cloaking."},
+"timer":{n:"Timer",c:"orange",d:"Stopwatch and countdown timer in one."},
+"local music player":{n:"Local Music Player",c:"rose",d:"Play music files straight from your own device."},
+"file + folder viewer":{n:"File + Folder Viewer",c:"lime",d:"Browse the files and folders on your device."},
+"groq api keys":{n:"Groq API Keys",c:"green",d:"Grab a free Groq API key for AI tools."},
+"notes":{n:"Notes",c:"amber",d:"Quick notes saved right in your browser."},
+"image to base64":{n:"Image to Base64",c:"green",d:"Turn an image into base64 so you can embed it even when the image link is blocked."}
+},
+links:{
+"scratch":{n:"Scratch",c:"orange",d:"Games, music and animations made by the Scratch community."},
+"get youtube key":{n:"Get YouTube Key",c:"rose",d:"Step-by-step guide to getting a YouTube Data API v3 key."},
+"google doodles":{n:"Google Doodles",c:"blue",d:"Minesweeper, Solitaire, Snake and lots more Google games."},
+"cineby":{n:"Cineby",c:"yellow",d:"Movie and sports streaming. Not proxied, so some networks may block it."},
+"code editor":{n:"Code Editor (Web)",c:"green",d:"A feature-packed online code editor."},
+"cps test":{n:"CPS Test",c:"orange",d:"Test how many clicks per second you can hit."}
+}
+};
+</script>
+
+<script>
 /* Game Hubs preview on the sign in / sign up screen (locked until login) */
 (function(){
   var teaser=document.getElementById('ghTeaser'),track=document.getElementById('ghTrack'),sub=document.getElementById('ghTeaserSub');
   if(!teaser||!track)return;
   var URL_='https://raw.githubusercontent.com/Cra-Z-Gaming/VUS/refs/heads/main/apps.json';
-  var ALLOW={"kbh games":"KBH Games","reids games":"Reids Games","greeni":"Greeni","polaris hub":"Polaris Hub","wither games":"Wither Games","gn-math":"GN-Math","nautilusos":"NautilusOS","ultimate game stash":"Ultimate Game Stash","sigma os":"Sigma OS","noah's tutoring":"Noah's Tutoring","noah's tutoring launcher":"Noah's Tutoring Launcher"};
+  var INFO=window.HUB_INFO||{},ALLOW={};Object.keys(INFO).forEach(function(k){ALLOW[k]=INFO[k].n});
   var COL={white:['rgba(255,255,255,.14)','#f8fafc'],green:['rgba(34,197,94,.16)','#4ade80'],blue:['rgba(59,130,246,.16)','#60a5fa'],rose:['rgba(244,63,94,.16)','#fb7185'],violet:['rgba(139,92,246,.16)','#a78bfa'],yellow:['rgba(234,179,8,.16)','#fde047'],cyan:['rgba(6,182,212,.16)','#22d3ee'],lime:['rgba(132,204,22,.16)','#a3e635'],orange:['rgba(249,115,22,.16)','#fb923c'],red:['rgba(239,68,68,.16)','#f87171'],purple:['rgba(168,85,247,.16)','#c084fc'],black:['rgba(255,255,255,.08)','#e2e8f0'],grey:['rgba(148,163,184,.16)','#cbd5e1'],amber:['rgba(245,158,11,.16)','#fbbf24']};
   var FALLBACK_COLS=['violet','cyan','green','rose','amber','blue','orange','purple','lime','red','grey'];
-  var hubs=Object.keys(ALLOW).map(function(k,i){return{name:ALLOW[k],desc:'',icon:'',color:FALLBACK_COLS[i%FALLBACK_COLS.length]}});
+  var hubs=Object.keys(ALLOW).map(function(k,i){return{name:ALLOW[k],desc:INFO[k].d||'',icon:'',color:INFO[k].c||FALLBACK_COLS[i%FALLBACK_COLS.length]}});
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   function col(h){return COL[(h.color||'').toLowerCase()]||COL.grey}
   function renderMarquee(){
@@ -2357,7 +2428,7 @@ html.anti-lag .hwi *,html.anti-lag .hwi{animation:none!important}
     var ctl=window.AbortController?new AbortController():null,t=setTimeout(function(){ctl&&ctl.abort()},6000);
     fetch(URL_+'?v='+Date.now(),{cache:'no-store',signal:ctl?ctl.signal:undefined}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){
       clearTimeout(t);
-      var list=(d.hubs||[]).filter(function(h){return h&&h.name&&h.url&&ALLOW[String(h.name).trim().toLowerCase()]}).map(function(h){return{name:String(h.name).trim(),desc:h.desc||'',icon:h.icon||'',color:h.color||'grey'}});
+      var list=(d.hubs||[]).filter(function(h){return h&&h.name&&h.url&&ALLOW[String(h.name).trim().toLowerCase()]}).map(function(h){var k=String(h.name).trim().toLowerCase(),i=INFO[k]||{};return{name:i.n||String(h.name).trim(),desc:i.d||h.desc||'',icon:h.icon||'',color:h.color||i.c||'grey'}});
       if(list.length){hubs=list;renderMarquee()}
     }).catch(function(){});
   }catch(e){}
@@ -2459,7 +2530,7 @@ html.anti-lag .hwi *,html.anti-lag .hwi{animation:none!important}
       <button class="opt" id="goGlobal"><div class="ic">🌍</div><h3>Itsukis Chat</h3><p>Global chat and rooms</p></button>
       <button class="opt" id="goDMs"><div class="ic">💬</div><h3>Itsuki DMs</h3><p>Private chats and friends</p><span class="badge hidden" id="dmBadge"></span></button>
       <button class="opt" id="goSettings"><div class="ic">⚙️</div><h3>Settings</h3><p>Style your chat and UI</p></button>
-      <button class="opt" id="goGameHubs"><div class="ic">🎮</div><h3>Game Hubs</h3><p>Browse game sites</p></button>
+      <button class="opt" id="goGameHubs"><div class="ic">🎮</div><h3>Hubs &amp; Tools</h3><p>Games, apps &amp; links</p></button>
     </div>
     <div class="home-foot">
       <button class="online-pill" id="homeOnlinePill" type="button" title="Everyone online across Itsuki's Chat, not just this room or DM"><span class="dot"></span><span id="onlineCount">0</span> online</button>
@@ -6212,21 +6283,26 @@ const HUB_COLORS={
 let _hubData=null,_hubQuery='';
 // Curated allowlist — only these hubs (by name) show up, regardless of whatever else
 // gets added to the "hubs" array in apps.json down the line.
-const GAME_HUB_ALLOWLIST=new Set([
-  "kbh games","reids games","greeni","polaris hub","wither games","gn-math",
-  "nautilusos","ultimate game stash","sigma os","noah's tutoring","noah's tutoring launcher"
-]);
+const HUB_INFO=window.HUB_INFO||{},HUB_INFO_X=window.HUB_INFO_X||{};
+const HUB_SECTIONS=[['apps','Apps'],['hubs','Hubs'],['tools','Tools'],['links','Links']];
+let _hubSec='hubs';
+const GAME_HUB_ALLOWLIST=new Set(Object.keys(HUB_INFO));
+function hubInfoFor(sec,name){
+  const k=(name||'').trim().toLowerCase();
+  return (sec==='hubs'?HUB_INFO:(HUB_INFO_X[sec]||{}))[k]||null;
+}
 function isGameHub(h){
   return GAME_HUB_ALLOWLIST.has((h.name||'').trim().toLowerCase());
 }
 function modalGameHubs(){
-  _hubQuery='';
+  _hubQuery='';_hubSec='hubs';
   $('#modalRoot').innerHTML=`<div class="modal-bg" id="ghBg"><div class="modal wide">
     <button class="modal-x" id="ghX">✕</button>
-    <h2>🎮 Game Hubs</h2>
-    <div class="hint">A bunch of game sites — pick one and it opens in a new tab.</div>
-    <div class="field" style="margin-top:14px"><input id="ghSearch" placeholder="Search game hubs..." autocomplete="off"></div>
-    <div class="hub-list" id="ghList"><div class="empty">Loading game hubs...</div></div>
+    <h2>🎮 Hubs &amp; Tools</h2>
+    <div class="hint">Game sites, movie hubs, proxies, apps, tools and links — pick one and it opens in a new tab.</div>
+    <div class="field" style="margin-top:14px"><input id="ghSearch" placeholder="Search everything..." autocomplete="off"></div>
+    <div class="hub-list" id="ghList"><div class="empty">Loading...</div></div>
+    <div class="hub-tabs" id="ghTabs" role="tablist"></div>
   </div></div>`;
   $('#ghX').onclick=closeGameHubs;
   $('#ghBg').onclick=e=>{if(e.target.id==='ghBg')closeGameHubs()};
@@ -6246,19 +6322,49 @@ async function loadHubs(){
     const res=await fetch(GAME_HUBS_URL+'?v='+Date.now(),{cache:'no-store'});
     if(!res.ok)throw new Error('HTTP '+res.status);
     const data=await res.json();
-    _hubData=(data.hubs||[]).filter(h=>h&&h.name&&h.name.trim()&&h.url&&h.url.trim()).filter(isGameHub);
+    const out=[];
+    HUB_SECTIONS.forEach(([sec])=>{
+      (data[sec]||[]).forEach(h=>{
+        if(!h||!h.name||!h.name.trim()||!h.url||!h.url.trim())return;
+        const i=hubInfoFor(sec,h.name);
+        if(!i)return; // curated: only listed items show
+        out.push({...h,sec,name:i.n||h.name.trim(),desc:i.d||h.desc||'',icon:i.i||h.icon||'',color:(h.color&&h.color.trim())||i.c||''});
+      });
+    });
+    _hubData=out;
     renderHubList();
   }catch(e){
     const box=$('#ghList');if(!box)return;
-    box.innerHTML=`<div class="empty">Couldn't load game hubs.<br><button class="btn sec small" id="ghRetry" style="margin-top:10px">Retry</button></div>`;
-    if($('#ghRetry'))$('#ghRetry').onclick=()=>{box.innerHTML='<div class="empty">Loading game hubs...</div>';loadHubs()};
+    box.innerHTML=`<div class="empty">Couldn't load the list.<br><button class="btn sec small" id="ghRetry" style="margin-top:10px">Retry</button></div>`;
+    if($('#ghRetry'))$('#ghRetry').onclick=()=>{box.innerHTML='<div class="empty">Loading...</div>';loadHubs()};
   }
 }
-function renderHubList(){
+function renderHubList(swap){
   const box=$('#ghList');if(!box||!_hubData)return;
   const q=_hubQuery;
-  const items=q?_hubData.filter(h=>h.name.toLowerCase().includes(q)||(h.desc||'').toLowerCase().includes(q)):_hubData;
-  if(!items.length){box.innerHTML='<div class="empty">No game hubs found.</div>';return}
+  const match=h=>!q||h.name.toLowerCase().includes(q)||(h.desc||'').toLowerCase().includes(q);
+  const counts={};
+  _hubData.forEach(h=>{if(match(h))counts[h.sec]=(counts[h.sec]||0)+1});
+  const tabs=$('#ghTabs');
+  if(tabs){
+    tabs.innerHTML='';
+    HUB_SECTIONS.forEach(([k,label])=>{
+      const n=counts[k]||0;
+      const b=document.createElement('button');
+      b.type='button';b.setAttribute('role','tab');b.setAttribute('aria-selected',_hubSec===k);
+      b.className='hub-tab'+(_hubSec===k?' on':'')+(n?'':' zero');
+      b.innerHTML=`<span>${label}</span><span class="cnt">${n}</span>`;
+      b.onclick=()=>{if(_hubSec===k)return;_hubSec=k;renderHubList(true);box.scrollTop=0};
+      tabs.appendChild(b);
+    });
+  }
+  const items=_hubData.filter(h=>h.sec===_hubSec&&match(h));
+  if(swap){box.classList.remove('swap');void box.offsetWidth;box.classList.add('swap')}
+  if(!items.length){
+    const other=Object.values(counts).reduce((a,b)=>a+b,0);
+    box.innerHTML='<div class="empty">'+(q&&other?'No matches in this tab, but '+other+' in the other tabs.':'Nothing found.')+'</div>';
+    return;
+  }
   box.innerHTML='';
   items.forEach(h=>{
     const c=HUB_COLORS[(h.color||'').toLowerCase()]||HUB_COLORS.grey;
