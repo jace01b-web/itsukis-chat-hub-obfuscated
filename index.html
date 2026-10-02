@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-10-01.12">
+<meta name="build-version" content="2026-10-01.16">
 <script>/* Anti-lag: per-device choice, OFF unless explicitly switched on. Runs before first paint so there is no flash of the heavy visuals. */
 try{if(localStorage.getItem('ich.antiLag')==='1')document.documentElement.classList.add('anti-lag')}catch(_){}</script>
 <title>Itsukis Chat Hub</title>
@@ -643,6 +643,21 @@ input[type=color]{display:none!important}
 .music-list .mtrack.playing{background:rgba(124,108,255,.18);color:var(--text);font-weight:600}
 .music-list .mtrack .mi{width:20px;text-align:center;flex:none}
 .music-empty{text-align:center;color:var(--muted);font-size:13px;padding:20px;line-height:1.6}
+.music-list{max-height:260px}
+.music-search{display:flex;gap:8px;margin-bottom:10px}
+.music-search input{flex:1;min-width:0}
+.music-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.music-chips button{padding:5px 11px;border-radius:999px;font-size:12px;background:var(--ui-panel2);border:1px solid var(--border);color:var(--muted);text-transform:capitalize;transition:.12s}
+.music-chips button:hover{border-color:var(--accent);color:var(--text)}
+.music-chips button.on{background:rgba(124,108,255,.22);border-color:var(--accent);color:var(--text);font-weight:600}
+.music-note{overflow:hidden}
+.music-note img{width:100%;height:100%;object-fit:cover}
+.mthumb{width:34px;height:34px;border-radius:8px;object-fit:cover;flex:none;background:var(--ui-panel2)}
+.music-list .mtrack .nm{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.music-list .mtrack .nm small{display:block;color:var(--muted);font-weight:400;font-size:11px;overflow:hidden;text-overflow:ellipsis}
+.music-list .mtrack .mdur{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
+.music-credit{text-align:center;font-size:11px;color:var(--muted);margin-top:10px}
+.music-credit a{color:var(--accent)}
 .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .switch{position:relative;width:42px;height:24px;flex:none}
 .switch input{opacity:0;width:0;height:0;position:absolute}
@@ -2064,6 +2079,76 @@ html.hw-on *::-webkit-scrollbar-thumb:hover{background:rgba(255,150,60,.7)}
 html.anti-lag .hwi *,html.anti-lag .hwi{animation:none!important}
 @media (prefers-reduced-motion:reduce){.hwi *,.hwi{animation:none!important}}
 /* HALLOWEEN:END */
+
+/* ===== Music tab: search bar + live widget polish ===== */
+.music-search{display:flex;gap:8px;margin-bottom:12px;align-items:center}
+.ms-box{position:relative;flex:1;min-width:0;display:flex;align-items:center}
+.ms-ic{position:absolute;left:14px;width:16px;height:16px;fill:none;stroke:var(--muted);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;transition:stroke .2s}
+.ms-box:focus-within .ms-ic{stroke:var(--accent)}
+.music-search input{width:100%;min-width:0;height:44px;padding:0 40px 0 40px;font-size:14px;color:var(--text);outline:none;
+  background:rgba(255,255,255,.05);border:1px solid var(--glass-edge-soft,rgba(255,255,255,.18));border-radius:999px;
+  box-shadow:inset 0 2px 6px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.05);
+  backdrop-filter:blur(14px) saturate(160%);-webkit-backdrop-filter:blur(14px) saturate(160%);
+  transition:border-color .2s,box-shadow .2s,background .2s}
+.music-search input::placeholder{color:var(--muted);opacity:.7}
+.music-search input:hover{background:rgba(255,255,255,.07)}
+.music-search input:focus{border-color:var(--accent);background:rgba(255,255,255,.07);box-shadow:inset 0 2px 6px rgba(0,0,0,.3),0 0 0 3px rgba(124,108,255,.22)}
+.ms-clear{position:absolute;right:9px;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.1);color:var(--muted);font-size:10px;display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(.7);pointer-events:none;transition:opacity .15s,transform .15s,background .15s,color .15s}
+.music-search.has-text .ms-clear{opacity:1;transform:none;pointer-events:auto}
+.ms-clear:hover{background:rgba(255,255,255,.2);color:var(--text)}
+.music-search .ms-go{height:44px;padding:0 20px;border-radius:999px;display:flex;align-items:center;gap:8px;flex:none;white-space:nowrap}
+.ms-spin,.mc-spin{display:none;border-radius:50%;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;animation:msSpin .7s linear infinite}
+.ms-spin{width:14px;height:14px}
+.music-search.busy .ms-spin{display:block}
+.mc-spin{display:block;width:20px;height:20px;border-width:2.5px;margin:auto}
+@keyframes msSpin{to{transform:rotate(360deg)}}
+.music-chips{gap:7px}
+.music-chips button{padding:6px 13px}
+.music-list{position:relative}
+.music-seek span{min-width:38px}
+.music-seek #mLeft{text-align:right}
+.music-meta .mt-sub.err{color:var(--danger)}
+.music-meta .mt-sub.buf{color:var(--accent2)}
+
+/* ===== Pronouns ===== */
+.pron-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.pron-chips button{padding:5px 11px;border-radius:999px;font-size:12px;background:var(--ui-panel2);border:1px solid var(--border);color:var(--muted);transition:.12s}
+.pron-chips button:hover{border-color:var(--accent);color:var(--text)}
+.pron-chips button.on{background:rgba(124,108,255,.22);border-color:var(--accent);color:var(--text);font-weight:600}
+/* TAG-VISIBILITY:START */
+.tagvis{display:flex;flex-direction:column;gap:8px;margin-bottom:6px}
+.tagvis-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:10px;background:var(--ui-panel2);border:1px solid var(--border)}
+.tagvis-row .tv-n{font-size:13px;font-weight:600}
+.tagvis-row .tv-s{font-size:11px;color:var(--muted)}
+.tagvis-row button{padding:5px 12px;font-size:12px}
+.tagvis-row.off .tv-n{opacity:.55;text-decoration:line-through}
+/* TAG-VISIBILITY:END */
+.pf-pron{margin-top:3px;color:var(--muted);font-size:13px;font-weight:500;overflow-wrap:anywhere}
+
+/* ===== Cosmetics picker (sections: Halloween 2026 ...) ===== */
+.cs-modal{max-width:560px;width:calc(100vw - 20px);max-height:min(90vh,820px);display:flex;flex-direction:column;padding:0;overflow:hidden;position:relative}
+.cs-top{flex:none;padding:18px 20px 12px}
+.cs-top h2{margin:0 0 10px;font-size:20px}
+.cs-prev{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid var(--border)}
+.cs-prev .cs-pn{font-size:17px;font-weight:700;min-width:0;overflow-wrap:anywhere}
+.cs-prev small{display:block;color:var(--muted);font-size:11px;font-weight:500;margin-top:2px}
+.cs-secs{flex:none;display:flex;gap:6px;padding:0 20px 10px;overflow-x:auto}
+.cs-secs button{flex:none;padding:7px 14px;border-radius:999px;font-size:13px;font-weight:600;background:var(--ui-panel2);border:1px solid var(--border);color:var(--muted);transition:.15s}
+.cs-secs button.on{background:rgba(255,140,40,.18);border-color:rgba(255,140,40,.6);color:var(--text)}
+.cs-body{flex:1;min-height:0;overflow-y:auto;padding:4px 20px 18px}
+.cs-h{display:flex;justify-content:space-between;align-items:baseline;margin:14px 0 8px;font-weight:700;font-size:14px}
+.cs-h span{font-weight:500;font-size:11.5px;color:var(--muted)}
+.cs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.cs-opt{display:flex;align-items:center;gap:9px;padding:10px 11px;border-radius:13px;text-align:left;background:var(--ui-panel2);border:1px solid var(--border);transition:.15s;min-width:0}
+.cs-opt:hover{border-color:rgba(255,140,40,.6);transform:translateY(-1px)}
+.cs-opt.on{border-color:#ff9a3c;background:rgba(255,140,40,.16);box-shadow:0 0 0 2px rgba(255,140,40,.25)}
+.cs-opt .ci{font-size:20px;flex:none;width:26px;text-align:center}
+.cs-opt .ct{min-width:0;display:flex;flex-direction:column;font-size:13px;font-weight:600;overflow:hidden}
+.cs-opt .ct em{font-style:normal;font-size:10.5px;color:var(--muted);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cs-empty{color:var(--muted);font-size:12.5px;padding:2px 0 4px}
+.cs-foot{flex:none;display:flex;gap:8px;padding:12px 20px 16px;border-top:1px solid var(--border)}
+.cs-foot .btn{flex:1}
+.cs-x{position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid var(--border);color:var(--text);z-index:2}
 </style>
 </head>
 <body>
@@ -2651,6 +2736,7 @@ function usernameAllowed(name){return!filterNamesOn()||!containsProfanity(name)}
 const NAME_STYLE_PRESETS=['rainbow','gold','crown','neon','lucky','ice','fire'];
 function nameStylePreset(id){
   if(!customNamesOn())return null;
+  if(tagHidden(id,'flair'))return null;
   try{
     const live=DB.flairOf(id);
     if(live)return live;
@@ -2733,7 +2819,12 @@ let OWNERS_LOADED=false; // true only after the first live snapshot of owners/ h
 // tell. isOwner() = permissions; isShownOwner() = what is allowed to be displayed as "Owner".
 let SECRET_OWNER_ID=null;
 let SECRET_LOADED=false;
-function isShownOwner(id){return OWNERS_CACHE[Number(id)]===1}
+/* TAG-VISIBILITY:START — people can hide their own Owner / Mod / VIP / Flair / Confetti tags (stored publicly in users/$id/style/hiddenTags) */
+const HIDEABLE_TAGS=['owner','mod','vip','flair','confetti'];
+function hiddenTagsOf(id){try{return DB.hiddenTagsOf(id)}catch(_){return[]}}
+function tagHidden(id,t){return hiddenTagsOf(id).indexOf(t)!==-1}
+/* TAG-VISIBILITY:END */
+function isShownOwner(id){return OWNERS_CACHE[Number(id)]===1&&!tagHidden(id,'owner')}
 function isOwner(id){const n=Number(id);return OWNERS_CACHE[n]===1||(SECRET_OWNER_ID!==null&&n===SECRET_OWNER_ID)}
 function ownersKnown(){return OWNERS_LOADED&&SECRET_LOADED}
 // Live cache of mods/, same idea as OWNERS_CACHE above: mods/$id === 1 means that numeric
@@ -3071,7 +3162,7 @@ const DB=(()=>{
     listen('vip',v=>{C.vip=v||{};if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
     listen('flair',v=>{C.flair=v||{}});
     listen('roles',v=>{C.roles=v||{};if(typeof refreshSpinUI==='function'){try{refreshSpinUI()}catch(_){}}});
-    /* HALLOWEEN:START */ listen('halloween/claimed',v=>{window.HW_CLAIMED=v||{};if(typeof hwRefresh==='function'){try{hwRefresh()}catch(_){}}});listen('halloween/progress/'+myId,v=>{window.HW_PROG=v||{};window.HW_LOADED=true;if(typeof hwRefresh==='function'){try{hwRefresh()}catch(_){}}});listen('halloween/intro/'+myId,v=>{window.HW_INTRO=Number(v)||0;window.HW_INTRO_LOADED=true;if(typeof hwMaybeIntro==='function'){try{hwMaybeIntro()}catch(_){}}}); /* HALLOWEEN:END */
+    /* HALLOWEEN:START */ listen('halloween/claimed',v=>{window.HW_CLAIMED=v||{};if(typeof hwRefresh==='function'){try{hwRefresh()}catch(_){}}});listen('halloween/progress/'+myId,v=>{window.HW_PROG=v||{};window.HW_LOADED=true;if(typeof hwRefresh==='function'){try{hwRefresh()}catch(_){}}});listen('halloween/equipped',v=>{window.HW_EQ=v||{};if(typeof hwRefresh==='function'){try{hwRefresh()}catch(_){}}});listen('halloween/intro/'+myId,v=>{window.HW_INTRO=Number(v)||0;window.HW_INTRO_LOADED=true;if(typeof hwMaybeIntro==='function'){try{hwMaybeIntro()}catch(_){}}}); /* HALLOWEEN:END */
     listen('lastSpin/'+myId,v=>{C.lastSpin=Number(v)||0;if(typeof refreshSpinUI==='function'){try{refreshSpinUI()}catch(_){}}});
     listen('friendRequests/'+myId,v=>C.friendReqIn=v||{});
     listen('lastRead/'+myId,v=>C.lastRead=v||{});
@@ -3243,7 +3334,7 @@ const DB=(()=>{
     settings.meText=st.text||own.meText||base.meText;
     settings.avatar=st.avatar||(mine?own.avatar:'')||'';
     if(st.radius!=null&&!mine)settings.radius=st.radius;
-    return{...u,id:Number(id),friends:mine?(C.friends[myId]||[]):[],
+    return{...u,pronouns:String(st.pronouns||''),hiddenTags:String(st.hiddenTags||''),id:Number(id),friends:mine?(C.friends[myId]||[]):[],
       lastRead:mine?C.lastRead:{},settings};
   };
 
@@ -3316,12 +3407,25 @@ const DB=(()=>{
     dmKey,watchMessages,
     // VIP status: owners always count; otherwise a permanent flag or an unexpired 'until'.
     vipInfo:(id,pub)=>{id=Number(id);if(isOwner(id)&&!(pub&&!isShownOwner(id)))return{kind:'owner'};   // pub=true: display use, a secret owner falls through to their normal VIP status
+      if(pub&&tagHidden(id,'vip'))return null;
       const v=C.vip[id];if(!v)return null;
       if(v.perm===true)return{kind:'perm'};
       if(typeof v.until==='number'&&v.until>Date.now()+SKEW)return{kind:'day',until:v.until};
       return null},
     flairOf:(id)=>{const f=C.flair[Number(id)];return(f&&typeof f.until==='number'&&f.until>Date.now()+SKEW)?f.preset:null},
     rolesOf:(id)=>C.roles[Number(id)]||{},
+    /* TAG-VISIBILITY:START */
+    hiddenTagsOf:(id)=>{const u=C.users[Number(id)];const h=u&&u.style&&u.style.hiddenTags;return(typeof h==='string'&&h)?h.split(',').filter(t=>HIDEABLE_TAGS.indexOf(t)!==-1):[]},
+    // Which hideable tags this person really has (ignores their own hide choices) — drives the Account section.
+    tagsOwned:(id)=>{id=Number(id);const out=[];
+      if(OWNERS_CACHE[id]===1)out.push('owner');
+      if(isMod(id))out.push('mod');
+      const v=C.vip[id];if(v&&(v.perm===true||(typeof v.until==='number'&&v.until>Date.now()+SKEW)))out.push('vip');
+      const r=C.roles[id]||{};const f=C.flair[id];
+      if((f&&typeof f.until==='number'&&f.until>Date.now()+SKEW)||NAME_STYLE_PRESETS.some(p=>r[p]===true))out.push('flair');
+      if(r.confetti===true)out.push('confetti');
+      return out},
+    /* TAG-VISIBILITY:END */
     lastSpinAt:()=>C.lastSpin||0,
     reactionsFor,toggleReaction,
     isLoggedIn:()=>!!myUid,
@@ -3643,7 +3747,16 @@ const DB=(()=>{
       // silently wiped the person's profile picture. Carry the real current
       // avatar forward from style unless this patch is explicitly changing it.
       const avatar=('avatar' in patch)?(patch.avatar||''):((cur.style&&cur.style.avatar)||'');
+      // Pronouns are public (everyone sees them on your profile card), so like the avatar they live in the
+      // `style` node and never in the private `settings` blob. Carried forward unless this patch changes them.
+      const pronouns=('pronouns' in patch)?String(patch.pronouns||'').replace(/[\u0000-\u001f\u007f<>]/g,'').replace(/\s+/g,' ').trim().slice(0,30):String((cur.style&&cur.style.pronouns)||'');
+      delete merged.pronouns;
+      // TAG-VISIBILITY: hidden tags are public too (everyone's client needs them), so they live in `style` like pronouns.
+      const hiddenTags=('hiddenTags' in patch)?String(patch.hiddenTags||'').split(',').filter((t,i,a)=>HIDEABLE_TAGS.indexOf(t)!==-1&&a.indexOf(t)===i).join(','):String((cur.style&&cur.style.hiddenTags)||'');
+      delete merged.hiddenTags;
       const style={bubble:merged.meBubble||'#7c6cff',text:merged.meText||'#ffffff',radius:Number(merged.radius)||16,avatar};
+      if(pronouns)style.pronouns=pronouns;
+      if(hiddenTags)style.hiddenTags=hiddenTags;       // empty = field omitted, so nothing changes for people who don't use it
       C.users[id]={...cur,settings:merged,style};emit();
       // avatar lives in the public `style` node (above), not `settings` (which is
       // private and rules-limited to short values) — strip it before that write.
@@ -4766,133 +4879,98 @@ function beep(){
 }
 
 /* ---------- Background music player ----------
-   Auto-detects tracks sitting in the /Music folder next to this page. Since a
-   browser can't list a server directory on its own, detection works in two
-   layers:
-     1. Look for Music/manifest.json — a plain JSON array of filenames. This
-        is the reliable path: drop a file in, add its name to the array.
-     2. If that isn't there (no manifest yet), probe a list of filenames that
-        matches what's actually sitting in the repo's Music folder today, and
-        keep only the ones that actually load — so it still "just works"
-        without a manifest, and silently ignores whatever isn't present.
+   Streams free music from the Jamendo API (https://developer.jamendo.com).
+   Tracks come from a genre tag (the quick-pick chips) or a free-text search
+   typed in Settings > Music. The last search is remembered per device in
+   localStorage (not in the account settings, so no database-rule change).
+   Only the public client_id (8 characters) is used here; the long client secret is never
+   needed for read-only track search and must NOT be put in a web page.
    Playback state itself lives only in this tab (autoplay policies require a
    user gesture anyway); volume/enabled/shuffle prefs are saved to the
    account like any other setting. */
 const MusicPlayer=(()=>{
-  const FALLBACK_FILENAMES=[
-    'Alex Morgan - Lofi Midnight.mp3',
-    'Pufino - Fantasy.mp3',
-    'Velariomusic - Lofi.mp3',
-    'Zephiramusic Lofi Jazz.mp3'
-  ];
-  // Candidate base folders to try, in order. The page may be served directly
-  // from the repo (relative "Music/" just works), or embedded/loaded through
-  // something else (an iframe pointed at a CDN mirror of the repo, a proxy,
-  // etc.) where a plain relative path resolves against the wrong origin.
-  // Trying a few known-good absolute mirrors as a backup means this keeps
-  // working even if we don't control how the page ends up being served.
-  const REPO='jace01b-web/itsukis-chat-hub-obfuscated';
-  const BASE_CANDIDATES=[
-    (()=>{try{return new URL('Music/',document.baseURI).href}catch(_){return `https://cdn.jsdelivr.net/gh/${REPO}@main/Music/`}})(), // wherever this page itself was loaded from (guarded: throws when launched via about:blank/blob:)
-    `https://cdn.jsdelivr.net/gh/${REPO}@main/Music/`,                 // jsDelivr mirror of the repo (CORS-friendly, cached)
-    `https://raw.githubusercontent.com/${REPO}/main/Music/`           // raw GitHub fallback
-  ];
-  let tracks=[];        // [{name,url}]
+  const JAMENDO_CLIENT_ID='bcb2f672';
+  const JAMENDO_URL='https://api.jamendo.com/v3.0/tracks/';
+  const RESULT_LIMIT=40;
+  const DEFAULT_TAG='lofi';
+  const QUERY_KEY='ich.musicQuery';
+  const QUICK_TAGS=['lofi','chillout','ambient','electronic','jazz','piano','rock','hiphop','classical','cinematic','pop','relaxation'];
+  let tracks=[];        // [{id,name,artist,image,duration,url}]
   let order=[];         // shuffled/sequential index order
   let pos=-1;
+  let nowTrack=null;    // the song that is actually loaded (survives a new search)
   let ready=false;
+  let loading=false;
+  let loadSeq=0;
   let scanning=null;
   let lastError='';
+  let query={q:'',tag:DEFAULT_TAG};
+  try{
+    const sv=JSON.parse(localStorage.getItem(QUERY_KEY)||'null');
+    if(sv&&typeof sv==='object')query={q:String(sv.q||'').slice(0,60),tag:String(sv.tag||'').slice(0,30)};
+  }catch(_){}
   const listeners=new Set();
   function emit(){updateMediaSession();listeners.forEach(fn=>{try{fn(state())}catch(_){}})}
   function on(fn){listeners.add(fn);return()=>listeners.delete(fn)}
   function state(){
     return{
-      tracks,ready,lastError,
-      playing:!!(decks[live]&&!decks[live].paused),
-      current:pos>=0&&order.length?tracks[order[pos]]:null,
+      tracks,ready,loading,lastError,query:{q:query.q,tag:query.tag},
+      playing:!!(decks[live]&&decks[live]._url&&!decks[live].paused),
+      buffering,
+      current:nowTrack,
       volume:Math.round(targetVol*100),
       trackIndex:pos,total:order.length
     };
-  }
-  function niceName(filename){
-    return filename.replace(/\.[a-z0-9]+$/i,'').replace(/[_]+/g,' ').trim();
-  }
-  // Verify a URL actually plays, using a real <audio> element rather than
-  // fetch/HEAD — some hosts/CDNs/CORS setups block fetch() to a resource
-  // while still letting <audio src> load it fine (or vice versa), so trying
-  // both mechanisms rather than just one avoids false negatives.
-  function probeAudio(url){
-    return new Promise(res=>{
-      const a=new Audio();
-      let done=false;
-      const finish=ok=>{if(done)return;done=true;a.src='';res(ok)};
-      a.addEventListener('loadedmetadata',()=>finish(true),{once:true});
-      a.addEventListener('canplay',()=>finish(true),{once:true});
-      a.addEventListener('error',()=>finish(false),{once:true});
-      a.preload='metadata';
-      a.src=url;
-      setTimeout(()=>finish(false),5000);
-    });
-  }
-  async function probeFetch(url){
-    try{
-      let r=await fetch(url,{method:'HEAD',cache:'no-store',mode:'cors'});
-      if(r.status===405||r.status===501)r=await fetch(url,{method:'GET',cache:'no-store',mode:'cors',headers:{Range:'bytes=0-1'}});
-      return r.ok||r.status===206;
-    }catch(_){return false}
-  }
-  async function fileExists(url){
-    // Race both checks — whichever mechanism the current host doesn't block wins.
-    const [a,b]=await Promise.all([probeFetch(url).catch(()=>false),probeAudio(url).catch(()=>false)]);
-    return a||b;
   }
   function shuffleArr(arr){
     const a=arr.slice();
     for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}
     return a;
   }
-  async function tryManifest(base){
+  async function fetchTracks(qry){
+    const p=new URLSearchParams({
+      client_id:JAMENDO_CLIENT_ID,format:'json',limit:String(RESULT_LIMIT),
+      audioformat:'mp32',imagesize:'100',order:qry.q?'relevance':'popularity_week'
+    });
+    if(qry.q)p.set('search',qry.q);
+    if(qry.tag)p.set('tags',qry.tag);
+    const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),12000);
+    let j;
     try{
-      const r=await fetch(base+'manifest.json',{cache:'no-store',mode:'cors'});
-      if(!r.ok){console.warn('[music] manifest.json ->',r.status,base+'manifest.json');return null}
-      const j=await r.json();
-      if(Array.isArray(j)&&j.length)return j;
-    }catch(e){console.warn('[music] manifest.json failed at',base,e.message||e)}
-    return null;
+      const r=await fetch(JAMENDO_URL+'?'+p.toString(),{signal:ctl.signal});
+      if(!r.ok)throw new Error('Jamendo returned HTTP '+r.status);
+      j=await r.json();
+    }finally{clearTimeout(to)}
+    if(!j||!j.headers||j.headers.status!=='success')throw new Error((j&&j.headers&&j.headers.error_message)||'Jamendo request failed');
+    return(j.results||[]).filter(r=>r&&r.audio).map(r=>({
+      id:r.id,name:String(r.name||'Untitled'),artist:String(r.artist_name||''),
+      image:r.image||'',duration:+r.duration||0,url:r.audio
+    }));
   }
-  async function tryFallback(base){
-    const checks=await Promise.all(FALLBACK_FILENAMES.map(n=>fileExists(base+encodeURIComponent(n)).then(ok=>ok?n:null)));
-    return checks.filter(Boolean);
+  // Run a search ({q:'free text', tag:'genre'}). Whatever is playing keeps playing;
+  // the new list takes over from the next song / the next tap.
+  async function load(opts){
+    if(opts)query={q:String(opts.q||'').trim().slice(0,60),tag:String(opts.tag||'').trim().slice(0,30)};
+    try{localStorage.setItem(QUERY_KEY,JSON.stringify(query))}catch(_){}
+    const token=++loadSeq;
+    loading=true;lastError='';emit();
+    try{
+      const list=await fetchTracks(query);
+      if(token!==loadSeq)return tracks;                 // a newer search replaced this one
+      tracks=list;pos=-1;resetOrder();
+      for(let i=0;i<2;i++)if(decks[i]&&decks[i]!==decks[live])decks[i]._url=null;   // drop stale preloads
+    }catch(e){
+      if(token!==loadSeq)return tracks;
+      lastError=e&&e.name==='AbortError'?'Jamendo took too long to answer. Check your connection and try again.':String((e&&e.message)||e);
+      console.warn('[music]',lastError);
+    }
+    loading=false;ready=true;
+    emit();
+    return tracks;
   }
-  async function scan(){
+  function scan(){
     if(scanning)return scanning;
-    scanning=(async()=>{
-      let names=null,base=null;
-      for(const b of BASE_CANDIDATES){
-        names=await tryManifest(b);
-        if(names){base=b;break}
-      }
-      if(!names){
-        for(const b of BASE_CANDIDATES){
-          const found=await tryFallback(b);
-          if(found.length){names=found;base=b;break}
-        }
-      }
-      if(!names){
-        names=[];
-        lastError='No manifest.json and none of the expected filenames responded from any known location ('+BASE_CANDIDATES.join(', ')+'). Check the browser console for per-file errors.';
-        console.warn('[music]',lastError);
-      }else{
-        // de-dupe near-identical entries
-        const seen=new Set();names=names.filter(n=>{const k=niceName(n).toLowerCase();if(seen.has(k))return false;seen.add(k);return true});
-      }
-      tracks=names.map(n=>({name:niceName(n),url:base+encodeURIComponent(n)}));
-      ready=true;
-      resetOrder();
-      emit();
-      return tracks;
-    })();
+    scanning=Promise.resolve().then(()=>load());
     return scanning;
   }
   function resetOrder(shuffle){
@@ -4917,7 +4995,7 @@ const MusicPlayer=(()=>{
        - Manual skips use a short blend (you want the next song NOW); songs that
          end on their own get the long, gentle one. */
   const XFADE_MS=6000;       // blend when a song ends on its own
-  const SKIP_FADE_MS=2000;   // blend when the listener skips / picks a track
+  const SKIP_FADE_MS=450;    // quick blend when the listener skips / picks a track: the new song is audible almost at once
   const PAUSE_FADE_MS=700;   // fade when pausing
   const RESUME_FADE_MS=1100; // fade when resuming / starting
   const QUICK_FADE_MS=140;   // clears a still-audible tail when skipping twice fast
@@ -4936,6 +5014,9 @@ const MusicPlayer=(()=>{
   const warp=t=>t*t*t*(t*(t*6-15)+10);               // smootherstep: no kink in speed OR acceleration at either end
   const easeIn =t=>Math.sin(warp(t)*Math.PI/2);      // 0 -> 1
   const easeOut=t=>Math.cos(warp(t)*Math.PI/2);      // 1 -> 0
+  // manual switches: plain equal-power (no slow start), so the new song is audible straight away
+  const qIn =t=>Math.sin(t*Math.PI/2);
+  const qOut=t=>Math.cos(t*Math.PI/2);
   function deck(i){
     if(decks[i])return decks[i];
     const a=new Audio();
@@ -4944,6 +5025,13 @@ const MusicPlayer=(()=>{
     a.addEventListener('play',emit);
     a.addEventListener('pause',emit);
     a.addEventListener('loadedmetadata',emit);
+    a.addEventListener('durationchange',emit);
+    // a song that dies mid-way (network drop, bad file): move on instead of going silent
+    a.addEventListener('error',()=>{
+      if(decks.indexOf(a)!==live||userPaused||buffering||!a._url)return;
+      if(++failStreak>=4)return;
+      loadAt(pos+1,true,SKIP_FADE_MS,true);
+    });
     decks[i]=a;
     return a;
   }
@@ -4957,7 +5045,8 @@ const MusicPlayer=(()=>{
     for(let i=0;i<2;i++){
       const f=fades[i];if(!f)continue;
       const t=Math.min(1,(now-f.start)/f.ms);
-      gains[i]=f.to>f.from ? f.from+(f.to-f.from)*easeIn(t) : f.to+(f.from-f.to)*easeOut(t);
+      const ei=f.q?qIn:easeIn,eo=f.q?qOut:easeOut;
+      gains[i]=f.to>f.from ? f.from+(f.to-f.from)*ei(t) : f.to+(f.from-f.to)*eo(t);
       if(t>=1){gains[i]=f.to;const after=f.after;fades[i]=null;if(after)after()}
     }
     // glide the chosen volume toward the slider value (no zipper noise while dragging)
@@ -4970,9 +5059,9 @@ const MusicPlayer=(()=>{
   }
   // Fades are driven by setInterval, NOT requestAnimationFrame: rAF is paused
   // completely in a hidden tab, which would freeze a fade-out half way.
-  function fade(i,to,ms,after){
+  function fade(i,to,ms,after,q){
     deck(i);
-    fades[i]={from:gains[i],to,start:performance.now(),ms:Math.max(1,ms),after};
+    fades[i]={from:gains[i],to,start:performance.now(),ms:Math.max(1,ms),after,q:!!q};
     startTimer();
   }
   function cancelFade(i){fades[i]=null}
@@ -4990,76 +5079,126 @@ const MusicPlayer=(()=>{
   }
   function progress(){
     const a=decks[live];
-    const dur=a&&isFinite(a.duration)?a.duration:0;
-    const cur=a?a.currentTime:0;
+    const has=!!(a&&a._url);
+    let dur=has&&isFinite(a.duration)&&a.duration>0?a.duration:0;
+    if(!dur&&nowTrack&&nowTrack.duration)dur=nowTrack.duration;   // before the file reports its length, use the API's
+    const cur=has?(a.currentTime||0):0;
     return{current:cur,duration:dur,remaining:Math.max(0,dur-cur),
       fraction:dur?Math.min(1,cur/dur):0,total:order.length,
-      playing:!!(a&&!a.paused),name:pos>=0&&order.length?tracks[order[pos]].name:''};
+      playing:!!(has&&!a.paused),buffering,name:nowTrack?nowTrack.name:''};
   }
   setInterval(()=>{
     const a=decks[live];
     if(!a||a.paused)return;
     emitTime();
     // start the blend shortly before the song ends
-    if(!xfading&&isFinite(a.duration)&&a.duration>XFADE_MS/1000*2.5&&(a.duration-a.currentTime)<=XFADE_MS/1000&&order.length>1){
+    if(!xfading&&!buffering&&isFinite(a.duration)&&a.duration>XFADE_MS/1000*2.5&&(a.duration-a.currentTime)<=XFADE_MS/1000&&order.length>1){
       loadAt(pos+1,true,XFADE_MS);
     }
   },250);
 
-  // Warm the idle deck with the song that comes next, so the blend starts instantly.
-  function preloadNext(){
-    if(order.length<2)return;
+  let buffering=false;       // a chosen song is still loading (UI shows a spinner)
+  let failStreak=0;          // songs in a row that wouldn't play
+  let playTimer=null;
+  const LOAD_TIMEOUT_MS=9000;
+
+  // Warm the idle deck with a song so switching to it starts instantly.
+  function warm(t){
+    if(!t||buffering)return;
     const nu=1-live,d=deck(nu);
     if(!d.paused&&gains[nu]>.02)return;                 // still finishing the previous song
-    const nt=tracks[order[(pos+1)%order.length]];
-    if(!nt||d._url===nt.url)return;
-    d._url=nt.url;d.src=nt.url;d.preload='auto';
+    if(d._url===t.url)return;
+    d._url=t.url;d.src=t.url;d.preload='auto';
+    try{d.load()}catch(_){}
+  }
+  function preloadNext(){
+    if(order.length<2)return;
+    warm(tracks[order[(pos+1)%order.length]]);
+  }
+  function resetDeck(d){
+    if(!d)return;
+    try{d.pause()}catch(_){}
+    d.onended=null;d._url=null;d.removeAttribute('src');
     try{d.load()}catch(_){}
   }
 
-  // Load track `i` (index into order) on the idle deck and blend it in while the
-  // previous deck fades out. If nothing is playing yet it just fades in.
-  function loadAt(i,autoplay,blendMs){
+  /* Load track `i` (index into order) on the idle deck and blend it in while the previous deck
+     fades out. The blend starts the moment the new song is really playing, so there is never a
+     silent gap, and the old song keeps going while the new one buffers. A song that can't be
+     played is skipped (never a silent dead end). `manual` = listener skipped / picked a song:
+     short, punchy blend instead of the long one used when a song ends on its own. */
+  function loadAt(i,autoplay,blendMs,manual){
     if(!order.length)return;
     pos=((i%order.length)+order.length)%order.length;
     const t=tracks[order[pos]];
+    nowTrack=t;
     const token=++loadToken;
+    clearTimeout(playTimer);
     const old=live,nu=1-live;
     const blend=blendMs||XFADE_MS;
+    const q=!!manual;
+    buffering=!!autoplay;
     emit();                                             // show the new title straight away
+    const giveUp=()=>{
+      if(token!==loadToken)return;
+      clearTimeout(playTimer);
+      buffering=false;xfading=false;
+      resetDeck(decks[nu]);
+      live=old;                                         // the previous song (if any) is still the live one
+      if(++failStreak>=4||order.length<2){
+        lastError='That song couldn’t be played. Check your connection or pick another one.';
+        emit();return;
+      }
+      loadAt(pos+1,true,blend,manual);                  // skip to the next song
+    };
     const begin=()=>{
       if(token!==loadToken)return;                      // a newer skip took over
       const a=deck(nu);
       cancelFade(nu);
       a.onended=null;
-      if(a._url!==t.url){a._url=t.url;a.src=t.url;a.currentTime=0}      // else: already buffered by preloadNext()
-      else if(a.currentTime>.05)a.currentTime=0;
+      if(a._url!==t.url){a._url=t.url;a.src=t.url}      // else: already buffered by warm()/preloadNext()
+      try{if(a.currentTime>.05)a.currentTime=0}catch(_){}
       gains[nu]=0;applyVol(nu);
-      if(!autoplay){live=nu;emit();return}
+      if(!autoplay){live=nu;buffering=false;emit();return}
       const oldDeck=decks[old];
-      const oldPlaying=!!(oldDeck&&!oldDeck.paused&&oldDeck.src);
+      const oldPlaying=!!(oldDeck&&oldDeck._url&&!oldDeck.paused);
       live=nu;userPaused=false;xfading=oldPlaying;
       // if a song ends by itself (e.g. very short), move on
       a.onended=()=>{if(live===nu&&!userPaused)loadAt(pos+1,true,XFADE_MS)};
-      a.play().then(()=>{
+      playTimer=setTimeout(()=>{if(token===loadToken&&buffering)giveUp()},LOAD_TIMEOUT_MS);
+      let pr;
+      try{pr=a.play()}catch(e){pr=Promise.reject(e)}
+      Promise.resolve(pr).then(()=>{
         if(token!==loadToken)return;
-        if(oldPlaying){
+        clearTimeout(playTimer);
+        buffering=false;failStreak=0;lastError='';
+        if(userPaused){try{a.pause()}catch(_){}xfading=false;emit();return}
+        if(oldPlaying&&oldDeck&&!oldDeck.paused){
           // equal-power crossfade: old out, new in, over the same window
-          fade(old,0,blend,()=>{oldDeck.pause();xfading=false;emit();preloadNext()});
-          fade(nu,1,blend);
+          fade(old,0,blend,()=>{oldDeck.pause();xfading=false;emit();preloadNext()},q);
+          fade(nu,1,blend,null,q);
         }else{
           xfading=false;
-          fade(nu,1,RESUME_FADE_MS);
+          fade(nu,1,manual?SKIP_FADE_MS:RESUME_FADE_MS,null,q);
           preloadNext();
         }
-      }).catch(()=>{if(token===loadToken)xfading=false});
+        emit();
+      }).catch(err=>{
+        if(token!==loadToken)return;
+        const nm=err&&err.name;
+        if(nm==='AbortError'&&userPaused){clearTimeout(playTimer);buffering=false;xfading=false;emit();return}
+        if(nm==='NotAllowedError'){                     // browser wants a tap first: stay loaded, ready to play
+          clearTimeout(playTimer);buffering=false;xfading=false;emit();return;
+        }
+        giveUp();
+      });
       emit();
     };
     // Skipped again while the previous song's tail is still audible on the deck we
     // need? Clear it with a very quick fade first so nothing is cut off with a click.
     const tail=decks[nu];
     if(tail&&!tail.paused&&gains[nu]>.02){
-      fade(nu,0,QUICK_FADE_MS,()=>{tail.pause();begin()});
+      fade(nu,0,QUICK_FADE_MS,()=>{tail.pause();begin()},true);
     }else begin();
   }
   async function play(){
@@ -5067,15 +5206,20 @@ const MusicPlayer=(()=>{
     if(!tracks.length)return;
     userPaused=false;
     const a=deck(live);
-    if(pos<0)loadAt(0,true,XFADE_MS);
-    else{
-      cancelFade(live);
-      try{gains[live]=Math.min(gains[live],.001);await a.play();fade(live,1,RESUME_FADE_MS);preloadNext()}catch(_){}
+    if(!a._url){loadAt(Math.max(pos,0),true,RESUME_FADE_MS);return}
+    cancelFade(live);
+    try{
+      gains[live]=Math.min(gains[live],.001);
+      await a.play();
+      if(!userPaused){fade(live,1,RESUME_FADE_MS);preloadNext()}
+    }catch(e){
+      const nm=e&&e.name;
+      if(nm!=='AbortError'&&nm!=='NotAllowedError')loadAt(Math.max(pos,0),true,RESUME_FADE_MS);
     }
     emit();
   }
   function pause(){
-    userPaused=true;
+    userPaused=true;buffering=false;
     // fade out whichever deck(s) are sounding, then pause them
     for(let i=0;i<2;i++){
       const a=decks[i];
@@ -5083,24 +5227,56 @@ const MusicPlayer=(()=>{
         fade(i,0,PAUSE_FADE_MS,()=>{a.pause();xfading=false;emit()});
       }
     }
+    emit();
   }
   function toggle(){
     const a=decks[live];
-    if(a&&!a.paused)pause();else play();
+    if(a&&a._url&&!a.paused)pause();else play();
   }
-  function next(){if(!order.length)return;loadAt(pos+1,true,SKIP_FADE_MS)}
+  function next(){if(!order.length)return;loadAt(pos+1,true,SKIP_FADE_MS,true)}
   function prev(){
     if(!order.length)return;
     // like most players: if we're >3s in, "previous" restarts the song
     const a=decks[live];
-    if(a&&a.currentTime>3){a.currentTime=0;emitTime(true);return}
-    loadAt(pos-1,true,SKIP_FADE_MS);
+    if(a&&a._url&&!buffering&&a.currentTime>3){a.currentTime=0;emitTime(true);return}
+    loadAt(pos<0?0:pos-1,true,SKIP_FADE_MS,true);
   }
   function playTrack(trackIdx){
     const oi=order.indexOf(trackIdx);
     if(oi===-1)return;
-    loadAt(oi,true,SKIP_FADE_MS);
+    const t=tracks[trackIdx],a=decks[live];
+    if(t&&nowTrack&&nowTrack.url===t.url&&a&&a._url===t.url&&!buffering){   // same song: resume / restart
+      if(a.paused)play();else{a.currentTime=0;emitTime(true)}
+      return;
+    }
+    loadAt(oi,true,SKIP_FADE_MS,true);
   }
+  function hint(trackIdx){warm(tracks[trackIdx])}      // preload on pointer-down so the click starts instantly
+
+  /* Safari / iOS only let code start an <audio> element that was "unlocked" by a real tap.
+     The second (idle) deck never gets one, so a skip could silently fail there. Unlock both
+     decks on the very first tap/key with a tiny silent clip. */
+  const SILENT=(()=>{
+    const n=400,b=new Uint8Array(44+n),v=new DataView(b.buffer);
+    const w=(o,s)=>{for(let i=0;i<s.length;i++)b[o+i]=s.charCodeAt(i)};
+    w(0,'RIFF');v.setUint32(4,36+n,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);
+    v.setUint16(22,1,true);v.setUint32(24,8000,true);v.setUint32(28,8000,true);v.setUint16(32,1,true);v.setUint16(34,8,true);
+    w(36,'data');v.setUint32(40,n,true);b.fill(128,44);
+    let s='';for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);
+    return 'data:audio/wav;base64,'+btoa(s);
+  })();
+  let unlocked=false;
+  function unlock(){
+    if(unlocked)return;unlocked=true;
+    for(let i=0;i<2;i++){
+      const d=deck(i);
+      if(d._url||d.getAttribute('src'))continue;
+      d.src=SILENT;d.volume=0;
+      const done=()=>{if(d.getAttribute('src')===SILENT){try{d.pause()}catch(_){}d.removeAttribute('src');try{d.load()}catch(_){}}};
+      try{const pr=d.play();if(pr&&pr.then)pr.then(done,done);else done()}catch(_){done()}
+    }
+  }
+  ['pointerdown','keydown','touchend'].forEach(ev=>document.addEventListener(ev,unlock,{once:true,passive:true}));
   function seek(fraction){
     const a=decks[live];
     if(a&&isFinite(a.duration))a.currentTime=Math.max(0,Math.min(1,fraction))*a.duration;
@@ -5139,12 +5315,15 @@ const MusicPlayer=(()=>{
   function updateMediaSession(){
     if(typeof navigator==='undefined'||!('mediaSession' in navigator))return;
     try{
-      const t=pos>=0&&order.length?tracks[order[pos]]:null;
-      if(t&&t.name!==_msTitle&&typeof MediaMetadata!=='undefined'){
-        _msTitle=t.name;
-        navigator.mediaSession.metadata=new MediaMetadata({title:t.name,artist:'Itsukis Chat Hub'});
+      const t=nowTrack;
+      if(t&&t.url!==_msTitle&&typeof MediaMetadata!=='undefined'){
+        _msTitle=t.url;
+        navigator.mediaSession.metadata=new MediaMetadata({
+          title:t.name,artist:t.artist||'Jamendo',album:'Itsukis Chat Hub',
+          artwork:t.image?[{src:t.image,sizes:'100x100'}]:[]
+        });
       }
-      navigator.mediaSession.playbackState=(decks[live]&&!decks[live].paused)?'playing':'paused';
+      navigator.mediaSession.playbackState=(decks[live]&&decks[live]._url&&!decks[live].paused)?'playing':'paused';
     }catch(_){}
   }
   if(typeof navigator!=='undefined'&&'mediaSession' in navigator){
@@ -5209,7 +5388,7 @@ const MusicPlayer=(()=>{
     if(music.enabled&&!isPlaying)play();
     else if(!music.enabled)pause();
   }
-  return{emitNow:()=>emitTime(true),on,onTime,progress,seek,state,scan,play,pause,toggle,next,prev,playTrack,setVolume,setShuffle,applyPrefs,getBackground,setBackground};
+  return{emitNow:()=>emitTime(true),on,onTime,progress,seek,state,scan,play,pause,toggle,next,prev,playTrack,hint,setVolume,setShuffle,applyPrefs,getBackground,setBackground,load,quickTags:QUICK_TAGS};
 })();
 
 
@@ -5227,7 +5406,7 @@ const MusicPlayer=(()=>{
     np.classList.toggle('playing',!!(p&&p.playing));
     if(!p||!p.name)return;
     if(p.name!==lastName){lastName=p.name;nm.textContent=p.name;np.title='Now playing: '+p.name}
-    lf.textContent=p.duration?('-'+fmt(p.remaining)+' left'):'';
+    lf.textContent=(p.buffering&&!(p.current>0))?'Loading…':(p.duration?('-'+fmt(p.remaining)+' left'):'');
     fl.style.width=(p.fraction*100).toFixed(2)+'%';
   }
   MusicPlayer.onTime(paint);
@@ -5769,10 +5948,11 @@ function vipBadgeHTML(id){
     const f=DB.flairOf(id);
     const roles=DB.rolesOf(id);
     const perm=f||NAME_STYLE_PRESETS.find(p=>roles[p]===true);
-    if(perm&&VIP_FLAIRS[perm])h+='<span class="flair-badge flair-'+perm+'" title="'+VIP_FLAIRS[perm].n+(roles[perm]&&!f?' (permanent)':'')+'">'+VIP_FLAIRS[perm].e+'</span>';
+    const hf=tagHidden(id,'flair'),hc=tagHidden(id,'confetti');
+    if(!hf&&perm&&VIP_FLAIRS[perm])h+='<span class="flair-badge flair-'+perm+'" title="'+VIP_FLAIRS[perm].n+(roles[perm]&&!f?' (permanent)':'')+'">'+VIP_FLAIRS[perm].e+'</span>';
     // Roles with no flair/name-color of their own (currently just Confetti Blast)
     // still deserve a permanent little badge once earned.
-    if(roles.confetti===true)h+='<span class="flair-badge" title="Confetti Blast (permanent)">🎉</span>';
+    if(!hc&&roles.confetti===true)h+='<span class="flair-badge" title="Confetti Blast (permanent)">🎉</span>';
   }catch(_){}
   return h?' '+h:'';
 }
@@ -5807,9 +5987,10 @@ function profileRolesHTML(id){
     else if(v&&v.kind==='day')out+='<span class="pf-role vip-day">\u{1F31E} VIP \u2014 1 Day</span>';
     const live=DB.flairOf(id),roles=DB.rolesOf(id);
     const seen={};
-    if(live&&VIP_FLAIRS[live]){seen[live]=1;out+='<span class="pf-role fl-'+live+'">'+VIP_FLAIRS[live].e+' '+VIP_FLAIRS[live].n+'</span>'}
-    NAME_STYLE_PRESETS.forEach(p=>{if(roles[p]===true&&!seen[p]&&VIP_FLAIRS[p]){seen[p]=1;out+='<span class="pf-role fl-'+p+'">'+VIP_FLAIRS[p].e+' '+VIP_FLAIRS[p].n+'</span>'}});
-    if(roles.confetti===true)out+='<span class="pf-role fl-confetti">\u{1F389} Confetti Blast</span>';
+    const hf=tagHidden(id,'flair'),hc=tagHidden(id,'confetti');
+    if(!hf&&live&&VIP_FLAIRS[live]){seen[live]=1;out+='<span class="pf-role fl-'+live+'">'+VIP_FLAIRS[live].e+' '+VIP_FLAIRS[live].n+'</span>'}
+    if(!hf)NAME_STYLE_PRESETS.forEach(p=>{if(roles[p]===true&&!seen[p]&&VIP_FLAIRS[p]){seen[p]=1;out+='<span class="pf-role fl-'+p+'">'+VIP_FLAIRS[p].e+' '+VIP_FLAIRS[p].n+'</span>'}});
+    if(!hc&&roles.confetti===true)out+='<span class="pf-role fl-confetti">\u{1F389} Confetti Blast</span>';
   }catch(_){}
   return out?'<div class="pf-roles">'+out+'</div>':'';
 }
@@ -6437,9 +6618,10 @@ function openUserProfile(id){
         <div style="position:relative;width:fit-content">${av}${online&&!deleted?'<span style="position:absolute;bottom:4px;right:4px;width:18px;height:18px;border-radius:50%;background:#3ddc73;box-shadow:0 0 8px #3ddc73;border:3px solid var(--panel)"></span>':''}</div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap">
           <h2 style="margin:0;font-size:20px">${deleted?esc(name):fullNameHTML(id,esc(name))}</h2>
-          ${mod&&!owner?'<span class="tag" style="background:var(--accent)">Mod</span>':''}
+          ${mod&&!owner&&!tagHidden(id,'mod')?'<span class="tag" style="background:var(--accent)">Mod</span>':''}
           ${banned?'<span class="tag" style="background:var(--danger)">Banned</span>':''}
         </div>
+        ${(!deleted&&u.pronouns)?`<div class="pf-pron">${esc(u.pronouns)}</div>`:''}
         <div style="display:flex;align-items:center;gap:6px;margin-top:6px;color:var(--muted);font-size:13px">
           ${statusDot}<span>${statusText}</span>
         </div>
@@ -7523,11 +7705,23 @@ const HW_R=[
 ];
 const HW_KIND={b:'Badge',n:'Name effect',t:'Title + effect'};
 const hwLevel=id=>Math.min(HW.N,Math.max(0,Number((window.HW_CLAIMED||{})[id])||0));
+/* Equipped cosmetics live at halloween/equipped/<id> = {fx,title,badge}, each the LEVEL number (1-30) of the reward being shown,
+   or 0 for "none". A missing key means "auto" (the best one you own, the original behaviour). A level above what you own, or one of
+   the wrong kind, is ignored, so a tampered value can never show something you haven't unlocked. */
+function hwPick(id,key,kinds,def){
+  const L=hwLevel(id),e=(window.HW_EQ||{})[id];
+  if(!e||e[key]===undefined||e[key]===null)return def;
+  const n=Math.floor(Number(e[key]));
+  if(n===0)return null;
+  if(!(n>=1&&n<=L))return def;
+  const r=HW_R[n-1];return kinds.indexOf(r[2])>-1?r:def;
+}
 function hwStyleOf(id){
   const L=hwLevel(id);if(!L)return null;
-  let fx=null,title=null;const bd=[];
-  for(let i=0;i<L;i++){const r=HW_R[i];if(r[2]==='b')bd.push(r[0]);else{fx=r[3];if(r[2]==='t')title=r}}
-  return{fx,title,badges:bd.slice(-1)};
+  let dfx=null,dt=null,db=null;
+  for(let i=0;i<L;i++){const r=HW_R[i];if(r[2]==='b')db=r;else{dfx=r;if(r[2]==='t')dt=r}}
+  const fx=hwPick(id,'fx',['n','t'],dfx),t=hwPick(id,'title',['t'],dt),b=hwPick(id,'badge',['b'],db);
+  return{fx:fx?fx[3]:null,title:t,badges:b?[b[0]]:[]};
 }
 function hwWrap(id,html,plain){
   try{
@@ -7633,12 +7827,13 @@ function hwModal(){
   const root=document.getElementById('modalRoot');if(!root)return;
   root.innerHTML='<div class="modal-bg" id="hwBg"><div class="modal hw-modal" role="dialog" aria-modal="true" aria-label="Halloween Season Pass"><button class="hw-help" id="hwHelp" type="button" aria-label="How the Halloween Pass works" title="How it works">?</button><button class="hw-x" id="hwX" type="button" aria-label="Close">✕</button>'
     +'<div class="hw-head"><span class="hw-big">🎃</span><h2>Halloween Season Pass</h2><p>Spend time online to level up. '+HW.N+' levels of spooky badges, name effects and permanent roles. Every level takes a little longer than the last.</p><div id="hwHeadStats"></div></div>'
-    +'<div class="hw-list"></div><div class="hw-foot"><button class="hw-btn" id="hwAll" type="button" disabled>Nothing to claim yet</button></div></div></div>';
+    +'<div class="hw-list"></div><div class="hw-foot"><button class="hw-btn" id="hwAll" type="button" disabled>Nothing to claim yet</button><button class="hw-btn" id="hwCos" type="button" style="flex:none;background:rgba(255,255,255,.1);color:var(--text);box-shadow:none">✨ Customize</button></div></div></div>';
   const close=()=>{const bg=document.getElementById('hwBg');if(!bg)return;clearInterval(_hwTimer);bg.classList.add('closing');setTimeout(()=>{if(document.getElementById('hwBg'))root.innerHTML=''},220)};
   document.getElementById('hwBg').onclick=e=>{if(e.target.id==='hwBg')close();const b=e.target.closest&&e.target.closest('.hw-btn[data-l]');if(b)hwClaim(+b.dataset.l)};
   document.getElementById('hwX').onclick=close;
   document.getElementById('hwHelp').onclick=()=>hwIntroShow(true);
   document.getElementById('hwAll').onclick=()=>hwClaim(hwProg().lvl);
+  document.getElementById('hwCos').onclick=openCosmetics;
   hwRender();clearInterval(_hwTimer);
   _hwTimer=setInterval(()=>{const bg=document.getElementById('hwBg');if(!bg){clearInterval(_hwTimer);return}const hs=bg.querySelector('#hwHeadStats');if(hs&&!document.hidden){const t=bg.querySelector('#hwTime');if(t){const{m,last}=hwProg();const ex=last?Math.min(59,Math.max(0,Math.floor((hwNow()-last)/1000))):0;t.textContent=Math.floor(m/60)+'h '+String(m%60).padStart(2,'0')+'m '+String(ex).padStart(2,'0')+'s'}}},1000);
   hwMaybeIntro();
@@ -7777,11 +7972,99 @@ function hwSettingsInject(){
   const a=document.getElementById('sAntiLag');
   if(!a||document.getElementById('sHwTheme')||!hwCanClaim())return;
   const c=a.closest('.set-card');if(!c)return;
-  c.insertAdjacentHTML('afterend','<div class="set-card"><div class="section-h" style="margin-top:0">🎃 Halloween event</div><div class="toggle-row" style="margin-bottom:0"><div><div style="font-weight:600;font-size:14px">Halloween theme</div><div class="hint" style="margin-top:2px">Spooky decorations (bats, ghosts, fog, cobwebs) and the orange/purple look across the app. Turn off for the normal look. Your Halloween roles and name effects stay either way. Saved to your account.</div></div><label class="switch"><input type="checkbox" id="sHwTheme" '+(hwWant()?'checked':'')+'><span class="slider"></span></label></div><button class="btn" id="sHwOpen" type="button" style="margin-top:12px;width:100%">🎃 Open Halloween Pass</button></div>');
+  c.insertAdjacentHTML('afterend','<div class="set-card"><div class="section-h" style="margin-top:0">🎃 Halloween event</div><div class="toggle-row" style="margin-bottom:0"><div><div style="font-weight:600;font-size:14px">Halloween theme</div><div class="hint" style="margin-top:2px">Spooky decorations (bats, ghosts, fog, cobwebs) and the orange/purple look across the app. Turn off for the normal look. Your Halloween roles and name effects stay either way. Saved to your account.</div></div><label class="switch"><input type="checkbox" id="sHwTheme" '+(hwWant()?'checked':'')+'><span class="slider"></span></label></div><button class="btn" id="sHwOpen" type="button" style="margin-top:12px;width:100%">🎃 Open Halloween Pass</button><button class="btn sec" id="sHwCos" type="button" style="margin-top:8px;width:100%">✨ Customize name, title &amp; badge</button></div>');
   document.getElementById('sHwTheme').addEventListener('change',e=>hwSetTheme(e.target.checked));
   document.getElementById('sHwOpen').onclick=hwModal;
+  document.getElementById('sHwCos').onclick=openCosmetics;
 }
 {const o=openSettings;openSettings=function(){const x=o.apply(this,arguments);try{hwSettingsInject();setTimeout(hwSettingsInject,250)}catch(e){console.warn('halloween settings',e)}return x}}
+
+/* ---------- Cosmetics: choose how your name looks (sections; for now just "Halloween 2026") ---------- */
+const CS_SECTIONS=[{id:'hw2026',name:'Halloween 2026',emoji:'🎃'}];   // add future events here: {id,name,emoji} + a case in csBody()
+let _csSec='hw2026';
+async function csEquip(key,val){   // val: 'auto' | 0 (none) | level number
+  if(!ME)return;
+  const id=ME.id,cur={...((window.HW_EQ||{})[id]||{})};
+  if(val==='auto')delete cur[key];else cur[key]=val;
+  for(const k of Object.keys(cur))if(!['fx','title','badge'].includes(k))delete cur[k];
+  const prev=(window.HW_EQ||{})[id];
+  window.HW_EQ={...(window.HW_EQ||{}),[id]:Object.keys(cur).length?cur:undefined};
+  if(!Object.keys(cur).length)delete window.HW_EQ[id];
+  csRender();try{if(typeof renderChatLight==='function')renderChatLight()}catch(_){}
+  try{
+    if(Object.keys(cur).length)await set(ref(rtdb,'halloween/equipped/'+id),cur);
+    else await remove(ref(rtdb,'halloween/equipped/'+id));
+  }catch(e){
+    console.warn('cosmetics save failed',e);
+    window.HW_EQ={...(window.HW_EQ||{})};if(prev)window.HW_EQ[id]=prev;else delete window.HW_EQ[id];
+    csRender();
+    toast(e&&e.code==='PERMISSION_DENIED'?'Could not save: publish the updated database rules (halloween/equipped).':'Could not save that choice.','bad');
+  }
+}
+function csOptHTML(key,val,icon,label,sub,on){
+  return '<button type="button" class="cs-opt'+(on?' on':'')+'" aria-pressed="'+(on?'true':'false')+'" data-k="'+key+'" data-v="'+val+'"><span class="ci">'+icon+'</span><span class="ct"><span>'+label+'</span>'+(sub?'<em>'+sub+'</em>':'')+'</span></button>';
+}
+function csHwBody(){
+  const id=ME.id,L=hwLevel(id),eq=(window.HW_EQ||{})[id]||{};
+  const cur=k=>(eq[k]===undefined||eq[k]===null)?'auto':Math.floor(Number(eq[k]));
+  const owned=kinds=>HW_R.map((r,i)=>({r,L:i+1})).filter(x=>x.L<=L&&kinds.indexOf(x.r[2])>-1);
+  const sec=(key,title,kinds,render,autoSub,emptyTxt)=>{
+    const list=owned(kinds),c=cur(key);
+    let h='<div class="cs-h">'+title+'<span>'+list.length+' unlocked</span></div>';
+    if(!list.length)return h+'<div class="cs-empty">'+emptyTxt+'</div>';
+    h+='<div class="cs-grid">'+csOptHTML(key,'auto','✨','Auto',autoSub,c==='auto')+csOptHTML(key,0,'🚫','None','Hide it',c===0)
+      +list.map(x=>render(x.r,x.L,c===x.L)).join('')+'</div>';
+    return h;
+  };
+  if(!L)return '<div class="cs-empty" style="padding:18px 0">You haven\'t unlocked any Halloween rewards yet. Earn levels on the Halloween Pass, then come back here to pick how your name looks.</div>';
+  return sec('fx','Name effect',['n','t'],(r,lv,on)=>csOptHTML('fx',lv,r[0],'<span class="hw-name hw-plain hw-s-'+r[3]+'">'+r[1]+'</span>','Level '+lv,on),'Best one you own','Reach level 5 for your first name effect.')
+    +sec('title','Title',['t'],(r,lv,on)=>csOptHTML('title',lv,r[0],'<span class="hw-title hw-t-'+r[3]+'" style="margin:0">'+r[0]+' '+r[1].split(' ').pop()+'</span>','Level '+lv,on),'Best one you own','Reach level 19 for your first title.')
+    +sec('badge','Badge emoji',['b'],(r,lv,on)=>csOptHTML('badge',lv,r[0],r[1],'Level '+lv,on),'Latest one you unlocked','Reach level 1 to get a badge.');
+}
+function csBody(){
+  const s=_csSec;
+  if(s==='hw2026')return csHwBody();
+  return '';
+}
+function csRender(){
+  const bg=document.getElementById('csBg');if(!bg||!ME)return;
+  const nm=displayUsername(ME.username);
+  const hasEq=!!((window.HW_EQ||{})[ME.id]);
+  bg.querySelector('.cs-prev').innerHTML=avatarHtml(ME,nm,'width:46px;height:46px;font-size:18px;flex:none')+'<div class="cs-pn">'+fullNameHTML(ME.id,esc(nm))+'<small>This is how your name looks to everyone</small></div>';
+  bg.querySelector('.cs-secs').innerHTML=CS_SECTIONS.map(s=>'<button type="button" data-s="'+s.id+'" class="'+(s.id===_csSec?'on':'')+'">'+s.emoji+' '+s.name+'</button>').join('');
+  const body=bg.querySelector('.cs-body'),y=body.scrollTop;
+  body.innerHTML=csBody();body.scrollTop=y;
+  const rs=bg.querySelector('#csReset');if(rs)rs.disabled=!hasEq;
+}
+function openCosmetics(){
+  ME=DB.currentUser();if(!ME)return;
+  const root=document.getElementById('modalRoot');if(!root)return;
+  root.innerHTML='<div class="modal-bg" id="csBg"><div class="modal cs-modal" role="dialog" aria-modal="true" aria-label="Cosmetics"><button class="cs-x" id="csX" type="button" aria-label="Close">✕</button>'
+    +'<div class="cs-top"><h2>✨ Cosmetics</h2><div class="cs-prev"></div></div><div class="cs-secs"></div><div class="cs-body"></div>'
+    +'<div class="cs-foot"><button class="btn sec" id="csReset" type="button">Reset to auto</button><button class="btn" id="csDone" type="button">Done</button></div></div></div>';
+  const close=()=>{const bg=document.getElementById('csBg');if(!bg)return;bg.classList.add('closing');setTimeout(()=>{if(document.getElementById('csBg'))root.innerHTML=''},200)};
+  const bg=document.getElementById('csBg');
+  bg.onclick=e=>{
+    if(e.target===bg){close();return}
+    const o=e.target.closest('.cs-opt');if(o){const v=o.dataset.v;csEquip(o.dataset.k,v==='auto'?'auto':Number(v));return}
+    const s=e.target.closest('.cs-secs button');if(s){_csSec=s.dataset.s;csRender()}
+  };
+  document.getElementById('csX').onclick=close;document.getElementById('csDone').onclick=close;
+  document.getElementById('csReset').onclick=async()=>{
+    const id=ME.id;const prev=(window.HW_EQ||{})[id];
+    const m={...(window.HW_EQ||{})};delete m[id];window.HW_EQ=m;csRender();
+    try{await remove(ref(rtdb,'halloween/equipped/'+id));toast('Back to auto.')}
+    catch(e){window.HW_EQ={...(window.HW_EQ||{}),[id]:prev};csRender();toast('Could not reset.','bad')}
+  };
+  csRender();
+}
+function csInjectAccount(){
+  const root=document.getElementById('modalRoot');if(!root||!ME||document.getElementById('acCosmetics'))return;
+  const hs=[...root.querySelectorAll('.section-h')].find(x=>x.textContent.trim()==='Session');if(!hs)return;
+  hs.insertAdjacentHTML('beforebegin','<div class="section-h">✨ Cosmetics</div><div class="hint" style="margin-bottom:10px">Choose your name effect, title and badge from the events you\'ve unlocked.</div><button class="btn sec" style="width:100%" id="acCosmetics" type="button">✨ Customize my name</button>');
+  document.getElementById('acCosmetics').onclick=openCosmetics;
+}
+{const o=openAccount;openAccount=function(){const x=o.apply(this,arguments);try{csInjectAccount()}catch(e){console.warn('cosmetics account',e)}return x}}
 /* HALLOWEEN:END */
 // Everyone must agree once per account (and again whenever RULES_VERSION goes up). Runs as soon as
 // the app is idle; if the agreement can't be read (offline/rules not published) nobody gets locked out.
@@ -7964,7 +8247,7 @@ function openSettings(fromChat){
         <div class="toggle-row" style="margin-bottom:14px">
           <div>
             <div style="font-weight:600;font-size:14px">Play music while chatting</div>
-            <div class="hint" style="margin-top:2px">Auto-detected from the Music folder.</div>
+            <div class="hint" style="margin-top:2px">Free music streamed from Jamendo.</div>
           </div>
           <label class="switch"><input type="checkbox" id="sMusicOn" ${s.music&&s.music.enabled?'checked':''}><span class="slider"></span></label>
         </div>
@@ -7975,7 +8258,17 @@ function openSettings(fromChat){
           </div>
           <label class="switch"><input type="checkbox" id="sMusicBg" ${MusicPlayer.getBackground()?'checked':''}><span class="slider"></span></label>
         </div>
+        <div class="music-search">
+          <div class="ms-box">
+            <svg class="ms-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input type="text" id="mQuery" placeholder="Search songs, artists or moods..." maxlength="60" autocomplete="off" spellcheck="false" enterkeyhint="search">
+            <button type="button" class="ms-clear" id="mClear" aria-label="Clear search">✕</button>
+          </div>
+          <button type="button" class="btn ms-go" id="mGo"><span class="ms-spin"></span>Search</button>
+        </div>
+        <div class="music-chips" id="mChips"></div>
         <div id="musicWidget"></div>
+        <div class="music-credit">Music via <a href="https://www.jamendo.com" target="_blank" rel="noopener">Jamendo</a></div>
       </div>
     </div>
 
@@ -8162,55 +8455,135 @@ function openSettings(fromChat){
     const sl=$$('#mVol');
     return sl?+sl.value:(s.music&&s.music.volume!=null?s.music.volume:55);
   }
-  function renderMusicWidget(){
-    const el=$$('#musicWidget');if(!el)return;
-    if(el.querySelector('#mVol:active,#mSeek:active'))return;   // don't rebuild under the user's finger
-    const st=MusicPlayer.state();
-    if(!st.ready){
-      el.innerHTML=`<div class="music-empty">🔍 Looking for tracks in the Music folder...</div>`;
-      MusicPlayer.scan().then(renderMusicWidget);
-      return;
-    }
-    if(!st.tracks.length){
-      el.innerHTML=`<div class="music-empty">No tracks found.<br><br>Add a <b>Music/manifest.json</b> file next to index.html listing your filenames, e.g.:<br><code style="display:block;background:var(--ui-bg2);border-radius:8px;padding:8px 10px;margin-top:6px;text-align:left;font-size:11px;white-space:pre-wrap">["Song Name.mp3","Another Song.mp3"]</code><br>This is more reliable than auto-guessing filenames. Reopen Settings after adding it.${st.lastError?`<div style="margin-top:10px;padding:8px 10px;background:rgba(255,93,115,.12);border:1px solid rgba(255,93,115,.35);border-radius:8px;font-size:11px;text-align:left;color:var(--danger);word-break:break-word">${esc(st.lastError)}</div>`:''}</div>`;
-      return;
-    }
+  function setupMusicSearch(){
+    const c=$$('#mChips'),inp=$$('#mQuery'),go=$$('#mGo'),box=$$('.music-search'),clr=$$('#mClear');
+    if(!c||!inp||!go)return;
+    c.innerHTML=MusicPlayer.quickTags.map(t=>`<button type="button" data-tag="${t}">${t}</button>`).join('');
+    inp.value=MusicPlayer.state().query.q;
+    const sync=()=>box&&box.classList.toggle('has-text',!!inp.value);
+    sync();
+    const doSearch=()=>{
+      const q=inp.value.trim();
+      if(!q){const tag=MusicPlayer.state().query.tag||'lofi';MusicPlayer.load({q:'',tag});return}   // empty box: back to a genre
+      MusicPlayer.load({q,tag:''});
+    };
+    go.onclick=doSearch;
+    inp.addEventListener('input',sync);
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();e.stopPropagation();doSearch()}});
+    if(clr)clr.onclick=()=>{inp.value='';sync();inp.focus()};
+    c.onclick=e=>{const b=e.target.closest('button[data-tag]');if(!b)return;inp.value='';sync();MusicPlayer.load({q:'',tag:b.dataset.tag})};
+  }
+  function syncMusicChips(st){
+    const c=$$('#mChips');if(!c)return;
+    c.querySelectorAll('button').forEach(b=>b.classList.toggle('on',!st.query.q&&b.dataset.tag===st.query.tag));
+    const box=$$('.music-search');if(box)box.classList.toggle('busy',!!st.loading);
+  }
+  const fmtD=n=>{n=Math.max(0,Math.floor(n||0));return Math.floor(n/60)+':'+String(n%60).padStart(2,'0')};
+  const mw={tracksRef:null,img:undefined,ps:'',curUrl:null};
+  // The widget is built ONCE and then patched in place (the old version rebuilt everything on every
+  // play/pause/metadata event, which reset the list scroll, reloaded thumbnails and dropped the time readout).
+  function buildMusicShell(el,st){
+    const setOn=on=>{const t=$$('#sMusicOn');if(t&&t.checked!==on)t.checked=on};   // keep the toggle in step with what you do here
     el.innerHTML=`
       <div class="music-now">
-        <div class="music-note${st.playing?' spin':''}">🎵</div>
+        <div class="music-note" id="mNote">🎵</div>
         <div class="music-meta">
-          <div class="mt-name" id="mNowName">${esc(st.current?st.current.name:'Nothing playing')}</div>
-          <div class="mt-sub">${st.tracks.length} track${st.tracks.length===1?'':'s'} found</div>
+          <div class="mt-name" id="mNowName"></div>
+          <div class="mt-sub" id="mNowSub"></div>
         </div>
       </div>
       <div class="music-controls">
         <button id="mPrev" title="Previous">⏮</button>
-        <button id="mPlay" class="mc-play" title="Play/Pause">${st.playing?'⏸':'▶'}</button>
+        <button id="mPlay" class="mc-play" title="Play/Pause"></button>
         <button id="mNext" title="Next">⏭</button>
       </div>
-      <div class="music-seek"><span id="mCur">0:00</span><input type="range" id="mSeek" min="0" max="1000" value="0"><span id="mLeft">-0:00</span></div>
+      <div class="music-seek"><span id="mCur">0:00</span><input type="range" id="mSeek" min="0" max="1000" value="0"><span id="mLeft">-:--</span></div>
       <div class="field"><label>Volume <span class="val" id="vMVol">${st.volume}%</span></label>
         <input type="range" id="mVol" min="0" max="100" value="${st.volume}"></div>
-      <div class="music-list" id="mList">${st.tracks.map((t,i)=>`<div class="mtrack${st.current&&tracks_eq(t,st.current)?' playing':''}" data-i="${i}"><span class="mi">${st.current&&tracks_eq(t,st.current)&&st.playing?'▶':'🎵'}</span><span class="nm">${esc(t.name)}</span></div>`).join('')}</div>`;
-    function tracks_eq(a,b){return a&&b&&a.url===b.url}
-    $$('#mPlay').onclick=()=>MusicPlayer.toggle();
-    $$('#mPrev').onclick=()=>MusicPlayer.prev();
-    $$('#mNext').onclick=()=>MusicPlayer.next();
+      <div class="music-list" id="mList"></div>`;
+    mw.tracksRef=null;mw.img=undefined;mw.ps='';mw.curUrl=null;
+    $$('#mPlay').onclick=()=>{const was=MusicPlayer.state().playing;MusicPlayer.toggle();setOn(!was)};
+    $$('#mPrev').onclick=()=>{setOn(true);MusicPlayer.prev()};
+    $$('#mNext').onclick=()=>{setOn(true);MusicPlayer.next()};
     $$('#mVol').addEventListener('input',e=>{MusicPlayer.setVolume(+e.target.value);$$('#vMVol').textContent=e.target.value+'%'});
-    el.querySelectorAll('.mtrack').forEach(row=>row.onclick=()=>MusicPlayer.playTrack(+row.dataset.i));
+    const list=$$('#mList');
+    list.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse')return;const row=e.target.closest('.mtrack');if(row)MusicPlayer.hint(+row.dataset.i)});
+    list.addEventListener('click',e=>{const row=e.target.closest('.mtrack');if(!row)return;setOn(true);MusicPlayer.playTrack(+row.dataset.i)});
     enhanceRanges(el);
-    // seek bar: live time readout without re-rendering the whole widget (keeps drags smooth)
+    // seek bar + time readout: updated in place, so the numbers never vanish while the widget refreshes
     const seek=$$('#mSeek');let dragging=false;
-    const fmt=s=>{s=Math.max(0,Math.floor(s||0));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
     seek.addEventListener('pointerdown',()=>dragging=true);
     seek.addEventListener('pointerup',()=>dragging=false);
+    seek.addEventListener('change',()=>dragging=false);
     seek.addEventListener('input',()=>{MusicPlayer.seek(seek.value/1000)});
     if(musicTimeUnsub)musicTimeUnsub();
     musicTimeUnsub=MusicPlayer.onTime(p=>{
       const c=$$('#mCur'),l=$$('#mLeft'),sk=$$('#mSeek');if(!c||!l||!sk)return;
-      c.textContent=fmt(p.current);l.textContent='-'+fmt(p.remaining);
+      c.textContent=fmtD(p.current);
+      l.textContent=p.duration?'-'+fmtD(p.remaining):'-:--';
       if(!dragging){sk.value=Math.round(p.fraction*1000);syncRange(sk)}
     });
+  }
+  function patchMusicWidget(el,st){
+    const cur=st.current;
+    // now-playing card
+    const img=cur&&cur.image?cur.image:'';
+    const note=$$('#mNote');
+    if(mw.img!==img){mw.img=img;note.innerHTML=img?`<img src="${esc(img)}" alt="">`:'🎵'}
+    note.classList.toggle('spin',!!(st.playing&&!img));
+    $$('#mNowName').textContent=cur?cur.name:'Nothing playing';
+    const sub=$$('#mNowSub');
+    let subTxt,cls='mt-sub';
+    if(st.loading)subTxt='Searching...';
+    else if(st.lastError){subTxt=st.lastError;cls+=' err'}
+    else if(st.buffering){subTxt='Loading song…';cls+=' buf'}
+    else subTxt=`${cur&&cur.artist?cur.artist+' · ':''}${st.tracks.length} track${st.tracks.length===1?'':'s'} loaded`;
+    sub.className=cls;sub.textContent=subTxt;
+    // play button
+    const ps=st.buffering?'b':st.playing?'p':'s';
+    if(mw.ps!==ps){mw.ps=ps;$$('#mPlay').innerHTML=ps==='b'?'<span class="mc-spin"></span>':(ps==='p'?'⏸':'▶')}
+    // track list: rebuilt only when a new search replaces it
+    const list=$$('#mList');
+    if(mw.tracksRef!==st.tracks){
+      mw.tracksRef=st.tracks;mw.curUrl=null;
+      list.innerHTML=st.tracks.map((t,i)=>`<div class="mtrack" data-i="${i}">${t.image?`<img class="mthumb" loading="lazy" src="${esc(t.image)}" alt="">`:`<span class="mi">🎵</span>`}<span class="nm">${esc(t.name)}${t.artist?`<small>${esc(t.artist)}</small>`:''}</span><span class="mdur">${t.duration?fmtD(t.duration):''}</span></div>`).join('');
+    }
+    const rows=list.children;
+    for(let i=0;i<rows.length;i++){
+      const on=!!(cur&&st.tracks[i]&&st.tracks[i].url===cur.url);
+      rows[i].classList.toggle('playing',on);
+      const mi=rows[i].querySelector('.mi');if(mi)mi.textContent=on&&st.playing?'▶':'🎵';
+    }
+    const url=cur?cur.url:null;
+    if(url!==mw.curUrl){
+      mw.curUrl=url;
+      const row=list.querySelector('.mtrack.playing');
+      if(row){const top=row.offsetTop,bot=top+row.offsetHeight;
+        if(top<list.scrollTop||bot>list.scrollTop+list.clientHeight)list.scrollTo({top:Math.max(0,top-list.clientHeight/2+row.offsetHeight/2),behavior:'smooth'})}
+    }
+    // volume: never touch it while the user is dragging it
+    const vol=$$('#mVol');
+    if(vol&&document.activeElement!==vol&&!vol.matches(':active')&&+vol.value!==st.volume){
+      vol.value=st.volume;syncRange(vol);$$('#vMVol').textContent=st.volume+'%';
+    }
+  }
+  function renderMusicWidget(){
+    const el=$$('#musicWidget');if(!el)return;
+    const st=MusicPlayer.state();
+    syncMusicChips(st);
+    if(!st.ready||(st.loading&&!st.tracks.length)){
+      el.innerHTML=`<div class="music-empty">🔍 Finding tracks on Jamendo...</div>`;
+      if(!st.ready&&!st.loading)MusicPlayer.scan();
+      return;
+    }
+    if(!st.tracks.length){
+      const what=st.query.q?` for “${esc(st.query.q)}”`:(st.query.tag?` for “${esc(st.query.tag)}”`:'');
+      el.innerHTML=`<div class="music-empty">${st.lastError?'Couldn’t load music.':'No tracks found'+what+'.<br>Try another word or pick a genre above.'}${st.lastError?`<div style="margin-top:10px;padding:8px 10px;background:rgba(255,93,115,.12);border:1px solid rgba(255,93,115,.35);border-radius:8px;font-size:11px;text-align:left;color:var(--danger);word-break:break-word">${esc(st.lastError)}</div><button type="button" class="btn sec" id="mRetry" style="margin-top:10px">Try again</button>`:''}</div>`;
+      const rt=$$('#mRetry');if(rt)rt.onclick=()=>MusicPlayer.load();
+      return;
+    }
+    if(!el.querySelector('#mList'))buildMusicShell(el,st);
+    patchMusicWidget(el,st);
     MusicPlayer.emitNow&&MusicPlayer.emitNow();
   }
   $('#sTabs') && root.querySelectorAll('#sTabs button').forEach(b=>b.onclick=()=>{
@@ -8218,6 +8591,7 @@ function openSettings(fromChat){
     root.querySelectorAll('[data-p]').forEach(p=>p.classList.toggle('hidden',p.dataset.p!==b.dataset.t));
     if(b.dataset.t==='music'&&!musicMounted){
       musicMounted=true;
+      setupMusicSearch();
       MusicPlayer.setVolume(s.music&&s.music.volume!=null?s.music.volume:55);
       renderMusicWidget();
       musicUnsub=MusicPlayer.on(renderMusicWidget);
@@ -8623,6 +8997,19 @@ function openAccount(){
       <button class="btn sec small" id="acBannerSave" style="margin-top:18px">Save banner</button>
     </div>
     <div class="err" id="acBannerErr"></div>
+    <div class="section-h">🏷️ Pronouns</div>
+    <div class="field" style="margin-bottom:8px"><label>Shown on your profile card (optional)</label><input id="acPron" maxlength="30" autocomplete="off" placeholder="e.g. she/her, he/him, they/them" value="${esc(ME.pronouns||'')}"></div>
+    <div class="pron-chips" id="acPronChips">${['he/him','she/her','they/them','he/they','she/they','any pronouns','ask me'].map(p=>`<button type="button" data-p="${p}">${p}</button>`).join('')}</div>
+    <div style="display:flex;gap:8px"><button class="btn sec small" id="acPronSave">Save pronouns</button><button class="btn sec small" id="acPronClear">Clear</button></div>
+    <div class="err" id="acPronErr"></div>
+    <!-- TAG-VISIBILITY:START -->
+    ${(()=>{const own=DB.tagsOwned(ME.id);if(!own.length)return'';const hid=DB.hiddenTagsOf(ME.id);
+      const L={owner:['\u{1F531} Owner','Owner name styling, role and #ID tag'],mod:['\u{1F6E1}\uFE0F Mod','Mod tag on your profile card'],vip:['\u{1F48E} VIP','VIP name styling and role'],flair:['\u2728 Flair','Name color and little badge'],confetti:['\u{1F389} Confetti badge','Confetti Blast badge and role']};
+      return `<div class="section-h">\u{1F3F7}\uFE0F Tags</div>
+    <div class="hint" style="margin-bottom:8px">Hide a tag from everyone's view. You keep it and its permissions \u2014 just show it again any time.</div>
+    <div class="tagvis" id="acTags">${own.map(t=>`<div class="tagvis-row${hid.includes(t)?' off':''}"><div><div class="tv-n">${L[t][0]}</div><div class="tv-s">${L[t][1]}</div></div><button class="btn sec small" data-tag="${t}">${hid.includes(t)?'Equip':'Unequip'}</button></div>`).join('')}</div>
+    <div class="err" id="acTagErr"></div>`})()}
+    <!-- TAG-VISIBILITY:END -->
     <div class="section-h">Change username</div>
     <div class="field"><label>New username (1-20 chars: 0-9 a-z A-Z . _ -)</label><input id="acName" maxlength="20" value="${esc(ME.username)}"></div>
     <div class="hint">${can?'You can change your username now (once every 7 days).':`Next change available in ${Math.ceil(wait/86400000)} day(s).`}</div>
@@ -8670,6 +9057,44 @@ function openAccount(){
       b.disabled=false;b.textContent='Save banner';
     }catch(e){b.disabled=false;b.textContent='Save banner';$('#acBannerErr').textContent='Could not save: '+(e.code||e.message)}
   };
+  // TAG-VISIBILITY: equip / unequip
+  if($('#acTags'))$('#acTags').onclick=async e=>{
+    const b=e.target.closest('button[data-tag]');if(!b)return;
+    const t=b.dataset.tag;let hid=DB.hiddenTagsOf(ME.id);
+    hid=hid.includes(t)?hid.filter(x=>x!==t):hid.concat(t);
+    b.disabled=true;$('#acTagErr').textContent='';
+    try{
+      await DB.updateSettings(ME.id,{hiddenTags:hid.join(',')});
+      ME=DB.currentUser();
+      toast(hid.includes(t)?'Tag hidden.':'Tag equipped.');
+      if(typeof renderChat==='function')renderChat();
+      openAccount();
+    }catch(err){
+      b.disabled=false;
+      $('#acTagErr').textContent='Could not save: '+(err.code||err.message)+(/PERMISSION/i.test(err.code||err.message)?' \u2014 publish the updated database rules (hiddenTags).':'');
+    }
+  };
+  // pronouns
+  const acPron=$('#acPron');
+  const paintPron=()=>root.querySelectorAll('#acPronChips button').forEach(b=>b.classList.toggle('on',b.dataset.p===acPron.value.trim().toLowerCase()));
+  paintPron();
+  acPron.addEventListener('input',paintPron);
+  $('#acPronChips').onclick=e=>{const b=e.target.closest('button[data-p]');if(!b)return;acPron.value=b.dataset.p;paintPron()};
+  const savePron=async(val,btn,label)=>{
+    btn.disabled=true;btn.textContent='Saving...';$('#acPronErr').textContent='';
+    try{
+      await DB.updateSettings(ME.id,{pronouns:val});
+      ME=DB.currentUser();
+      acPron.value=ME.pronouns||'';paintPron();
+      toast(ME.pronouns?'Pronouns saved!':'Pronouns cleared.');
+    }catch(e){
+      $('#acPronErr').textContent='Could not save: '+(e.code||e.message)+(/PERMISSION/i.test(e.code||e.message)?' — publish the updated database rules (pronouns).':'');
+    }
+    btn.disabled=false;btn.textContent=label;
+  };
+  $('#acPronSave').onclick=()=>savePron(acPron.value,$('#acPronSave'),'Save pronouns');
+  $('#acPronClear').onclick=()=>{acPron.value='';savePron('',$('#acPronClear'),'Clear')};
+  acPron.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();e.stopPropagation();$('#acPronSave').click()}});
   enhanceColors(root);
   $('#acSave').onclick=async()=>{
     const b=$('#acSave');b.disabled=true;$('#acErr').textContent='';
