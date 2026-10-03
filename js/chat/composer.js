@@ -1,0 +1,166 @@
+/* ==========================================================================
+ * js/chat/composer.js
+ * Composer: @mentions, sending, reply / edit
+ * Loaded by js/loader.js (load order lives in js/manifest.js).
+ * All js files share one global scope, so functions/consts here are visible to the others.
+ * ========================================================================== */
+'use strict';
+
+/* Composer */
+const msgIn=$('#msgIn');
+msgIn.addEventListener('input',()=>{
+  msgIn.style.height='auto';msgIn.style.height=Math.min(msgIn.scrollHeight,140)+'px';
+  $('#cc').textContent=msgIn.value.length;
+  updateMentionPop();
+});
+msgIn.addEventListener('keydown',e=>{
+  const pop=$('#mentionPop');
+  if(!pop.classList.contains('hidden')){
+    const items=[...pop.children];
+    if(e.key==='ArrowDown'){e.preventDefault();view.mentionSel=(view.mentionSel+1)%items.length;hilite();return}
+    if(e.key==='ArrowUp'){e.preventDefault();view.mentionSel=(view.mentionSel-1+items.length)%items.length;hilite();return}
+    if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();items[view.mentionSel].click();return}
+    if(e.key==='Escape'){pop.classList.add('hidden');return}
+  }
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}
+  if(e.key==='Escape'&&(view.editingId||view.replyingTo)){cancelCompose()}
+});
+function hilite(){[...$('#mentionPop').children].forEach((c,i)=>c.classList.toggle('sel',i===view.mentionSel))}
+function mentionCandidates(){
+  const key=view.roomKey;let ids=[];
+  if(key===CFG.GLOBAL_ROOM||key===CFG.ANNOUNCEMENTS_ROOM)ids=DB.allUsers().map(u=>u.id);
+  else if(key?.startsWith('dm_'))ids=key.split('_').slice(1).map(Number);
+  else ids=DB.getRoom(key)?.members||[];
+  return ids.filter(i=>i!==ME.id).map(i=>DB.getUser(i)).filter(Boolean);
+}
+function updateMentionPop(){
+  const pop=$('#mentionPop');
+  const pos=msgIn.selectionStart;
+  const before=msgIn.value.slice(0,pos);
+  const m=before.match(/@([0-9a-zA-Z._-]*)$/);
+  if(!m){pop.classList.add('hidden');return}
+  const q=m[1].toLowerCase();
+  let opts=mentionCandidates().filter(u=>u.username.toLowerCase().startsWith(q)).slice(0,6)
+    .map(u=>({label:u.username,ic:'👤'}));
+  if(view.roomKey!==null&&!view.roomKey.startsWith('dm_')&&'everyone'.startsWith(q))opts.unshift({label:'everyone',ic:'📣'});
+  if(!opts.length){pop.classList.add('hidden');return}
+  view.mentionSel=0;pop.innerHTML='';
+  opts.forEach((o,i)=>{
+    const d=document.createElement('div');d.className=i===0?'sel':'';
+    d.innerHTML=`${o.ic} ${esc(o.label)}`;
+    d.onclick=()=>{
+      const start=pos-m[0].length;
+      msgIn.value=msgIn.value.slice(0,start)+'@'+o.label+' '+msgIn.value.slice(pos);
+      msgIn.focus();pop.classList.add('hidden');
+      const np=start+o.label.length+2;msgIn.setSelectionRange(np,np);
+    };
+    pop.appendChild(d);
+  });
+  pop.classList.remove('hidden');
+}
+$('#sendBtn').onclick=send;
+
+function extractPings(text){
+  const out=new Set();
+  if(/@everyone\b|@here\b/.test(text)&&view.roomKey!==CFG.GLOBAL_ROOM)out.add('everyone');
+  const re=/@([0-9a-zA-Z._-]{1,20})/g;let m;
+  while((m=re.exec(text))){
+    const id=DB.get().usernameIndex[m[1].toLowerCase()];
+    if(id!==undefined&&id!==ME.id)out.add(id);
+  }
+  return[...out];
+}
+let _lastSendAt=0;
+let _sendScanning=false;
+async function send(){
+  const msgLimit=view.roomKey===CFG.ANNOUNCEMENTS_ROOM?Infinity:CFG.MAX_MSG;
+  const text=expandShortcodes(msgIn.value.trim()).slice(0,msgLimit);
+  if(!view.roomKey)return;
+  if(DB.isBanned(ME.id)){toast('Your account has been banned.','bad');return}
+  if(view.roomKey===CFG.ANNOUNCEMENTS_ROOM&&!isOwner(ME.id)){toast('Only the owner can post announcements.','bad');return}
+
+  if(view.editingId){
+    if(!text){toast('Message can\'t be empty.','bad');return}
+    const id=view.editingId,key=view.roomKey;
+    DB.editMessage(key,id,text).catch(e=>toast(e.message,'bad'));
+    cancelCompose();
+    renderMessages(view.roomKey);
+    return;
+  }
+
+  if(!text&&!view.pending.length)return;
+  if(view.pending.length&&NSFW.on()){
+    if(_sendScanning)return;
+    _sendScanning=true;
+    toast('Checking image'+(view.pending.length===1?'':'s')+'…');
+    let bad=false;
+    try{bad=await NSFW.anyFlagged(view.pending)}finally{_sendScanning=false}
+    if(bad){
+      view.pending=[];renderPreviews();
+      DB.selfMuteNsfw().catch(()=>{});
+      toast('Image blocked: NSFW content isn\'t allowed. You are muted for 1 hour.','bad');
+      return;
+    }
+  }
+  _lastSendAt=Date.now();
+  const replyTo=view.replyingTo?{id:view.replyingTo.id,senderId:view.replyingTo.senderId,preview:replyPreviewText(view.replyingTo)}:null;
+  const _draftImgs=view.pending.slice();
+  DB.sendMessage(view.roomKey,{senderId:ME.id,text,images:_draftImgs,pings:extractPings(text),replyTo})
+    .catch(e=>{
+      toast(e.message,'bad');
+      // Refused (banned): don't make the message vanish — restore the draft so it isn't silently lost.
+      if(/banned/i.test(e.message||'')&&msgIn&&!msgIn.value){msgIn.value=text;$('#cc').textContent=text.length}
+    });
+  cancelCompose();
+  msgIn.value='';msgIn.style.height='auto';$('#cc').textContent=0;
+  view.pending=[];renderPreviews();$('#mentionPop').classList.add('hidden');
+  renderMessages(view.roomKey);
+  $('#messages').scrollTop=$('#messages').scrollHeight;
+}
+
+/* ---------- Reply / Edit ---------- */
+function replyPreviewText(m){
+  if(m.text)return m.text;
+  if(m.images&&m.images.length)return '📷 '+m.images.length+' image'+(m.images.length===1?'':'s');
+  return '';
+}
+function startReply(m){
+  view.editingId=null;
+  view.replyingTo={id:m.id,senderId:m.senderId};
+  renderComposeContext();
+  msgIn.focus();
+}
+function startEdit(m){
+  view.replyingTo=null;
+  view.editingId=m.id;
+  msgIn.value=m.text||'';
+  msgIn.style.height='auto';msgIn.style.height=Math.min(msgIn.scrollHeight,140)+'px';
+  $('#cc').textContent=msgIn.value.length;
+  renderComposeContext();
+  msgIn.focus();
+  const np=msgIn.value.length;msgIn.setSelectionRange(np,np);
+}
+function cancelCompose(){
+  const wasEditing=!!view.editingId;
+  view.replyingTo=null;view.editingId=null;
+  renderComposeContext();
+  if(wasEditing){msgIn.value='';msgIn.style.height='auto';$('#cc').textContent=0}
+}
+function renderComposeContext(){
+  const box=$('#composeContext');
+  if(view.editingId){
+    box.classList.add('active');
+    $('#ccLabel').textContent='Editing message';
+    $('#ccText').textContent='';
+  }else if(view.replyingTo){
+    const s=DB.getUser(view.replyingTo.senderId);
+    const name=(s&&!s.deleted)?displayUsername(s.username):'Deleted User';
+    box.classList.add('active');
+    $('#ccLabel').textContent='Replying to '+name;
+    const arr=DB.messages(view.roomKey);
+    const src=arr.find(x=>x.id===view.replyingTo.id);
+    $('#ccText').textContent=src?replyPreviewText(src):'';
+  }else{
+    box.classList.remove('active');
+  }
+}

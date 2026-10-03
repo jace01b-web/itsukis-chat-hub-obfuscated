@@ -1,0 +1,848 @@
+/* ==========================================================================
+ * js/settings/settings-page.js
+ * Settings page (Interface, Music, Pings, Hubs & Tools, Moderation, ...)
+ * Loaded by js/loader.js (load order lives in js/manifest.js).
+ * All js files share one global scope, so functions/consts here are visible to the others.
+ * ========================================================================== */
+'use strict';
+
+function openSettings(fromChat){
+  ME=DB.currentUser();
+  const orig={...ME.settings,pings:{...ME.settings.pings}};
+  const s={...orig,pings:{...orig.pings}};
+  const root=$('#modalRoot');
+  root.innerHTML=`<div class="modal-bg"><div class="modal wide">
+    <h2>⚙️ Settings</h2>
+    <div class="hint">Everything is private except your bubble &amp; text color — that's how <b>everyone</b> sees your messages.</div>
+
+    <div class="preview-box" id="pvBox">
+      <div class="pv-bg" id="pvBg"></div><div class="pv-dim" id="pvDim"></div>
+      <div class="msg"><div class="msg-row"><div class="avatar" style="width:28px;height:28px;font-size:11px">A</div><div class="msg-body"><div class="meta">Alex</div><div class="bubble" style="background:#3b3f7a;color:#fff">Hey! How does this look?</div></div></div></div>
+      <div class="msg me"><div class="msg-row"><div class="avatar" style="width:28px;height:28px;font-size:11px">Y</div><div class="msg-body"><div class="meta">You</div><div class="bubble">Looking great 🔥</div></div></div></div>
+    </div>
+
+    <div class="modal-tabs" id="sTabs">
+      <button data-t="msg" class="active">💬 Messages</button>
+      <button data-t="bg">🖼️ Background</button>
+      <button data-t="ui">🪟 Interface</button>
+      <button data-t="ping">🔔 Pings</button>
+      <button data-t="music">🎵 Music</button>
+      <button data-t="filter">🚫 Filter</button>
+      <button data-t="about">ℹ️ About</button>
+      ${(isOwner(ME.id)||isMod(ME.id))?'<button data-t="mod">🛡️ Moderation</button>':''}
+    </div>
+
+    <div data-p="msg">
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">Your message color (public)</div>
+        <div class="set-grid">
+          <div class="field"><label>Bubble color</label><input type="color" id="sMe" value="${s.meBubble}"></div>
+          <div class="field"><label>Text color</label><input type="color" id="sMeT" value="${s.meText}"></div>
+        </div>
+      </div>
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">Text display</div>
+        <div class="set-grid">
+          <div class="field"><label>Bubble roundness <span class="val" id="vRad"></span></label><input type="range" id="sRad" min="0" max="28" value="${s.radius}"></div>
+          <div class="field"><label>Font</label><select id="sFont">${Object.keys(FONTS).map(f=>`<option value="${f}" ${s.font===f?'selected':''}>${f}</option>`).join('')}</select></div>
+          <div class="field"><label>Text size <span class="val" id="vSize"></span></label><input type="range" id="sSize" min="11" max="24" value="${s.size}"></div>
+          <div class="field" style="flex-direction:row;gap:18px;align-items:center;margin-top:20px">
+            <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="sBold" ${s.bold?'checked':''}> Bold</label>
+            <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="sItal" ${s.italic?'checked':''}> Italic</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div data-p="bg" class="hidden">
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">Chat background</div>
+        <div class="set-grid">
+          <div class="field"><label>Type</label><select id="sBgT">${['none','color','gradient','image'].map(t=>`<option value="${t}" ${s.bgType===t?'selected':''}>${t}</option>`).join('')}</select></div>
+          <div class="field"><label>Image fit</label><select id="sBgFit">
+            <option value="cover" ${s.bgFit!=='contain'?'selected':''}>Fill (crop to fit)</option>
+            <option value="contain" ${s.bgFit==='contain'?'selected':''}>Show whole image</option></select></div>
+          <div class="field"><label>Color 1</label><input type="color" id="sBg1" value="${s.bgColor}"></div>
+          <div class="field"><label>Color 2 (gradient)</label><input type="color" id="sBg2" value="${s.bgColor2}"></div>
+        </div>
+        <div class="field" style="margin-top:14px"><label>Custom image</label>
+          <label class="file-btn" id="fileLbl"><input type="file" id="sBgI" accept="image/*"><span id="fileTxt">📁 ${s.bgImage?'Change image':'Choose an image'}</span></label></div>
+        <div class="set-grid" style="margin-top:4px">
+          <div class="field"><label>Blur <span class="val" id="vBlur"></span></label><input type="range" id="sBlur" min="0" max="30" value="${s.bgBlur}"></div>
+          <div class="field"><label>Darkness <span class="val" id="vDim"></span></label><input type="range" id="sDim" min="0" max="90" value="${s.bgDim}"></div>
+        </div>
+        <div class="hint">The background fills the whole app. Blur is clipped to the screen, so it never spills off the edges.</div>
+      </div>
+    </div>
+
+    <div data-p="ui" class="hidden">
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">Interface glass</div>
+        <div class="field"><label>UI opacity <span class="val" id="vUiO"></span></label><input type="range" id="sUiO" min="10" max="100" value="${s.uiOpacity??50}"></div>
+        <div class="field"><label>UI blur (frosted glass) <span class="val" id="vUiB"></span></label><input type="range" id="sUiB" min="0" max="30" value="${s.uiBlur??18}"></div>
+        <div class="hint">Lower opacity lets your custom background show through panels, the sidebar and the top bar.</div>
+      </div>
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">Scrolling</div>
+        <div class="field" style="margin-bottom:0"><label style="justify-content:flex-start;gap:8px"><input type="checkbox" id="sAutoScroll" ${s.autoScrollBottom!==false?'checked':''}> Auto-scroll to the newest message</label></div>
+        <div class="hint">Jumps you to the bottom when you open a chat and whenever a new message arrives. Turn off to stay where you're reading.</div>
+      </div>
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">⚡ Performance</div>
+        <div class="toggle-row" style="margin-bottom:0">
+          <div>
+            <div style="font-weight:600;font-size:14px">Anti-lag mode</div>
+            <div class="hint" style="margin-top:2px">Off by default. Turns off the liquid-glass blur, glows, shimmer and looping effects, and makes panels more solid. Everything still works — it just draws far less. Saved to your account, so it follows you to all your devices, and it takes over from the UI opacity/blur sliders while on.</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="sAntiLag" ${AntiLag.on()?'checked':''}><span class="slider"></span></label>
+        </div>
+      </div>
+    </div>
+
+    <div data-p="ping" class="hidden">
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">🔔 Notifications</div>
+        <div class="toggle-row" style="margin-bottom:14px">
+          <div style="font-weight:600;font-size:14px">Receive @everyone pings</div>
+          <label class="switch"><input type="checkbox" id="sPe" ${s.pings.everyone?'checked':''}><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div style="font-weight:600;font-size:14px">Play sound on ping</div>
+          <label class="switch"><input type="checkbox" id="sPs" ${s.pings.sound?'checked':''}><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row" style="margin-top:14px">
+          <div>
+            <div style="font-weight:600;font-size:14px">Desktop notifications</div>
+            <div class="hint" style="margin-top:2px">Silent notifications with the sender's name when you're pinged or DMed elsewhere.</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="sPd" ${s.pings.desktop?'checked':''}><span class="slider"></span></label>
+        </div>
+      </div>
+    </div>
+
+    <div data-p="music" class="hidden">
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">🎵 Background music</div>
+        <div class="toggle-row" style="margin-bottom:14px">
+          <div>
+            <div style="font-weight:600;font-size:14px">Play music while chatting</div>
+            <div class="hint" style="margin-top:2px">Free music streamed from Jamendo.</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="sMusicOn" ${s.music&&s.music.enabled?'checked':''}><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row" style="margin-bottom:14px">
+          <div>
+            <div style="font-weight:600;font-size:14px">Keep playing in the background</div>
+            <div class="hint" style="margin-top:2px">Off: music fades out when you switch tabs or apps, and fades back in when you return.</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="sMusicBg" ${MusicPlayer.getBackground()?'checked':''}><span class="slider"></span></label>
+        </div>
+        <div class="music-search">
+          <div class="ms-box">
+            <svg class="ms-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input type="text" id="mQuery" placeholder="Search songs, artists or moods..." maxlength="60" autocomplete="off" spellcheck="false" enterkeyhint="search">
+            <button type="button" class="ms-clear" id="mClear" aria-label="Clear search">✕</button>
+          </div>
+          <button type="button" class="btn ms-go" id="mGo"><span class="ms-spin"></span>Search</button>
+        </div>
+        <div class="music-chips" id="mChips"></div>
+        <div id="musicWidget"></div>
+        <div class="music-credit">Music via <a href="https://www.jamendo.com" target="_blank" rel="noopener">Jamendo</a></div>
+      </div>
+    </div>
+
+    <div data-p="filter" class="hidden">
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">🚫 Content filter (your view)</div>
+        <div class="toggle-row" style="margin-bottom:0">
+          <div>
+            <div style="font-weight:600;font-size:14px">Censor inappropriate words in chat</div>
+            <div class="hint" style="margin-top:2px">On by default. This only changes what YOU see — it censors messages client-side as you read them, and doesn't affect what other people see or what's stored.</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="sFilterLocal" ${s.filterLocal!==false?'checked':''}><span class="slider"></span></label>
+        </div>
+      </div>
+      <div class="hint">Server-wide username filtering is controlled separately by the server owners.</div>
+    </div>
+
+    <div data-p="about" class="hidden">
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">ℹ️ Version</div>
+        <div class="set-grid">
+          <div class="field"><label>You're running</label><div style="font-weight:600;font-size:14px;padding-top:4px">${esc(MY_BUILD)||'unknown'}</div></div>
+          <div class="field"><label>Server's pinned version</label><div id="aboutPinned" style="font-weight:600;font-size:14px;padding-top:4px">…</div></div>
+        </div>
+        <div class="hint" id="aboutHint" style="margin-top:8px"></div>
+      </div>
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">📜 Server rules</div>
+        <div class="about-rules-row">
+          <div class="hint" id="aboutRulesStatus" style="margin:0">${rulesAgreed(RULES_STATE)?'✅ You agreed to the rules'+(RULES_STATE.at?' on '+esc(fmtRulesDate(RULES_STATE.at)):''):'You haven\'t agreed to the rules yet.'}</div>
+          <button class="btn small" id="aboutRulesBtn" type="button">📜 View rules</button>
+        </div>
+      </div>
+    </div>
+
+    ${(isOwner(ME.id)||isMod(ME.id))?`<div data-p="mod" class="hidden">
+      ${isOwner(ME.id)?`<div class="set-card">
+        <div class="section-h" style="margin-top:0">🛡️ Content filter</div>
+        <div class="toggle-row">
+          <div>
+            <div style="font-weight:600;font-size:14px">Filter usernames too</div>
+            <div class="hint" style="margin-top:2px">Blocks filtered words at signup/rename, and censors any that slip through when shown.</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="modFilterNames" ${filterNamesOn()?'checked':''}><span class="slider"></span></label>
+        </div>
+      </div>
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">🎨 Custom usernames</div>
+        <div class="toggle-row">
+          <div>
+            <div style="font-weight:600;font-size:14px">Show custom usernames with roles</div>
+            <div class="hint" style="margin-top:2px">When on (default), a user's earned flair/role colors their name everywhere it's shown. When off, everyone displays as a plain username regardless of roles.</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="modCustomNames" ${customNamesOn()?'checked':''}><span class="slider"></span></label>
+        </div>
+      </div>
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">💎 Give VIP</div>
+        <div class="set-grid">
+          <div class="field"><label>User ID</label><input type="number" id="modVipId" placeholder="e.g. 42"></div>
+          <div class="field"><label>Duration</label><select id="modVipDur">
+            <option value="24h">24 hours</option>
+            <option value="perm">Forever</option>
+          </select></div>
+        </div>
+        <div class="actions" style="justify-content:flex-start;margin-top:10px">
+          <button class="btn" id="modVipGo">Give VIP</button>
+          <button class="btn sec" id="modVipRemoveGo">Remove VIP</button>
+        </div>
+        <div class="hint" style="margin-top:8px">Grants access to the VIP Lounge directly, without needing the daily spin. "Forever" never expires; "24 hours" counts down from now the same as a spin win.</div>
+      </div>
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">🧹 Message cleanup</div>
+        <div class="field"><label>Delete messages older than</label>
+          <select id="modRetention">${[[0,'Never (keep everything)'],[1,'1 day'],[3,'3 days'],[7,'7 days (default)'],[14,'14 days'],[30,'30 days']].map(([v,l])=>`<option value="${v}"${(typeof MODSET.retentionDays==='number'?MODSET.retentionDays:7)===v?' selected':''}>${l}</option>`).join('')}</select></div>
+        <div class="actions" style="justify-content:flex-start;margin-top:10px">
+          <button class="btn" id="modPruneGo" type="button">Clean up now</button>
+        </div>
+        <div class="hint" id="modPruneStat" style="margin-top:8px">Runs automatically in the background too. Deletes old messages (and their reactions) in Global, VIP and any chat you're in — this shrinks your database and makes chats load faster. Announcements are never auto-deleted.</div>
+      </div>
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">🔨 Ban a user</div>
+        <div class="set-grid">
+          <div class="field"><label>User ID</label><input type="number" id="modBanId" placeholder="e.g. 42"></div>
+        </div>
+        <div class="actions" style="justify-content:flex-start;margin-top:10px">
+          <button class="btn" style="background:var(--danger)" id="modBanGo">Ban</button>
+          <button class="btn sec" id="modUnbanGo">Unban</button>
+        </div>
+        <div class="hint" style="margin-top:8px">Banned accounts show as "Deleted User", reserve their old username so it can't be taken while banned, and can't send messages, change settings, or do anything else — but they stay signed in so they can't ban-evade by making a new account. Unbanning gives them a new generated username (which they can change anytime) and frees their old one for reuse.</div>
+      </div>
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">🚀 Version control</div>
+        <div class="ver-stats" id="verStats">
+          <div class="ver-stat"><label>Your build</label><div class="ver-pill" id="verMyBuild">${esc(MY_BUILD)||'unknown'}</div></div>
+          <div class="ver-stat"><label>Pinned version</label><div class="ver-pill" id="modVerPinned">…</div></div>
+          <div class="ver-stat"><label>Latest deployed</label><div class="ver-pill" id="verLatestDeployed">checking…</div></div>
+        </div>
+        <div class="field" style="margin-top:14px"><label>Version to push</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="modVerInput" maxlength="60" value="${esc(MY_BUILD)}" style="flex:1">
+            <button class="btn sec small" id="modVerUseLatest" type="button" style="flex-shrink:0;white-space:nowrap" disabled>Use latest deployed</button>
+          </div>
+        </div>
+        <div class="hint bad hidden" id="modVerWarn" style="margin-top:6px"></div>
+        <div class="actions" style="justify-content:flex-start;margin-top:10px">
+          <button class="btn" id="modVerGo">Force everyone onto this version</button>
+        </div>
+        <div class="hint" style="margin-top:8px">Pins this label as the site's canonical version. Every signed-in client compares its own build against it live — non-owners on a mismatched build get fully locked out of the app (can't read or do anything) until they're back on the right version, with a screen telling them to relaunch the website or join the Discord. Owners are exempt from that lock (you'll only get a small non-blocking heads-up) so you can still get in here to fix the pin even if your own tab is mismatched. Make sure the new file is actually live first: pushing a version nobody's build matches yet will leave every non-owner locked out until a matching build actually goes live.</div>
+        <div class="section-h" style="margin-top:16px;font-size:13px">History</div>
+        <div id="modVerHistory" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto"></div>
+      </div>`:''}
+      ${isOwner(ME.id)?`<div class="set-card">
+        <div class="section-h" style="margin-top:0">✏️ Change a username</div>
+        <div class="field"><label>Find the account (user ID or username)</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="modRenQ" placeholder="e.g. 42 or their current username" autocomplete="off" spellcheck="false" style="flex:1">
+            <button class="btn sec small" id="modRenFind" type="button" style="flex-shrink:0">Look up</button>
+          </div>
+        </div>
+        <div id="modRenResults" style="margin-top:10px"></div>
+        <div id="modRenForm" class="hidden" style="margin-top:12px">
+          <div class="field"><label>New username (1-20 chars: 0-9 a-z A-Z . _ - and spaces)</label>
+            <input type="text" id="modRenName" maxlength="20" autocomplete="off" spellcheck="false"></div>
+          <div class="actions" style="justify-content:flex-start;margin-top:10px">
+            <button class="btn" id="modRenGo" type="button">Change username</button>
+          </div>
+        </div>
+        <div class="hint" style="margin-top:8px">Look the person up by ID or exact username and check it's the right account before renaming. Names set here can include spaces (normal signups and self-renames can't). Usernames can never be duplicated, and their old username is freed for anyone to use right away. They keep signing in with the same password/email — just with the new name — and the normal 7-day self-rename cooldown starts over. Banned accounts and other owners can't be renamed.</div>
+      </div>`:''}
+      ${isOwner(ME.id)?`<div class="set-card">
+        <div class="section-h" style="margin-top:0">🎃 Halloween Pass level</div>
+        <div class="field"><label>Find the account (user ID or username)</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="modHwQ" placeholder="e.g. 42 or their username" autocomplete="off" spellcheck="false" style="flex:1">
+            <button class="btn sec small" id="modHwFind" type="button" style="flex-shrink:0">Look up</button>
+          </div>
+        </div>
+        <div id="modHwResults" style="margin-top:10px"></div>
+        <div id="modHwForm" class="hidden" style="margin-top:12px">
+          <div class="field"><label>Set pass level (0-${HW.N}, 0 removes it)</label>
+            <input type="number" id="modHwLevel" min="0" max="${HW.N}" step="1" autocomplete="off"></div>
+          <div class="actions" style="justify-content:flex-start;margin-top:10px">
+            <button class="btn" id="modHwGo" type="button">Set level</button>
+          </div>
+        </div>
+        <div class="hint" style="margin-top:8px">Look the person up by ID or exact username, check it's the right account, then set their level. It's pre-filled with one level above their current one. They instantly get every reward up to that level (badges, name effects, titles), and their logged-in time is raised to match when you level them up. Setting a lower level takes rewards away (their time is left alone, so they can re-claim what they've actually earned).</div>
+      </div>`:''}
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">🔇 Mute a user</div>
+        <div class="set-grid">
+          <div class="field"><label>User ID</label><input type="number" id="modMuteId" placeholder="e.g. 42"></div>
+          <div class="field"><label>Duration</label><select id="modMuteDur">
+            ${(isOwner(ME.id)?OWNER_MUTE_OPTS:MOD_MUTE_OPTS).map(([m,l])=>`<option value="${m}">${l}</option>`).join('')}</select></div>
+        </div>
+        <div class="actions" style="justify-content:flex-start;margin-top:10px">
+          <button class="btn" style="background:var(--danger)" id="modMuteGo">Mute</button>
+          <button class="btn sec" id="modUnmuteGo">Unmute</button>
+        </div>
+        <div class="hint" style="margin-top:8px">${isOwner(ME.id)?'Muted users can still read messages and use menus, just can\'t send anything until the mute expires or is lifted.':'Muted users can still read messages and use menus, just can\'t send anything until the timeout expires or is lifted. Timeouts are capped at 1 day, and owners and other mods can\'t be muted.'}</div>
+      </div>
+      ${isOwner(ME.id)?`<div class="set-card">
+        <div class="section-h" style="margin-top:0">🗑️ Delete messages</div>
+        <div class="set-grid">
+          <div class="field"><label>User ID</label><input type="number" id="modDelId" placeholder="e.g. 42"></div>
+        </div>
+        <div class="actions" style="justify-content:flex-start;margin-top:10px">
+          <button class="btn sec" id="modDelSearch">Find messages</button>
+        </div>
+        <div class="hint" style="margin-top:8px">Shows this user's messages in Global Chat and in every room or DM <b>your own account</b> is a member of. It can't reach conversations you're not part of — banning someone also wipes their messages in everything you can reach, and their own client wipes the rest of theirs.</div>
+        <div id="modDelResults" style="margin-top:12px"></div>
+      </div>`:''}
+    </div>`:''}
+
+    <div class="err" id="sErr"></div>
+    <div class="actions">
+      <button class="btn sec" id="sReset">Reset</button>
+      <button class="btn sec" id="sCancel">Cancel</button>
+      <button class="btn" id="sSave">Save</button>
+    </div></div></div>`;
+  const $$=id=>root.querySelector(id);
+  let musicUnsub=null,musicTimeUnsub=null,musicMounted=false;
+  function musicWidgetVolume(){
+    const sl=$$('#mVol');
+    return sl?+sl.value:(s.music&&s.music.volume!=null?s.music.volume:55);
+  }
+  function setupMusicSearch(){
+    const c=$$('#mChips'),inp=$$('#mQuery'),go=$$('#mGo'),box=$$('.music-search'),clr=$$('#mClear');
+    if(!c||!inp||!go)return;
+    c.innerHTML=MusicPlayer.quickTags.map(t=>`<button type="button" data-tag="${t}">${t}</button>`).join('');
+    inp.value=MusicPlayer.state().query.q;
+    const sync=()=>box&&box.classList.toggle('has-text',!!inp.value);
+    sync();
+    const doSearch=()=>{
+      const q=inp.value.trim();
+      if(!q){const tag=MusicPlayer.state().query.tag||'lofi';MusicPlayer.load({q:'',tag});return}   // empty box: back to a genre
+      MusicPlayer.load({q,tag:''});
+    };
+    go.onclick=doSearch;
+    inp.addEventListener('input',sync);
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();e.stopPropagation();doSearch()}});
+    if(clr)clr.onclick=()=>{inp.value='';sync();inp.focus()};
+    c.onclick=e=>{const b=e.target.closest('button[data-tag]');if(!b)return;inp.value='';sync();MusicPlayer.load({q:'',tag:b.dataset.tag})};
+  }
+  function syncMusicChips(st){
+    const c=$$('#mChips');if(!c)return;
+    c.querySelectorAll('button').forEach(b=>b.classList.toggle('on',!st.query.q&&b.dataset.tag===st.query.tag));
+    const box=$$('.music-search');if(box)box.classList.toggle('busy',!!st.loading);
+  }
+  const fmtD=n=>{n=Math.max(0,Math.floor(n||0));return Math.floor(n/60)+':'+String(n%60).padStart(2,'0')};
+  const mw={tracksRef:null,img:undefined,ps:'',curUrl:null};
+  // The widget is built ONCE and then patched in place (the old version rebuilt everything on every
+  // play/pause/metadata event, which reset the list scroll, reloaded thumbnails and dropped the time readout).
+  function buildMusicShell(el,st){
+    const setOn=on=>{const t=$$('#sMusicOn');if(t&&t.checked!==on)t.checked=on};   // keep the toggle in step with what you do here
+    el.innerHTML=`
+      <div class="music-now">
+        <div class="music-note" id="mNote">🎵</div>
+        <div class="music-meta">
+          <div class="mt-name" id="mNowName"></div>
+          <div class="mt-sub" id="mNowSub"></div>
+        </div>
+      </div>
+      <div class="music-controls">
+        <button id="mPrev" title="Previous">⏮</button>
+        <button id="mPlay" class="mc-play" title="Play/Pause"></button>
+        <button id="mNext" title="Next">⏭</button>
+      </div>
+      <div class="music-seek"><span id="mCur">0:00</span><input type="range" id="mSeek" min="0" max="1000" value="0"><span id="mLeft">-:--</span></div>
+      <div class="field"><label>Volume <span class="val" id="vMVol">${st.volume}%</span></label>
+        <input type="range" id="mVol" min="0" max="100" value="${st.volume}"></div>
+      <div class="music-list" id="mList"></div>`;
+    mw.tracksRef=null;mw.img=undefined;mw.ps='';mw.curUrl=null;
+    $$('#mPlay').onclick=()=>{const was=MusicPlayer.state().playing;MusicPlayer.toggle();setOn(!was)};
+    $$('#mPrev').onclick=()=>{setOn(true);MusicPlayer.prev()};
+    $$('#mNext').onclick=()=>{setOn(true);MusicPlayer.next()};
+    $$('#mVol').addEventListener('input',e=>{MusicPlayer.setVolume(+e.target.value);$$('#vMVol').textContent=e.target.value+'%'});
+    const list=$$('#mList');
+    list.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse')return;const row=e.target.closest('.mtrack');if(row)MusicPlayer.hint(+row.dataset.i)});
+    list.addEventListener('click',e=>{const row=e.target.closest('.mtrack');if(!row)return;setOn(true);MusicPlayer.playTrack(+row.dataset.i)});
+    enhanceRanges(el);
+    // seek bar + time readout: updated in place, so the numbers never vanish while the widget refreshes
+    const seek=$$('#mSeek');let dragging=false;
+    seek.addEventListener('pointerdown',()=>dragging=true);
+    seek.addEventListener('pointerup',()=>dragging=false);
+    seek.addEventListener('change',()=>dragging=false);
+    seek.addEventListener('input',()=>{MusicPlayer.seek(seek.value/1000)});
+    if(musicTimeUnsub)musicTimeUnsub();
+    musicTimeUnsub=MusicPlayer.onTime(p=>{
+      const c=$$('#mCur'),l=$$('#mLeft'),sk=$$('#mSeek');if(!c||!l||!sk)return;
+      c.textContent=fmtD(p.current);
+      l.textContent=p.duration?'-'+fmtD(p.remaining):'-:--';
+      if(!dragging){sk.value=Math.round(p.fraction*1000);syncRange(sk)}
+    });
+  }
+  function patchMusicWidget(el,st){
+    const cur=st.current;
+    // now-playing card
+    const img=cur&&cur.image?cur.image:'';
+    const note=$$('#mNote');
+    if(mw.img!==img){mw.img=img;note.innerHTML=img?`<img src="${esc(img)}" alt="">`:'🎵'}
+    note.classList.toggle('spin',!!(st.playing&&!img));
+    $$('#mNowName').textContent=cur?cur.name:'Nothing playing';
+    const sub=$$('#mNowSub');
+    let subTxt,cls='mt-sub';
+    if(st.loading)subTxt='Searching...';
+    else if(st.lastError){subTxt=st.lastError;cls+=' err'}
+    else if(st.buffering){subTxt='Loading song…';cls+=' buf'}
+    else subTxt=`${cur&&cur.artist?cur.artist+' · ':''}${st.tracks.length} track${st.tracks.length===1?'':'s'} loaded`;
+    sub.className=cls;sub.textContent=subTxt;
+    // play button
+    const ps=st.buffering?'b':st.playing?'p':'s';
+    if(mw.ps!==ps){mw.ps=ps;$$('#mPlay').innerHTML=ps==='b'?'<span class="mc-spin"></span>':(ps==='p'?'⏸':'▶')}
+    // track list: rebuilt only when a new search replaces it
+    const list=$$('#mList');
+    if(mw.tracksRef!==st.tracks){
+      mw.tracksRef=st.tracks;mw.curUrl=null;
+      list.innerHTML=st.tracks.map((t,i)=>`<div class="mtrack" data-i="${i}">${t.image?`<img class="mthumb" loading="lazy" src="${esc(t.image)}" alt="">`:`<span class="mi">🎵</span>`}<span class="nm">${esc(t.name)}${t.artist?`<small>${esc(t.artist)}</small>`:''}</span><span class="mdur">${t.duration?fmtD(t.duration):''}</span></div>`).join('');
+    }
+    const rows=list.children;
+    for(let i=0;i<rows.length;i++){
+      const on=!!(cur&&st.tracks[i]&&st.tracks[i].url===cur.url);
+      rows[i].classList.toggle('playing',on);
+      const mi=rows[i].querySelector('.mi');if(mi)mi.textContent=on&&st.playing?'▶':'🎵';
+    }
+    const url=cur?cur.url:null;
+    if(url!==mw.curUrl){
+      mw.curUrl=url;
+      const row=list.querySelector('.mtrack.playing');
+      if(row){const top=row.offsetTop,bot=top+row.offsetHeight;
+        if(top<list.scrollTop||bot>list.scrollTop+list.clientHeight)list.scrollTo({top:Math.max(0,top-list.clientHeight/2+row.offsetHeight/2),behavior:'smooth'})}
+    }
+    // volume: never touch it while the user is dragging it
+    const vol=$$('#mVol');
+    if(vol&&document.activeElement!==vol&&!vol.matches(':active')&&+vol.value!==st.volume){
+      vol.value=st.volume;syncRange(vol);$$('#vMVol').textContent=st.volume+'%';
+    }
+  }
+  function renderMusicWidget(){
+    const el=$$('#musicWidget');if(!el)return;
+    const st=MusicPlayer.state();
+    syncMusicChips(st);
+    if(!st.ready||(st.loading&&!st.tracks.length)){
+      el.innerHTML=`<div class="music-empty">🔍 Finding tracks on Jamendo...</div>`;
+      if(!st.ready&&!st.loading)MusicPlayer.scan();
+      return;
+    }
+    if(!st.tracks.length){
+      const what=st.query.q?` for “${esc(st.query.q)}”`:(st.query.tag?` for “${esc(st.query.tag)}”`:'');
+      el.innerHTML=`<div class="music-empty">${st.lastError?'Couldn’t load music.':'No tracks found'+what+'.<br>Try another word or pick a genre above.'}${st.lastError?`<div style="margin-top:10px;padding:8px 10px;background:rgba(255,93,115,.12);border:1px solid rgba(255,93,115,.35);border-radius:8px;font-size:11px;text-align:left;color:var(--danger);word-break:break-word">${esc(st.lastError)}</div><button type="button" class="btn sec" id="mRetry" style="margin-top:10px">Try again</button>`:''}</div>`;
+      const rt=$$('#mRetry');if(rt)rt.onclick=()=>MusicPlayer.load();
+      return;
+    }
+    if(!el.querySelector('#mList'))buildMusicShell(el,st);
+    patchMusicWidget(el,st);
+    MusicPlayer.emitNow&&MusicPlayer.emitNow();
+  }
+  $('#sTabs') && root.querySelectorAll('#sTabs button').forEach(b=>b.onclick=()=>{
+    root.querySelectorAll('#sTabs button').forEach(x=>x.classList.toggle('active',x===b));
+    root.querySelectorAll('[data-p]').forEach(p=>p.classList.toggle('hidden',p.dataset.p!==b.dataset.t));
+    if(b.dataset.t==='music'&&!musicMounted){
+      musicMounted=true;
+      setupMusicSearch();
+      MusicPlayer.setVolume(s.music&&s.music.volume!=null?s.music.volume:55);
+      renderMusicWidget();
+      musicUnsub=MusicPlayer.on(renderMusicWidget);
+    }
+    if(b.dataset.t==='about')renderAboutTab();
+    if(b.dataset.t==='mod'&&isOwner(ME.id)&&typeof renderVerHistory==='function')renderVerHistory();
+  });
+  function renderAboutTab(){
+    const rb=$$('#aboutRulesBtn');
+    if(rb)rb.onclick=()=>modalRules({back:()=>openSettings(true)});
+    const pinnedEl=$$('#aboutPinned'),hintEl=$$('#aboutHint');
+    if(!pinnedEl)return;
+    const cur=APP_VERSION_CACHE&&APP_VERSION_CACHE.current;
+    pinnedEl.textContent=cur||'not pinned yet';
+    if(!cur)hintEl.textContent='';
+    else if(cur===MY_BUILD)hintEl.textContent="You're up to date.";
+    else hintEl.innerHTML=(isOwner(ME.id)?'Your build doesn\'t match the pinned version. You\'re an owner, so you\'re not locked out — ':'You\'re on a different version than what\'s live — ')+'you can <a href="#" id="aboutRefreshNow">refresh now</a>, or try relaunching the website, or <a href="'+OLD_VER_DISCORD+'" target="_blank" rel="noopener noreferrer">join the Discord</a>.';
+    $$('#aboutRefreshNow')&&($$('#aboutRefreshNow').onclick=e=>{e.preventDefault();location.reload();});
+  }
+  renderAboutTab();
+  let renderVerHistory=null;
+  if(isOwner(ME.id)){
+    let latestDeployed=undefined; // undefined = not checked yet, null = checked but couldn't tell
+    const setPill=(el,text,cls)=>{if(!el)return;el.textContent=text;el.className='ver-pill'+(cls?' '+cls:'')};
+    const updateWarning=()=>{
+      const warn=$$('#modVerWarn'),input=$$('#modVerInput');
+      if(!warn||!input)return;
+      const v=input.value.trim();
+      if(!v||v===MY_BUILD||(latestDeployed&&v===latestDeployed)){warn.classList.add('hidden');return}
+      warn.classList.remove('hidden');
+      warn.textContent='⚠️ This doesn\'t match your build or the latest detected deploy — clients (including yours) won\'t find a match until a build with that label actually goes live.';
+    };
+    renderVerHistory=function(){
+      const pinnedEl=$$('#modVerPinned'),myEl=$$('#verMyBuild'),list=$$('#modVerHistory');
+      if(!pinnedEl)return;
+      const cur=APP_VERSION_CACHE&&APP_VERSION_CACHE.current;
+      setPill(pinnedEl,cur||'not set',cur?(cur===MY_BUILD?'ok':'warn'):'unknown');
+      setPill(myEl,MY_BUILD||'unknown',cur?(cur===MY_BUILD?'ok':'warn'):'');
+      const hist=DB.versionHistory();
+      list.innerHTML=hist.length?'':'<div class="hint">No version has been pushed yet.</div>';
+      hist.forEach(h=>{
+        const row=document.createElement('div');
+        row.className='list-row';
+        row.innerHTML=`<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">${esc(h.version)}</div><div class="hint" style="margin-top:2px">${new Date(h.at).toLocaleString()} · by #${h.by}</div></div>`;
+        list.appendChild(row);
+      });
+      updateWarning();
+    }
+    renderVerHistory();
+    // Check what's actually deployed right now (independent of the DB-pinned version),
+    // so the owner isn't pushing blind — see fetchDeployedBuild() near checkForUpdate().
+    fetchDeployedBuild().then(v=>{
+      latestDeployed=v;
+      const el=$$('#verLatestDeployed'),useBtn=$$('#modVerUseLatest');
+      if(el)setPill(el,v||'could not check',v?(v===MY_BUILD?'ok':'warn'):'unknown');
+      if(useBtn&&v){useBtn.disabled=false;useBtn.onclick=()=>{$$('#modVerInput').value=v;updateWarning()}}
+      updateWarning();
+    });
+    $$('#modVerInput')&&$$('#modVerInput').addEventListener('input',updateWarning);
+    $$('#modVerGo')&&($$('#modVerGo').onclick=async()=>{
+      const v=$$('#modVerInput').value.trim();
+      if(!v){toast('Enter a version label','bad');return}
+      const mismatch=v!==MY_BUILD&&!(latestDeployed&&v===latestDeployed);
+      if(mismatch&&!confirm('"'+v+'" doesn\'t match your current build'+(latestDeployed?' or the latest detected deploy':'')+'. Every signed-in client (including yours) will keep retrying and reloading until a build with that exact label is actually live, then fall back to a "stuck" notice instead of looping forever. Push it anyway?'))return;
+      const btn=$$('#modVerGo');btn.disabled=true;
+      try{
+        await DB.forceVersion(v);
+        toast('Version "'+v+'" pushed — everyone will be moved onto it.');
+        renderVerHistory();renderAboutTab();
+      }catch(err){toast(err.message,'bad')}
+      finally{btn.disabled=false}
+    });
+  }
+  if(isOwner(ME.id)||isMod(ME.id)){
+    $$('#modFilterNames')&&$$('#modFilterNames').addEventListener('change',e=>{
+      DB.setFilterSettings({filterNames:e.target.checked}).catch(err=>toast(err.message,'bad'));
+    });
+    $$('#modCustomNames')&&$$('#modCustomNames').addEventListener('change',e=>{
+      DB.setFilterSettings({customNames:e.target.checked}).catch(err=>{toast(err.message,'bad');e.target.checked=!e.target.checked});
+    });
+    $$('#modVipGo')&&($$('#modVipGo').onclick=async()=>{
+      const id=+$$('#modVipId').value,dur=$$('#modVipDur').value;
+      if(!id){toast('Enter a user ID','bad');return}
+      try{await DB.giveVip(id,dur);toast('User #'+id+' given VIP ('+(dur==='perm'?'forever':'24 hours')+').')}
+      catch(err){toast(err.message,'bad')}
+    });
+    $$('#modVipRemoveGo')&&($$('#modVipRemoveGo').onclick=async()=>{
+      const id=+$$('#modVipId').value;
+      if(!id){toast('Enter a user ID','bad');return}
+      try{await DB.removeVip(id);toast('VIP removed from user #'+id+'.')}
+      catch(err){toast(err.message,'bad')}
+    });
+    $$('#modBanGo')&&($$('#modBanGo').onclick=async()=>{
+      const id=+$$('#modBanId').value;
+      if(!id){toast('Enter a user ID','bad');return}
+      try{await DB.banUser(id);toast('User #'+id+' banned.')}catch(err){toast(err.message,'bad')}
+    });
+    $$('#modUnbanGo')&&($$('#modUnbanGo').onclick=async()=>{
+      const id=+$$('#modBanId').value;
+      if(!id){toast('Enter a user ID','bad');return}
+      try{await DB.unbanUser(id);toast('User #'+id+' unbanned and restored (or restored on their next sign-in).')}catch(err){toast(err.message,'bad')}
+    });
+    $$('#modRetention')&&($$('#modRetention').onchange=async e=>{
+      try{await DB.setRetention(+e.target.value);toast(+e.target.value?'Messages older than '+e.target.value+' day(s) will be cleaned up.':'Automatic cleanup is off.')}
+      catch(err){toast(err.message,'bad')}
+    });
+    $$('#modPruneGo')&&($$('#modPruneGo').onclick=async()=>{
+      const btn=$$('#modPruneGo'),st=$$('#modPruneStat');
+      if(!DB.retentionDays()){toast('Pick an age above first (cleanup is set to Never).','bad');return}
+      btn.disabled=true;btn.textContent='Cleaning…';
+      const r=await DB.pruneRun({aggressive:true,maxBatches:400,onProgress:n=>{if(st)st.textContent='Deleted '+n+' old message(s) so far…'}});
+      btn.disabled=false;btn.textContent='Clean up now';
+      if(st)st.textContent=r.busy?'Another cleanup is already running — try again in a moment.':'Done. Deleted '+r.deleted+' old message(s).';
+    });
+    $$('#modMuteGo')&&($$('#modMuteGo').onclick=async()=>{
+      const id=+$$('#modMuteId').value;
+      if(!id){toast('Enter a user ID','bad');return}
+      const mins=+$$('#modMuteDur').value;
+      try{await DB.muteUser(id,mins*60*1000);toast('User #'+id+' muted for '+$$('#modMuteDur').selectedOptions[0].textContent+'.')}catch(err){toast(err.message,'bad')}
+    });
+    $$('#modUnmuteGo')&&($$('#modUnmuteGo').onclick=async()=>{
+      const id=+$$('#modMuteId').value;
+      if(!id){toast('Enter a user ID','bad');return}
+      try{await DB.unmuteUser(id);toast('User #'+id+' unmuted.')}catch(err){toast(err.message,'bad')}
+    });
+    if($$('#modRenFind')){
+      let renTarget=null;
+      const resBox=$$('#modRenResults'),form=$$('#modRenForm'),nameIn=$$('#modRenName'),qIn=$$('#modRenQ');
+      const pick=m=>{
+        renTarget=m;
+        const cls=m=>[m.owner?'owner':'',m.banned?'banned':'',m.deleted?'deleted':''].filter(Boolean).join(', ');
+        resBox.innerHTML=`<div class="list-row" style="align-items:center">${avatarHtml(m.user,m.username)}<div style="flex:1;min-width:0;margin-left:10px"><div class="nm" style="word-break:break-word">${esc(m.username)} <span class="hint">#${m.id}</span></div>${cls(m)?`<div class="hint">${cls(m)}</div>`:''}</div></div>`;
+        if(m.banned||m.deleted){form.classList.add('hidden');resBox.insertAdjacentHTML('beforeend','<div class="hint bad" style="margin-top:6px">Banned/deleted accounts can\'t be renamed. Unban them first.</div>');return}
+        if(m.owner&&m.id!==ME.id){form.classList.add('hidden');resBox.insertAdjacentHTML('beforeend','<div class="hint bad" style="margin-top:6px">You can\'t rename another owner.</div>');return}
+        form.classList.remove('hidden');nameIn.value=m.username;nameIn.focus();nameIn.select();
+      };
+      const find=async()=>{
+        renTarget=null;form.classList.add('hidden');
+        resBox.innerHTML='<div class="hint">Searching…</div>';
+        let found;
+        try{found=await DB.lookupUserForRename(qIn.value)}
+        catch(err){resBox.innerHTML=`<div class="hint" style="color:var(--danger)">${esc(err.message||'Lookup failed')}</div>`;return}
+        if(!found.length){resBox.innerHTML='<div class="empty">No account found with that ID or username.</div>';return}
+        if(found.length===1){pick(found[0]);return}
+        // a number can be one person's ID and another person's username — let the owner choose
+        resBox.innerHTML='<div class="hint" style="margin-bottom:6px">Two accounts match — pick the right one:</div>';
+        found.forEach(m=>{
+          const row=document.createElement('div');row.className='list-row';row.style.cursor='pointer';
+          row.innerHTML=`${avatarHtml(m.user,m.username)}<div style="flex:1;min-width:0;margin-left:10px"><div class="nm">${esc(m.username)} <span class="hint">#${m.id}</span></div></div><button class="btn small" type="button">Select</button>`;
+          row.querySelector('button').onclick=()=>pick(m);
+          resBox.appendChild(row);
+        });
+      };
+      $$('#modRenFind').onclick=find;
+      qIn.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();find()}});
+      nameIn.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$$('#modRenGo').click()}});
+      $$('#modRenGo').onclick=async()=>{
+        if(!renTarget){toast('Look up an account first.','bad');return}
+        const target=renTarget,wanted=nameIn.value;
+        if(!confirm('Change "'+target.username+'" (#'+target.id+') to "'+wanted.replace(/\s+/g,' ').trim()+'"?\n\nTheir old username becomes available to anyone.'))return;
+        const btn=$$('#modRenGo');btn.disabled=true;btn.textContent='Changing…';
+        try{
+          const r=await DB.ownerRenameUser(target.id,wanted);
+          toast('#'+r.id+' renamed: "'+r.oldName+'" → "'+r.newName+'". The old name is now free.');
+          qIn.value='';nameIn.value='';form.classList.add('hidden');renTarget=null;
+          resBox.innerHTML=`<div class="hint">Done — #${r.id} is now <b>${esc(r.newName)}</b>. "${esc(r.oldName)}" is available again.</div>`;
+        }catch(err){toast(err.message,'bad')}
+        finally{btn.disabled=false;btn.textContent='Change username'}
+      };
+    }
+    if($$('#modHwFind')){
+      let hwTarget=null;
+      const resBox=$$('#modHwResults'),form=$$('#modHwForm'),lvIn=$$('#modHwLevel'),qIn=$$('#modHwQ');
+      const pick=m=>{
+        hwTarget=m;
+        const L=hwLevel(m.id);
+        const cls=[m.owner?'owner':'',m.banned?'banned':'',m.deleted?'deleted':''].filter(Boolean).join(', ');
+        resBox.innerHTML=`<div class="list-row" style="align-items:center">${avatarHtml(m.user,m.username)}<div style="flex:1;min-width:0;margin-left:10px"><div class="nm" style="word-break:break-word">${esc(m.username)} <span class="hint">#${m.id}</span></div>${cls?`<div class="hint">${cls}</div>`:''}<div class="hint">🎃 Pass level ${L} / ${HW.N}${L?' · '+esc(HW_R[L-1][0]+' '+HW_R[L-1][1]):''}</div></div></div>`;
+        if(m.deleted){form.classList.add('hidden');resBox.insertAdjacentHTML('beforeend','<div class="hint bad" style="margin-top:6px">Deleted accounts can\'t be given pass levels.</div>');return}
+        form.classList.remove('hidden');lvIn.value=Math.min(HW.N,L+1);
+      };
+      const find=async()=>{
+        hwTarget=null;form.classList.add('hidden');
+        resBox.innerHTML='<div class="hint">Searching…</div>';
+        let found;
+        try{found=await DB.lookupUserForRename(qIn.value)}
+        catch(err){resBox.innerHTML=`<div class="hint" style="color:var(--danger)">${esc(err.message||'Lookup failed')}</div>`;return}
+        if(!found.length){resBox.innerHTML='<div class="empty">No account found with that ID or username.</div>';return}
+        if(found.length===1){pick(found[0]);return}
+        resBox.innerHTML='<div class="hint" style="margin-bottom:6px">Two accounts match — pick the right one:</div>';
+        found.forEach(m=>{
+          const row=document.createElement('div');row.className='list-row';row.style.cursor='pointer';
+          row.innerHTML=`${avatarHtml(m.user,m.username)}<div style="flex:1;min-width:0;margin-left:10px"><div class="nm">${esc(m.username)} <span class="hint">#${m.id}</span></div></div><button class="btn small" type="button">Select</button>`;
+          row.querySelector('button').onclick=()=>pick(m);
+          resBox.appendChild(row);
+        });
+      };
+      $$('#modHwFind').onclick=find;
+      qIn.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();find()}});
+      lvIn.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$$('#modHwGo').click()}});
+      $$('#modHwGo').onclick=async()=>{
+        if(!hwTarget){toast('Look up an account first.','bad');return}
+        const t=hwTarget,lv=Math.floor(Number(lvIn.value)),cur=hwLevel(t.id);
+        if(!Number.isFinite(lv)||lv<0||lv>HW.N){toast('Level must be between 0 and '+HW.N+'.','bad');return}
+        if(lv===cur){toast(t.username+' is already level '+cur+'.','bad');return}
+        if(!confirm((lv>cur?'Level up':'Lower')+' "'+t.username+'" (#'+t.id+') on the Halloween Pass from level '+cur+' to level '+lv+'?'))return;
+        const btn=$$('#modHwGo');btn.disabled=true;btn.textContent='Saving…';
+        try{
+          const r=await DB.ownerSetHalloweenLevel(t.id,lv);
+          toast('🎃 '+r.username+' (#'+r.id+') is now Halloween Pass level '+r.level+'.');
+          pick(t);
+        }catch(err){toast(err.message,'bad')}
+        finally{btn.disabled=false;btn.textContent='Set level'}
+      };
+    }
+    $$('#modDelSearch')&&($$('#modDelSearch').onclick=async()=>{
+      const id=+$$('#modDelId').value;
+      const resBox=$$('#modDelResults');
+      if(!id){toast('Enter a user ID','bad');return}
+      resBox.innerHTML='<div class="hint">Searching…</div>';
+      let results;
+      try{results=await DB.searchUserMessages(id)}
+      catch(err){resBox.innerHTML=`<div class="hint" style="color:var(--danger)">Search failed: ${esc(err.message||err.code||'')}</div>`;return}
+      renderModDelResults(resBox,id,results);
+    });
+  }
+  function keyLabel(key){
+    if(key===CFG.GLOBAL_ROOM)return '🌍 Global Chat';
+    if(key===CFG.ANNOUNCEMENTS_ROOM)return '📢 Announcements';
+    if(key===CFG.VIP_ROOM)return '💎 VIP Lounge';
+    if(key.startsWith('dm_')){
+      const [,a,b]=key.split('_').map(Number);const other=a===ME.id?b:a;
+      const u=DB.getUser(other);
+      return '💬 DM with '+(u?esc(u.username):'#'+other);
+    }
+    const r=DB.getRoom(key);
+    return r?('🔒 '+esc(r.name)):('🔒 Room '+key);
+  }
+  function renderModDelResults(resBox,userId,results){
+    if(!results.length){resBox.innerHTML='<div class="hint">No messages found for #'+userId+' in any conversation you can see.</div>';return}
+    resBox.innerHTML=`<div class="hint" style="margin-bottom:8px">${results.length} message${results.length===1?'':'s'} found.</div>
+      <div class="actions" style="justify-content:flex-start;margin-bottom:10px">
+        <button class="btn" style="background:var(--danger)" id="modDelAll">Delete all ${results.length}</button>
+      </div>
+      <div id="modDelList" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto"></div>`;
+    const list=resBox.querySelector('#modDelList');
+    results.forEach(r=>{
+      const row=document.createElement('div');
+      row.className='list-row';row.style.alignItems='flex-start';
+      const when=new Date(r.at).toLocaleString();
+      const preview=r.text?esc(r.text).slice(0,140):(r.images.length?'📷 '+r.images.length+' image'+(r.images.length===1?'':'s'):'(empty)');
+      row.innerHTML=`<div style="flex:1;min-width:0">
+          <div class="hint" style="margin-bottom:3px">${keyLabel(r.key)} · ${when}</div>
+          <div style="font-size:13px;word-break:break-word">${preview}</div>
+        </div>
+        <button class="btn danger small" data-del-one="${r.key}|${r.id}">Delete</button>`;
+      list.appendChild(row);
+    });
+    resBox.querySelectorAll('[data-del-one]').forEach(b=>{
+      b.onclick=async()=>{
+        const [key,mid]=b.dataset.delOne.split('|');
+        b.disabled=true;
+        try{
+          await DB.deleteMessage(key,mid);
+          toast('Message deleted.');
+          renderModDelResults(resBox,userId,results.filter(r=>!(r.key===key&&r.id===mid)));
+        }catch(err){toast(err.message,'bad');b.disabled=false}
+      };
+    });
+    const allBtn=resBox.querySelector('#modDelAll');
+    if(allBtn)allBtn.onclick=async()=>{
+      if(!confirm('Delete all '+results.length+' message(s) from #'+userId+'? This removes them for everyone and cannot be undone.'))return;
+      allBtn.disabled=true;allBtn.textContent='Deleting…';
+      let ok=0,fail=0;
+      try{const res=await DB.deleteMessagesBulk(results.map(r=>({key:r.key,id:r.id})));ok=res.ok;fail=res.fail}
+      catch(e){fail=results.length}
+      toast(fail?`Deleted ${ok}, ${fail} failed.`:`Deleted ${ok} message(s).`,fail?'bad':undefined);
+      renderModDelResults(resBox,userId,[]);
+    };
+  }
+  function read(){
+    s.meBubble=$$('#sMe').value;s.meText=$$('#sMeT').value;
+    s.radius=+$$('#sRad').value;s.font=$$('#sFont').value;s.size=+$$('#sSize').value;
+    s.bold=$$('#sBold').checked;s.italic=$$('#sItal').checked;
+    s.bgType=$$('#sBgT').value;s.bgColor=$$('#sBg1').value;s.bgColor2=$$('#sBg2').value;
+    s.bgFit=$$('#sBgFit').value;
+    s.bgBlur=+$$('#sBlur').value;s.bgDim=+$$('#sDim').value;
+    s.uiOpacity=+$$('#sUiO').value;s.uiBlur=+$$('#sUiB').value;
+    s.autoScrollBottom=$$('#sAutoScroll').checked;
+    s.antiLag=AntiLag.on();   // keep the Save payload in step with the toggle (it saves itself instantly)
+    s.filterLocal=$$('#sFilterLocal').checked;
+    s.pings={everyone:$$('#sPe').checked,sound:$$('#sPs').checked,desktop:$$('#sPd').checked};
+    s.music={enabled:$$('#sMusicOn').checked,volume:musicWidgetVolume(),shuffle:s.music&&s.music.shuffle!==false};
+  }
+  function readouts(){
+    $$('#vRad').textContent=s.radius+'px';$$('#vSize').textContent=s.size+'px';
+    $$('#vBlur').textContent=s.bgBlur+'px';$$('#vDim').textContent=s.bgDim+'%';
+    $$('#vUiO').textContent=s.uiOpacity+'%';$$('#vUiB').textContent=s.uiBlur+'px';
+  }
+  function preview(){
+    read();readouts();
+    applyStyle($$('#pvBox'),s);
+    paintBg($$('#pvBg'),$$('#pvDim'),s);
+    // live-preview the real app too, so background/glass changes are visible behind the modal
+    applyStyle(document.documentElement,s);
+    refitAllAvatars();
+  }
+  $$('#sMusicOn').addEventListener('change',()=>{
+    preview();
+    if(s.music.enabled)MusicPlayer.play();else MusicPlayer.pause();
+  });
+  // Background play is a per-device choice kept in localStorage (no database field / rule change needed).
+  $$('#sMusicBg').addEventListener('change',e=>MusicPlayer.setBackground(e.target.checked));
+  // Anti-lag is an account setting (synced across devices); applied instantly and saved straight away.
+  $$('#sAntiLag').addEventListener('change',e=>AntiLag.set(e.target.checked));
+  // Flipping this on has to ask the browser for permission right here, inside the click
+  // handler — browsers require a real user gesture for the prompt to reliably show at all,
+  // and this is the ONLY place in the app permission is ever requested (see the notes above
+  // checkPingNotifications). Turning it off never touches browser permission at all.
+  $$('#sPd').addEventListener('change',e=>{
+    if(!e.target.checked)return;                 // turning off: just a preference change
+    if(typeof Notification==='undefined'){e.target.checked=false;preview();toast('Your browser does not support notifications.','bad');return}
+    if(Notification.permission==='granted')return;        // already have it — nothing to ask
+    if(Notification.permission==='denied'){                // previously blocked — auto turn back off
+      e.target.checked=false;preview();
+      toast('Notifications are blocked for this site in your browser settings.','bad');
+      return;
+    }
+    // permission is 'default' — genuinely ask; auto-revert the toggle if they decline
+    Notification.requestPermission().then(p=>{
+      if(p!=='granted'){e.target.checked=false;preview();toast('Notifications were not allowed.','bad')}
+    });
+  });
+  root.querySelectorAll('input,select').forEach(i=>i.addEventListener('input',preview));
+  $$('#sBgI').onchange=async e=>{
+    const f=e.target.files[0];if(!f)return;
+    $$('#fileTxt').textContent='⏳ Processing...';
+    try{
+      s.bgImage=await compressImage(f,1920,.8);
+      s.bgType='image';$$('#sBgT').value='image';
+      $$('#fileTxt').textContent='✅ '+f.name;
+    }catch(_){$$('#fileTxt').textContent='❌ Could not load that image'}
+    preview();
+  };
+  const closeRevert=()=>{if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();closeModalAnimated(root,()=>{applyStyle(document.documentElement,ME.settings);refitAllAvatars();MusicPlayer.applyPrefs(ME.settings.music)})};
+  $$('#sCancel').onclick=closeRevert;
+  $$('#sReset').onclick=()=>{
+    Object.assign(s,{meBubble:'#7c6cff',meText:'#ffffff',radius:16,font:'system',size:15,bold:false,italic:false,bgType:'gradient',bgColor:'#2a1f5c',bgColor2:'#7c2f66',bgImage:'',bgFit:'cover',bgBlur:0,bgDim:30,uiOpacity:50,uiBlur:18,autoScrollBottom:true,filterLocal:true,pings:{everyone:true,sound:true,desktop:true},music:{enabled:true,volume:15,shuffle:true}});
+    if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();
+    MusicPlayer.setBackground(false);
+    DB.updateSettings(ME.id,s).catch(()=>{});
+    ME=DB.currentUser();
+    closeModalAnimated(root,()=>{applyStyle(document.documentElement,s);refitAllAvatars();MusicPlayer.applyPrefs(s.music);toast('Settings reset.')});
+  };
+  $$('#sSave').onclick=async()=>{
+    read();
+    const b=$$('#sSave');b.disabled=true;b.textContent='Saving...';
+    try{
+      await DB.updateSettings(ME.id,s);
+      ME=DB.currentUser();if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();
+      closeModalAnimated(root,()=>{
+        applyStyle(document.documentElement,ME.settings);MusicPlayer.applyPrefs(ME.settings.music);toast('Saved!');
+        // Re-render the message list immediately so a filter toggle change (or any other
+        // setting affecting how messages are displayed) applies to already-loaded messages
+        // right away, instead of waiting for the next unrelated re-render.
+        if(typeof renderChat==='function')renderChat();
+      });
+    }catch(e){
+      b.disabled=false;b.textContent='Save';
+      $$('#sErr').textContent='Could not save: '+(e.code||e.message)+(/PERMISSION/i.test(e.code||e.message)?' — publish the updated database rules.':'');
+    }
+  };
+  enhanceRanges(root);enhanceSelects(root);enhanceColors(root);
+  preview();
+}
