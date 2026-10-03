@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-10-01.20">
+<meta name="build-version" content="2026-10-02.1">
 <script>/* Anti-lag: per-device choice, OFF unless explicitly switched on. Runs before first paint so there is no flash of the heavy visuals. */
 try{if(localStorage.getItem('ich.antiLag')==='1')document.documentElement.classList.add('anti-lag')}catch(_){}</script>
 <title>Itsukis Chat Hub</title>
@@ -724,6 +724,72 @@ input[type=color]{display:none!important}
   50%{transform:translateY(-5px) scale(1.05);opacity:1;box-shadow:0 0 7px rgba(255,108,180,.75)}
 }
 .toast.bad{border-left-color:var(--danger)}
+.gift-alert-bg{z-index:3000;background:radial-gradient(ellipse at 50% 30%,rgba(90,30,120,.55),rgba(4,2,10,.88));backdrop-filter:blur(12px) saturate(150%);-webkit-backdrop-filter:blur(12px) saturate(150%)}
+@property --ga-a{syntax:'<angle>';initial-value:0deg;inherits:false}
+.gift-alert{--ga-a:0deg;position:relative;max-width:430px;width:100%;max-height:94vh;overflow-y:auto;padding:0;border:2px solid transparent;border-radius:30px;scrollbar-width:none;
+  background:linear-gradient(#160c28,#0f0820) padding-box,conic-gradient(from var(--ga-a),#ff7a18,#ff3d81,#8b5cf6,#5865F2,#ff7a18) border-box;
+  box-shadow:0 40px 90px rgba(0,0,0,.7),0 0 80px rgba(255,122,24,.25),0 0 140px rgba(139,92,246,.25);
+  animation:gaPop .6s cubic-bezier(.16,1.2,.3,1) both,gaSpin 7s linear infinite}
+.gift-alert::-webkit-scrollbar{display:none}
+@keyframes gaSpin{to{--ga-a:360deg}}
+@keyframes gaPop{from{opacity:0;transform:translateY(30px) scale(.9)}to{opacity:1;transform:none}}
+.gift-alert .ga-x{position:absolute;top:14px;right:14px;z-index:3;width:34px;height:34px;padding:0;margin:0;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(20,10,36,.7);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:0;appearance:none;-webkit-appearance:none;-webkit-tap-highlight-color:transparent;transition:background .15s,border-color .15s,transform .2s}
+.gift-alert .ga-x svg{width:14px;height:14px;display:block;pointer-events:none}
+.gift-alert .ga-x:hover{background:rgba(255,122,24,.38);border-color:rgba(255,160,70,.75);transform:rotate(90deg) scale(1.06)}
+.gift-alert .ga-x:active{transform:rotate(90deg) scale(.9)}
+.gift-alert-bg.closing{animation:gaBgOut .26s ease forwards}
+.gift-alert-bg.closing .gift-alert{animation:gaOut .26s cubic-bezier(.4,0,1,1) forwards}
+@keyframes gaOut{to{opacity:0;transform:translateY(24px) scale(.9)}}
+@keyframes gaBgOut{to{opacity:0}}
+.gift-alert .ga-hero{position:relative;padding:34px 24px 22px;text-align:center;overflow:hidden;background:radial-gradient(circle at 50% 0%,rgba(255,122,24,.42),transparent 62%),radial-gradient(circle at 90% 100%,rgba(139,92,246,.3),transparent 55%)}
+.gift-alert .ga-hero::after{content:"";position:absolute;inset:auto 0 0 0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent)}
+.gift-alert .ga-float{position:absolute;pointer-events:none;opacity:.8;animation:gaFloat 4.4s ease-in-out infinite}
+@keyframes gaFloat{0%,100%{transform:translateY(0) rotate(-8deg)}50%{transform:translateY(-12px) rotate(8deg)}}
+.gift-alert .ga-orb{position:relative;width:96px;height:96px;margin:0 auto 12px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:50px;
+  background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.28),rgba(255,122,24,.25) 45%,rgba(139,92,246,.25));border:1px solid rgba(255,255,255,.25);
+  box-shadow:0 0 0 8px rgba(255,122,24,.08),0 0 0 18px rgba(255,122,24,.045),0 14px 40px rgba(255,122,24,.45);animation:gaBob 3s ease-in-out infinite}
+@keyframes gaBob{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-6px) scale(1.05)}}
+.gift-alert .ga-tag{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#ffd9b0;padding:5px 12px;border-radius:999px;background:rgba(255,122,24,.15);border:1px solid rgba(255,150,60,.45)}
+.gift-alert .ga-tag i{width:7px;height:7px;border-radius:50%;background:#ff9a3c;box-shadow:0 0 10px #ff9a3c;animation:gaBlink 1.4s infinite}
+@keyframes gaBlink{50%{opacity:.25}}
+.gift-alert h2{margin:12px 0 6px;font-size:30px;line-height:1.05;font-weight:900;letter-spacing:-.02em;background:linear-gradient(90deg,#ffc070,#ff5f9e 55%,#b49bff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.gift-alert .ga-text{font-size:14.5px;line-height:1.5;color:#e8def8}
+.gift-alert .ga-text b{color:#fff}
+.gift-alert .ga-body{padding:16px 20px 20px}
+.gift-alert .ga-list{display:flex;flex-direction:column;gap:9px}
+.gift-alert .ga-item{position:relative;display:flex;align-items:center;gap:13px;text-align:left;padding:12px 14px;border-radius:18px;overflow:hidden;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12)}
+.gift-alert .ga-ico{flex:none;width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:23px;background:rgba(255,255,255,.08)}
+.gift-alert .ga-info{flex:1;min-width:0}
+.gift-alert .ga-info b{display:block;font-size:15.5px;font-weight:800;color:#fff;line-height:1.2}
+.gift-alert .ga-info span{display:block;font-size:12px;color:#bfb2da;margin-top:2px}
+.gift-alert .ga-badge{flex:none;font-size:10px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;padding:5px 9px;border-radius:999px;white-space:nowrap}
+.gift-alert .ga-item.sure{background:linear-gradient(120deg,rgba(255,138,40,.3),rgba(255,61,129,.16));border-color:rgba(255,160,70,.6);box-shadow:0 0 24px rgba(255,122,24,.2),inset 0 1px 0 rgba(255,255,255,.16)}
+.gift-alert .ga-item.sure::after{content:"";position:absolute;top:0;bottom:0;width:60px;left:-80px;background:linear-gradient(100deg,transparent,rgba(255,255,255,.22),transparent);transform:skewX(-20deg);animation:gaShine 3.8s ease-in-out infinite}
+@keyframes gaShine{0%,55%{left:-80px}100%{left:115%}}
+.gift-alert .ga-item.sure .ga-ico{background:linear-gradient(135deg,#ff9a3c,#ff3d81);box-shadow:0 6px 16px rgba(255,100,60,.45)}
+.gift-alert .ga-item.sure .ga-badge{background:#ff9a3c;color:#2a1000}
+.gift-alert .ga-item.maybe{border-style:dashed;border-color:rgba(160,130,255,.55);background:rgba(139,92,246,.1)}
+.gift-alert .ga-item.maybe .ga-ico{background:rgba(139,92,246,.3)}
+.gift-alert .ga-item.maybe .ga-badge{background:rgba(139,92,246,.35);color:#e0d4ff;border:1px solid rgba(180,155,255,.5)}
+.gift-alert .ga-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0 0}
+.gift-alert .ga-step{padding:10px 6px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);font-size:11.5px;line-height:1.35;color:#d7cbef;text-align:center}
+.gift-alert .ga-step b{display:flex;width:22px;height:22px;margin:0 auto 5px;align-items:center;justify-content:center;border-radius:50%;font-size:11px;color:#2a1000;background:linear-gradient(135deg,#ffb25e,#ff5f9e)}
+.gift-alert .ga-dc{margin-top:16px;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;color:#fff;border:0;border-radius:18px;padding:14px 16px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;background:linear-gradient(135deg,#5865F2,#7b6cff);box-shadow:0 12px 28px rgba(88,101,242,.5),inset 0 1px 0 rgba(255,255,255,.25);transition:transform .15s,filter .15s}
+.gift-alert .ga-dc:hover{transform:translateY(-2px);filter:brightness(1.1)}
+.gift-alert .ga-dc:active{transform:scale(.98)}
+.gift-alert .ga-dc svg{width:21px;height:21px;flex:none}
+.gift-alert .ga-dc small{opacity:.78;font-weight:600;font-size:12px}
+.gift-alert .ga-ok{margin-top:8px;width:100%;background:none;border:0;color:#a99bc9;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;padding:10px;border-radius:12px;transition:.15s}
+.gift-alert .ga-ok:hover{color:#fff;background:rgba(255,255,255,.07)}
+.gift-alert .ga-note{margin-top:2px;text-align:center;font-size:11px;color:#85799f}
+@media(max-width:400px){.gift-alert h2{font-size:25px}.gift-alert .ga-hero{padding:30px 16px 18px}.gift-alert .ga-body{padding:14px 14px 16px}.gift-alert .ga-badge{font-size:9px;padding:4px 7px}}
+@media(prefers-reduced-motion:reduce){.gift-alert,.gift-alert *{animation:none!important}}
+.gift-link{display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#ff8a28,#ff3d81);color:#fff;border:0;padding:8px 18px;border-radius:40px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;box-shadow:0 6px 18px rgba(255,100,60,.35)}
+.gift-link:hover{transform:translateY(-1px);filter:brightness(1.08)}
+/* main menu footer: online pill, Discord and Gift buttons all share one size */
+#homePage .home-foot .online-pill,#homePage .home-foot .discord-link,#homePage .home-foot .gift-link{box-sizing:border-box;height:38px;padding:0 20px;margin:0;gap:8px;font-size:13px;font-weight:700;line-height:1;border-radius:40px;justify-content:center;white-space:nowrap}
+#homePage .home-foot .online-pill{color:var(--text,#fff)}
+#homePage .home-foot .online-pill .dot{width:9px;height:9px;flex:none}
 @keyframes slide{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
 .tag{font-size:10px;background:var(--accent2);color:#fff;padding:1px 6px;border-radius:8px;font-weight:700}
 .tag.owner{background:linear-gradient(135deg,#ffb3cd,#ff4f8b);color:#3a0a1f}
@@ -2535,6 +2601,7 @@ links:{
     <div class="home-foot">
       <button class="online-pill" id="homeOnlinePill" type="button" title="Everyone online across Itsuki's Chat, not just this room or DM"><span class="dot"></span><span id="onlineCount">0</span> online</button>
       <a class="discord-link" href="https://discord.gg/MV8RD9XzvA" target="_blank" rel="noopener noreferrer">Join our Discord</a>
+      <button class="gift-link" id="giftPromoBtn" type="button">🎁 Gift Nitro perks</button>
     </div>
   </div>
 
@@ -3650,6 +3717,15 @@ const DB=(()=>{
       if(myId!=null&&mySessionToken){await get(R('sessions/'+myId)).then(s=>{const v=s.val();if(v&&v.token===mySessionToken)return remove(R('sessions/'+myId))}).catch(()=>{})}
       stopAll();await fbSignOut(auth);myId=null;
     },
+    // Nitro-promo alert: has this account already closed it? (saved at giftPromoSeen/$id)
+    async giftPromoSeen(){
+      if(myId==null)return false;
+      try{return (await get(R('giftPromoSeen/'+myId))).val()===true}catch(_){return false}
+    },
+    async markGiftPromoSeen(){
+      if(myId==null)return;
+      try{await set(R('giftPromoSeen/'+myId),true)}catch(_){}
+    },
     async resetPassword(email){try{await sendPasswordResetEmail(auth,email)}catch(e){throw new Error(authMsg(e))}},
     // Lets a Google-signed-up account also sign in with username/password.
     hasPasswordLogin:()=>!!auth.currentUser?.providerData.some(p=>p.providerId==='password'),
@@ -4681,6 +4757,67 @@ function toast(msg,type=''){
   const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;
   $('#toasts').appendChild(t);setTimeout(()=>t.remove(),4000);
 }
+
+/* ---------- Nitro gift promo ---------- */
+const GIFT_PROMO={name:'Suki',discord:'@AniItsuki'};
+const DC_SVG='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.79 19.79 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.74 19.74 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.1 13.1 0 01-1.872-.892.077.077 0 01-.008-.128c.126-.094.252-.192.372-.292a.074.074 0 01.078-.01c3.927 1.793 8.18 1.793 12.061 0a.074.074 0 01.079.009c.12.1.246.199.372.293a.077.077 0 01-.006.127 12.3 12.3 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.84 19.84 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>';
+function giftPromoSeenLocal(id){try{return localStorage.getItem('giftPromoSeen_'+id)==='1'}catch(_){return false}}
+function giftPromoMarkLocal(id){try{localStorage.setItem('giftPromoSeen_'+id,'1')}catch(_){}}
+/* Auto-opens after login / Google sign-in, but only until the account has closed it once (saved per account). */
+async function giftPromoToast(){
+  try{
+    const me=DB.currentUser();if(!me)return;
+    if(giftPromoSeenLocal(me.id))return;
+    if(await DB.giftPromoSeen()){giftPromoMarkLocal(me.id);return}
+  }catch(_){}
+  setTimeout(showGiftPromo,700);
+}
+/* Opens the alert right now (also used by the main-menu button). Closing it saves it for the account. */
+function showGiftPromo(){
+  if(document.getElementById('giftAlertBg'))return;
+  const bg=document.createElement('div');bg.className='modal-bg gift-alert-bg';bg.id='giftAlertBg';
+  bg.innerHTML='<div class="modal gift-alert" role="alertdialog" aria-modal="true">'
+    +'<button type="button" class="ga-x" aria-label="Close"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 2l10 10M12 2L2 12"/></svg></button>'
+    +'<div class="ga-hero">'
+      +'<span class="ga-float" style="left:16px;top:50px;font-size:24px">\ud83c\udf83</span>'
+      +'<span class="ga-float" style="right:18px;top:70px;font-size:20px;animation-delay:-1.5s">\ud83d\udd77\ufe0f</span>'
+      +'<span class="ga-float" style="left:30px;bottom:30px;font-size:16px;animation-delay:-2.4s">\u2728</span>'
+      +'<span class="ga-float" style="right:34px;bottom:34px;font-size:18px;animation-delay:-.8s">\ud83e\udd87</span>'
+      +'<div class="ga-orb">\ud83c\udf81</div>'
+      +'<div class="ga-tag"><i></i>Halloween Special</div>'
+      +'<h2>Gift Nitro.<br>Get Rewarded.</h2>'
+      +'<div class="ga-text">Gift <b>'+GIFT_PROMO.name+'</b> Discord Nitro and you get:</div>'
+    +'</div>'
+    +'<div class="ga-body">'
+      +'<div class="ga-list">'
+        +'<div class="ga-item sure"><div class="ga-ico">\u2b50</div><div class="ga-info"><b>VIP</b><span>Your own VIP status</span></div><div class="ga-badge">\u2714 Guaranteed</div></div>'
+        +'<div class="ga-item sure"><div class="ga-ico">\ud83c\udf83</div><div class="ga-info"><b>FULL Halloween Pass</b><span>The MAX Season Pass, fully unlocked</span></div><div class="ga-badge">\u2714 Guaranteed</div></div>'
+        +'<div class="ga-item maybe"><div class="ga-ico">\ud83d\udee1\ufe0f</div><div class="ga-info"><b>MOD</b><span>A shot at joining the mod team</span></div><div class="ga-badge">\ud83c\udfb2 Chance</div></div>'
+      +'</div>'
+      +'<div class="ga-steps">'
+        +'<div class="ga-step"><b>1</b>Gift Nitro on Discord</div>'
+        +'<div class="ga-step"><b>2</b>Send your username</div>'
+        +'<div class="ga-step"><b>3</b>Get your perks</div>'
+      +'</div>'
+      +'<button type="button" class="ga-dc">'+DC_SVG+'<span>Discord: '+GIFT_PROMO.discord+'</span><small>(tap to copy)</small></button>'
+      +'<button type="button" class="ga-ok">Got it</button>'
+      +'<div class="ga-note">Closing this saves it to your account. Reopen it anytime from the main menu.</div>'
+    +'</div></div>';
+  const close=()=>{
+    if(bg._closing)return;bg._closing=true;
+    try{const me=DB.currentUser();if(me){giftPromoMarkLocal(me.id);DB.markGiftPromoSeen()}}catch(_){}
+    bg.classList.add('closing');setTimeout(()=>bg.remove(),260);
+  };
+  bg.querySelector('.ga-x').onclick=close;
+  bg.querySelector('.ga-ok').onclick=close;
+  bg.onclick=e=>{if(e.target===bg)close()};
+  bg.querySelector('.ga-dc').onclick=()=>{
+    try{navigator.clipboard.writeText(GIFT_PROMO.discord.replace(/^@/,''))}catch(_){}
+    toast('Copied '+GIFT_PROMO.discord+' to your clipboard');
+  };
+  document.body.appendChild(bg);
+}
+(function(){const b=document.getElementById('giftPromoBtn');if(b)b.onclick=showGiftPromo})();
 
 // Readable ping toast: who pinged you, where, and a preview of the message. Click it to open their profile.
 /* Pings are tracked by message id (persisted per account on this device), never by list length.
@@ -5769,7 +5906,7 @@ $('#upUser').addEventListener('input',e=>{
 $('#formIn').onsubmit=async e=>{
   e.preventDefault();$('#inErr').textContent='';
   const b=e.submitter;if(b)b.disabled=true;
-  try{await DB.login($('#inId').value.trim(),$('#inPw').value);goHome()}
+  try{await DB.login($('#inId').value.trim(),$('#inPw').value);goHome();giftPromoToast()}
   catch(err){$('#inErr').textContent=err.message}
   finally{if(b)b.disabled=false}
 };
@@ -5793,7 +5930,7 @@ $('#formUp').onsubmit=async e=>{
 $('#googleBtn').onclick=async()=>{
   try{
     const r=await DB.googleSignIn();
-    if(r.needsProfile){show('authPage');modalPickUsername()}else goHome();
+    if(r.needsProfile){show('authPage');modalPickUsername()}else{goHome();giftPromoToast()}
   }catch(err){toast(err.message,'bad')}
 };
 function modalDeleteMessageConfirm(key,m){
@@ -5914,7 +6051,7 @@ function modalPickUsername(){
   $('#pkX').onclick=async()=>{$('#modalRoot').innerHTML='';await DB.signOut();show('authPage')};
   $('#pkOk').onclick=async()=>{
     const b=$('#pkOk');b.disabled=true;$('#pkErr').textContent='';
-    try{await DB.completeGoogleProfile($('#pkName').value.trim());$('#modalRoot').innerHTML='';goHome()}
+    try{await DB.completeGoogleProfile($('#pkName').value.trim());$('#modalRoot').innerHTML='';goHome();giftPromoToast()}
     catch(e){console.error('profile setup failed',e);$('#pkErr').textContent=e.message}
     finally{b.disabled=false}
   };
