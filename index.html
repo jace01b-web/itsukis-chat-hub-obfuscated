@@ -7,11 +7,110 @@
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
 <meta name="build-version" content="2026-10-02.21">
-<script src="js/early/anti-lag-boot.js"></script>
 <title>Itsukis Chat Hub</title>
 <link rel="icon" type="image/png" href="https://aniitsukicoded.github.io/backups/icon.png">
-<script src="js/manifest.js"></script>
-<script src="js/early/load-styles.js"></script>
+<!-- RAW-LINK BOOTSTRAP: everything (css + js) is loaded from raw.githubusercontent.com.
+     raw links are served as text/plain, which browsers refuse to run/apply through
+     <script src> / <link rel=stylesheet>, so each file is fetched as text and handed to the
+     page as a blob: URL instead. Relative "js/..." and "css/..." URLs (set by loader.js and
+     friends via script.src, setAttribute or fetch) are redirected to the raw repo too.
+     All files are prefetched in parallel; the page stays hidden until styles are in
+     (10s safety timeout). Replaces the old static <script src> tags and js/early/load-styles.js. -->
+<script>
+(function(){
+  var RAW="https://raw.githubusercontent.com/jace01b-web/itsukis-chat-hub-obfuscated/main/";
+  var m=document.querySelector('meta[name="build-version"]');
+  var Q=m&&m.content?"?v="+encodeURIComponent(m.content):"";
+  var CSS=["01-base","02-now-playing","03-form-controls","04-layout-background","05-auth-home-basics","06-chat","07-modals-pickers","08-overlays-friends","09-game-hubs","10-profile-cropper-composer","11-glass-theme","12-vip-spin","13-auth-page","14-extras-menu","15-anti-lag","16-rules-modal","17-halloween","18-music-profile-cosmetics"];
+  var JS=["js/loader.js","js/manifest.js","js/auth/auth.js","js/chat/attachments.js","js/chat/chat-header.js","js/chat/chat-view.js","js/chat/composer.js","js/chat/emoji-data.js","js/chat/emoji-picker.js","js/chat/live-sync.js","js/chat/messages.js","js/chat/pings.js","js/chat/text-and-media.js","js/chat/typing-indicator.js","js/core/auto-update.js","js/core/boot.js","js/core/config.js","js/core/crash-catcher.js","js/core/database.js","js/core/diagnostics.js","js/core/firebase-imports.js","js/core/firebase-init.js","js/core/helpers.js","js/core/name-styles.js","js/core/sound.js","js/core/state.js","js/early/anti-lag-boot.js","js/early/load-styles.js","js/features/gift-promo.js","js/features/halloween.js","js/features/vip-and-spin.js","js/games/auth-hubs-preview.js","js/games/game-hubs.js","js/games/hub-info.js","js/moderation/bans.js","js/moderation/content-filter.js","js/moderation/nsfw-filter.js","js/moderation/roles.js","js/settings/account.js","js/settings/anti-lag.js","js/settings/appearance.js","js/settings/rules.js","js/settings/rules-check.js","js/settings/settings-page.js","js/social/friends.js","js/social/rooms.js","js/social/user-profile.js","js/tools/music-player.js","js/tools/now-playing.js","js/ui/ad-copy.js","js/ui/auth-card-motion.js","js/ui/context-menu.js","js/ui/controls.js","js/ui/extras-menu.js","js/ui/home.js","js/ui/liquid-glass.js","js/ui/modals.js","js/ui/navigation.js","js/ui/sidebar-toggle.js"];
+  var STATIC_LATE=["js/ui/auth-card-motion.js","js/games/hub-info.js","js/games/auth-hubs-preview.js","js/ui/ad-copy.js","js/core/crash-catcher.js","js/loader.js"];
+
+  var hide=document.createElement("style");
+  hide.id="css-boot-hide";hide.textContent="html{visibility:hidden}";
+  document.head.appendChild(hide);
+  function reveal(){var h=document.getElementById("css-boot-hide");if(h)h.remove();}
+  setTimeout(reveal,10000);
+
+  var origFetch=window.fetch;
+  function keyOf(u){return u.split("#")[0].split("?")[0];}
+  function toRaw(u){
+    u=String(u);
+    var r=/^(?:\.\/)?((?:js|css)\/.*)$/.exec(u);
+    if(r)return RAW+r[1];
+    if(u.indexOf(RAW)===0)return u;
+    try{
+      var a=new URL(u,location.href).href;
+      var dir=location.href.split("#")[0].split("?")[0].replace(/[^\/]*$/,"");
+      if(a.indexOf(dir)===0){var rest=a.slice(dir.length);if(/^(?:js|css)\//.test(rest))return RAW+rest;}
+    }catch(e){}
+    return null;
+  }
+  var texts={},blobs={};
+  function text(key){
+    return texts[key]||(texts[key]=origFetch.call(window,key+Q).then(function(r){
+      if(!r.ok)throw new Error(key+" HTTP "+r.status);return r.text();}));
+  }
+  function blob(key){
+    return blobs[key]||(blobs[key]=text(key).then(function(t){
+      return URL.createObjectURL(new Blob([t],{type:"text/javascript"}));}));
+  }
+
+  /* redirect script loads (kept in order) */
+  var chain=Promise.resolve();
+  var srcDesc=Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype,"src");
+  var origSetAttr=Element.prototype.setAttribute;
+  function redirect(el,v){
+    var raw=toRaw(v);if(raw===null)return false;
+    var key=keyOf(raw);
+    chain=chain.then(function(){return blob(key);}).then(
+      function(b){srcDesc.set.call(el,b);},
+      function(e){console.error("[raw]",e);srcDesc.set.call(el,raw);});
+    return true;
+  }
+  Object.defineProperty(HTMLScriptElement.prototype,"src",{configurable:true,enumerable:true,get:srcDesc.get,
+    set:function(v){if(!redirect(this,v))srcDesc.set.call(this,v);}});
+  Element.prototype.setAttribute=function(n,v){
+    if(this instanceof HTMLScriptElement&&String(n).toLowerCase()==="src"&&redirect(this,v))return;
+    return origSetAttr.call(this,n,v);};
+  window.fetch=function(i,o){
+    if(typeof i==="string"){var r=toRaw(i);if(r!==null)i=r;}
+    return origFetch.call(this,i,o);};
+
+  /* prefetch everything in parallel */
+  JS.forEach(function(p){blob(RAW+p).catch(function(){});});
+  var cssDone=Promise.all(CSS.map(function(f){
+    return text(RAW+"css/"+f+".css").then(function(t){return {f:f,t:t};},
+      function(e){console.error("[css]",e);return {f:f,t:""};});
+  })).then(function(res){
+    res.forEach(function(x){
+      if(!x.t)return;
+      var s=document.createElement("style");
+      s.setAttribute("data-css",x.f+".css");s.textContent=x.t;document.head.appendChild(s);
+    });
+    window.__cssReady=true;
+  });
+
+  function run(path){
+    return new Promise(function(done){
+      var s=document.createElement("script");
+      s.onload=s.onerror=function(){done();};
+      s.src=path;
+      document.head.appendChild(s);
+    });
+  }
+  var dom=new Promise(function(r){
+    if(document.readyState!=="loading")r();else document.addEventListener("DOMContentLoaded",r);});
+
+  run("js/early/anti-lag-boot.js")
+    .then(function(){return run("js/manifest.js");})
+    .then(function(){return cssDone;})
+    .then(reveal)
+    .then(function(){return dom;})
+    .then(function(){
+      return STATIC_LATE.reduce(function(p,f){return p.then(function(){return run(f);});},Promise.resolve());
+    });
+})();
+</script>
 </head>
 <body>
 <div class="bgfx" id="bgfx"><div class="layer" id="bgLayer"></div><div class="dim" id="bgDimEl"></div></div>
@@ -104,11 +203,8 @@
     </div>
   </div>
 </div>
-<script src="js/ui/auth-card-motion.js"></script>
 
-<script src="js/games/hub-info.js"></script>
 
-<script src="js/games/auth-hubs-preview.js"></script>
 
 <!-- ============ HOME ============ -->
 <div id="homePage" class="page hidden">
@@ -173,7 +269,6 @@
       <a class="tqq-alt" href="https://discord.gg/4P9gYCQxju" target="_blank" rel="noopener noreferrer">(or https://discord.gg/4P9gYCQxju)</a>
     </div>
   </aside>
-  <script src="js/ui/ad-copy.js"></script>
 </div>
 
 <!-- ============ CHAT ============ -->
@@ -255,7 +350,5 @@
 <div id="modalRoot"></div>
 <div id="lightboxRoot"></div>
 
-<script src="js/core/crash-catcher.js"></script>
-<script src="js/loader.js"></script>
 </body>
 </html>
