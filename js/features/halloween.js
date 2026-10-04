@@ -84,7 +84,7 @@ function hwDeco(on){
   if(!on){
     if(!d)return;
     d.classList.add('out');                           // css plays the exit, then the layer is removed
-    clearTimeout(d._rm);d._rm=setTimeout(()=>d.remove(),1000);
+    clearTimeout(d._rm);d._rm=setTimeout(()=>d.remove(),1200);
     return;
   }
   if(d){clearTimeout(d._rm);d.classList.remove('out');return}   // turned back on mid-exit: css plays the entrance again
