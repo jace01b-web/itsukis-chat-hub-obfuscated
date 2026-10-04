@@ -5,7 +5,7 @@
  * ========================================================================== */
 
 /* ===================================================================
-   LIQUID GLASS — iOS-style global glass pass
+   LIQUID GLASS v4 — clear glass over living colour, with real edge refraction (Chromium)
    Layers real specular highlights, saturation and depth onto the
    existing frosted-panel system. Respects the user's own UI-opacity /
    UI-blur settings (still driven by --ui-alpha / --ui-blur) — this only
@@ -29,20 +29,25 @@
   --glass-grain:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 1.3 0 0 0 -.5'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='.09'/></svg>");
   --glass-spring:cubic-bezier(.16,1,.3,1);
   /* how much of the user's panel colour stays on glass (lower = clearer). Panels use this % of --ui-panel's own opacity. */
-  --glass-clear:34%;
-  --glass-clear-pop:78%;
+  --glass-clear:14%;
+  --glass-clear-pop:74%;
+  /* glass blur is capped so what is behind stays recognisable (your UI-blur slider can only go lower) */
+  --glass-blur:min(var(--ui-blur,16px),9px);
+  /* colours of the soft light blobs that drift behind everything so the glass always has something to show */
+  --lg-o1:#7c6cff;--lg-o2:#ff6cb4;--lg-o3:#5eaaff;--lg-o4:#b06bff;--lg-o5:#ff9a6c;
 }
+html.hw-on{--lg-o1:#ff7a1a;--lg-o2:#a855ff;--lg-o3:#ff4f8b;--lg-o4:#ffb347;--lg-o5:#7a3dff}
 
 /* ---- big frosted surfaces: real blur, saturation, glass bevel ---- */
 .sidebar,.topbar,.composer,.card,.userchip,.online-pill,.opt,.np.show{
-  backdrop-filter:blur(var(--ui-blur)) saturate(200%) brightness(1.1)!important;
-  -webkit-backdrop-filter:blur(var(--ui-blur)) saturate(200%) brightness(1.1)!important;
+  backdrop-filter:blur(var(--glass-blur)) saturate(220%) brightness(1.1)!important;
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(220%) brightness(1.1)!important;
   border-color:var(--glass-edge-soft)!important;
   --glass-fill:color-mix(in srgb,var(--ui-panel) var(--glass-clear),transparent);
-  background:linear-gradient(135deg,rgba(255,255,255,.09),rgba(255,255,255,.015) 55%,rgba(255,255,255,.04)),var(--glass-fill)!important;
+  background:linear-gradient(135deg,rgba(255,255,255,.12),rgba(255,255,255,.025) 50%,rgba(255,255,255,.06)),var(--glass-fill)!important;
   transition:box-shadow .35s var(--glass-spring),border-color .35s var(--glass-spring);
 }
-.opt:hover,.userchip:hover,.online-pill:hover{background:linear-gradient(135deg,rgba(255,255,255,.14),rgba(255,255,255,.03) 55%,rgba(255,255,255,.06)),var(--glass-fill)!important}
+.opt:hover,.userchip:hover,.online-pill:hover{background:linear-gradient(135deg,rgba(255,255,255,.18),rgba(255,255,255,.04) 50%,rgba(255,255,255,.08)),var(--glass-fill)!important}
 @media(max-width:760px){
   .sidebar{background:var(--ui-panel)!important}
 }
@@ -70,7 +75,6 @@
   background:
     radial-gradient(140% 60% at 15% -10%,var(--glass-sheen),transparent 60%),
     linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.02) 24%,transparent 46%),
-    radial-gradient(80% 55% at 100% 118%,var(--glass-glow),transparent 72%),
     var(--glass-grain);
   opacity:.6
 }
@@ -244,4 +248,34 @@ html.anti-lag .sidebar::after,html.anti-lag .topbar::after,html.anti-lag .compos
 
 @supports not (background:color-mix(in srgb,red 50%,transparent)){
   .sidebar,.topbar,.composer,.card,.userchip,.online-pill,.opt{background:var(--ui-panel)!important}
+}
+
+/* ===================================================================
+   v4: LIVING BACKDROP + REAL REFRACTION
+   Glass can only look like glass if there is something behind it. These
+   soft colour blobs drift slowly behind the whole app (under every panel,
+   over the wallpaper), so every card, bar and pill always has light and
+   colour to bend and blur. Colours follow the theme (Halloween re-tints them).
+   =================================================================== */
+.lg-orbs{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;contain:layout paint style}
+.lg-orbs i{position:absolute;display:block;width:var(--s,46vmax);height:var(--s,46vmax);left:var(--x);top:var(--y);margin:calc(var(--s,46vmax)/-2) 0 0 calc(var(--s,46vmax)/-2);border-radius:50%;
+  background:radial-gradient(closest-side,var(--c) 0%,color-mix(in srgb,var(--c) 45%,transparent) 42%,transparent 72%);opacity:var(--o,.5);will-change:transform;animation:lgDrift var(--d,40s) ease-in-out infinite alternate}
+.lg-orbs i:nth-child(1){--c:var(--lg-o1);--x:12%;--y:18%;--s:52vmax;--o:.42;--d:46s;--dx:14vw;--dy:10vh}
+.lg-orbs i:nth-child(2){--c:var(--lg-o2);--x:88%;--y:14%;--s:44vmax;--o:.40;--d:38s;--dx:-12vw;--dy:16vh}
+.lg-orbs i:nth-child(3){--c:var(--lg-o3);--x:70%;--y:86%;--s:50vmax;--o:.34;--d:52s;--dx:-16vw;--dy:-12vh}
+.lg-orbs i:nth-child(4){--c:var(--lg-o4);--x:24%;--y:82%;--s:40vmax;--o:.36;--d:42s;--dx:18vw;--dy:-14vh}
+.lg-orbs i:nth-child(5){--c:var(--lg-o5);--x:50%;--y:46%;--s:30vmax;--o:.26;--d:34s;--dx:-10vw;--dy:12vh}
+@keyframes lgDrift{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(var(--dx),var(--dy),0) scale(1.18)}}
+@media (prefers-reduced-motion:reduce){.lg-orbs i{animation:none}}
+html.anti-lag .lg-orbs i{animation:none}
+
+/* text stays crisp on clear glass */
+.opt h3,.opt p,.userchip,.online-pill{text-shadow:0 1px 10px rgba(0,0,0,.4)}
+
+/* Chromium: bend what is behind the glass at its rounded edge (lens refraction).
+   The per-element filter (--lg-f) is generated at runtime by the small script in index.html;
+   anywhere it is unavailable these rules simply don't apply and the clear glass above is used. */
+html.lg-refract .sidebar,html.lg-refract .topbar,html.lg-refract .composer,html.lg-refract .card,html.lg-refract .userchip,html.lg-refract .online-pill,html.lg-refract .opt{
+  backdrop-filter:var(--lg-f,blur(0px)) blur(var(--glass-blur)) saturate(220%) brightness(1.1)!important;
+  -webkit-backdrop-filter:var(--lg-f,blur(0px)) blur(var(--glass-blur)) saturate(220%) brightness(1.1)!important;
 }
