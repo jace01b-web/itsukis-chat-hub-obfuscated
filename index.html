@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-10-03.10">
+<meta name="build-version" content="2026-10-03.09">
 <title>Itsukis Chat Hub</title>
 <link rel="icon" type="image/png" href="https://aniitsukicoded.github.io/backups/icon.png">
 <!-- RAW-LINK BOOTSTRAP: everything (css + js) is loaded from raw.githubusercontent.com.
@@ -361,7 +361,8 @@
    Every part fails silently so the page never breaks.
    ========================================================================== */
 (function(){
-  if(window.__lgEngine)return;window.__lgEngine=window.__lg=1;
+  if(window.__lgEngine||/[?&]noglass\b/.test(location.search))return;   /* add ?noglass to the URL to switch the engine off */
+  window.__lgEngine=window.__lg=1;
   var de=document.documentElement;
   var C=window.lgTune={strength:2.6,dispersion:1,spec:.9,bezel:1,light:[-.62,-.78]};
   try{var u=window.lgConfig||{};for(var k in u)C[k]=u[k]}catch(_){}
@@ -437,7 +438,7 @@
       var w=el.offsetWidth,h=el.offsetHeight;                 /* layout size: unaffected by pop-in scale animations */
       if(w<40||h<28||w>1400||h>1400)return;
       var rad=parseFloat(getComputedStyle(el).borderTopLeftRadius)||18;
-      var full=!de.classList.contains('anti-lag')&&w*h<90000&&w<700&&C.dispersion>0;   /* big panels use the cheaper single-pass lens */
+      var full=!de.classList.contains('anti-lag')&&w*h<60000&&w<500&&C.dispersion>0;   /* big panels use the cheaper single-pass lens */
       var key=w+'x'+h+'x'+Math.round(rad)+(full?'F':'L');
       if(seen.get(el)===key)return;seen.set(el,key);
       var bz=Math.max(12,Math.min(40,Math.min(w,h)*.36))*C.bezel;
@@ -479,9 +480,9 @@
       var cx=r.left+r.width/2,cy=r.top+r.height/2,dx=mx-cx,dy=my-cy;
       var ex=Math.max(r.left-mx,0,mx-r.right),ey=Math.max(r.top-my,0,my-r.bottom);
       var nr=Math.max(0,1-Math.sqrt(ex*ex+ey*ey)/280);nr=nr*nr*(3-2*nr);
-      var ang=Math.round((Math.atan2(dx,-dy)*180/Math.PI+360)%360),nn=Math.round(nr*50)/50;
-      if(el._la!==ang)el.style.setProperty('--lg-a',(el._la=ang)+'deg');
-      if(el._ln!==nn)el.style.setProperty('--lg-n',(el._ln=nn));
+      var L=Math.sqrt(dx*dx+dy*dy)||1,nn=Math.round(nr*20)/20,vx=Math.round(-dx/L*nn*20)/20,vy=Math.round(-dy/L*nn*20)/20;
+      var key=vx+'|'+vy+'|'+nn;
+      if(el._lk!==key){el._lk=key;var st=el.style;st.setProperty('--lg-x',vx);st.setProperty('--lg-y',vy);st.setProperty('--lg-n',nn)}
     });
     }catch(_){}
   }
