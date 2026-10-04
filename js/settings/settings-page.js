@@ -44,7 +44,8 @@ function openSettings(fromChat){
         <div class="section-h" style="margin-top:0">Text display</div>
         <div class="set-grid">
           <div class="field"><label>Bubble roundness <span class="val" id="vRad"></span></label><input type="range" id="sRad" min="0" max="28" value="${s.radius}"></div>
-          <div class="field"><label>Font</label><select id="sFont">${Object.keys(FONTS).map(f=>`<option value="${f}" ${s.font===f?'selected':''}>${f}</option>`).join('')}</select></div>
+          <div class="field"><label>Font</label><select id="sFont">${fontKeys().map(f=>`<option value="${f}" ${s.font===f?'selected':''}>${f==='custom'?'custom (link)':f}</option>`).join('')}</select></div>
+          <div class="field" id="sCustomFontWrap" style="grid-column:1/-1;${s.font==='custom'?'':'display:none'}"><label>Custom font link</label><input id="sCustomFont" type="url" maxlength="300" spellcheck="false" autocapitalize="off" placeholder="https://…/MyFont.woff2" value="${esc(s.customFont||'')}"><span class="hint" id="sCustomFontHint">Paste a link to a .ttf / .otf / .woff / .woff2 file, or a Google Fonts link.</span></div>
           <div class="field"><label>Text size <span class="val" id="vSize"></span></label><input type="range" id="sSize" min="11" max="24" value="${s.size}"></div>
           <div class="field" style="flex-direction:row;gap:18px;align-items:center;margin-top:20px">
             <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="sBold" ${s.bold?'checked':''}> Bold</label>
@@ -754,6 +755,7 @@ function openSettings(fromChat){
   function read(){
     s.meBubble=$$('#sMe').value;s.meText=$$('#sMeT').value;
     s.radius=+$$('#sRad').value;s.font=$$('#sFont').value;s.size=+$$('#sSize').value;
+    s.customFont=(($$('#sCustomFont')||{}).value||'').trim();
     s.bold=$$('#sBold').checked;s.italic=$$('#sItal').checked;
     s.bgType=$$('#sBgT').value;s.bgColor=$$('#sBg1').value;s.bgColor2=$$('#sBg2').value;
     s.bgFit=$$('#sBgFit').value;
@@ -772,6 +774,7 @@ function openSettings(fromChat){
   }
   function preview(){
     read();readouts();
+    $$('#sCustomFontWrap').style.display=s.font==='custom'?'':'none';
     applyStyle($$('#pvBox'),s);
     paintBg($$('#pvBg'),$$('#pvDim'),s);
     // live-preview the real app too, so background/glass changes are visible behind the modal
@@ -818,7 +821,7 @@ function openSettings(fromChat){
   const closeRevert=()=>{if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();closeModalAnimated(root,()=>{applyStyle(document.documentElement,ME.settings);refitAllAvatars();MusicPlayer.applyPrefs(ME.settings.music)})};
   $$('#sCancel').onclick=closeRevert;
   $$('#sReset').onclick=()=>{
-    Object.assign(s,{meBubble:'#7c6cff',meText:'#ffffff',radius:16,font:'system',size:15,bold:false,italic:false,bgType:'gradient',bgColor:'#2a1f5c',bgColor2:'#7c2f66',bgImage:'',bgFit:'cover',bgBlur:0,bgDim:30,uiOpacity:50,uiBlur:18,autoScrollBottom:true,filterLocal:true,pings:{everyone:true,sound:true,desktop:true},music:{enabled:true,volume:15,shuffle:true}});
+    Object.assign(s,{meBubble:'#7c6cff',meText:'#ffffff',radius:16,font:'system',customFont:'',size:15,bold:false,italic:false,bgType:'gradient',bgColor:'#2a1f5c',bgColor2:'#7c2f66',bgImage:'',bgFit:'cover',bgBlur:0,bgDim:30,uiOpacity:50,uiBlur:18,autoScrollBottom:true,filterLocal:true,pings:{everyone:true,sound:true,desktop:true},music:{enabled:true,volume:15,shuffle:true}});
     if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();
     MusicPlayer.setBackground(false);
     DB.updateSettings(ME.id,s).catch(()=>{});
@@ -827,6 +830,7 @@ function openSettings(fromChat){
   };
   $$('#sSave').onclick=async()=>{
     read();
+    if(s.font==='custom'&&!CustomFont.valid(s.customFont)){$$('#sErr').textContent='Custom font needs a valid font link (https://… .woff2 / .ttf / .otf, or Google Fonts).';return}
     const b=$$('#sSave');b.disabled=true;b.textContent='Saving...';
     try{
       await DB.updateSettings(ME.id,s);
@@ -846,3 +850,86 @@ function openSettings(fromChat){
   enhanceRanges(root);enhanceSelects(root);enhanceColors(root);
   preview();
 }
+
+/* ==========================================================================
+ * Custom font (paste a link). Saved as the account setting `customFont`
+ * (synced across devices) alongside font:'custom'.
+ * Accepts: https link to a .ttf/.otf/.woff/.woff2 file, or a Google Fonts css link.
+ * ========================================================================== */
+function fontKeys(){
+  const k=Object.keys(FONTS);
+  if(!k.includes('custom'))k.push('custom');
+  return k;
+}
+const CustomFont=(function(){
+  const FACE='ICHCustomFont',DEFAULT_HINT='Paste a link to a .ttf / .otf / .woff / .woff2 file, or a Google Fonts link.';
+  let family=FACE,loadedUrl='',face=null,linkEl=null,timer=0,installed=false;
+  function isGoogle(u){try{return new URL(u).hostname==='fonts.googleapis.com'}catch(_){return false}}
+  function gFamily(u){
+    try{return (new URL(u).searchParams.get('family')||'').split(':')[0].trim()}catch(_){return ''}
+  }
+  function valid(u){
+    u=(u||'').trim();
+    if(!u||u.length>300||/\s/.test(u))return false;
+    try{
+      const x=new URL(u);
+      if(x.protocol!=='https:')return false;
+      if(isGoogle(u))return !!gFamily(u);
+      return /\.(ttf|otf|woff2?)$/i.test(x.pathname);
+    }catch(_){return false}
+  }
+  function hint(t){const h=document.getElementById('sCustomFontHint');if(h)h.textContent=t}
+  function load(u){
+    if(u===loadedUrl)return;
+    loadedUrl=u;
+    hint('Loading font…');
+    if(isGoogle(u)){
+      if(!linkEl){linkEl=document.createElement('link');linkEl.rel='stylesheet';document.head.appendChild(linkEl)}
+      family=gFamily(u);
+      linkEl.onload=()=>hint('Font loaded ✓');
+      linkEl.onerror=()=>{loadedUrl='';hint('Couldn’t load that font — check the link.')};
+      linkEl.href=u;
+      return;
+    }
+    family=FACE;
+    const f=new FontFace(FACE,'url("'+encodeURI(u)+'")');
+    f.load().then(()=>{
+      if(u!==loadedUrl)return;
+      if(face)document.fonts.delete(face);
+      document.fonts.add(f);face=f;hint('Font loaded ✓');
+    }).catch(()=>{if(u===loadedUrl){loadedUrl='';hint('Couldn’t load that font — check the link.')}});
+  }
+  // Called whenever styles are applied. While the settings box is open, wait a moment so
+  // half-typed links don't fire requests; at boot / on another device, load straight away.
+  function ensure(raw){
+    const u=(raw||'').trim();
+    const typing=!!document.getElementById('sCustomFont');
+    if(!u){hint(DEFAULT_HINT);return}
+    if(!valid(u)){hint('That doesn’t look like a font link (https:// … .woff2 / .ttf / .otf, or Google Fonts).');return}
+    clearTimeout(timer);
+    if(typing&&loadedUrl)timer=setTimeout(()=>load(u),400);else load(u);
+  }
+  function install(){
+    if(installed)return true;
+    if(typeof FONTS==='undefined'||typeof applyStyle!=='function')return false;
+    const sample=FONTS.system||FONTS[Object.keys(FONTS)[0]];
+    if(typeof sample!=='string'){console.warn('[custom font] unexpected FONTS format, not installed');installed=true;return true}
+    try{
+      Object.defineProperty(FONTS,'custom',{enumerable:true,configurable:true,get:()=>'"'+family+'",system-ui,sans-serif'});
+      const orig=applyStyle;
+      applyStyle=function(el,s){
+        try{if(s&&s.font==='custom')ensure(s.customFont)}catch(_){}
+        return orig.apply(this,arguments);
+      };
+      installed=true;
+      // settings were applied before this hook existed (script load order) -> apply once more
+      if(typeof ME!=='undefined'&&ME&&ME.settings&&ME.settings.font==='custom')applyStyle(document.documentElement,ME.settings);
+    }catch(e){console.warn('[custom font] could not hook applyStyle',e);installed=true}
+    return true;
+  }
+  if(!install()){
+    const t=setInterval(()=>{if(install())clearInterval(t)},200);
+    setTimeout(()=>clearInterval(t),20000);
+  }
+  return {valid,ensure,install};
+})();
