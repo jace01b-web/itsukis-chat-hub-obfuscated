@@ -66,17 +66,28 @@ function hwWant(){
   try{const s=ME&&ME.settings&&ME.settings.hwTheme;if(typeof s==='boolean')return s}catch(_){}
   try{return localStorage.getItem(HW.K)!=='0'}catch(_){return true}
 }
-function hwSetTheme(v){
+function hwSetTheme(v,src){
   try{localStorage.setItem(HW.K,v?'1':'0')}catch(_){}
   if(ME){ME.settings=ME.settings||{};ME.settings.hwTheme=v}   /* keep the in-memory copy fresh: hwWant() reads it first, a stale value made the theme flip back off */
   if(ME&&ME.id!=null)DB.setSettingKey(ME.id,'hwTheme',v).catch(()=>{});
-  hwSync();
+  const fancy=src&&!document.documentElement.classList.contains('anti-lag')&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!fancy){hwSync();return}
+  /* same as the launcher: an expanding glow from the switch, then the theme swaps underneath it */
+  const rc=(src.closest('.switch')||src).getBoundingClientRect(),rp=document.createElement('div');
+  rp.className='hw-ripple '+(v?'on':'off');rp.style.left=(rc.left+rc.width/2)+'px';rp.style.top=(rc.top+rc.height/2)+'px';
+  document.body.appendChild(rp);setTimeout(()=>rp.remove(),1000);
+  setTimeout(()=>{hwSync();if(v)hwBurst(true)},160);
 }
 function hwDeco(on){
   document.documentElement.classList.toggle('hw-on',on);
   let d=document.getElementById('hwDeco');
-  if(!on){if(d)d.remove();return}
-  if(d)return;
+  if(!on){
+    if(!d||d.classList.contains('out'))return;
+    if(document.documentElement.classList.contains('anti-lag')){d.remove();return}
+    d.classList.add('out');clearTimeout(d._rm);d._rm=setTimeout(()=>d.remove(),1000);   /* pieces fade out like the launcher */
+    return;
+  }
+  if(d){if(d.classList.contains('out')){clearTimeout(d._rm);d.classList.remove('out')}return}
   const r=(a,b)=>(a+Math.random()*(b-a)).toFixed(2);
   const web='<svg viewBox="0 0 120 120"><g fill="none" stroke="currentColor" stroke-width="1"><path d="M0 0L120 0M0 0L0 120M0 0L100 60M0 0L60 100M0 0L115 25M0 0L25 115"/><path d="M0 30Q18 18 30 0M0 55Q32 36 55 0M0 82Q50 58 82 0M0 110Q70 82 110 0"/></g></svg>';
   let h='<i class="hw-vig"></i><i class="hw-moon"></i><i class="hw-fog"></i><i class="hw-fog f2"></i><div class="hw-web l">'+web+'</div><div class="hw-web r">'+web+'</div>'
@@ -96,11 +107,11 @@ function hwProg(){
 }
 const hwFmt=m=>{m=Math.max(0,Math.ceil(m));const h=Math.floor(m/60),x=m%60;return h?h+'h '+String(x).padStart(2,'0')+'m':x+'m'};
 function hwClaimable(){if(!ME)return 0;const{lvl}=hwProg();return Math.max(0,lvl-hwLevel(ME.id))}
-function hwBurst(){
+function hwBurst(noConfetti){
   if(document.documentElement.classList.contains('anti-lag'))return;
   const em=['🎃','🦇','👻','🕸️','🍬','💀'];
   for(let i=0;i<22;i++){const e=document.createElement('b');e.className='hw-pop';e.style.cssText='--x:'+(20+Math.random()*60)+'vw;--y:'+(55+Math.random()*25)+'vh;--dx:'+((Math.random()-.5)*220)+'px;--r:'+((Math.random()-.5)*80)+'deg;animation-delay:'+(Math.random()*.35)+'s';e.textContent=em[i%em.length];document.body.appendChild(e);setTimeout(()=>e.remove(),2200)}
-  if(typeof burstConfetti==='function')burstConfetti(50);
+  if(!noConfetti&&typeof burstConfetti==='function')burstConfetti(50);
 }
 function hwRowsHTML(){
   const{m,lvl}=hwProg(),have=ME?hwLevel(ME.id):0;
@@ -261,7 +272,21 @@ function hwSync(){
     if(d){if(n)d.textContent=n;else d.remove()}
   }
 }
-function hwRefresh(){hwSync();hwRender();hwHeroRefresh()}
+/* Season Pass banner on the home screen (same look as the launcher's banner) */
+function hwBannerSync(){
+  const wrap=document.querySelector('#homePage .home-wrap'),hero=wrap&&wrap.querySelector('.home-hero');
+  let b=document.getElementById('hwBanner');
+  if(!hero||!(hwOpen()&&hwWant())){if(b)b.remove();return}
+  if(b)return;
+  const r=(a,c)=>(a+Math.random()*(c-a)).toFixed(1);let sp='';
+  for(let i=0;i<9;i++)sp+='<i style="--x:'+r(4,94)+'%;--s:'+r(2,4)+'px;--dx:'+r(-20,20)+'px;--d:'+r(3,6)+'s;--t:-'+r(0,6)+'s"></i>';
+  b=document.createElement('button');b.type='button';b.id='hwBanner';b.className='hw-banner';
+  b.innerHTML='<span class="hw-hero-ring"></span><span class="hw-hero-sp" aria-hidden="true">'+sp+'</span><span class="big">🎃</span><div><b>Halloween Season Pass is live</b><span>Spend time online to level up through 30 levels of spooky badges, name effects and permanent roles. Runs until early November.</span></div>';
+  b.onclick=()=>{if(ME&&hwCanClaim())hwModal()};
+  hero.insertAdjacentElement('afterend',b);
+}
+setInterval(hwBannerSync,700);hwBannerSync();
+function hwRefresh(){hwSync();hwRender();hwHeroRefresh();hwBannerSync()}
 window.hwRefresh=hwRefresh;
 setInterval(hwSync,3000);hwSync();
 function hwHeroRefresh(){
@@ -290,7 +315,7 @@ function hwSettingsInject(){
   if(!a||document.getElementById('sHwTheme')||!hwCanClaim())return;
   const c=a.closest('.set-card');if(!c)return;
   c.insertAdjacentHTML('afterend','<div class="set-card"><div class="section-h" style="margin-top:0">🎃 Halloween event</div><div class="toggle-row" style="margin-bottom:0"><div><div style="font-weight:600;font-size:14px">Halloween theme</div><div class="hint" style="margin-top:2px">Spooky decorations (bats, ghosts, fog, cobwebs) and the orange/purple look across the app. Turn off for the normal look. Your Halloween roles and name effects stay either way. Saved to your account.</div></div><label class="switch"><input type="checkbox" id="sHwTheme" '+(hwWant()?'checked':'')+'><span class="slider"></span></label></div><button class="btn" id="sHwOpen" type="button" style="margin-top:12px;width:100%">🎃 Open Halloween Pass</button><button class="btn sec" id="sHwCos" type="button" style="margin-top:8px;width:100%">✨ Customize name, title &amp; badge</button></div>');
-  document.getElementById('sHwTheme').addEventListener('change',e=>hwSetTheme(e.target.checked));
+  document.getElementById('sHwTheme').addEventListener('change',e=>hwSetTheme(e.target.checked,e.target));
   document.getElementById('sHwOpen').onclick=hwModal;
   document.getElementById('sHwCos').onclick=openCosmetics;
 }
