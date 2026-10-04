@@ -24,19 +24,25 @@
   --glass-glow-strong:color-mix(in srgb,var(--accent,#7c6cff) 46%,transparent);
   --glass-shadow:0 30px 70px rgba(0,0,0,.46),0 4px 14px rgba(0,0,0,.26);
   /* light from the top-left: bright top + left rim, dim bottom + right rim, soft inner glow, dark pooled bottom */
-  --glass-inset:inset 0 1.5px 0 rgba(255,255,255,.46),inset 1.5px 0 0 rgba(255,255,255,.15),inset -1px 0 0 rgba(255,255,255,.06),inset 0 -1.5px 0 rgba(0,0,0,.22),inset 0 0 42px rgba(255,255,255,.06),inset 0 -24px 36px rgba(0,0,0,.18);
+  --glass-inset:inset 0 1.5px 0 rgba(255,255,255,.46),inset 1.5px 0 0 rgba(255,255,255,.15),inset -1px 0 0 rgba(255,255,255,.06),inset 0 -1.5px 0 rgba(0,0,0,.22),inset 0 0 42px rgba(255,255,255,.07),inset 0 -24px 36px rgba(0,0,0,.08);
   /* frosted grain: very faint noise so big panels feel like real frosted glass instead of flat blur */
   --glass-grain:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 1.3 0 0 0 -.5'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='.09'/></svg>");
   --glass-spring:cubic-bezier(.16,1,.3,1);
+  /* how much of the user's panel colour stays on glass (lower = clearer). Panels use this % of --ui-panel's own opacity. */
+  --glass-clear:34%;
+  --glass-clear-pop:78%;
 }
 
 /* ---- big frosted surfaces: real blur, saturation, glass bevel ---- */
 .sidebar,.topbar,.composer,.card,.userchip,.online-pill,.opt,.np.show{
-  backdrop-filter:blur(var(--ui-blur)) saturate(190%) brightness(1.06) contrast(1.03)!important;
-  -webkit-backdrop-filter:blur(var(--ui-blur)) saturate(190%) brightness(1.06) contrast(1.03)!important;
+  backdrop-filter:blur(var(--ui-blur)) saturate(200%) brightness(1.1)!important;
+  -webkit-backdrop-filter:blur(var(--ui-blur)) saturate(200%) brightness(1.1)!important;
   border-color:var(--glass-edge-soft)!important;
+  --glass-fill:color-mix(in srgb,var(--ui-panel) var(--glass-clear),transparent);
+  background:linear-gradient(135deg,rgba(255,255,255,.09),rgba(255,255,255,.015) 55%,rgba(255,255,255,.04)),var(--glass-fill)!important;
   transition:box-shadow .35s var(--glass-spring),border-color .35s var(--glass-spring);
 }
+.opt:hover,.userchip:hover,.online-pill:hover{background:linear-gradient(135deg,rgba(255,255,255,.14),rgba(255,255,255,.03) 55%,rgba(255,255,255,.06)),var(--glass-fill)!important}
 @media(max-width:760px){
   .sidebar{background:var(--ui-panel)!important}
 }
@@ -119,7 +125,8 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
    background-color-from-behind, blurred and saturated back up — a red backdrop
    reads red, a photo reads as that photo, a picked gradient reads as itself. */
 .mention-pop,.emoji-pop,.cp-pop,.csel-menu,.list-row,.modal,.empty,.toast,.msg-hover-bar,.sys,.date-sep,.reaction-pill{
-  background:linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,.03) 40%),var(--ui-panel)!important;
+  --glass-fill:color-mix(in srgb,var(--ui-panel) var(--glass-clear-pop),transparent);
+  background:linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,.03) 40%),var(--glass-fill)!important;
   backdrop-filter:blur(28px) saturate(220%) brightness(1.04)!important;-webkit-backdrop-filter:blur(28px) saturate(220%) brightness(1.04)!important;
   border:1px solid var(--glass-edge-soft)!important;
   box-shadow:var(--glass-shadow),inset 0 1.5px 0 rgba(255,255,255,.3),inset 1px 0 0 rgba(255,255,255,.08),inset 0 -1px 0 rgba(0,0,0,.2)
@@ -234,3 +241,7 @@ input[type=range]{accent-color:var(--accent)}
 /* anti-lag mode: keep the look, drop the expensive layers */
 html.anti-lag .sidebar::before,html.anti-lag .topbar::before,html.anti-lag .composer::before,html.anti-lag .card::before,html.anti-lag .modal::before{animation:none}
 html.anti-lag .sidebar::after,html.anti-lag .topbar::after,html.anti-lag .composer::after,html.anti-lag .card::after,html.anti-lag .modal::after,html.anti-lag .gc-card::after{display:none}
+
+@supports not (background:color-mix(in srgb,red 50%,transparent)){
+  .sidebar,.topbar,.composer,.card,.userchip,.online-pill,.opt{background:var(--ui-panel)!important}
+}
