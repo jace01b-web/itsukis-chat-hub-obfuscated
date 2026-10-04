@@ -13,7 +13,7 @@ html.hw-on{--accent:#ff7a1a;--accent2:#a855ff}
   background:radial-gradient(circle at 30% 30%,#fff8dc,#ffd98a 58%,#e9a24a);box-shadow:0 0 34px 10px rgba(255,190,90,.26),0 0 90px 30px rgba(255,150,40,.12)}
 .hw-moon::before{content:'';position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 62% 38%,rgba(170,110,40,.35) 0 7%,transparent 8%),radial-gradient(circle at 38% 66%,rgba(170,110,40,.3) 0 10%,transparent 11%),radial-gradient(circle at 70% 70%,rgba(170,110,40,.25) 0 5%,transparent 6%)}
 @keyframes hwMoon{50%{transform:translate3d(0,-6px,0)}}
-.hw-web{position:absolute;top:0;width:150px;height:150px;color:rgba(255,255,255,.17);animation:hwWebIn .9s var(--spring,cubic-bezier(.16,1,.3,1)) .1s both}
+.hw-web{position:absolute;top:0;width:150px;height:150px;color:rgba(255,255,255,.17);animation:hwWebT .9s var(--spring,cubic-bezier(.16,1,.3,1)) .1s both,hwWebO .6s ease .1s both}
 .hw-web.l{--wx:-50px}.hw-web.r{--wx:50px}
 .hw-web.l{left:0}.hw-web.r{right:0;transform:scaleX(-1)}
 .hw-web svg{width:100%;height:100%}
@@ -46,17 +46,19 @@ html.anti-lag .hw-deco *,html.anti-lag .hw-name,html.anti-lag .hw-title,html.ant
 @keyframes hwDecoOut{from{opacity:1}to{opacity:0}}
 @keyframes hwMoonIn{from{scale:.2}to{scale:1}}
 @keyframes hwMoonOut{from{scale:1}to{scale:.2}}
-@keyframes hwWebIn{from{opacity:0;translate:var(--wx,0px) -50px}to{opacity:1;translate:0 0}}
-@keyframes hwWebOut{from{opacity:1;translate:0 0}to{opacity:0;translate:var(--wx,0px) -50px}}
+@keyframes hwWebT{from{translate:var(--wx,0px) -50px}to{translate:0 0}}
+@keyframes hwWebO{from{opacity:0}to{opacity:1}}
+@keyframes hwWebTOut{from{translate:0 0}to{translate:var(--wx,0px) -50px}}
+@keyframes hwWebOOut{from{opacity:1}to{opacity:0}}
 @keyframes hwDrop{from{translate:0 -130%}to{translate:0 0}}
 @keyframes hwDropOut{from{translate:0 0}to{translate:0 -130%}}
 @keyframes hwRise{from{translate:0 90px}to{translate:0 0}}
 @keyframes hwRiseOut{from{translate:0 0}to{translate:0 90px}}
 .hw-deco.out{animation:hwDecoOut .8s ease both}
-.hw-deco.out .hw-moon{animation:hwMoon 8s ease-in-out infinite,hwMoonOut .6s ease both}
-.hw-deco.out .hw-web{animation:hwWebOut .6s ease both}
-.hw-deco.out .hw-sp{animation:hwSwing 4.5s ease-in-out infinite,hwDropOut .7s ease both}
-.hw-deco.out .hw-pk{animation:hwPk 2.8s ease-in-out infinite,hwRiseOut .6s ease both}
+.hw-deco.out .hw-moon{animation:hwMoon 8s ease-in-out infinite,hwMoonOut 1s var(--spring,cubic-bezier(.16,1,.3,1)) both}
+.hw-deco.out .hw-web{animation:hwWebTOut .9s var(--spring,cubic-bezier(.16,1,.3,1)) both,hwWebOOut .6s ease both}
+.hw-deco.out .hw-sp{animation:hwSwing 4.5s ease-in-out infinite,hwDropOut 1.1s var(--spring,cubic-bezier(.16,1,.3,1)) both}
+.hw-deco.out .hw-pk{animation:hwPk 2.8s ease-in-out infinite,hwRiseOut .8s var(--spring,cubic-bezier(.16,1,.3,1)) both}
 .hw-deco.out .hw-pk.r{animation-delay:-1.4s,0s}
 /* glow that spreads out from the Halloween switch when the theme is turned on/off */
 .hw-ripple{position:fixed;z-index:900;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;pointer-events:none;animation:hwRipple .95s cubic-bezier(.2,.7,.3,1) forwards}
@@ -99,7 +101,8 @@ html.anti-lag .hw-deco *,html.anti-lag .hw-name,html.anti-lag .hw-title,html.ant
 
 /* ===== Halloween skin for the rest of the app (colours, borders and glows only, never sizes or positions) ===== */
 html.hw-on{--accent:#ff7a1a;--accent2:#a855ff;--border:rgba(255,165,90,.15)}
-html.hw-on .bgfx{background:radial-gradient(1100px 680px at 12% -8%,rgba(150,70,255,.34),transparent 58%),radial-gradient(950px 640px at 96% 6%,rgba(255,110,30,.22),transparent 58%),radial-gradient(1000px 720px at 50% 118%,rgba(255,90,20,.20),transparent 62%),linear-gradient(160deg,#0d0714 0%,#170b24 45%,#22101a 100%)}
+.bgfx::before{content:"";position:absolute;inset:0;background:radial-gradient(1100px 680px at 12% -8%,rgba(150,70,255,.34),transparent 58%),radial-gradient(950px 640px at 96% 6%,rgba(255,110,30,.22),transparent 58%),radial-gradient(1000px 720px at 50% 118%,rgba(255,90,20,.20),transparent 62%),linear-gradient(160deg,#0d0714 0%,#170b24 45%,#22101a 100%);opacity:0;transition:opacity .8s ease}
+html.hw-on .bgfx::before{opacity:1}
 html.hw-on ::selection{background:rgba(255,122,26,.45)}
 html.hw-on .btn:not(.sec):not(.danger){background:linear-gradient(135deg,#ff7a1a,#9a3df0);box-shadow:0 6px 18px rgba(255,110,20,.3)}
 html.hw-on .send{background:linear-gradient(135deg,#ff8a1f,#9a3df0);box-shadow:0 4px 14px rgba(255,110,20,.35)}
@@ -107,14 +110,16 @@ html.hw-on #chatPage:not(.vip-mode) .send{background:linear-gradient(135deg,#ff8
 html.hw-on .tabs button.active,html.hw-on .modal-tabs button.active{background:linear-gradient(135deg,#ff7a1a,#9a3df0);box-shadow:0 4px 14px rgba(255,110,20,.35)}
 html.hw-on .logo{filter:drop-shadow(0 0 12px rgba(255,120,20,.3))}
 html.hw-on .opt{border-color:rgba(255,150,60,.2)}
-html.hw-on .opt:hover{border-color:rgba(255,150,60,.75);box-shadow:0 20px 46px rgba(255,110,20,.3)}
+html.hw-on .opt:hover{border-color:rgba(255,150,60,.75);box-shadow:0 18px 40px rgba(255,110,20,.28)}
+html.hw-on .opt .ic{background:rgba(255,120,20,.14)}
 html.hw-on .opt:hover .ic{background:rgba(255,120,20,.26)}
 html.hw-on .userchip:hover,html.hw-on .online-pill:hover{border-color:rgba(255,150,60,.8)}
-html.hw-on .modal{border-color:rgba(255,150,60,.24);box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 50px rgba(255,100,20,.12),inset 0 1px 0 rgba(255,190,120,.16)}
-html.hw-on .modal-bg{background:rgba(14,5,22,.66)}
+html.hw-on .modal{border-color:rgba(255,150,60,.26);box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 50px rgba(255,100,20,.12)}
+html.hw-on .modal-bg{background:rgba(14,5,22,.72)}
 html.hw-on .gc-modal{border-color:rgba(255,150,60,.3)}
 html.hw-on .gc-card:not(.gc-vip):hover{border-color:rgba(255,150,60,.65);box-shadow:0 14px 34px rgba(255,110,20,.26)}
 html.hw-on .set-card:hover,html.hw-on .hub-row:hover{border-color:rgba(255,150,60,.5)}
+html.hw-on .hub-row:hover{border-color:rgba(255,150,60,.55)}
 html.hw-on .field input:focus,html.hw-on .field select:focus,html.hw-on .field textarea:focus{border-color:#ff7a1a;box-shadow:0 0 0 3px rgba(255,122,26,.2)}
 html.hw-on .field label .val{background:rgba(255,122,26,.2)}
 html.hw-on .gh-chip,html.hw-on .gh-teaser,html.hw-on .hub-row,html.hw-on .tqq-card,html.hw-on .tqq-side,html.hw-on .gha-modal{border-color:rgba(255,150,60,.22)}
