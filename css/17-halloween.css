@@ -40,6 +40,55 @@ html.anti-lag .hw-deco *,html.anti-lag .hw-name,html.anti-lag .hw-title,html.ant
 @media (max-width:700px){.hw-deco .hw-x{display:none}.hw-web{width:90px;height:90px}.hw-moon{width:42px}.hw-pk{font-size:26px}}
 @media (prefers-reduced-motion:reduce){.hw-deco *,.hw-name,.hw-title,.hw-modal *,.hw-hero *{animation:none!important}}
 
+/* ===== Launcher parity: entrance animation, ripple, and protection from glass/blur styles ===== */
+:root{--spring:cubic-bezier(.16,1,.3,1)}
+.hw-deco{animation:hwDecoIn .8s ease both}
+.hw-deco .hw-moon{animation:hwMoon 8s ease-in-out infinite,hwMoonIn 1s var(--spring) .15s both}
+.hw-deco .hw-web{animation:hwWebIn .9s var(--spring) .1s both}
+.hw-deco .hw-web.l{--wx:-50px}.hw-deco .hw-web.r{--wx:50px}
+.hw-deco .hw-sp{animation:hwSwing 4.5s ease-in-out infinite,hwDropIn 1.1s var(--spring) .3s both}
+.hw-deco .hw-pk{animation:hwPk 2.8s ease-in-out infinite,hwRiseIn .8s var(--spring) .35s both}
+.hw-deco .hw-pk.r{animation:hwPk 2.8s ease-in-out -1.4s infinite,hwRiseIn .8s var(--spring) .35s both}
+@keyframes hwDecoIn{from{opacity:0}to{opacity:1}}
+@keyframes hwMoonIn{from{scale:.2}to{scale:1}}
+@keyframes hwWebIn{from{opacity:0;translate:var(--wx) -50px}to{opacity:1;translate:0 0}}
+@keyframes hwDropIn{from{translate:0 -130%}to{translate:0 0}}
+@keyframes hwRiseIn{from{translate:0 90px}to{translate:0 0}}
+/* decorations must never pick up glass boxes / blur from the UI themes */
+.hw-deco,.hw-deco *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.hw-deco .hw-bat,.hw-deco .hw-bat i,.hw-deco .hw-gh,.hw-deco .hw-sp,.hw-deco .hw-sp b,.hw-deco .hw-pk,.hw-deco .hw-web,.hw-deco .hw-web svg,.hw-deco .hw-fog{background-color:transparent!important;border:0!important;box-shadow:none!important;border-radius:0!important;padding:0!important}
+.hw-deco .hw-fog{background-image:radial-gradient(50% 100% at 30% 100%,rgba(200,170,255,.13),transparent 70%),radial-gradient(40% 90% at 72% 100%,rgba(255,170,100,.1),transparent 70%)!important}
+.hw-deco .hw-fog.f2{background-image:radial-gradient(50% 100% at 30% 100%,rgba(200,170,255,.13),transparent 70%),radial-gradient(40% 90% at 72% 100%,rgba(255,170,100,.1),transparent 70%)!important}
+.hw-deco .hw-bat,.hw-deco .hw-gh,.hw-deco .hw-sp,.hw-deco .hw-pk,.hw-deco .hw-web{filter:none!important}
+/* expanding glow when the theme is switched */
+.hw-ripple{position:fixed;z-index:900;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;pointer-events:none;animation:hwRipple .95s cubic-bezier(.2,.7,.3,1) forwards}
+.hw-ripple.on{background:radial-gradient(circle,rgba(255,150,40,.75),rgba(168,85,255,.5) 55%,transparent 72%)}
+.hw-ripple.off{background:radial-gradient(circle,rgba(160,150,255,.6),rgba(90,80,200,.4) 55%,transparent 72%)}
+@keyframes hwRipple{0%{transform:scale(0);opacity:1}70%{opacity:.55}100%{transform:scale(70);opacity:0}}
+html.anti-lag .hw-deco,html.anti-lag .hw-deco *{animation:none!important}
+
+/* fade-out when the theme is switched off (halloween.js adds .out, then removes the layer) */
+.hw-deco.out{animation:hwDecoOut .8s ease forwards}
+@keyframes hwDecoOut{to{opacity:0}}
+/* no glass/highlight pseudo-elements on decorations (the moon keeps its craters) */
+.hw-deco *::after,.hw-deco *:not(.hw-moon)::before{content:none!important}
+
+/* ===== Season Pass banner on the home screen (copied from the launcher) ===== */
+.hw-banner{position:relative;isolation:isolate;display:flex;align-items:center;gap:18px;width:100%;max-width:540px;margin:6px auto 22px;padding:16px 20px;border-radius:22px;text-align:left;color:var(--text);font:inherit;cursor:pointer;overflow:visible;
+  background:radial-gradient(80% 160% at 6% 50%,rgba(255,120,20,.28),transparent 62%),linear-gradient(100deg,rgba(60,22,6,.6),rgba(34,14,56,.55) 70%),var(--ui-panel2);
+  border:1px solid rgba(255,150,60,.38);box-shadow:0 14px 38px rgba(0,0,0,.35),0 0 40px rgba(255,110,20,.14),inset 0 1px 0 rgba(255,200,140,.25);
+  animation:hwRise .6s var(--spring) .2s both;transition:transform .25s var(--spring),border-color .25s,box-shadow .25s}
+.hw-banner:hover{transform:translate3d(0,-2px,0);border-color:rgba(255,170,80,.7);box-shadow:0 18px 44px rgba(0,0,0,.4),0 0 56px rgba(255,110,20,.3),inset 0 1px 0 rgba(255,200,140,.3)}
+.hw-banner:focus-visible{outline:2px solid #ffb347;outline-offset:3px}
+.hw-banner .big{flex:none;font-size:40px;line-height:1;filter:drop-shadow(0 0 12px rgba(255,130,20,.7));animation:hwPk 2.8s ease-in-out infinite}
+.hw-banner b{display:block;font-size:17px;margin-bottom:3px}
+.hw-banner span{font-size:13.5px;color:#d8c4ee;line-height:1.5}
+.hw-banner .hw-hero-ring,.hw-banner .hw-hero-sp{display:block}
+@keyframes hwRise{from{opacity:0;transform:translateY(26px) scale(.94)}60%{opacity:1}to{opacity:1;transform:none}}
+@media (max-width:620px){.hw-banner{flex-direction:column;text-align:center}}
+html.anti-lag .hw-banner,html.anti-lag .hw-banner *{animation:none!important}
+@media (prefers-reduced-motion:reduce){.hw-banner,.hw-banner *{animation:none!important}}
+
 /* title pills + name effects. Colour/opacity/background-position only: no transforms or size changes, so rows never move. */
 .hw-title{display:inline-flex;align-items:center;gap:4px;margin:-2px 6px -2px 0;padding:2px 8px 2px 6px;border-radius:999px;font-size:.66em;font-weight:900;letter-spacing:.06em;text-transform:uppercase;vertical-align:middle;position:relative;isolation:isolate;white-space:nowrap;line-height:1.15}
 .hw-t-vamp{color:#ffc2cf;background:linear-gradient(100deg,rgba(120,0,25,.7),rgba(220,30,70,.4));box-shadow:inset 0 0 0 1px rgba(255,80,110,.6),0 0 10px rgba(220,20,60,.45);animation:hwBeat 1.8s ease-in-out infinite}
@@ -75,7 +124,10 @@ html.anti-lag .hw-deco *,html.anti-lag .hw-name,html.anti-lag .hw-title,html.ant
 
 /* ===== Halloween skin for the rest of the app (colours, borders and glows only, never sizes or positions) ===== */
 html.hw-on{--accent:#ff7a1a;--accent2:#a855ff;--border:rgba(255,165,90,.15)}
-html.hw-on .bgfx{background:radial-gradient(1100px 680px at 12% -8%,rgba(150,70,255,.34),transparent 58%),radial-gradient(950px 640px at 96% 6%,rgba(255,110,30,.22),transparent 58%),radial-gradient(1000px 720px at 50% 118%,rgba(255,90,20,.20),transparent 62%),linear-gradient(160deg,#0d0714 0%,#170b24 45%,#22101a 100%)}
+/* background: same crossfading Halloween overlay as the launcher */
+.bgfx{position:fixed}
+.bgfx::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(1100px 680px at 12% -8%,rgba(150,70,255,.34),transparent 58%),radial-gradient(950px 640px at 96% 6%,rgba(255,110,30,.22),transparent 58%),radial-gradient(1000px 720px at 50% 118%,rgba(255,90,20,.20),transparent 62%),linear-gradient(160deg,#0d0714 0%,#170b24 45%,#22101a 100%);opacity:0;transition:opacity .8s ease}
+html.hw-on .bgfx::before{opacity:1}
 html.hw-on ::selection{background:rgba(255,122,26,.45)}
 html.hw-on .btn:not(.sec):not(.danger){background:linear-gradient(135deg,#ff7a1a,#9a3df0);box-shadow:0 6px 18px rgba(255,110,20,.3)}
 html.hw-on .send{background:linear-gradient(135deg,#ff8a1f,#9a3df0);box-shadow:0 4px 14px rgba(255,110,20,.35)}
