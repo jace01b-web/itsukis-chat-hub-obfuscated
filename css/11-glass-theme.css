@@ -5,7 +5,7 @@
  * ========================================================================== */
 
 /* ===================================================================
-   LIQUID GLASS v4 — clear glass over living colour, with real edge refraction (Chromium)
+   LIQUID GLASS v5 — lens refraction, dispersion, baked specular bevel, light-reactive rim, jelly motion
    Layers real specular highlights, saturation and depth onto the
    existing frosted-panel system. Respects the user's own UI-opacity /
    UI-blur settings (still driven by --ui-alpha / --ui-blur) — this only
@@ -17,51 +17,64 @@
   --border:rgba(255,255,255,.14);
   --glass-sheen:rgba(255,255,255,.30);
   --glass-edge:rgba(255,255,255,.62);
-  --glass-edge-soft:rgba(255,255,255,.26);
+  --glass-edge-soft:rgba(255,255,255,.20);
   --glass-hover:rgba(176,166,255,.72);
   /* ambient colour that bleeds into glass from the accent (follows the user's accent / theme) */
   --glass-glow:color-mix(in srgb,var(--accent,#7c6cff) 30%,transparent);
   --glass-glow-strong:color-mix(in srgb,var(--accent,#7c6cff) 46%,transparent);
   --glass-shadow:0 30px 70px rgba(0,0,0,.46),0 4px 14px rgba(0,0,0,.26);
   /* light from the top-left: bright top + left rim, dim bottom + right rim, soft inner glow, dark pooled bottom */
-  --glass-inset:inset 2px 2px 1px -1px rgba(255,255,255,.78),inset -1.5px -1.5px 1px -1px rgba(255,255,255,.46),inset 0 1.5px 0 rgba(255,255,255,.28),inset 0 0 24px rgba(255,255,255,.10),inset 10px 12px 30px -16px rgba(255,255,255,.34),inset -10px -14px 30px -18px rgba(255,255,255,.16),inset 0 -22px 34px -12px rgba(0,0,0,.20);
+  --glass-inset:inset 0 0 26px rgb(var(--lg-rim)/.09),inset 12px 14px 32px -18px rgb(var(--lg-rim)/.40),inset -12px -16px 32px -20px rgb(var(--lg-rim)/.18),inset 0 -24px 36px -14px rgba(0,0,0,.20);
   /* frosted grain: very faint noise so big panels feel like real frosted glass instead of flat blur */
-  --glass-grain:linear-gradient(transparent,transparent);
+  --glass-grain:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .22 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
   --glass-spring:cubic-bezier(.16,1,.3,1);
   /* how much of the user's panel colour stays on glass (lower = clearer). Panels use this % of --ui-panel's own opacity. */
-  --glass-clear:9%;
-  --glass-clear-pop:74%;
+  --glass-clear:8%;
+  --glass-clear-pop:66%;
   /* glass blur is capped so what is behind stays recognisable (your UI-blur slider can only go lower) */
-  --glass-blur:min(var(--ui-blur,16px),6px);
+  --glass-blur:min(var(--ui-blur,16px),5px);
+  --glass-blur-pop:min(var(--ui-blur,16px),14px);
+  --glass-sat:200%;
+  --glass-rim-w:1.5px;
+  /* rim light colour (r g b) — themes retint it */
+  --lg-rim:255 255 255;
   /* colours of the soft light blobs that drift behind everything so the glass always has something to show */
   --lg-o1:#7c6cff;--lg-o2:#ff6cb4;--lg-o3:#5eaaff;--lg-o4:#b06bff;--lg-o5:#ff9a6c;
 }
 html.hw-on{--lg-o1:#9646ff;--lg-o2:#ff6e1e;--lg-o3:#8a3cff;--lg-o4:#ff5a14;--lg-o5:#b06bff}
-html.hw-on .lg-orbs i{opacity:calc(var(--o)*.8)}
+html.hw-on .lg-orbs i{opacity:calc(var(--o)*.85)}
 
-/* ---- big frosted surfaces: real blur, saturation, glass bevel ---- */
+/* ---- big frosted surfaces ----
+   Rim: a 1.5px transparent border whose border-box layer is two gradients — a fixed top-left key light
+   plus a conic arc that points at your pointer (--lg-a / --lg-n set by the engine in index.html).
+   Fill: nearly clear. Edge bend + dispersion + bevel highlight come from the SVG lens filter (--lg-f). */
 .sidebar,.topbar,.composer,.card,.userchip,.online-pill,.opt,.np.show{
-  backdrop-filter:blur(var(--glass-blur)) saturate(190%) brightness(1.08) contrast(1.04)!important;
-  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(190%) brightness(1.08) contrast(1.04)!important;
-  border-color:var(--glass-edge-soft)!important;
   --glass-fill:color-mix(in srgb,var(--ui-panel) var(--glass-clear),transparent);
-  background:linear-gradient(135deg,rgba(255,255,255,.12),rgba(255,255,255,.025) 50%,rgba(255,255,255,.06)),var(--glass-fill)!important;
-  transition:box-shadow .35s var(--glass-spring),border-color .35s var(--glass-spring);
+  backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(1.08) contrast(1.04)!important;
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(1.08) contrast(1.04)!important;
+  border:var(--glass-rim-w) solid transparent!important;
+  background:
+    linear-gradient(135deg,rgb(var(--lg-rim)/.14),rgb(var(--lg-rim)/.02) 48%,rgb(var(--lg-rim)/.07)) border-box padding-box,
+    linear-gradient(var(--glass-fill),var(--glass-fill)) border-box padding-box,
+    conic-gradient(from calc(var(--lg-a,0deg) - 55deg) at 50% 50%,transparent 0deg,rgb(var(--lg-rim)/calc(var(--lg-n,0)*.95)) 55deg,transparent 110deg,transparent 360deg) border-box border-box,
+    linear-gradient(135deg,rgb(var(--lg-rim)/calc(.9*var(--rb,1))) 0%,rgb(var(--lg-rim)/.16) 26%,rgb(var(--lg-rim)/.05) 50%,rgb(var(--lg-rim)/.16) 74%,rgb(var(--lg-rim)/calc(.6*var(--rb,1))) 100%) border-box border-box!important;
+  transition:box-shadow .4s var(--glass-spring),transform .55s var(--glass-spring),--rb .3s;
 }
-.opt:hover,.userchip:hover,.online-pill:hover{background:linear-gradient(135deg,rgba(255,255,255,.18),rgba(255,255,255,.04) 50%,rgba(255,255,255,.08)),var(--glass-fill)!important}
+.opt:hover,.userchip:hover,.online-pill:hover,.composer:focus-within{--rb:1.7}
+.topbar,.composer,.card,.modal{position:relative;isolation:isolate}
+.sidebar{isolation:isolate}
 @media(max-width:760px){
   .sidebar{background:var(--ui-panel)!important}
 }
-.topbar,.composer,.card,.modal{position:relative;isolation:isolate}
-.sidebar{isolation:isolate}
-.sidebar{box-shadow:var(--glass-inset),4px 0 26px rgba(0,0,0,.28)}
-.topbar{box-shadow:var(--glass-inset),0 4px 20px rgba(0,0,0,.2)}
-.composer{box-shadow:var(--glass-inset),0 -4px 20px rgba(0,0,0,.2)}
-.card{box-shadow:var(--glass-shadow),var(--glass-inset),0 0 60px -10px var(--glass-glow)}
-.opt{box-shadow:0 18px 44px rgba(0,0,0,.28),var(--glass-inset);isolation:isolate}
-.opt:hover{border-color:var(--glass-hover)!important;box-shadow:0 22px 54px rgba(0,0,0,.32),0 0 44px -6px var(--glass-glow-strong),var(--glass-inset)}
-.userchip:hover,.online-pill:hover{border-color:var(--glass-hover)!important;box-shadow:var(--glass-inset),0 8px 26px var(--glass-glow)}
-.userchip,.online-pill{box-shadow:var(--glass-inset),0 6px 18px rgba(0,0,0,.22)}
+/* depth: drop shadow + bevel + a coloured bounce light that spills below the glass */
+.sidebar{box-shadow:var(--glass-inset),6px 0 34px rgba(0,0,0,.30)}
+.topbar{box-shadow:var(--glass-inset),0 6px 26px rgba(0,0,0,.22)}
+.composer{box-shadow:var(--glass-inset),0 -6px 26px rgba(0,0,0,.22)}
+.card{box-shadow:var(--glass-shadow),var(--glass-inset),0 22px 50px -24px var(--glass-glow-strong)}
+.opt{box-shadow:0 22px 50px rgba(0,0,0,.30),var(--glass-inset),0 18px 40px -22px var(--glass-glow-strong);isolation:isolate}
+.opt:hover{box-shadow:0 28px 60px rgba(0,0,0,.36),0 0 50px -6px var(--glass-glow-strong),var(--glass-inset)}
+.userchip,.online-pill{box-shadow:var(--glass-inset),0 8px 22px rgba(0,0,0,.24)}
+.userchip:hover,.online-pill:hover{box-shadow:var(--glass-inset),0 10px 30px var(--glass-glow)}
 
 /* soft light washing in from the top-left, like light hitting glass —
    pinned to z-index:-1 inside an isolated stacking context so it never
@@ -77,7 +90,7 @@ html.hw-on .lg-orbs i{opacity:calc(var(--o)*.8)}
     radial-gradient(140% 60% at 15% -10%,var(--glass-sheen),transparent 60%),
     linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.02) 24%,transparent 46%),
     var(--glass-grain);
-  opacity:.6
+  opacity:.7
 }
 
 /* ---- buttons: frosted glass pills ---- */
@@ -85,7 +98,7 @@ html.hw-on .lg-orbs i{opacity:calc(var(--o)*.8)}
   background:rgba(255,255,255,.07)!important;
   backdrop-filter:blur(16px) saturate(180%);-webkit-backdrop-filter:blur(16px) saturate(180%);
   border:1px solid var(--glass-edge-soft)!important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.32),inset 0 -6px 10px rgba(0,0,0,.14),0 5px 14px rgba(0,0,0,.24);
+  box-shadow:inset 1.5px 1.5px 1px -1px rgba(255,255,255,.7),inset -1px -1px 1px -1px rgba(255,255,255,.34),inset 0 -6px 10px rgba(0,0,0,.14),0 5px 14px rgba(0,0,0,.24);
   transition:background .28s var(--glass-spring),border-color .28s var(--glass-spring),transform .28s var(--glass-spring),box-shadow .28s var(--glass-spring)
 }
 /* .modal-x is already position:absolute (positioned) for its own placement;
@@ -103,14 +116,14 @@ html.hw-on .lg-orbs i{opacity:calc(var(--o)*.8)}
   transition:opacity .3s ease,background-position .65s var(--glass-spring)
 }
 .btn.sec:hover,.icon-btn:hover,.menu-btn:hover,.modal-x:hover,.sb-head .back:hover,.music-controls button:hover,.cp-eye:hover,.lb-btn:hover,.tab-mini button:hover{
-  background:rgba(255,255,255,.16)!important;border-color:var(--glass-edge)!important;transform:translateY(-1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -6px 10px rgba(0,0,0,.12),0 8px 20px var(--glass-glow)
+  background:rgba(255,255,255,.16)!important;border-color:var(--glass-edge)!important;transform:translateY(-1px);box-shadow:inset 1.5px 1.5px 1px -1px rgba(255,255,255,.9),inset -1px -1px 1px -1px rgba(255,255,255,.5),inset 0 -6px 10px rgba(0,0,0,.12),0 8px 20px var(--glass-glow)
 }
 .btn.sec:hover::after,.icon-btn:hover::after,.menu-btn:hover::after,.modal-x:hover::after,.sb-head .back:hover::after,.music-controls button:hover::after,.cp-eye:hover::after,.lb-btn:hover::after,.tab-mini button:hover::after{
   opacity:1;background-position:-30% 0
 }
 .btn.sec:active,.icon-btn:active{transform:scale(.95)}
 .btn,.send,.music-controls button.mc-play,.modal-tabs button.active,.tabs button.active{
-  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.5),inset 0 -12px 18px rgba(0,0,0,.16),0 8px 22px var(--glass-glow-strong)!important;
+  box-shadow:inset 2px 2px 1px -1px rgba(255,255,255,.85),inset -1.5px -1.5px 1px -1px rgba(255,255,255,.4),inset 0 -12px 18px rgba(0,0,0,.16),0 8px 22px var(--glass-glow-strong)!important;
   border:1px solid rgba(255,255,255,.24)
 }
 
@@ -125,17 +138,19 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
 .switch .slider{background:rgba(255,255,255,.09)!important;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .switch input:checked+.slider{background:linear-gradient(135deg,var(--accent),#5a4bff)!important}
 
-/* ---- popovers, menus, toasts, pills: true glass ----
-   Neutral --ui-panel now carries almost no hue of its own, so this is mostly
-   background-color-from-behind, blurred and saturated back up — a red backdrop
-   reads red, a photo reads as that photo, a picked gradient reads as itself. */
+/* ---- popovers, menus, toasts, modals: same rim + lens, stronger fill for legibility ---- */
 .mention-pop,.emoji-pop,.cp-pop,.csel-menu,.list-row,.modal,.empty,.toast,.msg-hover-bar,.sys,.date-sep,.reaction-pill{
   --glass-fill:color-mix(in srgb,var(--ui-panel) var(--glass-clear-pop),transparent);
-  background:linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,.03) 40%),var(--glass-fill)!important;
-  backdrop-filter:blur(28px) saturate(220%) brightness(1.04)!important;-webkit-backdrop-filter:blur(28px) saturate(220%) brightness(1.04)!important;
-  border:1px solid var(--glass-edge-soft)!important;
-  box-shadow:var(--glass-shadow),inset 0 1.5px 0 rgba(255,255,255,.3),inset 1px 0 0 rgba(255,255,255,.08),inset 0 -1px 0 rgba(0,0,0,.2)
+  background:
+    linear-gradient(180deg,rgb(var(--lg-rim)/.12),rgb(var(--lg-rim)/.03) 40%) border-box padding-box,
+    linear-gradient(var(--glass-fill),var(--glass-fill)) border-box padding-box,
+    conic-gradient(from calc(var(--lg-a,0deg) - 55deg) at 50% 50%,transparent 0deg,rgb(var(--lg-rim)/calc(var(--lg-n,0)*.9)) 55deg,transparent 110deg,transparent 360deg) border-box border-box,
+    linear-gradient(135deg,rgb(var(--lg-rim)/.85) 0%,rgb(var(--lg-rim)/.16) 28%,rgb(var(--lg-rim)/.05) 50%,rgb(var(--lg-rim)/.16) 72%,rgb(var(--lg-rim)/.55) 100%) border-box border-box!important;
+  backdrop-filter:blur(var(--glass-blur-pop)) saturate(220%) brightness(1.05)!important;-webkit-backdrop-filter:blur(var(--glass-blur-pop)) saturate(220%) brightness(1.05)!important;
+  border:var(--glass-rim-w) solid transparent!important;
+  box-shadow:var(--glass-shadow),var(--glass-inset)
 }
+
 .modal{overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .modal-bg{backdrop-filter:blur(10px) saturate(150%);-webkit-backdrop-filter:blur(10px) saturate(150%)}
 
@@ -149,7 +164,7 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
   background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,.04) 55%),var(--b-other,var(--ui-panel2));
   backdrop-filter:blur(20px) saturate(210%);-webkit-backdrop-filter:blur(20px) saturate(210%);
   border:1px solid var(--glass-edge-soft);
-  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.26),inset 0 -8px 12px rgba(0,0,0,.1),0 6px 18px rgba(0,0,0,.24)
+  box-shadow:inset 1.5px 1.5px 1px -1px rgba(255,255,255,.6),inset -1px -1px 1px -1px rgba(255,255,255,.28),inset 0 -8px 12px rgba(0,0,0,.1),0 6px 18px rgba(0,0,0,.24)
 }
 .bubble.img-only{background:none!important;backdrop-filter:none!important;border:none;box-shadow:none}
 .reaction-pill.mine{background:linear-gradient(rgba(124,108,255,.35),rgba(124,108,255,.35)),var(--ui-panel2)!important;border-color:var(--accent)!important}
@@ -237,7 +252,7 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
 /* sliders / progress: a glass tube with a lit fill */
 input[type=range]{accent-color:var(--accent)}
 /* subtle spring on the big surfaces when panels hover/focus-within (box-shadow only, never size) */
-.composer:focus-within{border-color:var(--glass-hover)!important;box-shadow:var(--glass-inset),0 14px 34px rgba(0,0,0,.3),0 0 34px -4px var(--glass-glow-strong)}
+.composer:focus-within{box-shadow:var(--glass-inset),0 14px 34px rgba(0,0,0,.3),0 0 34px -4px var(--glass-glow-strong)}
 .field input:focus,.field select:focus,.field textarea:focus{box-shadow:inset 0 2px 6px rgba(0,0,0,.3),0 0 0 3px var(--glass-glow)!important}
 /* browsers without backdrop-filter get a solid readable panel instead of see-through text */
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
@@ -273,26 +288,38 @@ html.anti-lag .lg-orbs i{animation:none}
 /* text stays crisp on clear glass */
 .opt h3,.opt p,.userchip,.online-pill{text-shadow:0 1px 10px rgba(0,0,0,.4)}
 
-/* Chromium: bend what is behind the glass at its rounded edge (lens refraction).
-   The per-element filter (--lg-f) is generated at runtime by the small script in index.html;
-   anywhere it is unavailable these rules simply don't apply and the clear glass above is used. */
+/* Chromium: lens refraction + dispersion + bevel highlight (filter generated per element in index.html) */
 html.lg-refract .sidebar,html.lg-refract .topbar,html.lg-refract .composer,html.lg-refract .card,html.lg-refract .userchip,html.lg-refract .online-pill,html.lg-refract .opt{
-  backdrop-filter:var(--lg-f,blur(0px)) blur(var(--glass-blur)) saturate(190%) brightness(1.08) contrast(1.04)!important;
-  -webkit-backdrop-filter:var(--lg-f,blur(0px)) blur(var(--glass-blur)) saturate(190%) brightness(1.08) contrast(1.04)!important;
+  backdrop-filter:var(--lg-f,blur(0px)) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(1.08) contrast(1.04)!important;
+  -webkit-backdrop-filter:var(--lg-f,blur(0px)) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(1.08) contrast(1.04)!important;
+}
+html.lg-refract .modal,html.lg-refract .toast,html.lg-refract .mention-pop,html.lg-refract .emoji-pop,html.lg-refract .cp-pop,html.lg-refract .csel-menu{
+  backdrop-filter:var(--lg-f,blur(0px)) blur(var(--glass-blur-pop)) saturate(220%) brightness(1.05)!important;
+  -webkit-backdrop-filter:var(--lg-f,blur(0px)) blur(var(--glass-blur-pop)) saturate(220%) brightness(1.05)!important;
 }
 
 /* ===================================================================
-   v5: DEEPER LIQUID GLASS
-   - chromatic-dispersion refraction at the rim (see index.html script)
-   - crisp directional specular rim + inner caustic bounce (--glass-inset)
-   - springy, liquid hover response
+   v5 EXTRAS
    =================================================================== */
-.opt,.userchip,.online-pill{transition:transform .5s var(--glass-spring),box-shadow .35s var(--glass-spring),border-color .35s var(--glass-spring),background .35s var(--glass-spring)}
+/* richer living backdrop: slow aurora sweep + a faint dot grid that makes the lens bending obvious */
+.lg-orbs::before{content:'';position:absolute;left:-25%;top:-25%;width:150%;height:150%;pointer-events:none;
+  background:conic-gradient(from 210deg at 62% 38%,transparent 0deg,color-mix(in srgb,var(--lg-o2) 22%,transparent) 50deg,transparent 110deg,color-mix(in srgb,var(--lg-o3) 20%,transparent) 200deg,transparent 260deg,color-mix(in srgb,var(--lg-o1) 22%,transparent) 320deg,transparent 360deg);
+  animation:lgAurora 140s linear infinite;will-change:transform}
+.lg-orbs::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:var(--lg-grid,.55);
+  background-image:radial-gradient(circle,rgba(255,255,255,.2) 1px,transparent 1.7px);background-size:30px 30px;
+  -webkit-mask-image:radial-gradient(130% 100% at 50% 42%,#000 18%,transparent 78%);mask-image:radial-gradient(130% 100% at 50% 42%,#000 18%,transparent 78%)}
+@keyframes lgAurora{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.lg-orbs::before{animation:none}}
+html.anti-lag .lg-orbs::before{animation:none}
+
+/* liquid hover: overshooting spring, squash on press */
+.opt,.userchip,.online-pill{transition:transform .6s cubic-bezier(.34,1.56,.64,1),box-shadow .4s var(--glass-spring)}
 @media(hover:hover){
-  .opt:hover{transform:translateY(-4px) scale(1.018)}
-  .userchip:hover,.online-pill:hover{transform:translateY(-1px) scale(1.03)}
+  .opt:hover{transform:translateY(-5px) scale(1.02)}
+  .userchip:hover,.online-pill:hover{transform:translateY(-1px) scale(1.035)}
 }
-.opt:active,.userchip:active{transform:scale(.97);transition-duration:.15s}
-/* wet highlight line along the top edge of the big panels */
-.card,.sidebar,.topbar,.composer{border-width:1px}
-.bubble{box-shadow:inset 1.5px 1.5px 1px -1px rgba(255,255,255,.55),inset -1px -1px 1px -1px rgba(255,255,255,.25),inset 0 -8px 12px rgba(0,0,0,.1),0 6px 18px rgba(0,0,0,.24)}
+.opt:active,.userchip:active{transform:scale(.965);transition-duration:.12s}
+/* jelly wobble after a click/tap (class added by the engine) */
+@keyframes lgJelly{0%{transform:scale(1)}28%{transform:scale(.94,1.05)}55%{transform:scale(1.04,.97)}78%{transform:scale(.99,1.01)}100%{transform:scale(1)}}
+.lg-jelly{animation:lgJelly .55s var(--glass-spring)}
+html.anti-lag .lg-jelly{animation:none}
