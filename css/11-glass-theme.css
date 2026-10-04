@@ -285,3 +285,10 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
 
 /* stop the hover/spring transitions on glass panels from re-compositing the blur mid-move */
 .sidebar,.topbar,.composer,.card,.modal{will-change:auto;transform:translateZ(0)}
+
+/* ---- scrolling glass (modals etc.): keep the glow/sheen layers pinned to the VISIBLE area ----
+   They are position:absolute inside a scroll container, so by default they scroll away
+   with the content. --st / --ch (scrollTop / clientHeight) come from the glow script in index.html. */
+.modal::before,.modal::after,.sidebar::before,.sidebar::after,.card::before,.card::after{
+  top:var(--st,0px);bottom:auto;height:var(--ch,100%)
+}
