@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-10-03.03">
+<meta name="build-version" content="2026-10-03.04">
 <title>Itsukis Chat Hub</title>
 <link rel="icon" type="image/png" href="https://aniitsukicoded.github.io/backups/icon.png">
 <!-- RAW-LINK BOOTSTRAP: everything (css + js) is loaded from raw.githubusercontent.com.
@@ -349,5 +349,32 @@
 <div id="modalRoot"></div>
 <div id="lightboxRoot"></div>
 
+<!-- Liquid Glass: keep the pointer glow locked to the cursor while scrolling -->
+<script>
+(function(){
+  var SEL='.sidebar,.topbar,.composer,.card,.modal,.gc-card',R=220,x=null,y=null,raf=0;
+  function paint(){
+    raf=0; if(x===null)return;
+    var els=document.querySelectorAll(SEL);
+    for(var i=0;i<els.length;i++){
+      var e=els[i],r=e.getBoundingClientRect();
+      if(r.bottom<0||r.top>innerHeight||r.right<0||r.left>innerWidth)continue;
+      var dx=Math.max(r.left-x,0,x-r.right),dy=Math.max(r.top-y,0,y-r.bottom);
+      var d=Math.sqrt(dx*dx+dy*dy);
+      e.style.setProperty('--px',(x-r.left)+'px');
+      e.style.setProperty('--py',(y-r.top)+'px');
+      e.style.setProperty('--glow-op',Math.max(0,Math.min(1,1-d/R)).toFixed(3));
+    }
+  }
+  function queue(){if(!raf)raf=requestAnimationFrame(paint)}
+  addEventListener('pointermove',function(e){x=e.clientX;y=e.clientY;queue()},{passive:true,capture:true});
+  addEventListener('pointerdown',function(e){x=e.clientX;y=e.clientY;queue()},{passive:true,capture:true});
+  document.addEventListener('scroll',queue,{passive:true,capture:true}); /* scroll doesn't bubble, so capture */
+  addEventListener('wheel',queue,{passive:true});
+  addEventListener('resize',queue);
+  document.addEventListener('pointerleave',function(){x=y=null;
+    document.querySelectorAll(SEL).forEach(function(e){e.style.setProperty('--glow-op','0')})});
+})();
+</script>
 </body>
 </html>
