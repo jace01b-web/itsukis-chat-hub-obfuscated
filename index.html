@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-10-03.02">
+<meta name="build-version" content="2026-10-03.03">
 <title>Itsukis Chat Hub</title>
 <link rel="icon" type="image/png" href="https://aniitsukicoded.github.io/backups/icon.png">
 <!-- RAW-LINK BOOTSTRAP: everything (css + js) is loaded from raw.githubusercontent.com.
@@ -349,29 +349,5 @@
 <div id="modalRoot"></div>
 <div id="lightboxRoot"></div>
 
-<!-- Liquid Glass refraction filter (Chromium only; other browsers keep the clear-blur fallback in 11-glass-theme.css) -->
-<script>
-(function(){
-  try{
-    var ua=navigator.userAgent;
-    if(!window.chrome)return;
-    if(/iPhone|iPad|iPod/.test(ua))return;
-    var map=function(w){return 'data:image/svg+xml;utf8,'+encodeURIComponent(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" preserveAspectRatio="none">'+
-      '<defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="0">'+
-      '<stop offset="0" stop-color="rgb(255,128,128)"/><stop offset="'+w+'" stop-color="rgb(128,128,128)"/>'+
-      '<stop offset="'+(1-w)+'" stop-color="rgb(128,128,128)"/><stop offset="1" stop-color="rgb(0,128,128)"/>'+
-      '</linearGradient></defs><rect width="200" height="100" fill="url(#g)"/></svg>')};
-    var f=function(id,scale,w){return '<filter id="'+id+'" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">'+
-      '<feImage href="'+map(w)+'" x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" result="m"/>'+
-      '<feDisplacementMap in="SourceGraphic" in2="m" scale="'+scale+'" xChannelSelector="R" yChannelSelector="G"/></filter>'};
-    var d=document.createElement('div');
-    d.style.cssText='position:absolute;width:0;height:0;overflow:hidden';
-    d.innerHTML='<svg width="0" height="0" aria-hidden="true"><defs>'+f('lg-refract',60,.06)+f('lg-refract-sm',22,.12)+'</defs></svg>';
-    document.body.insertBefore(d,document.body.firstChild);
-    document.documentElement.classList.add('lg-refract');
-  }catch(e){}
-})();
-</script>
 </body>
 </html>
