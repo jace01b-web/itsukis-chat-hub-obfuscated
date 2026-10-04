@@ -70,24 +70,13 @@ function hwSetTheme(v){
   try{localStorage.setItem(HW.K,v?'1':'0')}catch(_){}
   if(ME){ME.settings=ME.settings||{};ME.settings.hwTheme=v}   /* keep the in-memory copy fresh: hwWant() reads it first, a stale value made the theme flip back off */
   if(ME&&ME.id!=null)DB.setSettingKey(ME.id,'hwTheme',v).catch(()=>{});
-  const calm=document.documentElement.classList.contains('anti-lag')||(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
-  if(calm){hwSync();return}
-  const t=document.getElementById('sHwTheme'),el=t&&(t.closest('.switch')||t),rc=el?el.getBoundingClientRect():{left:innerWidth/2,top:innerHeight/2,width:0,height:0};
-  const rp=document.createElement('div');
-  rp.className='hw-ripple '+(v?'on':'off');rp.style.left=(rc.left+rc.width/2)+'px';rp.style.top=(rc.top+rc.height/2)+'px';
-  document.body.appendChild(rp);setTimeout(()=>rp.remove(),1000);
-  setTimeout(()=>{hwSync();if(v&&hwOpen())hwBurst()},160);   // theme swaps under the glow
+  hwSync();
 }
 function hwDeco(on){
   document.documentElement.classList.toggle('hw-on',on);
   let d=document.getElementById('hwDeco');
-  if(!on){
-    if(!d)return;
-    d.classList.add('out');                           // css plays the exit, then the layer is removed
-    clearTimeout(d._rm);d._rm=setTimeout(()=>d.remove(),1200);
-    return;
-  }
-  if(d){clearTimeout(d._rm);d.classList.remove('out');return}   // turned back on mid-exit: css plays the entrance again
+  if(!on){if(d)d.remove();return}
+  if(d)return;
   const r=(a,b)=>(a+Math.random()*(b-a)).toFixed(2);
   const web='<svg viewBox="0 0 120 120"><g fill="none" stroke="currentColor" stroke-width="1"><path d="M0 0L120 0M0 0L0 120M0 0L100 60M0 0L60 100M0 0L115 25M0 0L25 115"/><path d="M0 30Q18 18 30 0M0 55Q32 36 55 0M0 82Q50 58 82 0M0 110Q70 82 110 0"/></g></svg>';
   let h='<i class="hw-vig"></i><i class="hw-moon"></i><i class="hw-fog"></i><i class="hw-fog f2"></i><div class="hw-web l">'+web+'</div><div class="hw-web r">'+web+'</div>'
