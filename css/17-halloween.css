@@ -267,4 +267,8 @@ html.hw-on .opt:hover .ic{background:rgba(255,120,20,.26)}
 html.hw-on .modal-bg{background:rgba(14,5,22,.72)}
 html.hw-on .modal{border-color:rgba(255,150,60,.26);box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 50px rgba(255,100,20,.12),inset 0 1px 0 rgba(255,190,120,.16)}
 html.hw-on .toast{border-color:rgba(255,150,60,.25)}
+
+/* ===== Halloween tint for the liquid glass (11-glass-theme.css reads these variables) ===== */
+html.hw-on{--glass-sheen:rgba(255,196,140,.32);--glass-edge:rgba(255,190,130,.5);--glass-edge-soft:rgba(255,170,100,.24);--glass-hover:rgba(255,150,60,.78)}
+html.hw-on .switch input:checked+.slider{background:linear-gradient(135deg,#ff7a1a,#9a3df0)!important}
 /* HALLOWEEN:END */
