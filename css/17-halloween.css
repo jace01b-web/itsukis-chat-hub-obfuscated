@@ -262,23 +262,30 @@ html.hw-on .bgfx .layer:not([style*="url("]){background:none!important}
 html.hw-on .logo{filter:drop-shadow(0 0 12px rgba(255,120,20,.3))}
 html.hw-on .opt{border-color:rgba(255,150,60,.2)}
 html.hw-on .opt .ic{background:rgba(255,120,20,.14)}
-html.hw-on .opt:hover{box-shadow:0 22px 50px rgba(255,110,20,.32),var(--glass-inset)}
+html.hw-on .opt:hover{border-color:rgba(255,150,60,.75);box-shadow:0 18px 40px rgba(255,110,20,.28)}
 html.hw-on .opt:hover .ic{background:rgba(255,120,20,.26)}
 html.hw-on .modal-bg{background:rgba(14,5,22,.72)}
 html.hw-on .modal{border-color:rgba(255,150,60,.26);box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 50px rgba(255,100,20,.12),inset 0 1px 0 rgba(255,190,120,.16)}
 html.hw-on .toast{border-color:rgba(255,150,60,.25)}
 
-/* ===== Halloween glass: same engine as 11-glass-theme.css, retinted ember + violet ===== */
+/* ===== Halloween: calm, dark glass (no extra lights) - 11-glass-theme.css reads these variables ===== */
 html.hw-on{
-  --lg-rim:255 205 150;
-  --glass-sheen:rgba(255,200,150,.22);--glass-edge:rgba(255,185,120,.62);--glass-edge-soft:rgba(255,170,100,.30);--glass-hover:rgba(255,150,60,.70);
-  --glass-glow:rgba(255,110,20,.16);--glass-glow-strong:rgba(255,110,20,.32);
+  --glass-sheen:rgba(255,190,130,.10);--glass-edge:rgba(255,170,100,.40);--glass-edge-soft:rgba(255,160,90,.20);--glass-hover:rgba(255,150,60,.70);
+  --glass-glow:rgba(255,110,20,.07);--glass-glow-strong:rgba(255,110,20,.20);
   --glass-shadow:0 24px 60px rgba(0,0,0,.5),0 2px 10px rgba(0,0,0,.3);
-  --glass-inset-base:inset 2px 2px 1px -1px rgb(var(--lg-rim)/.70),inset -1.5px -1.5px 1px -1px rgba(255,150,80,.42),inset 0 0 28px rgb(var(--lg-rim)/.08),inset 12px 14px 32px -18px rgba(255,190,130,.32),inset -12px -16px 32px -20px rgba(170,90,255,.26),inset 0 -22px 34px -14px rgba(0,0,0,.24);
-  --glass-inset:var(--glass-inset-base);
-  --glass-clear:12%;--glass-clear-pop:70%;--glass-blur:min(var(--ui-blur,16px),6px)}
-/* ember + violet blobs and dot grid stay on so the glass has light to bend */
-html.hw-on .lg-orbs{display:block}
+  --glass-inset:inset 0 1px 0 rgba(255,200,150,.20),inset 0 0 30px rgba(255,255,255,.02),inset 0 -16px 28px rgba(0,0,0,.14);
+  --glass-clear:34%;--glass-blur:min(var(--ui-blur,16px),14px)}
+/* no drifting colour blobs: the original deep purple/ember background stays as it was */
+html.hw-on .lg-orbs{display:none}
+/* softer fill and no bright gloss/pointer light on panels */
+html.hw-on .sidebar,html.hw-on .topbar,html.hw-on .composer,html.hw-on .card,html.hw-on .userchip,html.hw-on .online-pill,html.hw-on .opt{
+  background:linear-gradient(135deg,rgba(255,255,255,.04),rgba(255,255,255,.01)),var(--glass-fill)!important;
+  backdrop-filter:blur(var(--glass-blur)) saturate(130%)!important;-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(130%)!important}
+html.hw-on.lg-refract .sidebar,html.hw-on.lg-refract .topbar,html.hw-on.lg-refract .composer,html.hw-on.lg-refract .card,html.hw-on.lg-refract .userchip,html.hw-on.lg-refract .online-pill,html.hw-on.lg-refract .opt{
+  backdrop-filter:var(--lg-f,blur(0px)) blur(var(--glass-blur)) saturate(130%)!important;-webkit-backdrop-filter:var(--lg-f,blur(0px)) blur(var(--glass-blur)) saturate(130%)!important}
+html.hw-on .opt:hover,html.hw-on .userchip:hover,html.hw-on .online-pill:hover{background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.015)),var(--glass-fill)!important}
+html.hw-on .sidebar::before,html.hw-on .topbar::before,html.hw-on .composer::before,html.hw-on .card::before,html.hw-on .modal::before{opacity:.35;animation:none}
+html.hw-on .sidebar::after,html.hw-on .topbar::after,html.hw-on .composer::after,html.hw-on .card::after,html.hw-on .modal::after,html.hw-on .gc-card::after{opacity:calc(var(--glow-op,0)*.35)}
 html.hw-on .opt h3,html.hw-on .opt p{text-shadow:none}
 html.hw-on .switch input:checked+.slider{background:linear-gradient(135deg,#ff7a1a,#9a3df0)!important}
 /* HALLOWEEN:END */
