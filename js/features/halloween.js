@@ -272,21 +272,7 @@ function hwSync(){
     if(d){if(n)d.textContent=n;else d.remove()}
   }
 }
-/* Season Pass banner on the home screen (same look as the launcher's banner) */
-function hwBannerSync(){
-  const wrap=document.querySelector('#homePage .home-wrap'),hero=wrap&&wrap.querySelector('.home-hero');
-  let b=document.getElementById('hwBanner');
-  if(!hero||!(hwOpen()&&hwWant())){if(b)b.remove();return}
-  if(b)return;
-  const r=(a,c)=>(a+Math.random()*(c-a)).toFixed(1);let sp='';
-  for(let i=0;i<9;i++)sp+='<i style="--x:'+r(4,94)+'%;--s:'+r(2,4)+'px;--dx:'+r(-20,20)+'px;--d:'+r(3,6)+'s;--t:-'+r(0,6)+'s"></i>';
-  b=document.createElement('button');b.type='button';b.id='hwBanner';b.className='hw-banner';
-  b.innerHTML='<span class="hw-hero-ring"></span><span class="hw-hero-sp" aria-hidden="true">'+sp+'</span><span class="big">🎃</span><div><b>Halloween Season Pass is live</b><span>Spend time online to level up through 30 levels of spooky badges, name effects and permanent roles. Runs until early November.</span></div>';
-  b.onclick=()=>{if(ME&&hwCanClaim())hwModal()};
-  hero.insertAdjacentElement('afterend',b);
-}
-setInterval(hwBannerSync,700);hwBannerSync();
-function hwRefresh(){hwSync();hwRender();hwHeroRefresh();hwBannerSync()}
+function hwRefresh(){hwSync();hwRender();hwHeroRefresh()}
 window.hwRefresh=hwRefresh;
 setInterval(hwSync,3000);hwSync();
 function hwHeroRefresh(){
