@@ -44,7 +44,7 @@ function openSettings(fromChat){
         <div class="section-h" style="margin-top:0">Text display</div>
         <div class="set-grid">
           <div class="field"><label>Bubble roundness <span class="val" id="vRad"></span></label><input type="range" id="sRad" min="0" max="28" value="${s.radius}"></div>
-          <div class="field"><label>Font</label><select id="sFont">${fontKeys().map(f=>`<option value="${f}" ${s.font===f?'selected':''}>${f==='custom'?'custom (link)':f}</option>`).join('')}</select></div>
+          <div class="field" style="grid-column:1/-1"><label>Font</label><div id="sFontChips" style="display:flex;flex-wrap:wrap;gap:6px"></div><select id="sFont" style="display:none">${fontKeys().map(f=>`<option value="${f}" ${s.font===f?'selected':''}>${f==='custom'?'custom (link)':f}</option>`).join('')}</select></div>
           <div class="field" id="sCustomFontWrap" style="grid-column:1/-1;${s.font==='custom'?'':'display:none'}"><label>Custom font link</label><input id="sCustomFont" type="url" maxlength="300" spellcheck="false" autocapitalize="off" placeholder="https://…/MyFont.woff2" value="${esc(s.customFont||'')}"><span class="hint" id="sCustomFontHint">Paste a link to a .ttf / .otf / .woff / .woff2 file, or a Google Fonts link.</span></div>
           <div class="field"><label>Text size <span class="val" id="vSize"></span></label><input type="range" id="sSize" min="11" max="24" value="${s.size}"></div>
           <div class="field" style="flex-direction:row;gap:18px;align-items:center;margin-top:20px">
@@ -767,6 +767,35 @@ function openSettings(fromChat){
     s.pings={everyone:$$('#sPe').checked,sound:$$('#sPs').checked,desktop:$$('#sPd').checked};
     s.music={enabled:$$('#sMusicOn').checked,volume:musicWidgetVolume(),shuffle:s.music&&s.music.shuffle!==false};
   }
+  function pickFont(k){const f=$$('#sFont');f.value=k;f.dispatchEvent(new Event('input',{bubbles:true}))}
+  function renderFontChips(){
+    const box=$$('#sFontChips');if(!box)return;
+    const saved=savedFonts(s.customFonts);
+    const mk=(label,on,fn,fam)=>{
+      const b=document.createElement('button');
+      b.type='button';b.className=on?'btn small':'btn sec small';b.textContent=label;b.style.width='auto';
+      if(fam)b.style.fontFamily=fam;
+      b.onclick=fn;return b;
+    };
+    box.textContent='';
+    Object.keys(FONTS).filter(k=>k!=='custom').forEach(k=>box.appendChild(mk(k,s.font===k,()=>pickFont(k),typeof FONTS[k]==='string'?FONTS[k]:''))); 
+    saved.forEach(u=>{
+      const w=document.createElement('span');w.style.cssText='display:inline-flex;gap:2px';
+      w.appendChild(mk(fontLabel(u),s.font==='custom'&&s.customFont===u,()=>{$$('#sCustomFont').value=u;pickFont('custom')}));
+      const x=mk('✕',false,()=>{s.customFonts=saved.filter(v=>v!==u).join('\n');renderFontChips()});
+      x.title='Remove from saved fonts';x.setAttribute('aria-label','Remove '+fontLabel(u));
+      w.appendChild(x);box.appendChild(w);
+    });
+    box.appendChild(mk('＋ custom link',s.font==='custom'&&!saved.includes(s.customFont),()=>{pickFont('custom');const i=$$('#sCustomFont');if(i)i.focus()}));
+  }
+  // Remember a custom font link the user saved with, so it shows up as a button next time (any device).
+  function rememberFont(){
+    if(s.font!=='custom'||!CustomFont.valid(s.customFont))return;
+    const l=savedFonts(s.customFonts).filter(x=>x!==s.customFont);
+    l.unshift(s.customFont);
+    while(l.length>5||l.join('\n').length>1500)l.pop();
+    s.customFonts=l.join('\n');
+  }
   function readouts(){
     $$('#vRad').textContent=s.radius+'px';$$('#vSize').textContent=s.size+'px';
     $$('#vBlur').textContent=s.bgBlur+'px';$$('#vDim').textContent=s.bgDim+'%';
@@ -775,6 +804,7 @@ function openSettings(fromChat){
   function preview(){
     read();readouts();
     $$('#sCustomFontWrap').style.display=s.font==='custom'?'':'none';
+    renderFontChips();
     applyStyle($$('#pvBox'),s);
     paintBg($$('#pvBg'),$$('#pvDim'),s);
     // live-preview the real app too, so background/glass changes are visible behind the modal
@@ -831,6 +861,7 @@ function openSettings(fromChat){
   $$('#sSave').onclick=async()=>{
     read();
     if(s.font==='custom'&&!CustomFont.valid(s.customFont)){$$('#sErr').textContent='Custom font needs a valid font link (https://… .woff2 / .ttf / .otf, or Google Fonts).';return}
+    rememberFont();
     const b=$$('#sSave');b.disabled=true;b.textContent='Saving...';
     try{
       await DB.updateSettings(ME.id,s);
@@ -847,7 +878,9 @@ function openSettings(fromChat){
       $$('#sErr').textContent='Could not save: '+(e.code||e.message)+(/PERMISSION/i.test(e.code||e.message)?' — publish the updated database rules.':'');
     }
   };
+  const _fs=$$('#sFont'),_ph=document.createComment('');_fs.replaceWith(_ph);
   enhanceRanges(root);enhanceSelects(root);enhanceColors(root);
+  _ph.replaceWith(_fs);
   preview();
 }
 
@@ -933,3 +966,14 @@ const CustomFont=(function(){
   }
   return {valid,ensure,install};
 })();
+
+// Saved custom fonts: links kept one per line in the account setting `customFonts` (max 5).
+function savedFonts(str){return String(str||'').split('\n').map(x=>x.trim()).filter(x=>x&&CustomFont.valid(x))}
+function fontLabel(u){
+  try{
+    const x=new URL(u),g=x.searchParams.get('family');
+    let n=(x.hostname==='fonts.googleapis.com'&&g)?g.split(':')[0]:decodeURIComponent(x.pathname.split('/').pop()||'').replace(/\.(ttf|otf|woff2?)$/i,'');
+    n=n||x.hostname;
+    return n.length>22?n.slice(0,21)+'…':n;
+  }catch(_){return 'font'}
+}
