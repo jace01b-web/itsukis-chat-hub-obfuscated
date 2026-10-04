@@ -45,7 +45,7 @@ function openSettings(fromChat){
         <div class="set-grid">
           <div class="field"><label>Bubble roundness <span class="val" id="vRad"></span></label><input type="range" id="sRad" min="0" max="28" value="${s.radius}"></div>
           <div class="field" style="grid-column:1/-1"><label>Font</label><div id="sFontChips" style="display:flex;flex-wrap:wrap;gap:6px"></div><select id="sFont" style="display:none">${fontKeys().map(f=>`<option value="${f}" ${s.font===f?'selected':''}>${f==='custom'?'custom (link)':f}</option>`).join('')}</select></div>
-          <div class="field" id="sCustomFontWrap" style="grid-column:1/-1;${s.font==='custom'?'':'display:none'}"><label>Custom font link</label><input id="sCustomFont" type="url" maxlength="300" spellcheck="false" autocapitalize="off" placeholder="https://…/MyFont.woff2" value="${esc(s.customFont||'')}"><span class="hint" id="sCustomFontHint">Paste a link to a .ttf / .otf / .woff / .woff2 file, or a Google Fonts link.</span></div>
+          <div class="field" id="sCustomFontWrap" style="grid-column:1/-1;${s.font==='custom'?'':'display:none'}"><label>Custom font link</label><input id="sCustomFont" type="url" maxlength="300" spellcheck="false" autocapitalize="off" placeholder="https://…/MyFont.woff2" value="${esc(s.customFont||'')}"><span class="hint" id="sCustomFontHint">Paste a font link, or upload a font file (.zip, .ttf, .otf, .woff, .woff2) from your device.</span><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn sec small" id="sFontUp" style="width:auto">Upload font file…</button><span class="hint" id="sFontUpName"></span></div><input type="file" id="sFontFile" accept=".zip,.ttf,.otf,.woff,.woff2" hidden></div>
           <div class="field"><label>Text size <span class="val" id="vSize"></span></label><input type="range" id="sSize" min="11" max="24" value="${s.size}"></div>
           <div class="field" style="flex-direction:row;gap:18px;align-items:center;margin-top:20px">
             <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="sBold" ${s.bold?'checked':''}> Bold</label>
@@ -767,6 +767,18 @@ function openSettings(fromChat){
     s.pings={everyone:$$('#sPe').checked,sound:$$('#sPs').checked,desktop:$$('#sPd').checked};
     s.music={enabled:$$('#sMusicOn').checked,volume:musicWidgetVolume(),shuffle:s.music&&s.music.shuffle!==false};
   }
+  $$('#sFontUp').onclick=()=>$$('#sFontFile').click();
+  $$('#sFontFile').onchange=async e=>{
+    const f=e.target.files[0];e.target.value='';if(!f)return;
+    const nm=$$('#sFontUpName');nm.textContent='Reading…';
+    try{
+      const r=await readFontFile(f);
+      s.customFontData=r.dataUrl;s.customFontFile=r.name;
+      $$('#sCustomFont').value='';
+      pickFont('custom');
+      nm.textContent='Uploaded: '+r.name+(r.count>1?' (picked 1 of '+r.count+' fonts in the zip)':'');
+    }catch(err){nm.textContent=(err&&err.message)||'Could not read that file.'}
+  };
   function pickFont(k){const f=$$('#sFont');f.value=k;f.dispatchEvent(new Event('input',{bubbles:true}))}
   function renderFontChips(){
     const box=$$('#sFontChips');if(!box)return;
@@ -786,7 +798,15 @@ function openSettings(fromChat){
       x.title='Remove from saved fonts';x.setAttribute('aria-label','Remove '+fontLabel(u));
       w.appendChild(x);box.appendChild(w);
     });
-    box.appendChild(mk('＋ custom link',s.font==='custom'&&!saved.includes(s.customFont),()=>{pickFont('custom');const i=$$('#sCustomFont');if(i)i.focus()}));
+    if(s.customFontData){
+      const w=document.createElement('span');w.style.cssText='display:inline-flex;gap:2px';
+      const lab='uploaded: '+String(s.customFontFile||'font').replace(/\.(ttf|otf|woff2?)$/i,'').slice(0,18);
+      w.appendChild(mk(lab,s.font==='custom'&&!s.customFont,()=>{$$('#sCustomFont').value='';pickFont('custom')}));
+      const x=mk('✕',false,()=>{s.customFontData='';s.customFontFile='';if(s.font==='custom'&&!s.customFont)pickFont('system');else renderFontChips()});
+      x.title='Remove the uploaded font';w.appendChild(x);box.appendChild(w);
+    }
+    box.appendChild(mk('＋ custom font',s.font==='custom'&&(s.customFont?!saved.includes(s.customFont):!s.customFontData),()=>{pickFont('custom');const i=$$('#sCustomFont');if(i)i.focus()}));
+    const nm=$$('#sFontUpName');if(nm)nm.textContent=s.customFontData?'Uploaded: '+(s.customFontFile||'font'):'';
   }
   // Remember a custom font link the user saved with, so it shows up as a button next time (any device).
   function rememberFont(){
@@ -860,7 +880,7 @@ function openSettings(fromChat){
   };
   $$('#sSave').onclick=async()=>{
     read();
-    if(s.font==='custom'&&!CustomFont.valid(s.customFont)){$$('#sErr').textContent='Custom font needs a valid font link (https://… .woff2 / .ttf / .otf, or Google Fonts).';return}
+    if(s.font==='custom'&&!(s.customFont?CustomFont.valid(s.customFont):!!s.customFontData)){$$('#sErr').textContent='Custom font needs a valid font link (https://… .woff2 / .ttf / .otf, or Google Fonts) or an uploaded font file.';return}
     rememberFont();
     const b=$$('#sSave');b.disabled=true;b.textContent='Saving...';
     try{
@@ -895,8 +915,8 @@ function fontKeys(){
   return k;
 }
 const CustomFont=(function(){
-  const FACE='ICHCustomFont',DEFAULT_HINT='Paste a link to a .ttf / .otf / .woff / .woff2 file, or a Google Fonts link.';
-  let family=FACE,loadedUrl='',face=null,linkEl=null,timer=0,installed=false;
+  const FACE='ICHCustomFont',DEFAULT_HINT='Paste a font link, or upload a font file (.zip, .ttf, .otf, .woff, .woff2) from your device.';
+  let family=FACE,loadedUrl='',face=null,linkEl=null,timer=0,installed=false,seq=0;
   function isGoogle(u){try{return new URL(u).hostname==='fonts.googleapis.com'}catch(_){return false}}
   function gFamily(u){
     try{return (new URL(u).searchParams.get('family')||'').split(':')[0].trim()}catch(_){return ''}
@@ -912,6 +932,10 @@ const CustomFont=(function(){
     }catch(_){return false}
   }
   function hint(t){const h=document.getElementById('sCustomFontHint');if(h)h.textContent=t}
+  // Every load gets its own font name, so a new font can never be mixed up with the old one,
+  // and a failed load falls back to the normal font instead of keeping the previous custom one.
+  function dropFace(){if(face){try{document.fonts.delete(face)}catch(_){}face=null}}
+  function reapply(){const f=document.getElementById('sFont');if(f)f.dispatchEvent(new Event('input',{bubbles:true}))}
   function load(u){
     if(u===loadedUrl)return;
     loadedUrl=u;
@@ -919,28 +943,47 @@ const CustomFont=(function(){
     if(isGoogle(u)){
       if(!linkEl){linkEl=document.createElement('link');linkEl.rel='stylesheet';document.head.appendChild(linkEl)}
       family=gFamily(u);
-      linkEl.onload=()=>hint('Font loaded ✓');
-      linkEl.onerror=()=>{loadedUrl='';hint('Couldn’t load that font — check the link.')};
+      linkEl.onload=()=>{if(u===loadedUrl)hint('Font loaded ✓')};
+      linkEl.onerror=()=>{if(u===loadedUrl){loadedUrl='';hint('Couldn’t load that font — check the link.')}};
       linkEl.href=u;
       return;
     }
-    family=FACE;
-    const f=new FontFace(FACE,'url("'+encodeURI(u)+'")');
+    const fam=FACE+(++seq);
+    family=fam;
+    // new URL().href keeps %20 etc. as they are (encodeURI would turn %20 into %2520 and break the link)
+    const f=new FontFace(fam,'url("'+new URL(u).href+'")');
     f.load().then(()=>{
       if(u!==loadedUrl)return;
-      if(face)document.fonts.delete(face);
-      document.fonts.add(f);face=f;hint('Font loaded ✓');
-    }).catch(()=>{if(u===loadedUrl){loadedUrl='';hint('Couldn’t load that font — check the link.')}});
+      dropFace();document.fonts.add(f);face=f;hint('Font loaded ✓');
+    }).catch(()=>{
+      if(u===loadedUrl){loadedUrl='';dropFace();hint('Couldn’t load that font — check the link.')}
+    });
+  }
+  function loadData(d,file){
+    const key='data:'+d.length+':'+d.slice(-24);
+    if(key===loadedUrl)return;
+    loadedUrl=key;
+    const fam=FACE+(++seq);
+    family=fam;
+    const bad=()=>{if(key===loadedUrl){loadedUrl='';dropFace();hint('That font file couldn’t be loaded.')}};
+    try{
+      const f=new FontFace(fam,b64ToBytes(d).buffer);
+      f.load().then(()=>{
+        if(key!==loadedUrl)return;
+        dropFace();document.fonts.add(f);face=f;hint('Using uploaded font: '+(file||'font'));
+      }).catch(bad);
+    }catch(_){bad()}
   }
   // Called whenever styles are applied. While the settings box is open, wait a moment so
   // half-typed links don't fire requests; at boot / on another device, load straight away.
-  function ensure(raw){
+  function ensure(raw,data,file){
     const u=(raw||'').trim();
+    clearTimeout(timer);
+    if(!u&&data){loadData(data,file);return}
     const typing=!!document.getElementById('sCustomFont');
     if(!u){hint(DEFAULT_HINT);return}
     if(!valid(u)){hint('That doesn’t look like a font link (https:// … .woff2 / .ttf / .otf, or Google Fonts).');return}
-    clearTimeout(timer);
-    if(typing&&loadedUrl)timer=setTimeout(()=>load(u),400);else load(u);
+    if(typing&&loadedUrl&&u!==loadedUrl)timer=setTimeout(()=>{load(u);reapply()},400);else load(u);
   }
   function install(){
     if(installed)return true;
@@ -951,7 +994,7 @@ const CustomFont=(function(){
       Object.defineProperty(FONTS,'custom',{enumerable:true,configurable:true,get:()=>'"'+family+'",system-ui,sans-serif'});
       const orig=applyStyle;
       applyStyle=function(el,s){
-        try{if(s&&s.font==='custom')ensure(s.customFont)}catch(_){}
+        try{if(s&&s.font==='custom')ensure(s.customFont,s.customFontData,s.customFontFile)}catch(_){}
         return orig.apply(this,arguments);
       };
       installed=true;
@@ -976,4 +1019,60 @@ function fontLabel(u){
     n=n||x.hostname;
     return n.length>22?n.slice(0,21)+'…':n;
   }catch(_){return 'font'}
+}
+
+// Reading a font from a device file. Most font sites hand out .zip files, so zips are opened
+// right in the browser (no library) and the best font inside is used (woff2 > woff > ttf > otf).
+function b64ToBytes(d){
+  const b=atob(String(d).slice(String(d).indexOf(',')+1)),u=new Uint8Array(b.length);
+  for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);
+  return u;
+}
+function bytesToB64(u8){
+  let t='';
+  for(let i=0;i<u8.length;i+=0x8000)t+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));
+  return btoa(t);
+}
+async function fontFromZip(buf){
+  const dv=new DataView(buf),u8=new Uint8Array(buf);
+  let e=-1;
+  for(let i=buf.byteLength-22;i>=Math.max(0,buf.byteLength-22-65535);i--){if(dv.getUint32(i,true)===0x06054b50){e=i;break}}
+  if(e<0)throw new Error('That zip file couldn’t be read.');
+  const n=dv.getUint16(e+10,true);let p=dv.getUint32(e+16,true);
+  const dec=new TextDecoder(),found=[];
+  for(let k=0;k<n;k++){
+    if(dv.getUint32(p,true)!==0x02014b50)break;
+    const method=dv.getUint16(p+10,true),csize=dv.getUint32(p+20,true),usize=dv.getUint32(p+24,true);
+    const nl=dv.getUint16(p+28,true),xl=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),off=dv.getUint32(p+42,true);
+    const name=dec.decode(u8.subarray(p+46,p+46+nl));
+    p+=46+nl+xl+cl;
+    if(name.endsWith('/')||/(^|\/)(__MACOSX\/|\.)/.test(name))continue;
+    const m=/\.(woff2|woff|ttf|otf)$/i.exec(name);
+    if(m)found.push({name,method,csize,usize,off,ext:m[1].toLowerCase()});
+  }
+  if(!found.length)throw new Error('No font file (.ttf / .otf / .woff / .woff2) found in that zip.');
+  const rank={woff2:0,woff:1,ttf:2,otf:3};
+  found.sort((a,b)=>rank[a.ext]-rank[b.ext]||a.name.split('/').length-b.name.split('/').length||a.usize-b.usize);
+  const f=found[0],ln=dv.getUint16(f.off+26,true),lx=dv.getUint16(f.off+28,true),start=f.off+30+ln+lx;
+  const raw=u8.subarray(start,start+f.csize);
+  let out;
+  if(f.method===0)out=raw.slice();
+  else if(f.method===8){
+    if(typeof DecompressionStream==='undefined')throw new Error('Your browser can’t open zip files here — unzip it and pick the font file instead.');
+    out=new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+  }else throw new Error('That zip uses a compression type I can’t open — unzip it and pick the font file instead.');
+  return {name:f.name.split('/').pop(),bytes:out,count:found.length};
+}
+async function readFontFile(file){
+  const MAX=150000,buf=await file.arrayBuffer();
+  let name=file.name,bytes=new Uint8Array(buf),count=1;
+  if(/\.zip$/i.test(name)||(bytes[0]===0x50&&bytes[1]===0x4b)){
+    const z=await fontFromZip(buf);name=z.name;bytes=z.bytes;count=z.count;
+  }
+  const m=/\.(woff2|woff|ttf|otf)$/i.exec(name);
+  if(!m)throw new Error('Pick a .zip, .ttf, .otf, .woff or .woff2 file.');
+  if(bytes.length>MAX)throw new Error('That font is too big ('+Math.round(bytes.length/1000)+' KB, max 150 KB). Try a .woff2 version or a smaller font.');
+  try{await new FontFace('ICHTest',bytes.slice().buffer).load()}catch(_){throw new Error('That file isn’t a usable font.')}
+  const mime={woff2:'font/woff2',woff:'font/woff',ttf:'font/ttf',otf:'font/otf'}[m[1].toLowerCase()];
+  return {name:name.slice(0,60),count,dataUrl:'data:'+mime+';base64,'+bytesToB64(bytes)};
 }
