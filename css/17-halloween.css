@@ -253,6 +253,28 @@ html.anti-lag .hwi *,html.anti-lag .hwi{animation:none!important}
 @keyframes hwRipple{0%{transform:scale(0);opacity:1}70%{opacity:.55}100%{transform:scale(70);opacity:0}}
 html.hw-on .modal-bg{background:rgba(14,5,22,.72)}
 html.hw-on .hub-row:hover{border-color:rgba(255,150,60,.55)}
+/* decorations must never pick up the app's glass/box styling (this is what boxed the bats, spiders and pumpkins) */
+.hw-deco .hw-bat,.hw-deco .hw-bat i,.hw-deco .hw-gh,.hw-deco .hw-sp,.hw-deco .hw-sp b,.hw-deco .hw-sp u,.hw-deco .hw-pk,.hw-deco .hw-web{
+  background:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:none!important;border:0!important;border-radius:0!important;padding:0!important;margin-left:0}
+.hw-deco .hw-sp u{background:rgba(255,255,255,.3)!important}
+.hw-deco .hw-bat,.hw-deco .hw-gh,.hw-deco .hw-pk{width:auto;height:auto}
+/* exit (hwDeco adds .out when the theme is switched off) */
+.hw-deco.out{animation:hwDecoOut .8s ease forwards}
+.hw-deco.out .hw-moon{animation:hwMoonOut .8s var(--hw-spring) forwards}
+.hw-deco.out .hw-web{animation:hwWebOut .7s var(--hw-spring) forwards}
+.hw-deco.out .hw-sp{animation:hwSpOut .8s var(--hw-spring) forwards}
+.hw-deco.out .hw-pk{animation:hwPkOut .6s var(--hw-spring) forwards}
+@keyframes hwDecoOut{to{opacity:0}}
+@keyframes hwMoonOut{to{scale:.2}}
+@keyframes hwWebOut{to{opacity:0;translate:var(--wx) -50px}}
+@keyframes hwSpOut{to{translate:0 -130%}}
+@keyframes hwPkOut{to{translate:0 90px}}
+/* launcher's neutral dark glass panels + orange icon tiles on the home screen and chips */
+html.hw-on .opt,html.hw-on .userchip,html.hw-on .online-pill{background:rgba(15,16,20,.55)!important}
+html.hw-on .opt:hover{background:rgba(24,25,31,.7)!important}
+html.hw-on .opt .ic{background:rgba(255,120,20,.14)}
+html.hw-on .opt:hover .ic{background:rgba(255,120,20,.28)}
+html.hw-on .modal-bg{background:rgba(14,5,22,.72)}
 html.anti-lag .hw-deco,html.anti-lag .hw-deco .hw-moon,html.anti-lag .hw-deco .hw-web,html.anti-lag .hw-deco .hw-pk{animation:none!important}
 @media (prefers-reduced-motion:reduce){.hw-deco,.hw-deco .hw-moon,.hw-deco .hw-web,.hw-deco .hw-sp,.hw-deco .hw-pk,.hw-ripple{animation:none!important}}
 /* HALLOWEEN:END */
