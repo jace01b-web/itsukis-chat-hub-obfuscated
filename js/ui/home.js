@@ -47,30 +47,6 @@ function openChat(mode,section){
   show('chatPage');renderChat();bumpRoomSwitch();
   DB.ensureDmMemberships();
 }
-/* ---------- Unread badge on the Announcements tile ---------- */
-(function(){
-  if(document.getElementById('gcBadgeCss'))return;
-  const st=document.createElement('style');st.id='gcBadgeCss';
-  st.textContent=`.gc-badge{position:absolute;top:12px;right:12px;z-index:3;min-width:24px;height:24px;padding:0 8px;border-radius:999px;
-    display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;
-    background:linear-gradient(135deg,#ff4d8d,#ff2e63);box-shadow:0 4px 14px rgba(255,46,99,.5),inset 0 1px 0 rgba(255,255,255,.35);
-    animation:gcBadgePop .35s cubic-bezier(.34,1.56,.64,1)}
-    .gc-badge.hidden{display:none}
-    @keyframes gcBadgePop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}`;
-  document.head.appendChild(st);
-})();
-// Shows "N new" on the Announcements tile. Re-runs on every DB change, so it updates live
-// while the picker is open (no-op when the picker isn't on screen).
-function refreshAnnBadge(){
-  const b=$('#gcAnnBadge');if(!b||!ME)return;
-  const n=DB.unreadAnnouncements(ME.id);
-  const txt=n>99?'99+':String(n);
-  if(b.textContent!==txt)b.textContent=txt;
-  b.title=n+' new announcement'+(n===1?'':'s');
-  b.classList.toggle('hidden',!n);
-}
-DB.onChange(refreshAnnBadge);
-
 // Home screen "Itsukis Chat" tile: ask Global Chat vs Rooms instead of assuming Global Chat.
 function modalGlobalChoice(){
   $('#modalRoot').innerHTML=`<div class="modal-bg gc-overlay" id="gcBg"><div class="modal gc-modal" style="max-width:760px;text-align:center">
@@ -97,13 +73,11 @@ function modalGlobalChoice(){
         <h3>Rooms</h3>
       </button>
       <button class="gc-card gc-announcements" id="gcAnnouncements">
-        <span class="gc-badge hidden" id="gcAnnBadge"></span>
         <div class="gc-ic">📢</div>
         <h3>Announcements</h3>
       </button>
     </div>
   </div></div>`;
-  refreshAnnBadge();
   const close=(after)=>{const bg=$('#gcBg');if(!bg){if(after)after();return}bg.classList.add('closing');setTimeout(()=>{if($('#modalRoot'))$('#modalRoot').innerHTML='';if(after)after()},240)};
   $('#gcBg').onclick=e=>{if(e.target.id==='gcBg')close()};
   $('#gcGlobal').onclick=()=>close(()=>openChat('global','global'));
