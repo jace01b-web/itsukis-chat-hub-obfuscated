@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-10-03.06">
+<meta name="build-version" content="2026-10-03.07">
 <title>Itsukis Chat Hub</title>
 <link rel="icon" type="image/png" href="https://aniitsukicoded.github.io/backups/icon.png">
 <!-- RAW-LINK BOOTSTRAP: everything (css + js) is loaded from raw.githubusercontent.com.
@@ -373,7 +373,7 @@
   }
   /* displacement map for a rounded rect: neutral grey inside, pushing inward along the edge normal inside a narrow bezel */
   function makeMap(w,h,r,bz){
-    var k=.5,cw=Math.max(8,Math.round(w*k)),ch=Math.max(8,Math.round(h*k));
+    var k=Math.min(1,520/Math.max(w,h)),cw=Math.max(8,Math.round(w*k)),ch=Math.max(8,Math.round(h*k));
     var c=document.createElement('canvas');c.width=cw;c.height=ch;
     var x=c.getContext('2d'),im=x.createImageData(cw,ch),d=im.data;
     var hw=w/2,hh=h/2;r=Math.min(r,hw,hh);
