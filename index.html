@@ -356,15 +356,15 @@
    2. Lens refraction  : per-element SDF lens map, chromatic dispersion, baked specular bevel (Chromium desktop)
    3. Light            : the rim of every panel is lit from the direction of your pointer
    4. Jelly            : buttons / cards squish when pressed
-   Tweak live from the console or set window.LG_CONFIG before this script runs:
+   Tweak live from the console (lgTune.strength=4) or set window.lgConfig before this script runs:
      {strength:2.6, dispersion:1, spec:.9, bezel:1, light:[-.62,-.78]}
    Every part fails silently so the page never breaks.
    ========================================================================== */
 (function(){
-  if(window.__lg2)return;window.__lg2=window.__lg=1;
+  if(window.__lgEngine)return;window.__lgEngine=window.__lg=1;
   var de=document.documentElement;
-  var C=window.LG={strength:2.6,dispersion:1,spec:.9,bezel:1,light:[-.62,-.78]};
-  try{var u=window.LG_CONFIG||{};for(var k in u)C[k]=u[k]}catch(_){}
+  var C=window.lgTune={strength:2.6,dispersion:1,spec:.9,bezel:1,light:[-.62,-.78]};
+  try{var u=window.lgConfig||{};for(var k in u)C[k]=u[k]}catch(_){}
 
   /* ---------- 1. backdrop ---------- */
   function orbs(){
@@ -437,7 +437,7 @@
       var w=el.offsetWidth,h=el.offsetHeight;                 /* layout size: unaffected by pop-in scale animations */
       if(w<40||h<28||w>1400||h>1400)return;
       var rad=parseFloat(getComputedStyle(el).borderTopLeftRadius)||18;
-      var full=!de.classList.contains('anti-lag')&&w*h<360000&&C.dispersion>0;   /* big panels use the cheaper single-pass lens */
+      var full=!de.classList.contains('anti-lag')&&w*h<90000&&w<700&&C.dispersion>0;   /* big panels use the cheaper single-pass lens */
       var key=w+'x'+h+'x'+Math.round(rad)+(full?'F':'L');
       if(seen.get(el)===key)return;seen.set(el,key);
       var bz=Math.max(12,Math.min(40,Math.min(w,h)*.36))*C.bezel;
@@ -473,7 +473,7 @@
   /* ---------- 3. light follows the pointer ---------- */
   var mx=-1e5,my=-1e5,raf=0;
   function light(){
-    raf=0;
+    raf=0;try{
     document.querySelectorAll(SEL).forEach(function(el){
       var r=el.getBoundingClientRect();if(!r.width)return;
       var cx=r.left+r.width/2,cy=r.top+r.height/2,dx=mx-cx,dy=my-cy;
@@ -483,15 +483,18 @@
       if(el._la!==ang)el.style.setProperty('--lg-a',(el._la=ang)+'deg');
       if(el._ln!==nn)el.style.setProperty('--lg-n',(el._ln=nn));
     });
+    }catch(_){}
   }
-  function track(e){mx=e.clientX;my=e.clientY;if(!raf)raf=requestAnimationFrame(light)}
+  function track(e){try{mx=e.clientX;my=e.clientY;if(!raf)raf=requestAnimationFrame(light)}catch(_){}}
 
   /* ---------- 4. jelly press ---------- */
   function jelly(e){
+   try{
     var t=e.target&&e.target.closest&&e.target.closest('.btn,.opt,.icon-btn,.send,.userchip,.online-pill,.menu-btn,.music-controls button');
     if(!t||matchMedia('(prefers-reduced-motion:reduce)').matches)return;
     t.classList.remove('lg-jelly');void t.offsetWidth;t.classList.add('lg-jelly');
     t.addEventListener('animationend',function a(ev){if(ev.animationName==='lgJelly'){t.classList.remove('lg-jelly');t.removeEventListener('animationend',a)}});
+   }catch(_){}
   }
 
   function start(){
