@@ -1,60 +1,31 @@
 /* ==========================================================================
  * css/11-glass-theme.css
- * Liquid-glass look applied across the app  (v3 remake, iOS 26 style)
+ * Liquid-glass look applied across the app
  * Order matters (later files override earlier ones) - see js/manifest.js
- *
- * Same selectors, same !important rules and same JS hooks (--px / --py /
- * --glow-op) as before, so nothing that depends on this file moves or breaks.
- * What changed is how the glass is built:
- *   - softer, layered rim light instead of one hard grey line
- *   - faint edge dispersion (pink / cyan hairlines) like real refracting glass
- *   - a fine frost grain over the sheen
- *   - a second, warm caustic light bouncing up from the bottom-right
- *   - a two-part pointer highlight: wide glow + tight specular hotspot
- *   - every glow is tinted from --accent, so it follows the active theme
- *     (purple normally, orange during Halloween) instead of a fixed purple
- *   - glass focus rings, hover glows, reduced-transparency / anti-lag support
  * ========================================================================== */
 
 /* ===================================================================
-   TOKENS
+   LIQUID GLASS — iOS-style global glass pass
+   Layers real specular highlights, saturation and depth onto the
+   existing frosted-panel system. Respects the user's own UI-opacity /
+   UI-blur settings (still driven by --ui-alpha / --ui-blur) — this only
+   adds edge light, inner glow and saturation on top of them.
    =================================================================== */
 :root{
   --border:rgba(255,255,255,.14);
-  --glass-sheen:rgba(255,255,255,.26);
-  --glass-edge:rgba(255,255,255,.38);
-  --glass-edge-soft:rgba(255,255,255,.16);
-  /* accent-tinted light (fallback = the classic purple) */
-  --glass-tint:rgba(124,108,255,.22);
-  --glass-tint-strong:rgba(124,108,255,.34);
+  --glass-sheen:rgba(255,255,255,.28);
+  --glass-edge:rgba(255,255,255,.4);
+  --glass-edge-soft:rgba(255,255,255,.18);
   --glass-shadow:0 24px 60px rgba(0,0,0,.42),0 2px 10px rgba(0,0,0,.24);
-  /* layered rim: crisp top edge, hairline all round, soft top bloom, inner haze,
-     bottom depth, and a barely-there pink/cyan dispersion on the side edges */
-  --glass-inset:
-    inset 0 0 0 1px rgba(255,255,255,.09),
-    inset 1.5px 1.5px 1px -1px rgba(255,255,255,.58),
-    inset -1.5px -1.5px 1px -1px rgba(255,255,255,.34),
-    inset 0 0 16px rgba(255,255,255,.07),
-    inset 0 18px 26px -20px rgba(255,255,255,.18),
-    inset 0 -22px 32px -14px rgba(0,0,0,.24),
-    inset 2px 0 0 -1px rgba(255,150,215,.07),
-    inset -2px 0 0 -1px rgba(120,205,255,.07);
+  --glass-inset:inset 0 1.5px 0 rgba(255,255,255,.38),inset 0 0 34px rgba(255,255,255,.05),inset 0 -18px 30px rgba(0,0,0,.16);
   /* shared "liquid" spring easing for glass motion (panels, sheets, hovers) */
   --glass-spring:cubic-bezier(.16,1,.3,1);
-  /* fine frost grain (tiled, very low alpha) */
-  --glass-grain:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .055 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-}
-@supports (color:color-mix(in srgb,red 50%,blue)){
-  :root{
-    --glass-tint:color-mix(in srgb,var(--accent,#7c6cff) 24%,transparent);
-    --glass-tint-strong:color-mix(in srgb,var(--accent,#7c6cff) 36%,transparent);
-  }
 }
 
 /* ---- big frosted surfaces: real blur, saturation, glass bevel ---- */
 .sidebar,.topbar,.composer,.card,.userchip,.online-pill,.opt,.np.show{
-  backdrop-filter:blur(var(--ui-blur)) saturate(190%) brightness(1.06)!important;
-  -webkit-backdrop-filter:blur(var(--ui-blur)) saturate(190%) brightness(1.06)!important;
+  backdrop-filter:blur(var(--ui-blur)) saturate(165%) brightness(1.04)!important;
+  -webkit-backdrop-filter:blur(var(--ui-blur)) saturate(165%) brightness(1.04)!important;
   border-color:var(--glass-edge-soft)!important;
   transition:box-shadow .35s var(--glass-spring),border-color .35s var(--glass-spring);
 }
@@ -69,66 +40,52 @@
 .card{box-shadow:var(--glass-shadow),var(--glass-inset)}
 .opt{box-shadow:0 16px 40px rgba(0,0,0,.24),var(--glass-inset);isolation:isolate}
 .userchip,.online-pill{box-shadow:var(--glass-inset),0 6px 18px rgba(0,0,0,.22)}
-.userchip:hover,.online-pill:hover{box-shadow:var(--glass-inset),0 10px 26px rgba(0,0,0,.28),0 0 22px -4px var(--glass-tint-strong)}
 
-/* light washing across the glass — pinned to z-index:-1 inside an isolated
-   stacking context so it never sits on top of real content or on top of
-   absolutely-positioned children like .modal-x. NOT .opt — its ::after is its
-   own hover-only diagonal shine sweep defined elsewhere; reusing it here
-   would clobber that sweep. Layers (top to bottom): frost grain, warm caustic
-   bouncing up from the bottom-right, main top-left sheen. */
+/* soft light washing in from the top-left, like light hitting glass —
+   pinned to z-index:-1 inside an isolated stacking context so it never
+   sits on top of real content or on top of absolutely-positioned
+   children like .modal-x. NOT .opt — its ::after is already its own
+   hover-only diagonal shine sweep (see .opt:after below); reusing it here
+   used to clobber that sweep's background/position, leaving a stray
+   always-on glow blob on the home-menu cards instead of a clean hover-only
+   streak. */
 .sidebar::before,.topbar::before,.composer::before,.card::before,.modal::before{
   content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;
-  background:
-    var(--glass-grain),
-    radial-gradient(90% 55% at 100% 112%,var(--glass-tint),transparent 66%),
-    radial-gradient(140% 60% at 15% -10%,var(--glass-sheen),transparent 60%);
-  background-size:140px 140px,auto,auto;
-  opacity:.55
+  background:radial-gradient(140% 60% at 15% -10%,var(--glass-sheen),transparent 60%);opacity:.55
 }
 
 /* ---- buttons: frosted glass pills ---- */
 .btn.sec,.icon-btn,.menu-btn,.modal-x,.sb-head .back,.music-controls button,.cp-eye,.lb-btn,.tab-mini button{
   background:rgba(255,255,255,.07)!important;
-  backdrop-filter:blur(16px) saturate(185%);-webkit-backdrop-filter:blur(16px) saturate(185%);
+  backdrop-filter:blur(16px) saturate(180%);-webkit-backdrop-filter:blur(16px) saturate(180%);
   border:1px solid var(--glass-edge-soft)!important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.26),inset 0 -8px 12px -6px rgba(0,0,0,.18),0 4px 12px rgba(0,0,0,.22);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 4px 12px rgba(0,0,0,.22);
   transition:background .28s var(--glass-spring),border-color .28s var(--glass-spring),transform .28s var(--glass-spring),box-shadow .28s var(--glass-spring)
 }
 /* .modal-x is already position:absolute (positioned) for its own placement;
    the rest need position:relative so the shimmer sweep below is contained.
-   .lb-btn is the one exception: it must stay position:fixed (set in the
-   lightbox rules) so it's pinned to the true viewport corners — so it's
-   deliberately left out of the position list. */
+   .lb-btn is the one exception: it must stay position:fixed (set above, in
+   the lightbox rules) so it's pinned to the true viewport corners instead of
+   its in-flow flex position — so it's deliberately left out of this list. */
 .btn.sec,.icon-btn,.menu-btn,.sb-head .back,.music-controls button,.cp-eye,.tab-mini button{position:relative;overflow:hidden}
 .lb-btn{overflow:hidden}
 .modal-x{overflow:hidden}
 .btn.sec::after,.icon-btn::after,.menu-btn::after,.modal-x::after,.sb-head .back::after,.music-controls button::after,.cp-eye::after,.lb-btn::after,.tab-mini button::after{
   content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;
-  background:linear-gradient(115deg,transparent 28%,rgba(255,255,255,.10) 42%,rgba(255,255,255,.30) 50%,rgba(255,255,255,.10) 58%,transparent 72%);
+  background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.24) 48%,rgba(255,255,255,.24) 52%,transparent 70%);
   background-size:220% 220%;background-position:130% 0;opacity:0;
-  transition:opacity .3s ease,background-position .7s var(--glass-spring)
+  transition:opacity .3s ease,background-position .65s var(--glass-spring)
 }
 .btn.sec:hover,.icon-btn:hover,.menu-btn:hover,.modal-x:hover,.sb-head .back:hover,.music-controls button:hover,.cp-eye:hover,.lb-btn:hover,.tab-mini button:hover{
-  background:rgba(255,255,255,.15)!important;border-color:var(--glass-edge)!important;transform:translateY(-1px);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.34),inset 0 -8px 12px -6px rgba(0,0,0,.16),0 8px 20px rgba(0,0,0,.26),0 0 18px -4px var(--glass-tint)
+  background:rgba(255,255,255,.15)!important;border-color:var(--glass-edge)!important;transform:translateY(-1px)
 }
 .btn.sec:hover::after,.icon-btn:hover::after,.menu-btn:hover::after,.modal-x:hover::after,.sb-head .back:hover::after,.music-controls button:hover::after,.cp-eye:hover::after,.lb-btn:hover::after,.tab-mini button:hover::after{
   opacity:1;background-position:-30% 0
 }
 .btn.sec:active,.icon-btn:active{transform:scale(.95)}
 .btn,.send,.music-controls button.mc-play,.modal-tabs button.active,.tabs button.active{
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.42),inset 0 -10px 16px rgba(0,0,0,.14),0 6px 18px rgba(124,108,255,.32)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 -10px 16px rgba(0,0,0,.14),0 6px 18px rgba(124,108,255,.32)!important;
   border:1px solid rgba(255,255,255,.2)
-}
-@supports (color:color-mix(in srgb,red 50%,blue)){
-  .btn,.send,.music-controls button.mc-play,.modal-tabs button.active,.tabs button.active{
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.42),inset 0 -10px 16px rgba(0,0,0,.14),0 6px 18px var(--glass-tint-strong)!important
-  }
-}
-/* keyboard focus: a clean glass ring */
-.btn:focus-visible,.icon-btn:focus-visible,.menu-btn:focus-visible,.send:focus-visible,.modal-x:focus-visible,.tab-mini button:focus-visible{
-  outline:2px solid var(--accent);outline-offset:2px
 }
 
 /* ---- inputs: recessed frosted wells ---- */
@@ -136,110 +93,101 @@
   background:rgba(255,255,255,.05)!important;
   backdrop-filter:blur(14px) saturate(160%);-webkit-backdrop-filter:blur(14px) saturate(160%);
   border-color:var(--glass-edge-soft)!important;
-  box-shadow:inset 0 2px 6px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.05),inset 0 -1px 0 rgba(255,255,255,.04);
-  transition:border-color .25s var(--glass-spring),box-shadow .25s var(--glass-spring),background .25s var(--glass-spring)
-}
-/* focus: the well lights up in the accent colour (border was previously stuck
-   grey because the rule above is !important) */
-.field input:focus,.field select:focus,.field textarea:focus,.row textarea:focus,.emoji-pop-search input:focus{
-  border-color:var(--accent)!important;background:rgba(255,255,255,.075)!important;
-  box-shadow:inset 0 2px 6px rgba(0,0,0,.3),0 0 0 3px var(--glass-tint),0 0 22px -6px var(--glass-tint-strong)
+  box-shadow:inset 0 2px 6px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.05)
 }
 input[type=checkbox]{background:rgba(255,255,255,.06)}
 .switch .slider{background:rgba(255,255,255,.09)!important;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .switch input:checked+.slider{background:linear-gradient(135deg,var(--accent),#5a4bff)!important}
 
 /* ---- popovers, menus, toasts, pills: true glass ----
-   Neutral --ui-panel carries almost no hue of its own, so this is mostly
-   background-colour-from-behind, blurred and saturated back up — a red backdrop
+   Neutral --ui-panel now carries almost no hue of its own, so this is mostly
+   background-color-from-behind, blurred and saturated back up — a red backdrop
    reads red, a photo reads as that photo, a picked gradient reads as itself. */
 .mention-pop,.emoji-pop,.cp-pop,.csel-menu,.list-row,.modal,.empty,.toast,.msg-hover-bar,.sys,.date-sep,.reaction-pill{
   background:linear-gradient(rgba(255,255,255,.05),rgba(255,255,255,.05)),var(--ui-panel)!important;
-  backdrop-filter:blur(26px) saturate(215%) brightness(1.03)!important;-webkit-backdrop-filter:blur(26px) saturate(215%) brightness(1.03)!important;
+  backdrop-filter:blur(26px) saturate(210%)!important;-webkit-backdrop-filter:blur(26px) saturate(210%)!important;
   border:1px solid var(--glass-edge-soft)!important;
-  box-shadow:var(--glass-shadow),inset 0 1px 0 rgba(255,255,255,.2),inset 0 18px 26px -22px rgba(255,255,255,.14),inset 0 -20px 28px -16px rgba(0,0,0,.18)
+  box-shadow:var(--glass-shadow),inset 0 1px 0 rgba(255,255,255,.18)
 }
 .modal{overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.modal-bg{backdrop-filter:blur(10px) saturate(145%);-webkit-backdrop-filter:blur(10px) saturate(145%)}
+.modal-bg{backdrop-filter:blur(8px) saturate(140%);-webkit-backdrop-filter:blur(8px) saturate(140%)}
 
 /* ---- message bubbles: frosted for others, glossy tinted glass for you ----
-   Both variants get their colour from a translucent rgba() (hexToRgba, set
-   per-sender inline for others and via --b-me for your own), layered under a
-   faint sheen, so the backdrop blur actually shows through. No !important on
-   purpose — a solid inline/var colour must still be able to win. */
+   Both variants now get their color from a translucent rgba() (see hexToRgba,
+   set per-sender inline for others and via --b-me for your own), layered under
+   a faint sheen, so the backdrop-filter blur actually shows through instead of
+   being hidden behind a flat opaque fill. No !important here on purpose — it's
+   what let a solid inline/var color fully mask the glass before. */
 .bubble{
   background:linear-gradient(rgba(255,255,255,.08),rgba(255,255,255,.08)),var(--b-other,var(--ui-panel2));
-  backdrop-filter:blur(18px) saturate(205%);-webkit-backdrop-filter:blur(18px) saturate(205%);
+  backdrop-filter:blur(18px) saturate(200%);-webkit-backdrop-filter:blur(18px) saturate(200%);
   border:1px solid var(--glass-edge-soft);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 -8px 12px -8px rgba(0,0,0,.16),0 4px 14px rgba(0,0,0,.22)
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 4px 14px rgba(0,0,0,.22)
 }
 .bubble.img-only{background:none!important;backdrop-filter:none!important;border:none;box-shadow:none}
 .reaction-pill.mine{background:linear-gradient(rgba(124,108,255,.35),rgba(124,108,255,.35)),var(--ui-panel2)!important;border-color:var(--accent)!important}
-@supports (color:color-mix(in srgb,red 50%,blue)){
-  .reaction-pill.mine{background:linear-gradient(var(--glass-tint-strong),var(--glass-tint-strong)),var(--ui-panel2)!important}
-}
 .msg.me .bubble{
-  background:linear-gradient(rgba(255,255,255,.15),rgba(255,255,255,.02)),var(--b-me,rgba(124,108,255,.6));
+  background:linear-gradient(rgba(255,255,255,.14),rgba(255,255,255,.02)),var(--b-me,rgba(124,108,255,.6));
   border:1px solid rgba(255,255,255,.3);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.44),inset 0 -12px 18px rgba(0,0,0,.16),0 6px 18px rgba(124,108,255,.28)
-}
-@supports (color:color-mix(in srgb,red 50%,blue)){
-  .msg.me .bubble{box-shadow:inset 0 1px 0 rgba(255,255,255,.44),inset 0 -12px 18px rgba(0,0,0,.16),0 6px 18px var(--glass-tint)}
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.42),inset 0 -12px 18px rgba(0,0,0,.16),0 6px 18px rgba(124,108,255,.28)
 }
 .mtrack{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 
 /* ---- icon badges: glassy bevel like an iOS app icon ---- */
 .avatar,.music-note,.np-ic{
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.48),inset 0 -6px 10px rgba(0,0,0,.18),inset 0 0 0 1px rgba(255,255,255,.05),0 4px 12px rgba(0,0,0,.25)
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -6px 10px rgba(0,0,0,.18),0 4px 12px rgba(0,0,0,.25)
 }
 
 /* ---- sidebar rows & tab strips: subtle glass on hover/active ---- */
 .sb-item:hover{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .sb-item.active{box-shadow:inset 0 1px 0 rgba(255,255,255,.38),inset 0 -8px 14px rgba(0,0,0,.14),0 4px 14px rgba(124,108,255,.32)!important}
-@supports (color:color-mix(in srgb,red 50%,blue)){
-  .sb-item.active{box-shadow:inset 0 1px 0 rgba(255,255,255,.38),inset 0 -8px 14px rgba(0,0,0,.14),0 4px 14px var(--glass-tint-strong)!important}
-}
-.tabs,.modal-tabs{background:rgba(255,255,255,.045)!important;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:inset 0 1px 3px rgba(0,0,0,.22),inset 0 -1px 0 rgba(255,255,255,.04)}
+.tabs,.modal-tabs{background:rgba(255,255,255,.045)!important;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 
 @media(max-width:700px){.sidebar::before,.topbar::before,.composer::before{opacity:.4}}
 
 /* ===================================================================
-   LIQUID GLASS v2/v3 — pointer-reactive light + floating panels.
-   On wider screens the sidebar/topbar/composer detach from the screen
-   edge into rounded, free-floating glass cards. Every big glass surface
-   also catches light that follows the pointer or finger: a wide soft
-   glow plus a tight bright specular hotspot sitting under the cursor.
+   LIQUID GLASS v2 — pointer-reactive light + floating "Void Launcher /
+   iOS 26" panels. On wider screens the sidebar/topbar/composer detach
+   from the screen edge into rounded, free-floating glass cards (like a
+   launcher's floating widgets, or iOS's floating toolbars with content
+   scrolling underneath). Every big glass surface also catches a soft
+   highlight that follows the pointer or finger — real specular
+   reaction, layered under the existing static top-left sheen, instead
+   of one fixed painted highlight.
    =================================================================== */
 :root{--px:50%;--py:0%}
 
-/* soften the base rounding everywhere — no hard 90° panel corners */
+/* soften the base rounding everywhere, even before the floating-desktop
+   treatment below kicks in — no more hard 90° panel corners */
 .sidebar{border-radius:0 22px 22px 0}
 .topbar{border-radius:0 0 22px 22px}
 .composer{border-radius:22px 22px 0 0}
 
-/* pointer-reactive specular highlight. Same z-index:-1 / isolation trick as
-   the static sheen, so it stays behind real content.
-   --glow-op is driven by JS from the pointer's distance to the panel (see the
-   "Liquid Glass: pointer-reactive specular highlight" script): 0 when the
-   pointer is further away than the glow radius, ramping to 1 as it nears. */
+/* pointer-reactive specular highlight — a true circular glint (not an
+   oval smear), plain white at low opacity so it reads consistently on
+   any background hue instead of shifting color via a blend mode. Same
+   z-index:-1 / isolation trick as the static sheen, so it stays behind
+   real content. */
 .sidebar::after,.topbar::after,.composer::after,.card::after,.modal::after,.gc-card::after{
   content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;
-  background:
-    radial-gradient(circle 70px at var(--px) var(--py),rgba(255,255,255,.20),transparent 100%),
-    radial-gradient(circle 240px at var(--px) var(--py),rgba(255,255,255,.15),transparent 72%),
-    radial-gradient(circle 340px at var(--px) var(--py),var(--glass-tint),transparent 75%);
+  background:radial-gradient(circle 220px at var(--px) var(--py),rgba(255,255,255,.16),transparent 72%);
+  /* --glow-op is driven by JS from the pointer's distance to this panel (see the
+     "Liquid Glass: pointer-reactive specular highlight" script) — 0 once the
+     pointer is further away than the glow's own 220px radius, ramping up to 1
+     as it gets close, so the light reads as glass reacting to a nearby hand
+     rather than snapping on only once you're directly over it. */
   opacity:var(--glow-op,0);transition:opacity .2s ease;
 }
 
-/* a very slow, subtle "breathing" of the static sheen — glass that reads as
-   alive rather than a flat painted highlight. Off for anyone who's asked
-   their system to reduce motion. */
+/* a very slow, subtle "breathing" of the static sheen — glass that reads
+   as alive rather than a flat painted highlight. Off for anyone who's
+   asked their system to reduce motion. */
 @media (prefers-reduced-motion: no-preference){
   .sidebar::before,.topbar::before,.composer::before,.card::before,.modal::before{
     animation:glassBreathe 7s ease-in-out infinite
   }
 }
-@keyframes glassBreathe{0%,100%{opacity:.45}50%{opacity:.74}}
+@keyframes glassBreathe{0%,100%{opacity:.45}50%{opacity:.72}}
 
 /* tactile, elastic press feedback on the main pill buttons */
 .btn:active{transform:scale(.96)}
@@ -259,15 +207,86 @@ input[type=checkbox]{background:rgba(255,255,255,.06)}
 }
 
 /* ===================================================================
-   ACCESSIBILITY / PERFORMANCE
+   LIQUID GLASS v3 — see-through, refractive glass (iOS 26 look)
+   Appended LAST on purpose: it only overrides how much the glass blurs,
+   tints and bends what's behind it. Layout, sizes, shadows, edge light,
+   hover shimmer and pointer glints from above are untouched.
+   - blur is capped (user's --ui-blur still applies, just never above the cap)
+   - fill is a faint smoky tint instead of an opaque panel colour
+   - html.lg-refract (set by the tiny script in index.html, Chromium only)
+     adds real edge refraction through an SVG displacement filter
    =================================================================== */
-/* people who ask for less transparency get the panels without the blur layer */
-@media (prefers-reduced-transparency: reduce){
-  .sidebar,.topbar,.composer,.card,.userchip,.online-pill,.opt,.np.show,
-  .mention-pop,.emoji-pop,.cp-pop,.csel-menu,.list-row,.modal,.empty,.toast,.msg-hover-bar,.sys,.date-sep,.reaction-pill,.bubble{
-    backdrop-filter:none!important;-webkit-backdrop-filter:none!important
-  }
+:root{
+  --lg-blur:min(var(--ui-blur,12px),5px);      /* big panels */
+  --lg-blur-sm:min(var(--ui-blur,12px),2px);   /* small things: bubbles, buttons, inputs */
+  --lg-tint:rgba(16,14,30,calc(min(var(--ui-alpha,.5),1)*.32));
 }
-/* anti-lag mode: no animated or pointer-driven glass */
-html.anti-lag .sidebar::before,html.anti-lag .topbar::before,html.anti-lag .composer::before,html.anti-lag .card::before,html.anti-lag .modal::before{animation:none}
-html.anti-lag .sidebar::after,html.anti-lag .topbar::after,html.anti-lag .composer::after,html.anti-lag .card::after,html.anti-lag .modal::after,html.anti-lag .gc-card::after{display:none}
+
+/* ---- big surfaces ---- */
+.sidebar,.topbar,.composer,.card,.userchip,.online-pill,.opt,.np.show{
+  background:linear-gradient(160deg,rgba(255,255,255,.10),rgba(255,255,255,.015) 45%,rgba(255,255,255,.04)),var(--lg-tint)!important;
+  backdrop-filter:blur(var(--lg-blur)) saturate(190%) brightness(1.08) contrast(1.04)!important;
+  -webkit-backdrop-filter:blur(var(--lg-blur)) saturate(190%) brightness(1.08) contrast(1.04)!important;
+  border-color:rgba(255,255,255,.34)!important;
+}
+@media(max-width:760px){
+  .sidebar{background:linear-gradient(160deg,rgba(255,255,255,.10),rgba(255,255,255,.02)),var(--lg-tint)!important}
+}
+
+/* ---- popovers, menus, toasts, modals, pills ---- */
+.mention-pop,.emoji-pop,.cp-pop,.csel-menu,.list-row,.modal,.empty,.toast,.msg-hover-bar,.sys,.date-sep,.reaction-pill{
+  background:linear-gradient(160deg,rgba(255,255,255,.10),rgba(255,255,255,.02)),var(--lg-tint)!important;
+  backdrop-filter:blur(var(--lg-blur)) saturate(200%) brightness(1.06)!important;
+  -webkit-backdrop-filter:blur(var(--lg-blur)) saturate(200%) brightness(1.06)!important;
+  border-color:rgba(255,255,255,.3)!important;
+}
+.modal-bg{backdrop-filter:blur(2px) saturate(130%);-webkit-backdrop-filter:blur(2px) saturate(130%)}
+
+/* ---- small things stay readable-through: tiny blur, high saturation ---- */
+.btn.sec,.icon-btn,.menu-btn,.modal-x,.sb-head .back,.music-controls button,.cp-eye,.lb-btn,.tab-mini button{
+  background:rgba(255,255,255,.05)!important;
+  backdrop-filter:blur(var(--lg-blur-sm)) saturate(190%) brightness(1.08);
+  -webkit-backdrop-filter:blur(var(--lg-blur-sm)) saturate(190%) brightness(1.08);
+}
+.field input,.field select,.field textarea,.row textarea,.cp-btn,.csel-btn,.emoji-pop-search input{
+  background:rgba(0,0,0,.14)!important;
+  backdrop-filter:blur(var(--lg-blur-sm)) saturate(160%);
+  -webkit-backdrop-filter:blur(var(--lg-blur-sm)) saturate(160%);
+}
+.switch .slider{backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+.tabs,.modal-tabs{backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.mtrack{backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+.sb-item:hover{backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+
+/* ---- message bubbles: clear glass, backdrop visible through them ---- */
+.bubble{
+  background:linear-gradient(rgba(255,255,255,.06),rgba(255,255,255,.02)),var(--b-other,rgba(16,14,30,.16));
+  backdrop-filter:blur(var(--lg-blur-sm)) saturate(220%) brightness(1.08);
+  -webkit-backdrop-filter:blur(var(--lg-blur-sm)) saturate(220%) brightness(1.08);
+  border-color:rgba(255,255,255,.28)
+}
+.msg.me .bubble{
+  background:linear-gradient(rgba(255,255,255,.14),rgba(255,255,255,.02)),var(--b-me,rgba(124,108,255,.45))
+}
+
+/* keep text crisp on a see-through surface */
+.sidebar,.topbar,.composer,.card,.bubble,.opt,.modal{text-shadow:0 1px 2px rgba(0,0,0,.35)}
+
+/* ---- real refraction (Chromium; filter is injected by the script in index.html) ----
+   Edges bend the backdrop like a glass lens. Everywhere else falls back to
+   the clear-blur look above, so nothing breaks in Safari / Firefox. */
+html.lg-refract .topbar,
+html.lg-refract .composer,
+html.lg-refract .card,
+html.lg-refract .opt,
+html.lg-refract .modal,
+html.lg-refract .np.show,
+html.lg-refract .toast,
+html.lg-refract .sidebar{
+  backdrop-filter:url(#lg-refract) blur(var(--lg-blur)) saturate(190%) brightness(1.08)!important;
+}
+html.lg-refract .bubble,
+html.lg-refract .userchip,
+html.lg-refract .online-pill{
+  backdrop-filter:url(#lg-refract-sm) blur(var(--lg-blur-sm)) saturate(220%) brightness(1.08)!important;
+}
