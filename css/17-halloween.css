@@ -73,22 +73,6 @@ html.anti-lag .hw-deco,html.anti-lag .hw-deco *{animation:none!important}
 /* no glass/highlight pseudo-elements on decorations (the moon keeps its craters) */
 .hw-deco *::after,.hw-deco *:not(.hw-moon)::before{content:none!important}
 
-/* ===== Season Pass banner on the home screen (copied from the launcher) ===== */
-.hw-banner{position:relative;isolation:isolate;display:flex;align-items:center;gap:18px;width:100%;max-width:540px;margin:6px auto 22px;padding:16px 20px;border-radius:22px;text-align:left;color:var(--text);font:inherit;cursor:pointer;overflow:visible;
-  background:radial-gradient(80% 160% at 6% 50%,rgba(255,120,20,.28),transparent 62%),linear-gradient(100deg,rgba(60,22,6,.6),rgba(34,14,56,.55) 70%),var(--ui-panel2);
-  border:1px solid rgba(255,150,60,.38);box-shadow:0 14px 38px rgba(0,0,0,.35),0 0 40px rgba(255,110,20,.14),inset 0 1px 0 rgba(255,200,140,.25);
-  animation:hwRise .6s var(--spring) .2s both;transition:transform .25s var(--spring),border-color .25s,box-shadow .25s}
-.hw-banner:hover{transform:translate3d(0,-2px,0);border-color:rgba(255,170,80,.7);box-shadow:0 18px 44px rgba(0,0,0,.4),0 0 56px rgba(255,110,20,.3),inset 0 1px 0 rgba(255,200,140,.3)}
-.hw-banner:focus-visible{outline:2px solid #ffb347;outline-offset:3px}
-.hw-banner .big{flex:none;font-size:40px;line-height:1;filter:drop-shadow(0 0 12px rgba(255,130,20,.7));animation:hwPk 2.8s ease-in-out infinite}
-.hw-banner b{display:block;font-size:17px;margin-bottom:3px}
-.hw-banner span{font-size:13.5px;color:#d8c4ee;line-height:1.5}
-.hw-banner .hw-hero-ring,.hw-banner .hw-hero-sp{display:block}
-@keyframes hwRise{from{opacity:0;transform:translateY(26px) scale(.94)}60%{opacity:1}to{opacity:1;transform:none}}
-@media (max-width:620px){.hw-banner{flex-direction:column;text-align:center}}
-html.anti-lag .hw-banner,html.anti-lag .hw-banner *{animation:none!important}
-@media (prefers-reduced-motion:reduce){.hw-banner,.hw-banner *{animation:none!important}}
-
 /* title pills + name effects. Colour/opacity/background-position only: no transforms or size changes, so rows never move. */
 .hw-title{display:inline-flex;align-items:center;gap:4px;margin:-2px 6px -2px 0;padding:2px 8px 2px 6px;border-radius:999px;font-size:.66em;font-weight:900;letter-spacing:.06em;text-transform:uppercase;vertical-align:middle;position:relative;isolation:isolate;white-space:nowrap;line-height:1.15}
 .hw-t-vamp{color:#ffc2cf;background:linear-gradient(100deg,rgba(120,0,25,.7),rgba(220,30,70,.4));box-shadow:inset 0 0 0 1px rgba(255,80,110,.6),0 0 10px rgba(220,20,60,.45);animation:hwBeat 1.8s ease-in-out infinite}
