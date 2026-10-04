@@ -25,6 +25,10 @@ let _hubData=null,_hubQuery='';
 // gets added to the "hubs" array in apps.json down the line.
 const HUB_INFO=window.HUB_INFO||{},HUB_INFO_X=window.HUB_INFO_X||{};
 const HUB_SECTIONS=[['apps','Apps'],['hubs','Hubs'],['tools','Tools'],['links','Links'],['proxies','Proxies']];
+// Custom entries added by hand (shown without needing the external apps.json / HUB_INFO).
+const CUSTOM_HUBS=[
+  {sec:'apps',name:'MZK',url:'https://raw.githubusercontent.com/Cra-Z-Gaming/VUS/refs/heads/main/MZK',desc:'MZK app.',icon:'MZK',color:'violet'}
+];
 let _hubSec='hubs',_pxGroup='',_hubDir=0;
 const GAME_HUB_ALLOWLIST=new Set(Object.keys(HUB_INFO));
 function hubInfoFor(sec,name){
@@ -108,6 +112,7 @@ async function loadHubs(){
         out.push({...h,sec,name:i.n||h.name.trim(),desc:i.d||h.desc||'',icon:i.i||h.icon||'',color:(h.color&&h.color.trim())||i.c||''});
       });
     });
+    CUSTOM_HUBS.forEach(h=>out.push({...h}));
     // Proxies: loaded from app.json in the chat hub repo, with a built-in copy as backup.
     let px=PROXY_FALLBACK;
     try{const pr=await fetch(PROXIES_URL+'?v='+Date.now(),{cache:'no-store'});if(pr.ok){const pj=await pr.json();if(pj&&Array.isArray(pj.groups)&&pj.groups.length)px=pj}}catch(_){}
