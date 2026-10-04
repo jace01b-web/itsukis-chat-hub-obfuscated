@@ -72,43 +72,22 @@ function hwSetTheme(v){
   if(ME&&ME.id!=null)DB.setSettingKey(ME.id,'hwTheme',v).catch(()=>{});
   const calm=document.documentElement.classList.contains('anti-lag')||(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
   if(calm){hwSync();return}
-  hwFxCss();
   const t=document.getElementById('sHwTheme'),el=t&&(t.closest('.switch')||t),rc=el?el.getBoundingClientRect():{left:innerWidth/2,top:innerHeight/2,width:0,height:0};
   const rp=document.createElement('div');
   rp.className='hw-ripple '+(v?'on':'off');rp.style.left=(rc.left+rc.width/2)+'px';rp.style.top=(rc.top+rc.height/2)+'px';
   document.body.appendChild(rp);setTimeout(()=>rp.remove(),1000);
   setTimeout(()=>{hwSync();if(v&&hwOpen())hwBurst()},160);   // theme swaps under the glow
 }
-/* Entrance / exit animations and the switch glow (same as the launcher). Injected once so no stylesheet needs editing. */
-function hwFxCss(){
-  if(document.getElementById('hwFxCss'))return;
-  const st=document.createElement('style');st.id='hwFxCss';
-  st.textContent=
-'.hw-deco{opacity:0;transition:opacity .8s ease}.hw-deco.in{opacity:1}'
-+'.hw-deco .hw-moon{scale:.2;transition:scale 1s var(--spring,cubic-bezier(.16,1,.3,1)) .15s}.hw-deco.in .hw-moon{scale:1}'
-+'.hw-deco .hw-web{opacity:0;transition:translate .9s var(--spring,cubic-bezier(.16,1,.3,1)) .1s,opacity .6s ease .1s}'
-+'.hw-deco .hw-web.l{translate:-50px -50px}.hw-deco .hw-web.r{translate:50px -50px}.hw-deco.in .hw-web{translate:0 0;opacity:1}'
-+'.hw-deco .hw-sp{translate:0 -130%;transition:translate 1.1s var(--spring,cubic-bezier(.16,1,.3,1)) .3s}.hw-deco.in .hw-sp{translate:0 0}'
-+'.hw-deco .hw-pk{translate:0 90px;transition:translate .8s var(--spring,cubic-bezier(.16,1,.3,1)) .35s}.hw-deco.in .hw-pk{translate:0 0}'
-+'.hw-deco:not(.in) .hw-moon,.hw-deco:not(.in) .hw-web,.hw-deco:not(.in) .hw-sp,.hw-deco:not(.in) .hw-pk{transition-delay:0s}'
-+'html.anti-lag .hw-deco,html.anti-lag .hw-deco *{transition:none!important}'
-+'.hw-ripple{position:fixed;z-index:900;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;pointer-events:none;animation:hwRipple .95s cubic-bezier(.2,.7,.3,1) forwards}'
-+'.hw-ripple.on{background:radial-gradient(circle,rgba(255,150,40,.75),rgba(168,85,255,.5) 55%,transparent 72%)}'
-+'.hw-ripple.off{background:radial-gradient(circle,rgba(160,150,255,.6),rgba(90,80,200,.4) 55%,transparent 72%)}'
-+'@keyframes hwRipple{0%{transform:scale(0);opacity:1}70%{opacity:.55}100%{transform:scale(70);opacity:0}}';
-  document.head.appendChild(st);
-}
 function hwDeco(on){
   document.documentElement.classList.toggle('hw-on',on);
   let d=document.getElementById('hwDeco');
-  hwFxCss();
   if(!on){
     if(!d)return;
-    d.classList.remove('in');                         // pieces glide back out and the layer fades
-    clearTimeout(d._rm);d._rm=setTimeout(()=>d.remove(),1200);
+    d.classList.add('out');                           // css plays the exit, then the layer is removed
+    clearTimeout(d._rm);d._rm=setTimeout(()=>d.remove(),1000);
     return;
   }
-  if(d){clearTimeout(d._rm);requestAnimationFrame(()=>d.classList.add('in'));return}
+  if(d){clearTimeout(d._rm);d.classList.remove('out');return}   // turned back on mid-exit: css plays the entrance again
   const r=(a,b)=>(a+Math.random()*(b-a)).toFixed(2);
   const web='<svg viewBox="0 0 120 120"><g fill="none" stroke="currentColor" stroke-width="1"><path d="M0 0L120 0M0 0L0 120M0 0L100 60M0 0L60 100M0 0L115 25M0 0L25 115"/><path d="M0 30Q18 18 30 0M0 55Q32 36 55 0M0 82Q50 58 82 0M0 110Q70 82 110 0"/></g></svg>';
   let h='<i class="hw-vig"></i><i class="hw-moon"></i><i class="hw-fog"></i><i class="hw-fog f2"></i><div class="hw-web l">'+web+'</div><div class="hw-web r">'+web+'</div>'
@@ -118,9 +97,7 @@ function hwDeco(on){
   for(let i=0;i<16;i++)h+='<i class="hw-em'+(i>7?' hw-x':'')+'" style="--x:'+r(0,100)+'%;--s:'+r(2,5)+'px;--dx:'+r(-60,60)+'px;--d:'+r(9,18)+'s;--t:-'+r(0,16)+'s"></i>';
   h+='<b class="hw-pk l">🎃</b><b class="hw-pk r hw-x">🎃</b>';
   d=document.createElement('div');d.id='hwDeco';d.className='hw-deco';d.setAttribute('aria-hidden','true');d.innerHTML=h;
-  document.body.insertBefore(d,document.body.firstChild);
-  void d.offsetWidth;requestAnimationFrame(()=>requestAnimationFrame(()=>d.classList.add('in')));   // next frames so the entrance transitions play
-    // first child + z-index 0 = sits behind every page and panel, so it can never cover or shift UI
+  document.body.insertBefore(d,document.body.firstChild);   // first child + z-index 0 = sits behind every page and panel, so it can never cover or shift UI
 }
 /* ---------- season pass ---------- */
 function hwProg(){
