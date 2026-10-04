@@ -128,6 +128,8 @@ html.hw-on{--accent:#ff7a1a;--accent2:#a855ff;--border:rgba(255,165,90,.15)}
 .bgfx{position:fixed}
 .bgfx::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(1100px 680px at 12% -8%,rgba(150,70,255,.34),transparent 58%),radial-gradient(950px 640px at 96% 6%,rgba(255,110,30,.22),transparent 58%),radial-gradient(1000px 720px at 50% 118%,rgba(255,90,20,.20),transparent 62%),linear-gradient(160deg,#0d0714 0%,#170b24 45%,#22101a 100%);opacity:0;transition:opacity .8s ease}
 html.hw-on .bgfx::before{opacity:1}
+/* Halloween background always wins over a personal background / dim, so it looks like the launcher */
+html.hw-on .bgfx .layer,html.hw-on .bgfx .dim{opacity:0!important}
 html.hw-on ::selection{background:rgba(255,122,26,.45)}
 html.hw-on .btn:not(.sec):not(.danger){background:linear-gradient(135deg,#ff7a1a,#9a3df0);box-shadow:0 6px 18px rgba(255,110,20,.3)}
 html.hw-on .send{background:linear-gradient(135deg,#ff8a1f,#9a3df0);box-shadow:0 4px 14px rgba(255,110,20,.35)}
@@ -194,7 +196,7 @@ html.hw-on *::-webkit-scrollbar-thumb:hover{background:rgba(255,150,60,.7)}
 .hw-head .hw-big{display:block;font-size:44px;line-height:1.1;animation:hwPk 2.6s ease-in-out infinite}
 .hw-head h2{font-size:24px;margin:2px 0 2px;background:linear-gradient(90deg,#ff7a1a,#ffd27a,#c58bff,#ff7a1a);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:nmFlow 6s linear infinite}
 .hw-head p{font-size:12.5px;color:var(--muted);max-width:420px;margin:0 auto}
-.hw-x{position:absolute;top:12px;right:12px;z-index:2;width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid var(--border);color:var(--text)}
+.hw-modal .hw-x{position:absolute;top:12px;right:12px;z-index:2;width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid var(--border);color:var(--text)}
 .hw-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
 .hw-stat{padding:9px 6px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,150,60,.25)}
 .hw-stat b{display:block;font-size:17px;color:#ffd9a8;font-variant-numeric:tabular-nums}
