@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-10-03.04">
+<meta name="build-version" content="2026-10-03.05">
 <title>Itsukis Chat Hub</title>
 <link rel="icon" type="image/png" href="https://aniitsukicoded.github.io/backups/icon.png">
 <!-- RAW-LINK BOOTSTRAP: everything (css + js) is loaded from raw.githubusercontent.com.
@@ -361,6 +361,8 @@
       if(r.bottom<0||r.top>innerHeight||r.right<0||r.left>innerWidth)continue;
       var dx=Math.max(r.left-x,0,x-r.right),dy=Math.max(r.top-y,0,y-r.bottom);
       var d=Math.sqrt(dx*dx+dy*dy);
+      e.style.setProperty('--st',e.scrollTop+'px');
+      e.style.setProperty('--ch',e.clientHeight+'px');
       e.style.setProperty('--px',(x-r.left)+'px');
       e.style.setProperty('--py',(y-r.top)+'px');
       e.style.setProperty('--glow-op',Math.max(0,Math.min(1,1-d/R)).toFixed(3));
