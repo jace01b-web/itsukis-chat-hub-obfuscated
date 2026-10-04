@@ -387,7 +387,7 @@
         var nx,ny;
         if(len>0){nx=ox/len*(px<0?-1:1);ny=oy/len*(py<0?-1:1)}
         else if(qx>qy){nx=px<0?-1:1;ny=0}else{nx=0;ny=py<0?-1:1}
-        var t=1-Math.max(dist,0)/bz,f=t*t*(3-2*t);   /* smooth, strongest at the very rim */
+        var u=Math.min(1,Math.max(dist,0)/bz),f=1-Math.sqrt(Math.max(0,1-(1-u)*(1-u)));   /* convex-lens profile: steepest right at the rim, easing to flat */
         R=128-nx*f*127;G=128-ny*f*127;
       }
       var o=(j*cw+i)*4;d[o]=R;d[o+1]=G;d[o+2]=128;d[o+3]=255;
@@ -400,18 +400,26 @@
       if(w<40||h<28||w>1400||h>1400)return;
       var key=w+'x'+h;if(seen.get(el)===key)return;seen.set(el,key);
       var rad=parseFloat(getComputedStyle(el).borderTopLeftRadius)||18;
-      var bz=Math.max(10,Math.min(30,Math.min(w,h)*.3));
+      var bz=Math.max(12,Math.min(40,Math.min(w,h)*.36));
       var id=el._lgid||(el._lgid='lgf'+(++n)),f=document.getElementById(id);
       if(!f){
         f=document.createElementNS(NS,'filter');f.id=id;
         f.setAttribute('color-interpolation-filters','sRGB');
         f.setAttribute('x','0');f.setAttribute('y','0');f.setAttribute('width','1');f.setAttribute('height','1');
-        f.innerHTML='<feImage result="m" preserveAspectRatio="none"/><feDisplacementMap in="SourceGraphic" in2="m" xChannelSelector="R" yChannelSelector="G"/>';
+        var ch=function(c,m){return '<feColorMatrix in="'+c+'" type="matrix" values="'+m+' 0 0 0 1 0" result="'+c+'c"/>'};
+        f.innerHTML='<feImage result="m" preserveAspectRatio="none"/>'
+          +'<feDisplacementMap in="SourceGraphic" in2="m" xChannelSelector="R" yChannelSelector="G" result="dr"/>'
+          +'<feDisplacementMap in="SourceGraphic" in2="m" xChannelSelector="R" yChannelSelector="G" result="dg"/>'
+          +'<feDisplacementMap in="SourceGraphic" in2="m" xChannelSelector="R" yChannelSelector="G" result="db"/>'
+          +ch('dr','1 0 0 0 0  0 0 0 0 0  0 0 0 0 0')+ch('dg','0 0 0 0 0  0 1 0 0 0  0 0 0 0 0')+ch('db','0 0 0 0 0  0 0 0 0 0  0 0 1 0 0')
+          +'<feComposite in="drc" in2="dgc" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="rg"/>'
+          +'<feComposite in="rg" in2="dbc" operator="arithmetic" k1="0" k2="1" k3="1" k4="0"/>';
         defs.appendChild(f);
       }
       var url=makeMap(w,h,rad,bz);
       var im=f.firstChild;im.setAttribute('href',url);im.setAttributeNS('http://www.w3.org/1999/xlink','href',url);
-      f.lastChild.setAttribute('scale',String(Math.round(bz*2.2)));   /* ~1.1 x bezel width of bend at the rim */
+      var S=bz*2.6,dm=f.querySelectorAll('feDisplacementMap');   /* red bends least, blue most = prism fringe at the rim */
+      dm[0].setAttribute('scale',String(Math.round(S*.86)));dm[1].setAttribute('scale',String(Math.round(S*.96)));dm[2].setAttribute('scale',String(Math.round(S*1.08)));
       el.style.setProperty('--lg-f','url(#'+id+')');
     }catch(_){}
   }
