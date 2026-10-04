@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-10-03.09">
+<meta name="build-version" content="2026-10-03.10">
 <title>Itsukis Chat Hub</title>
 <link rel="icon" type="image/png" href="https://aniitsukicoded.github.io/backups/icon.png">
 <!-- RAW-LINK BOOTSTRAP: everything (css + js) is loaded from raw.githubusercontent.com.
@@ -350,79 +350,116 @@
 <div id="lightboxRoot"></div>
 
 <script>
-/* Liquid Glass runtime: (1) drifting colour blobs behind the app, (2) Chromium-only edge refraction.
-   Safe to run twice; every part fails silently so the page never breaks. */
+/* ==========================================================================
+   LIQUID GLASS ENGINE v5
+   1. Living backdrop  : drifting colour blobs + aurora + faint dot grid (so glass has something to bend)
+   2. Lens refraction  : per-element SDF lens map, chromatic dispersion, baked specular bevel (Chromium desktop)
+   3. Light            : the rim of every panel is lit from the direction of your pointer
+   4. Jelly            : buttons / cards squish when pressed
+   Tweak live from the console or set window.LG_CONFIG before this script runs:
+     {strength:2.6, dispersion:1, spec:.9, bezel:1, light:[-.62,-.78]}
+   Every part fails silently so the page never breaks.
+   ========================================================================== */
 (function(){
-  if(window.__lg)return;window.__lg=1;
+  if(window.__lg2)return;window.__lg2=window.__lg=1;
   var de=document.documentElement;
+  var C=window.LG={strength:2.6,dispersion:1,spec:.9,bezel:1,light:[-.62,-.78]};
+  try{var u=window.LG_CONFIG||{};for(var k in u)C[k]=u[k]}catch(_){}
+
+  /* ---------- 1. backdrop ---------- */
   function orbs(){
     if(document.getElementById('lgOrbs')||!document.body)return;
     var d=document.createElement('div');d.id='lgOrbs';d.className='lg-orbs';d.setAttribute('aria-hidden','true');
     d.innerHTML='<i></i><i></i><i></i><i></i><i></i>';
     document.body.insertBefore(d,document.body.firstChild);
   }
+
+  /* ---------- 2. refraction ---------- */
   var ua=navigator.userAgent;
   var chromium=(!!window.chrome||/Chrom(e|ium)\//.test(ua))&&!/CriOS|FxiOS|iPhone|iPad|Firefox|Android/.test(ua)&&matchMedia('(min-width:761px) and (hover:hover)').matches;
-  var NS='http://www.w3.org/2000/svg',SEL='.opt,.userchip,.online-pill,.sidebar,.topbar,.composer,.card';
-  var defs=null,n=0,seen=new WeakMap(),ro=null;
+  var NS='http://www.w3.org/2000/svg';
+  var SEL='.opt,.userchip,.online-pill,.sidebar,.topbar,.composer,.card,.modal,.toast,.mention-pop,.emoji-pop,.cp-pop,.csel-menu';
+  var defs=null,n=0,seen=new WeakMap(),ro=null,cache={};
+
   function setup(){
     var svg=document.createElementNS(NS,'svg');svg.setAttribute('width','0');svg.setAttribute('height','0');
     svg.setAttribute('aria-hidden','true');svg.style.cssText='position:absolute;width:0;height:0;pointer-events:none';
     defs=document.createElementNS(NS,'defs');svg.appendChild(defs);document.body.appendChild(svg);
-    if(window.ResizeObserver)ro=new ResizeObserver(function(es){es.forEach(function(e){build(e.target)})});
+    if(window.ResizeObserver)ro=new ResizeObserver(function(es){es.forEach(function(e){later(e.target)})});
   }
-  /* displacement map for a rounded rect: neutral grey inside, pushing inward along the edge normal inside a narrow bezel */
-  function makeMap(w,h,r,bz){
+
+  /* One pass over the rounded-rect signed-distance field produces BOTH maps:
+       disp : R/G = inward lens displacement (convex-lens profile, steepest at the rim)
+       spec : white with alpha = bevel highlight, lit from C.light, plus a dim bounce on the far side */
+  function makeMaps(w,h,r,bz){
     var k=Math.min(1,520/Math.max(w,h)),cw=Math.max(8,Math.round(w*k)),ch=Math.max(8,Math.round(h*k));
-    var c=document.createElement('canvas');c.width=cw;c.height=ch;
-    var x=c.getContext('2d'),im=x.createImageData(cw,ch),d=im.data;
-    var hw=w/2,hh=h/2;r=Math.min(r,hw,hh);
+    var c1=document.createElement('canvas'),c2=document.createElement('canvas');
+    c1.width=c2.width=cw;c1.height=c2.height=ch;
+    var x1=c1.getContext('2d'),x2=c2.getContext('2d'),i1=x1.createImageData(cw,ch),i2=x2.createImageData(cw,ch),a=i1.data,b=i2.data;
+    var hw=w/2,hh=h/2,sw=Math.max(2.5,Math.min(8,bz*.24)),Lx=C.light[0],Ly=C.light[1];r=Math.min(r,hw,hh);
     for(var j=0;j<ch;j++)for(var i=0;i<cw;i++){
       var px=(i+.5)/k-hw,py=(j+.5)/k-hh;
       var qx=Math.abs(px)-hw+r,qy=Math.abs(py)-hh+r;
       var ox=Math.max(qx,0),oy=Math.max(qy,0),len=Math.sqrt(ox*ox+oy*oy);
-      var sdf=len+Math.min(Math.max(qx,qy),0)-r,dist=-sdf;
-      var R=128,G=128;
+      var dist=-(len+Math.min(Math.max(qx,qy),0)-r);
+      var R=128,G=128,A=0;
       if(dist<bz){
         var nx,ny;
         if(len>0){nx=ox/len*(px<0?-1:1);ny=oy/len*(py<0?-1:1)}
         else if(qx>qy){nx=px<0?-1:1;ny=0}else{nx=0;ny=py<0?-1:1}
-        var u=Math.min(1,Math.max(dist,0)/bz),f=1-Math.sqrt(Math.max(0,1-(1-u)*(1-u)));   /* convex-lens profile: steepest right at the rim, easing to flat */
+        var d0=Math.max(dist,0),t=Math.min(1,d0/bz),f=1-Math.sqrt(Math.max(0,1-(1-t)*(1-t)));
         R=128-nx*f*127;G=128-ny*f*127;
+        var dl=nx*Lx+ny*Ly,I=dl>0?Math.pow(dl,1.3):Math.pow(-dl,1.3)*.55;
+        A=Math.min(1,(.14+I*.9)*Math.exp(-d0/sw))*C.spec*255;
       }
-      var o=(j*cw+i)*4;d[o]=R;d[o+1]=G;d[o+2]=128;d[o+3]=255;
+      var o=(j*cw+i)*4;
+      a[o]=R;a[o+1]=G;a[o+2]=128;a[o+3]=255;
+      b[o]=255;b[o+1]=255;b[o+2]=255;b[o+3]=A;
     }
-    x.putImageData(im,0,0);return c.toDataURL();
+    x1.putImageData(i1,0,0);x2.putImageData(i2,0,0);
+    return{d:c1.toDataURL(),s:c2.toDataURL()};
   }
+
+  function chan(c,m){return '<feColorMatrix in="'+c+'" type="matrix" values="'+m+' 0 0 0 1 0" result="'+c+'c"/>'}
+  var DM='<feDisplacementMap in="SourceGraphic" in2="m" xChannelSelector="R" yChannelSelector="G" result="';
+  function filterHTML(full){
+    var s='<feImage result="m" preserveAspectRatio="none"/><feImage result="s" preserveAspectRatio="none"/>';
+    if(!full)return s+DM+'dr"/><feBlend in="s" in2="dr" mode="screen"/>';
+    return s+DM+'dr"/>'+DM+'dg"/>'+DM+'db"/>'
+      +chan('dr','1 0 0 0 0  0 0 0 0 0  0 0 0 0 0')+chan('dg','0 0 0 0 0  0 1 0 0 0  0 0 0 0 0')+chan('db','0 0 0 0 0  0 0 0 0 0  0 0 1 0 0')
+      +'<feComposite in="drc" in2="dgc" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="rg"/>'
+      +'<feComposite in="rg" in2="dbc" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="rgb"/>'
+      +'<feBlend in="s" in2="rgb" mode="screen"/>';
+  }
+
   function build(el){
     try{
-      var r=el.getBoundingClientRect(),w=Math.round(r.width),h=Math.round(r.height);
+      var w=el.offsetWidth,h=el.offsetHeight;                 /* layout size: unaffected by pop-in scale animations */
       if(w<40||h<28||w>1400||h>1400)return;
-      var key=w+'x'+h;if(seen.get(el)===key)return;seen.set(el,key);
       var rad=parseFloat(getComputedStyle(el).borderTopLeftRadius)||18;
-      var bz=Math.max(12,Math.min(40,Math.min(w,h)*.36));
+      var full=!de.classList.contains('anti-lag')&&w*h<360000&&C.dispersion>0;   /* big panels use the cheaper single-pass lens */
+      var key=w+'x'+h+'x'+Math.round(rad)+(full?'F':'L');
+      if(seen.get(el)===key)return;seen.set(el,key);
+      var bz=Math.max(12,Math.min(40,Math.min(w,h)*.36))*C.bezel;
       var id=el._lgid||(el._lgid='lgf'+(++n)),f=document.getElementById(id);
+      if(f&&f.getAttribute('data-m')!==(full?'F':'L')){f.remove();f=null}
       if(!f){
-        f=document.createElementNS(NS,'filter');f.id=id;
+        f=document.createElementNS(NS,'filter');f.id=id;f.setAttribute('data-m',full?'F':'L');
         f.setAttribute('color-interpolation-filters','sRGB');
         f.setAttribute('x','0');f.setAttribute('y','0');f.setAttribute('width','1');f.setAttribute('height','1');
-        var ch=function(c,m){return '<feColorMatrix in="'+c+'" type="matrix" values="'+m+' 0 0 0 1 0" result="'+c+'c"/>'};
-        f.innerHTML='<feImage result="m" preserveAspectRatio="none"/>'
-          +'<feDisplacementMap in="SourceGraphic" in2="m" xChannelSelector="R" yChannelSelector="G" result="dr"/>'
-          +'<feDisplacementMap in="SourceGraphic" in2="m" xChannelSelector="R" yChannelSelector="G" result="dg"/>'
-          +'<feDisplacementMap in="SourceGraphic" in2="m" xChannelSelector="R" yChannelSelector="G" result="db"/>'
-          +ch('dr','1 0 0 0 0  0 0 0 0 0  0 0 0 0 0')+ch('dg','0 0 0 0 0  0 1 0 0 0  0 0 0 0 0')+ch('db','0 0 0 0 0  0 0 0 0 0  0 0 1 0 0')
-          +'<feComposite in="drc" in2="dgc" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="rg"/>'
-          +'<feComposite in="rg" in2="dbc" operator="arithmetic" k1="0" k2="1" k3="1" k4="0"/>';
-        defs.appendChild(f);
+        f.innerHTML=filterHTML(full);defs.appendChild(f);
       }
-      var url=makeMap(w,h,rad,bz);
-      var im=f.firstChild;im.setAttribute('href',url);im.setAttributeNS('http://www.w3.org/1999/xlink','href',url);
-      var S=bz*2.6,dm=f.querySelectorAll('feDisplacementMap');   /* red bends least, blue most = prism fringe at the rim */
-      dm[0].setAttribute('scale',String(Math.round(S*.86)));dm[1].setAttribute('scale',String(Math.round(S*.96)));dm[2].setAttribute('scale',String(Math.round(S*1.08)));
+      var ck=w+'|'+h+'|'+Math.round(rad)+'|'+bz+'|'+C.spec,m=cache[ck]||(cache[ck]=makeMaps(w,h,rad,bz));
+      f.querySelectorAll('feImage').forEach(function(im,ix){
+        var url=ix?m.s:m.d;im.setAttribute('href',url);im.setAttributeNS('http://www.w3.org/1999/xlink','href',url)});
+      var S=bz*C.strength,dm=f.querySelectorAll('feDisplacementMap'),dp=C.dispersion;
+      if(dm.length===1)dm[0].setAttribute('scale',String(Math.round(S)));
+      else{dm[0].setAttribute('scale',String(Math.round(S*(1-.14*dp))));dm[1].setAttribute('scale',String(Math.round(S)));dm[2].setAttribute('scale',String(Math.round(S*(1+.12*dp))))}
       el.style.setProperty('--lg-f','url(#'+id+')');
     }catch(_){}
   }
+  function later(el){clearTimeout(el._lgt);el._lgt=setTimeout(function(){build(el)},140)}   /* debounce: no map rebuild every frame of a resize animation */
+
   var timer=0;
   function scan(){
     timer=0;
@@ -432,8 +469,36 @@
     });
   }
   function queue(){if(!timer)timer=setTimeout(scan,250)}
+
+  /* ---------- 3. light follows the pointer ---------- */
+  var mx=-1e5,my=-1e5,raf=0;
+  function light(){
+    raf=0;
+    document.querySelectorAll(SEL).forEach(function(el){
+      var r=el.getBoundingClientRect();if(!r.width)return;
+      var cx=r.left+r.width/2,cy=r.top+r.height/2,dx=mx-cx,dy=my-cy;
+      var ex=Math.max(r.left-mx,0,mx-r.right),ey=Math.max(r.top-my,0,my-r.bottom);
+      var nr=Math.max(0,1-Math.sqrt(ex*ex+ey*ey)/280);nr=nr*nr*(3-2*nr);
+      var ang=Math.round((Math.atan2(dx,-dy)*180/Math.PI+360)%360),nn=Math.round(nr*50)/50;
+      if(el._la!==ang)el.style.setProperty('--lg-a',(el._la=ang)+'deg');
+      if(el._ln!==nn)el.style.setProperty('--lg-n',(el._ln=nn));
+    });
+  }
+  function track(e){mx=e.clientX;my=e.clientY;if(!raf)raf=requestAnimationFrame(light)}
+
+  /* ---------- 4. jelly press ---------- */
+  function jelly(e){
+    var t=e.target&&e.target.closest&&e.target.closest('.btn,.opt,.icon-btn,.send,.userchip,.online-pill,.menu-btn,.music-controls button');
+    if(!t||matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+    t.classList.remove('lg-jelly');void t.offsetWidth;t.classList.add('lg-jelly');
+    t.addEventListener('animationend',function a(ev){if(ev.animationName==='lgJelly'){t.classList.remove('lg-jelly');t.removeEventListener('animationend',a)}});
+  }
+
   function start(){
     orbs();
+    addEventListener('pointermove',track,{passive:true});
+    document.addEventListener('mouseleave',function(){mx=my=-1e5;if(!raf)raf=requestAnimationFrame(light)});
+    document.addEventListener('pointerup',jelly,true);
     if(!chromium)return;
     try{setup();de.classList.add('lg-refract');scan();
       new MutationObserver(queue).observe(document.body,{childList:true,subtree:true});
@@ -442,7 +507,6 @@
   }
   if(document.body)start();else document.addEventListener('DOMContentLoaded',start);
 })();
-
 </script>
 </body>
 </html>
