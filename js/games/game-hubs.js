@@ -28,7 +28,7 @@ const HUB_SECTIONS=[['apps','Apps'],['hubs','Hubs'],['tools','Tools'],['links','
 // Custom entries added by hand (shown without needing the external apps.json / HUB_INFO).
 const CUSTOM_HUBS=[
   {sec:'apps',name:'MZK',url:'https://raw.githubusercontent.com/Cra-Z-Gaming/VUS/refs/heads/main/MZK',desc:'MZK app.',icon:'MZK',color:'violet'},
-  {sec:'hubs',name:'VUS Hub Modded',url:'https://raw.githubusercontent.com/AniItsukiCoded/VUS-Hub-Modded/refs/heads/main/VUSHubModded.html',desc:'Modded version of VUS Hub.',icon:'VM',color:'orange'}
+  {sec:'apps',name:'VUS Hub Modded',url:'https://raw.githubusercontent.com/AniItsukiCoded/VUS-Hub-Modded/refs/heads/main/VUSHubModded.html',desc:'Modded version of VUS Hub.',icon:'VM',color:'orange'}
 ];
 let _hubSec='hubs',_pxGroup='',_hubDir=0;
 const GAME_HUB_ALLOWLIST=new Set(Object.keys(HUB_INFO));
