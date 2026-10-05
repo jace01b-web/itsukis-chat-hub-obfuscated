@@ -75,10 +75,11 @@ function modalGlobalChoice(){
       <button class="gc-card gc-announcements" id="gcAnnouncements">
         <div class="gc-ic">📢</div>
         <h3>Announcements</h3>
-        ${(()=>{const n=DB.unreadAnnouncements(ME.id);return n?`<span class="badge gc-ann-badge" id="gcAnnBadge">${n>99?'99+':n} new</span>`:''})()}
+        <span class="ann-badge" id="gcAnnBadge"></span>
       </button>
     </div>
   </div></div>`;
+  refreshAnnPicker();
   const close=(after)=>{const bg=$('#gcBg');if(!bg){if(after)after();return}bg.classList.add('closing');setTimeout(()=>{if($('#modalRoot'))$('#modalRoot').innerHTML='';if(after)after()},240)};
   $('#gcBg').onclick=e=>{if(e.target.id==='gcBg')close()};
   $('#gcGlobal').onclick=()=>close(()=>openChat('global','global'));

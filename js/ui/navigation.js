@@ -29,6 +29,15 @@ function refreshBadge(){
   const b=$('#dmBadge');b.classList.toggle('hidden',!n);b.textContent=n;
   const a=DB.unreadAnnouncements(ME.id),ab=$('#annBadge');
   if(ab){ab.classList.toggle('hidden',!a);ab.textContent=a>99?'99+':a;ab.title=a+' new announcement'+(a===1?'':'s')}
+  refreshAnnPicker();
   $('#onlineCount').textContent=DB.onlineCount();
 }
 $('#homeOnlinePill').onclick=()=>openOnlineModal('Online now',DB.onlineIds());
+
+// Circular unread badge on the Announcements card of the chat picker (live: also called from live-sync).
+function refreshAnnPicker(){
+  const b=document.getElementById('gcAnnBadge');if(!b||!ME)return;
+  const n=DB.unreadAnnouncements(ME.id);
+  b.textContent=n>99?'99+':n;b.classList.toggle('show',n>0);
+  b.title=n+' new announcement'+(n===1?'':'s');
+}

@@ -167,8 +167,11 @@
 .mention-pop div:hover,.mention-pop div.sel{background:var(--accent)}
 .charcount{font-size:11px;color:var(--muted);text-align:right;margin-top:3px}
 
-/* New-announcements badge (home tile + chat picker) */
+/* New-announcements badges */
 #annBadge{position:absolute;top:14px;right:14px}
-.gc-ann-badge{position:absolute;top:10px;right:10px;z-index:2;animation:annPulse 1.8s ease-in-out infinite}
-@keyframes annPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
 .opt:has(.hw-dot) #annBadge{right:48px}
+.ann-badge{position:absolute;top:12px;right:12px;z-index:3;min-width:24px;height:24px;padding:0 7px;border-radius:12px;
+  background:linear-gradient(135deg,var(--accent2),#ff3d7f);color:#fff;font-size:12px;font-weight:800;line-height:24px;text-align:center;
+  box-shadow:0 2px 8px rgba(0,0,0,.45),0 0 0 2px rgba(255,255,255,.9);pointer-events:none;
+  transform:scale(0);opacity:0;transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .2s ease}
+.ann-badge.show{transform:scale(1);opacity:1}

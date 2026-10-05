@@ -51,6 +51,7 @@ DB.onChange(()=>{
     return; // let the restore write land and re-trigger onChange before doing anything else
   }
   if(view.page==='homePage')refreshBadge();
+  if(typeof refreshAnnPicker==='function')refreshAnnPicker();
   applyStyleIfChanged();
   DB.ensureDmMemberships();
   checkPingNotifications();
