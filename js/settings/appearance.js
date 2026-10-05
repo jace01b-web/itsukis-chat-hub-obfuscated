@@ -24,6 +24,8 @@ function bgCSS(s){
 // so blur never bleeds white edges and never spills off screen.
 function paintBg(layer,dim,s){
   const css=bgCSS(s);
+  // The real app background (not the settings preview): flag when a personal IMAGE is active so the Halloween skin lets it show.
+  if(layer.id==='bgLayer')document.documentElement.classList.toggle('has-bg-img',!!(css&&s.bgType==='image'));
   if(!css){layer.style.background='';layer.style.filter='none';dim.style.opacity=0;return}
   layer.style.background=css;
   layer.style.backgroundSize=(s.bgType==='image'&&s.bgFit==='contain')?'contain':'cover';
