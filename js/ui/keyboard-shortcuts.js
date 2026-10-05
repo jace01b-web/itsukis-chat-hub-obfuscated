@@ -31,6 +31,22 @@
     return c.offsetParent!==null;
   }
 
+  // Close the topmost closable panel (hub viewer, Settings, Hubs & Tools, friends/DM dialogs...) the same way its
+  // own Cancel/Close button would, so unsaved-settings revert etc. still run. Required dialogs (rules, username
+  // setup, Halloween popups) have no Cancel/Close button and are left alone.
+  function closeTopPanel(){
+    const hf=document.getElementById('hfClose');
+    if(hf&&document.querySelector('.hub-frame-box')){hf.click();return true}
+    const root=document.getElementById('modalRoot');
+    const bg=root&&root.querySelector('.modal-bg');
+    if(bg){
+      if(bg.id==='ghBg'&&typeof closeGameHubs==='function'){closeGameHubs();return true}
+      const btn=bg.querySelector('#sCancel,[id$="Cancel"],[id$="Close"],[id$="cancel"],[id$="close"],.modal-close,.cc-close');
+      if(btn){btn.click();return true}
+    }
+    return false;
+  }
+
   function goBackToMenu(){
     view.roomKey=null;view.section=null;DB.watchMessages(null);
     const sb=document.getElementById('sidebar');if(sb)sb.classList.remove('open');
@@ -42,13 +58,14 @@
 
     /* ---------- Escape ---------- */
     if(e.key==='Escape'){
-      if(overlayOpen())return;                       // the overlay's own handler closes it
+      if(closeTopPanel()){e.preventDefault();return}   // Settings / Hubs & Tools / viewer -> close it
+      if(overlayOpen())return;                       // pickers & menus close themselves
       const t=e.target;
       if(isEditable(t)){                             // stop typing; don't also leave the page
         if(t.id!=='msgIn')t.blur();                  // (msgIn handles itself in composer.js)
         return;
       }
-      if(typeof view!=='undefined'&&view.page==='chatPage'&&view.roomKey!==null){
+      if(typeof view!=='undefined'&&view.page==='chatPage'){   // chats, DMs, friends & requests
         e.preventDefault();goBackToMenu();
       }
       return;
