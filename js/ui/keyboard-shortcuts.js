@@ -11,17 +11,17 @@
 (function(){
   const isEditable=el=>!!el&&(el.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
 
+  const visible=el=>!!el&&(el.offsetWidth>0||el.offsetHeight>0||el.getClientRects().length>0)&&getComputedStyle(el).visibility!=='hidden';
+
   // Anything layered on top of the chat (settings, pickers, lightbox, menus, hub viewer...) owns the keyboard.
+  // Some of these (e.g. the right-click menu) stay in the DOM when closed, so only count them when actually shown.
   function overlayOpen(){
     const mr=document.getElementById('modalRoot'),lr=document.getElementById('lightboxRoot');
     if(mr&&mr.children.length)return true;
     if(lr&&lr.children.length)return true;
-    if(document.querySelector('.emoji-pop,#ctxMenu,.ctx-menu,.hub-frame-box,.hwi'))return true;
-    const ex=document.getElementById('extrasMenu');
-    if(ex&&(ex.classList.contains('open')||ex.closest('.open')))return true;
-    // any open <dialog>/aria-modal element, or an open custom dropdown
-    if(document.querySelector('[aria-modal="true"],dialog[open],.dd.open,.select.open'))return true;
-    return false;
+    if(document.querySelector('.emoji-pop,.hub-frame-box,.hwi'))return true;
+    if(document.querySelector('.ctx-menu.open,#ctxMenu.open,#extras.open,#extrasMenu.open'))return true;
+    return [...document.querySelectorAll('[aria-modal="true"],dialog[open]')].some(visible);
   }
 
   function composerUsable(){
