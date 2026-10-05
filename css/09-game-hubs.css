@@ -198,3 +198,42 @@
   animation:typedot 1.3s cubic-bezier(.45,0,.55,1) infinite}
 .typing-dots i:nth-child(2){animation-delay:.15s}
 .typing-dots i:nth-child(3){animation-delay:.3s}
+
+/* ===== Viewer bar redesign: floating liquid-glass pill that matches the rest of the app ===== */
+.hub-frame-box{background:radial-gradient(120% 90% at 50% 0%,#1c1830 0%,#0b0b12 70%)}
+.hub-frame-wrap{flex:none;padding:10px 12px 8px;padding-top:calc(10px + env(safe-area-inset-top,0px));position:relative;z-index:3}
+.hub-frame-bar{position:relative;display:flex;align-items:center;gap:12px;padding:8px 10px;border:1px solid var(--glass-edge-soft,rgba(255,255,255,.18));border-radius:20px;
+  background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.03)),var(--ui-panel,rgba(15,16,20,.55));
+  -webkit-backdrop-filter:blur(var(--ui-blur,18px)) saturate(1.7);backdrop-filter:blur(var(--ui-blur,18px)) saturate(1.7);
+  box-shadow:var(--glass-shadow,0 18px 44px rgba(0,0,0,.4)),var(--glass-inset,inset 0 1.5px 0 rgba(255,255,255,.3));overflow:hidden}
+/* soft specular sheen sweeping across the glass */
+.hub-frame-bar::before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.10) 46%,transparent 62%);background-size:220% 100%;animation:hfSheen 7s ease-in-out infinite}
+@keyframes hfSheen{0%,100%{background-position:120% 0}50%{background-position:-20% 0}}
+.hub-frame-bar>*{position:relative}
+.hf-title{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:9px;font-weight:800;font-size:14.5px;letter-spacing:.2px}
+.hf-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  background:linear-gradient(90deg,#fff,var(--accent,#7c6cff) 60%,var(--accent2,#ff6cb4));-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.hf-dot{flex:none;width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,var(--accent,#7c6cff),var(--accent2,#ff6cb4));
+  box-shadow:0 0 0 3px rgba(255,255,255,.06),0 0 12px var(--accent,#7c6cff);animation:hfPulse 2.4s ease-in-out infinite}
+@keyframes hfPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.78);opacity:.65}}
+.hf-actions{display:flex;gap:8px;flex:none}
+.hf-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;font-size:13px;font-weight:700;color:var(--text);
+  border:1px solid var(--glass-edge-soft,rgba(255,255,255,.18));background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.04));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 2px 8px rgba(0,0,0,.25);
+  transition:transform .25s var(--glass-spring,cubic-bezier(.16,1,.3,1)),border-color .2s,box-shadow .2s,background .2s}
+.hf-btn:hover{transform:translateY(-1px);border-color:var(--accent,#7c6cff);box-shadow:inset 0 1px 0 rgba(255,255,255,.34),0 6px 18px rgba(0,0,0,.35),0 0 16px -2px var(--accent,#7c6cff)}
+.hf-btn:active{transform:translateY(0) scale(.96)}
+.hf-btn .hf-ic{flex:none;transition:transform .3s var(--glass-spring,cubic-bezier(.16,1,.3,1))}
+.hf-btn:hover .hf-ic{transform:scale(1.15)}
+.hf-close:hover{border-color:var(--danger,#ff5d73);box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 6px 18px rgba(0,0,0,.35),0 0 16px -2px var(--danger,#ff5d73)}
+.hf-close:hover .hf-ic{transform:rotate(90deg) scale(1.1)}
+.hf-primary{border-color:transparent;color:#fff;background:linear-gradient(135deg,var(--accent,#7c6cff),var(--accent2,#ff6cb4));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 6px 18px -4px var(--accent,#7c6cff)}
+.hf-primary:hover{border-color:transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 8px 22px -2px var(--accent,#7c6cff)}
+.hf-prog{margin:0 18px;border-radius:99px}
+.hub-frame-box iframe{border-radius:16px 16px 0 0}
+.hub-frame-box:fullscreen .hub-frame-wrap{padding-top:10px}
+@media(max-width:560px){.hf-btn span{display:none}.hf-btn{padding:10px 12px}.hf-title{display:flex}.hub-frame-bar{gap:8px}}
+@media(prefers-reduced-motion:reduce){.hub-frame-bar::before,.hf-dot{animation:none}}
+.hub-frame-box.bare .hub-frame-wrap{display:none}

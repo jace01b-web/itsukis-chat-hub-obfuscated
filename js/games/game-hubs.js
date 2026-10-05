@@ -291,11 +291,19 @@ function closeHubFrame(){
   e.classList.add('closing');
   setTimeout(()=>e.remove(),240);
 }
+// Small stroke icons for the viewer bar (inherit colour from the button).
+const _hfSvg=d=>`<svg class="hf-ic" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const HF_IC={
+  close:_hfSvg('<path d="M18 6 6 18M6 6l12 12"/>'),
+  full:_hfSvg('<path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/>'),
+  exit:_hfSvg('<path d="M3 8h3a2 2 0 0 0 2-2V3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M21 16h-3a2 2 0 0 0-2 2v3"/>'),
+  tab:_hfSvg('<path d="M15 3h6v6M10 14 21 3M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/>')
+};
 // In-site viewer: shown when the "open in iframe" setting is on.
 function openHubFrame(h,srcdoc){
   const old=document.getElementById('hubFrameBox');if(old)old.remove();
   const box=document.createElement('div');box.id='hubFrameBox';box.className='hub-frame-box';
-  box.innerHTML=`<div class="hub-frame-bar"><button type="button" class="hf-btn" id="hfClose">✕ Close</button><div class="hf-title">${esc(h.name)}</div><button type="button" class="hf-btn" id="hfFull">⛶ Fullscreen</button><button type="button" class="hf-btn" id="hfTab">↗ New tab</button></div><div class="hf-prog"><i></i></div><div class="hf-stage"><div class="hf-loading"><div class="hf-spin"></div><b>Loading ${esc(h.name)}…</b><small>Some sites take a few seconds</small></div><iframe id="hfFrame" allow="fullscreen; autoplay; clipboard-write; gamepad; microphone; camera" allowfullscreen referrerpolicy="no-referrer"></iframe></div><button type="button" class="hf-exit" id="hfExit">⤡ Exit fullscreen</button>`;
+  box.innerHTML=`<div class="hub-frame-wrap"><div class="hub-frame-bar"><button type="button" class="hf-btn hf-close" id="hfClose">${HF_IC.close}<span>Close</span></button><div class="hf-title"><i class="hf-dot"></i><span class="hf-name">${esc(h.name)}</span></div><div class="hf-actions"><button type="button" class="hf-btn" id="hfFull">${HF_IC.full}<span>Fullscreen</span></button><button type="button" class="hf-btn hf-primary" id="hfTab">${HF_IC.tab}<span>New tab</span></button></div></div></div><div class="hf-prog"><i></i></div><div class="hf-stage"><div class="hf-loading"><div class="hf-spin"></div><b>Loading ${esc(h.name)}…</b><small>Some sites take a few seconds</small></div><iframe id="hfFrame" allow="fullscreen; autoplay; clipboard-write; gamepad; microphone; camera" allowfullscreen referrerpolicy="no-referrer"></iframe></div><button type="button" class="hf-exit" id="hfExit">⤡ Exit fullscreen</button>`;
   document.body.appendChild(box);
   const fr=box.querySelector('#hfFrame'),fb=box.querySelector('#hfFull');
   // reveal the page smoothly once it has loaded (or after a safety timeout)
@@ -306,7 +314,7 @@ function openHubFrame(h,srcdoc){
   // Fullscreen puts the IFRAME itself (just the page, no bar) into fullscreen.
   const canFs=!!(fr.requestFullscreen||fr.webkitRequestFullscreen);
   const isFs=()=>document.fullscreenElement===fr||document.webkitFullscreenElement===fr||box.classList.contains('bare');
-  const paint=()=>{const f=isFs();fb.textContent=f?'⤡ Exit fullscreen':'⛶ Fullscreen';box.classList.toggle('is-fs',f)};
+  const paint=()=>{const f=isFs();fb.innerHTML=(f?HF_IC.exit:HF_IC.full)+'<span>'+(f?'Exit fullscreen':'Fullscreen')+'</span>';box.classList.toggle('is-fs',f)};
   fb.onclick=()=>{
     if(!canFs){box.classList.toggle('bare');paint();return}   // e.g. iOS: fill the screen and hide the bar
     if(isFs())(document.exitFullscreen||document.webkitExitFullscreen).call(document);
@@ -316,7 +324,23 @@ function openHubFrame(h,srcdoc){
   _hubFsHandler=paint;
   document.addEventListener('fullscreenchange',paint);document.addEventListener('webkitfullscreenchange',paint);
   box.querySelector('#hfClose').onclick=closeHubFrame;
-  box.querySelector('#hfTab').onclick=()=>{window.open(h.url,'_blank','noopener')};
+  // "New tab" from the viewer: raw.githubusercontent.com serves source as plain text, so write the
+  // already-fetched page (or fetch it) into about:blank, exactly like the non-iframe mode does.
+  box.querySelector('#hfTab').onclick=()=>{
+    if(!h.url.includes('raw.githubusercontent.com')){window.open(h.url,'_blank','noopener');return}
+    if(srcdoc!=null){openHubBlank(h,srcdoc);return}
+    toast('Loading '+h.name+'...');
+    fetch(h.url+(h.url.includes('?')?'&':'?')+'v='+Date.now(),{cache:'no-store'})
+      .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text()})
+      .then(t=>openHubBlank(h,t))
+      .catch(()=>toast('Failed to load '+h.name,'bad'));
+  };
+}
+// Writes fetched page source into a fresh about:blank tab (so it renders instead of showing raw text).
+function openHubBlank(h,text){
+  const win=window.open('about:blank','_blank');
+  if(!win){toast('Popup blocked — allow popups for this site','bad');return}
+  win.document.open();win.document.write(text);win.document.close();
 }
 function launchHub(h){
   if(!h.url)return;
@@ -330,9 +354,7 @@ function launchHub(h){
     .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text()})
     .then(text=>{
       if(asFrame){openHubFrame(h,text);return}
-      const win=window.open('about:blank','_blank');
-      if(!win){toast('Popup blocked — allow popups for this site','bad');return}
-      win.document.open();win.document.write(text);win.document.close();
+      openHubBlank(h,text);
     })
     .catch(()=>{toast('Failed to load '+h.name,'bad')});
 }

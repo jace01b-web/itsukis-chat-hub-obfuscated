@@ -269,3 +269,20 @@ html.hw-on *::-webkit-scrollbar-thumb:hover{background:rgba(255,150,60,.7)}
 html.anti-lag .hwi *,html.anti-lag .hwi{animation:none!important}
 @media (prefers-reduced-motion:reduce){.hwi *,.hwi{animation:none!important}}
 /* HALLOWEEN:END */
+
+/* ===== Halloween: viewer bar ===== */
+html.hw-on .hub-frame-box{background:radial-gradient(90% 60% at 50% 0,rgba(255,122,26,.22),transparent 70%),radial-gradient(70% 60% at 100% 100%,rgba(150,70,255,.26),transparent 70%),#0d0616}
+html.hw-on .hub-frame-bar{border-color:rgba(255,150,60,.42);
+  background:radial-gradient(80% 200% at 8% 50%,rgba(255,120,20,.26),transparent 62%),radial-gradient(70% 200% at 96% 50%,rgba(150,70,255,.24),transparent 62%),linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02)),rgba(24,10,36,.62);
+  box-shadow:0 18px 44px rgba(0,0,0,.5),0 0 34px rgba(255,110,20,.18),inset 0 1.5px 0 rgba(255,210,150,.3)}
+html.hw-on .hub-frame-bar::after{content:"";position:absolute;left:14px;right:14px;bottom:0;height:2px;border-radius:2px;pointer-events:none;
+  background:linear-gradient(90deg,transparent,#ff7a1a,#ffd27a,#c58bff,transparent);background-size:200% 100%;animation:hfEmber 4s linear infinite;opacity:.9}
+@keyframes hfEmber{to{background-position:200% 0}}
+html.hw-on .hf-name{background:linear-gradient(90deg,#ffb347,#ff7a1a 35%,#d9b2ff 65%,#ffb347);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;animation:hfEmber 5s linear infinite}
+html.hw-on .hf-dot{background:radial-gradient(circle at 35% 30%,#ffd98a,#ff7a1a);box-shadow:0 0 0 3px rgba(255,140,40,.15),0 0 14px #ff7a1a}
+html.hw-on .hf-btn:hover{border-color:rgba(255,150,60,.8);box-shadow:inset 0 1px 0 rgba(255,220,170,.34),0 6px 18px rgba(0,0,0,.4),0 0 18px -2px rgba(255,120,20,.7)}
+html.hw-on .hf-primary{color:#2a1000;background:linear-gradient(135deg,#ffb347,#ff6a00);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 6px 18px -4px rgba(255,110,20,.7)}
+html.hw-on .hf-primary:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 8px 24px -2px rgba(255,110,20,.85)}
+html.hw-on .hf-spin{border-top-color:#ff7a1a}
+html.hw-on .hf-prog i{background:linear-gradient(90deg,transparent,#ff7a1a,#c46bff,transparent)}
+@media(prefers-reduced-motion:reduce){html.hw-on .hub-frame-bar::after,html.hw-on .hf-name{animation:none}}
