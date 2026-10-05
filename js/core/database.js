@@ -14,6 +14,7 @@ const DB=(()=>{
   const unsubs=[];         // base listeners
   let msgUnsub=null,msgKey=null;
   let reactUnsub=null;   // follows whichever conversation is open, alongside msgUnsub
+  let _rcBase,_rcShownAt=0;   // owner "Reconnect everyone" request tracking
   let presUnsub=null,presenceSelfRef=null;   // scoped "who's here" presence for the open context
   let presenceRef=null,sessUnsub=null,mySessionToken=null,sessionConfirmed=false,kicked=false;   // single-active-session enforcement
   const previewUnsubs={};
@@ -144,7 +145,7 @@ const DB=(()=>{
   }
 
   function startListeners(){
-    stopAll();BANNED_LOADED=false;
+    stopAll();BANNED_LOADED=false;_rcBase=undefined;
     presenceRef=R('onlineUsers/'+myId);
     claimSession();watchSession();
     listen('users',v=>C.users=v||{});
@@ -204,6 +205,20 @@ const DB=(()=>{
       C.online=C.onlineIds.length;
       C.onlineIds.forEach(id=>fetchUserIfMissing(id));
       if(ready)emit();   // refresh online pills/lists the moment someone goes offline
+    });
+    // Owner "Reconnect everyone": the owner clears every online marker and bumps reconnectRequest. Everyone with
+    // a live client gets a prompt and only shows as online again if they press Reconnect. The first value we
+    // receive is just the baseline (an old request), only later changes count.
+    listen('reconnectRequest',v=>{
+      const at=v&&typeof v.at==='number'?v.at:0;
+      if(_rcBase===undefined){_rcBase=at;return}
+      if(!at||at===_rcBase)return;
+      _rcBase=at;
+      if(Date.now()-_rcShownAt<10000)return;      // serverTimestamp fires twice (estimate, then real value)
+      _rcShownAt=Date.now();
+      if(kicked)return;
+      if(v.by===myId){armPresence();armScopedPresence();return}   // the owner who ran it stays online
+      if(typeof onReconnectCheck==='function')setTimeout(()=>onReconnectCheck(),0);
     });
     // heal my DM memberships as soon as friends load, so messages from a friend always become readable
     
@@ -405,6 +420,17 @@ const DB=(()=>{
     // confirmed claim and hides the overlay / re-arms presence from there, so
     // the button reacts the same way whether the claim lands in 50ms or 3s.
     reconnectSession:()=>{if(myId!=null)claimSession()},
+    // Owner only: mark everyone offline, then ask every live client to confirm they're really here.
+    async requestReconnectAll(){
+      if(!isOwner(myId))throw new Error('Only owners can do this.');
+      const ids=C.onlineIds.slice();
+      if(ids.length){const patch={};ids.forEach(id=>{patch[id]=null});await update(R('onlineUsers'),patch)}
+      await set(R('reconnectRequest'),{at:serverTimestamp(),by:myId});
+      armPresence();armScopedPresence();
+      return ids.length;
+    },
+    // Called when a user presses "Reconnect" on the owner's check: show as online again.
+    confirmOnline(){if(myId!=null&&!kicked){armPresence();armScopedPresence()}},
     settle:async()=>{await Promise.race([authReady,sleep(12000)]);await sessionDone;},
     onChange:f=>{listeners.add(f);return()=>listeners.delete(f)},
     dmKey,watchMessages,

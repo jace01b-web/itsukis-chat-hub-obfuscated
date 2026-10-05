@@ -187,8 +187,18 @@ function openOnlineModal(label,ids){
   root.innerHTML=`<div class="modal-bg"><div class="modal" style="max-width:380px">
     <h2>${esc(label)}</h2>
     <div class="online-list">${rows}</div>
-    <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn sec small" id="onlineModalClose">Close</button></div>
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:12px">${isOwner(ME.id)?'<button class="btn sec small" id="onlineReconnectAll" type="button" title="Sets everyone offline and asks them to reconnect">🔄 Reconnect everyone</button>':''}<button class="btn sec small" id="onlineModalClose">Close</button></div>
   </div></div>`;
+  const rc=$('#onlineReconnectAll');
+  if(rc){
+    let armed=false,t=0;
+    rc.onclick=async()=>{
+      if(!armed){armed=true;rc.textContent='Click again to confirm';clearTimeout(t);t=setTimeout(()=>{armed=false;rc.textContent='🔄 Reconnect everyone'},4000);return}
+      rc.disabled=true;rc.textContent='Working…';
+      try{const n=await DB.requestReconnectAll();toast('Online check sent. '+n+' marked offline until they reconnect.');root.innerHTML=''}
+      catch(e){toast(e.message||'Failed','bad');rc.disabled=false;armed=false;rc.textContent='🔄 Reconnect everyone'}
+    };
+  }
   $('#onlineModalClose').onclick=()=>{root.innerHTML=''};
   root.querySelector('.modal-bg').onclick=e=>{if(e.target===e.currentTarget)root.innerHTML=''};
   root.querySelectorAll('[data-open-profile]').forEach(el=>{el.style.cursor='pointer';el.onclick=()=>openUserProfile(Number(el.dataset.openProfile))});

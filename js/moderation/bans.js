@@ -111,3 +111,25 @@ function hideKickOverlay(){
   el.classList.add('closing');
   setTimeout(()=>{try{el.remove()}catch(_){}},260);
 }
+
+/* ---------- Owner "Reconnect everyone" prompt ----------
+   Shown to every live client after an owner runs the online check. Everyone was set offline; pressing the
+   button puts this account back online. Same look as the duplicate-client pause screen, different message. */
+let RC_OVERLAY=null;
+function onReconnectCheck(){
+  if(RC_OVERLAY||KICK_OVERLAY)return;
+  const bg=document.createElement('div');
+  bg.className='modal-bg gc-overlay';bg.style.zIndex='99998';
+  bg.innerHTML='<div class="modal gc-modal sess-modal"><div class="sess-ic">📡</div>'
+    +'<h2>Online check</h2>'
+    +'<div class="hint">An owner just reset everyone to offline to check who is really here. <b>If you\'re actually online, press Reconnect</b> to show as online again.</div>'
+    +'<div class="sess-btn-row"><button class="btn" id="rcBtn">Reconnect</button></div></div>';
+  document.body.appendChild(bg);RC_OVERLAY=bg;
+  const btn=bg.querySelector('#rcBtn');
+  btn.addEventListener('click',()=>{
+    if(btn.disabled)return;btn.disabled=true;
+    try{DB.confirmOnline()}catch(_){}
+    const el=RC_OVERLAY;RC_OVERLAY=null;
+    el.classList.add('closing');setTimeout(()=>{try{el.remove()}catch(_){}},260);
+  });
+}
