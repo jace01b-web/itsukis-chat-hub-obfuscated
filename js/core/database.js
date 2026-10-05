@@ -203,6 +203,7 @@ const DB=(()=>{
       C.onlineIds=v?Object.keys(v).map(Number):[];
       C.online=C.onlineIds.length;
       C.onlineIds.forEach(id=>fetchUserIfMissing(id));
+      if(ready)emit();   // refresh online pills/lists the moment someone goes offline
     });
     // heal my DM memberships as soon as friends load, so messages from a friend always become readable
     
@@ -453,7 +454,10 @@ const DB=(()=>{
     onlineCount:()=>C.online,
     onlineIds:()=>C.onlineIds.slice(),
     // ids currently present in whichever context is open (global / this room / this DM)
-    presenceIds:()=>C.presenceIds.slice(),
+    // A scoped presence marker can outlive its owner (stale node after a crash / dropped socket), so only
+    // count someone as "here" if the account-level onlineUsers marker agrees they're online. This keeps the
+    // chat online lists, the home counter and profile status all telling the same story.
+    presenceIds:()=>{const on=new Set(C.onlineIds);return C.presenceIds.filter(id=>on.has(id))},
     // ids of my current friends (not just anyone I've ever DMed — unfriending
     // leaves the old dmMembers record in place so chat history survives, so we
     // filter that record down to the live friends list instead of trusting it alone)
