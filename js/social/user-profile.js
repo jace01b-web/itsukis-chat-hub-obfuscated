@@ -69,6 +69,23 @@ function modalGiveVip(id,name){
 }
 
 // Click-through profile card: username, avatar, online state, user ID, friend status/actions.
+// Open the DM with someone from anywhere (profile card opened from the home screen, Global Chat, a room...).
+// The old button only swapped the open chat, so it did nothing visible unless you were already inside Itsuki DMs.
+async function openDmWith(id,modalRoot){
+  id=Number(id);
+  if(!ME||id===ME.id)return;
+  if(!DB.isFriend(ME.id,id)){toast('You can only message friends. Send a friend request first.','bad');return}
+  if(DB.isBlocked(ME.id,id)||DB.isBlockedBy(ME.id,id)){toast('You can\'t message this user.','bad');return}
+  (modalRoot||$('#modalRoot')).innerHTML='';
+  // make sure my side of the DM exists so the messages are readable/sendable
+  try{await DB.ensureDmMemberships()}catch(_){}
+  view.mode='dms';view.section=null;view.dmView='chat';
+  view.pending=[];view.replyingTo=null;view.editingId=null;renderPreviews();
+  if(view.page!=='chatPage')show('chatPage');          // coming from the home screen
+  selectRoom(DB.dmKey(ME.id,id));                       // also re-renders the sidebar (switches Global -> DMs)
+  const sb=$('#sidebar');if(sb)sb.classList.remove('open');
+}
+
 // Opened from message avatars, the online list, and the friends list.
 function openUserProfile(id){
   id=Number(id);
@@ -207,7 +224,7 @@ function openUserProfile(id){
     if(copyBtn)copyBtn.onclick=()=>{
       navigator.clipboard?.writeText(String(id)).then(()=>toast('User ID copied')).catch(()=>{});
     };
-    const goMsg=()=>{root.innerHTML='';view.dmView='chat';view.mode='dms';selectRoom(DB.dmKey(ME.id,id))};
+    const goMsg=()=>openDmWith(id,root);
     const el2=id2=>document.getElementById(id2);
     if(el2('pfMsg'))el2('pfMsg').onclick=goMsg;
     if(el2('pfAdd'))el2('pfAdd').onclick=async()=>{
@@ -225,7 +242,7 @@ function openUserProfile(id){
     };
     if(el2('pfRemove'))el2('pfRemove').onclick=()=>{
       if(!confirm('Remove this friend?'))return;
-      DB.removeFriend(ME.id,id).then(()=>{ME=DB.currentUser();render();renderChat()});
+      DB.removeFriend(ME.id,id).then(()=>{ME=DB.currentUser();render();renderChat()}).catch(e=>toast(e.message||'Could not remove friend','bad'));
     };
     if(el2('pfBlock'))el2('pfBlock').onclick=()=>{
       modalBlockConfirm(id,name,async()=>{
