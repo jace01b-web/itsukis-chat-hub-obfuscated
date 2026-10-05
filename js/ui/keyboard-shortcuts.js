@@ -35,13 +35,18 @@
   // own Cancel/Close button would, so unsaved-settings revert etc. still run. Required dialogs (rules, username
   // setup, Halloween popups) have no Cancel/Close button and are left alone.
   function closeTopPanel(){
+    if(document.querySelector('.hwi'))return false;                    // Halloween guide handles its own Escape
+    const ga=document.querySelector('#giftAlertBg:not(.closing) .ga-x');   // Gift Nitro promo (saves "seen" on close)
+    if(ga){ga.click();return true}
     const hf=document.getElementById('hfClose');
     if(hf&&document.querySelector('.hub-frame-box')){hf.click();return true}
     const root=document.getElementById('modalRoot');
-    const bg=root&&root.querySelector('.modal-bg');
+    const bg=root&&root.querySelector('.modal-bg:not(.closing)');
     if(bg){
       if(bg.id==='ghBg'&&typeof closeGameHubs==='function'){closeGameHubs();return true}
-      const btn=bg.querySelector('#sCancel,[id$="Cancel"],[id$="Close"],[id$="cancel"],[id$="close"],.modal-close,.cc-close');
+      // Each panel's own close/cancel control: Daily Spin (#spinX), Halloween Pass (#hwX), Cosmetics (#csX),
+      // Settings (#sCancel), profile cards, confirm dialogs (…Cancel / …Close) and generic X buttons.
+      const btn=bg.querySelector('#spinX,#hwX,#csX,#sCancel,.gv-x,.pf-x,.modal-x:not(.gh-gear),[id$="Cancel"],[id$="Close"],[id$="cancel"],[id$="close"],.modal-close,.cc-close');
       if(btn){btn.click();return true}
     }
     return false;
