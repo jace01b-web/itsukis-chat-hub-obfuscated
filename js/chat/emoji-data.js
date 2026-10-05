@@ -24,10 +24,23 @@ const EMOJI_CATS=[
 const EMOJI_BY_NAME={};
 const EMOJI_NAME_BY_CHAR={};
 EMOJI_CATS.forEach(cat=>cat.list.forEach(([e,name])=>{EMOJI_BY_NAME[name]=e;EMOJI_NAME_BY_CHAR[e]=name}));
+// Extra names for emoji that people search for under a different word (":v:", ":victory:", ":peace:" -> \u270c\ufe0f).
+const EMOJI_ALIASES={victory:'\u270c\ufe0f',peace:'\u270c\ufe0f',victory_hand:'\u270c\ufe0f',peace_sign:'\u270c\ufe0f',v:'\u270c\ufe0f'};
+Object.keys(EMOJI_ALIASES).forEach(n=>{if(!EMOJI_BY_NAME[n])EMOJI_BY_NAME[n]=EMOJI_ALIASES[n]});
+// :name search used by the composer popup. Names that START with the query come first, then names that
+// merely contain it; one result per emoji; first `limit` (10) only.
+function searchEmoji(q,limit){
+  q=String(q||'').toLowerCase();if(!q)return[];
+  const names=Object.keys(EMOJI_BY_NAME),seen=new Set(),out=[];
+  const add=n=>{const e=EMOJI_BY_NAME[n];if(seen.has(e))return;seen.add(e);out.push({name:n,emoji:e})};
+  names.filter(n=>n.startsWith(q)).forEach(add);
+  names.filter(n=>!n.startsWith(q)&&n.includes(q)).forEach(add);
+  return out.slice(0,limit||10);
+}
 // Matches a trailing/typed :shortcode: (allows an incomplete trailing ":name" while typing)
 const SHORTCODE_RE=/:([a-z0-9_+-]{2,40}):?/gi;
 // Replaces every complete :name: in a string with its emoji; unknown names pass through untouched.
 function expandShortcodes(str){
   if(!str)return str;
-  return str.replace(/:([a-z0-9_+-]{2,40}):/gi,(m,name)=>EMOJI_BY_NAME[name.toLowerCase()]||m);
+  return str.replace(/:([a-z0-9_+-]{1,40}):/gi,(m,name)=>EMOJI_BY_NAME[name.toLowerCase()]||m);
 }

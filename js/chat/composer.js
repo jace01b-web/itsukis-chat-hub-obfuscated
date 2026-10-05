@@ -37,10 +37,42 @@ function mentionCandidates(){
   else ids=DB.getRoom(key)?.members||[];
   return ids.filter(i=>i!==ME.id).map(i=>DB.getUser(i)).filter(Boolean);
 }
+// :emoji_name autocomplete (type ":" + 2 letters -> first 10 matches) and instant ":name:" -> emoji.
+function updateEmojiPop(pop,pos,before){
+  // finished shortcode, e.g. ":v:" or ":sob:" -> swap in the emoji right away
+  const done=before.match(/(^|\s):([a-z0-9_+-]{1,40}):$/i);
+  if(done&&EMOJI_BY_NAME[done[2].toLowerCase()]){
+    const e=EMOJI_BY_NAME[done[2].toLowerCase()],start=pos-done[0].length+done[1].length;
+    msgIn.value=msgIn.value.slice(0,start)+e+msgIn.value.slice(pos);
+    const np=start+e.length;msgIn.setSelectionRange(np,np);
+    $('#cc').textContent=msgIn.value.length;
+    pop.classList.add('hidden');return true;
+  }
+  const m=before.match(/(^|\s):([a-z0-9_+-]{2,40})$/i);   // ":" must start a word so links like https:// never trigger
+  if(!m)return false;
+  const res=searchEmoji(m[2],10);
+  if(!res.length){pop.classList.add('hidden');return true}
+  view.mentionSel=0;pop.innerHTML='';
+  res.forEach((r,i)=>{
+    const d=document.createElement('div');d.className=i===0?'sel':'';
+    d.innerHTML=`<span style="font-size:18px;display:inline-block;width:26px;text-align:center">${r.emoji}</span> :${esc(r.name)}:`;
+    d.onclick=()=>{
+      const start=pos-m[2].length-1;
+      msgIn.value=msgIn.value.slice(0,start)+r.emoji+' '+msgIn.value.slice(pos);
+      msgIn.focus();pop.classList.add('hidden');
+      const np=start+r.emoji.length+1;msgIn.setSelectionRange(np,np);
+      $('#cc').textContent=msgIn.value.length;
+    };
+    pop.appendChild(d);
+  });
+  pop.classList.remove('hidden');
+  return true;
+}
 function updateMentionPop(){
   const pop=$('#mentionPop');
   const pos=msgIn.selectionStart;
   const before=msgIn.value.slice(0,pos);
+  if(updateEmojiPop(pop,pos,before))return;
   const m=before.match(/@([0-9a-zA-Z._-]*)$/);
   if(!m){pop.classList.add('hidden');return}
   const q=m[1].toLowerCase();
