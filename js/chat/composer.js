@@ -23,7 +23,11 @@ msgIn.addEventListener('keydown',e=>{
     if(e.key==='Escape'){pop.classList.add('hidden');return}
   }
   if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}
-  if(e.key==='Escape'&&(view.editingId||view.replyingTo)){cancelCompose()}
+  if(e.key==='Escape'){
+    e.stopPropagation();
+    if(view.editingId||view.replyingTo)cancelCompose();   // 1st Escape: cancel edit / reply
+    else msgIn.blur();                                    // otherwise: stop typing
+  }
 });
 function hilite(){[...$('#mentionPop').children].forEach((c,i)=>c.classList.toggle('sel',i===view.mentionSel))}
 function mentionCandidates(){

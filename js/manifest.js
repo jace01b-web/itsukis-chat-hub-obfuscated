@@ -65,6 +65,7 @@ window.APP_MANIFEST={
     "chat/emoji-picker.js",
     "chat/text-and-media.js",
     "chat/composer.js",
+    "ui/keyboard-shortcuts.js",
     "chat/attachments.js",
     "settings/appearance.js",
     "settings/rules.js",
