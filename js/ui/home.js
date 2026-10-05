@@ -75,6 +75,7 @@ function modalGlobalChoice(){
       <button class="gc-card gc-announcements" id="gcAnnouncements">
         <div class="gc-ic">📢</div>
         <h3>Announcements</h3>
+        ${(()=>{const n=DB.unreadAnnouncements(ME.id);return n?`<span class="badge gc-ann-badge" id="gcAnnBadge">${n>99?'99+':n} new</span>`:''})()}
       </button>
     </div>
   </div></div>`;

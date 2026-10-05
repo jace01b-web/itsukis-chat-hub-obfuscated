@@ -27,6 +27,8 @@ function goHome(){
 function refreshBadge(){
   if(!ME)return;const n=DB.unreadDMs(ME.id);
   const b=$('#dmBadge');b.classList.toggle('hidden',!n);b.textContent=n;
+  const a=DB.unreadAnnouncements(ME.id),ab=$('#annBadge');
+  if(ab){ab.classList.toggle('hidden',!a);ab.textContent=a>99?'99+':a;ab.title=a+' new announcement'+(a===1?'':'s')}
   $('#onlineCount').textContent=DB.onlineCount();
 }
 $('#homeOnlinePill').onclick=()=>openOnlineModal('Online now',DB.onlineIds());

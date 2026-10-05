@@ -1543,6 +1543,11 @@ const DB=(()=>{
       });
       return n+Object.keys(C.friendReqIn).length;
     },
+    // New announcements since the user last opened the Announcements room (same rule as DMs/rooms).
+    unreadAnnouncements(uid){
+      const last=C.lastRead[CFG.ANNOUNCEMENTS_ROOM]||0;
+      return (C.messages[CFG.ANNOUNCEMENTS_ROOM]||[]).filter(m=>m.senderId!==uid&&m.at>last).length;
+    },
     unreadRooms(uid){
       let n=0;
       (C.myRoomIds||[]).forEach(id=>{

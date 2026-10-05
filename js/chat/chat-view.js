@@ -80,7 +80,7 @@ function renderChat(){
     menuBtn.onclick=()=>{view.roomKey=null;view.section=null;DB.watchMessages(null);goHome()};
     // No sidebar visible here to show unread DMs/rooms — so the only way to
     // know is a badge riding the back arrow itself.
-    const totalUnread=DB.unreadDMs(ME.id)+DB.unreadRooms(ME.id);
+    const totalUnread=DB.unreadDMs(ME.id)+DB.unreadRooms(ME.id)+(view.roomKey===CFG.ANNOUNCEMENTS_ROOM?0:DB.unreadAnnouncements(ME.id));
     menuBtnBadge.textContent=totalUnread>99?'99+':totalUnread;
     menuBtnBadge.classList.toggle('show',totalUnread>0);
   }else{
