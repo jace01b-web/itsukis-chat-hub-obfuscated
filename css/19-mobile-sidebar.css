@@ -87,6 +87,11 @@
   .main .topbar .menu-btn-wrap{display:inline-flex!important;flex:0 0 auto}
   .main .topbar .menu-btn{display:inline-flex!important;align-items:center;justify-content:center;width:40px;height:40px}
 
+  /* nothing to show in this room (Global / Announcements): no drawer, no ☰ */
+  body.ms-nosb .chat-layout .sidebar,
+  body.ms-nosb .ms-backdrop{display:none!important}
+  body.ms-nosb .main .topbar .menu-btn-wrap{display:none!important}
+
   /* messages + composer use the full width */
   .main .messages{padding-left:10px;padding-right:10px}
   .main .composer{padding-bottom:calc(8px + env(safe-area-inset-bottom))}
