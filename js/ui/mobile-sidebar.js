@@ -21,7 +21,7 @@
     var mb=e.target.closest&&e.target.closest('#menuBtn');
     if(mb&&isMobile()){
       e.preventDefault();e.stopImmediatePropagation();
-      if(body.classList.contains('ms-nosb')){          /* Global / Announcements: it's a back arrow */
+      if(isBackIcon()){          /* app is showing ← (Global / Announcements): act as back */
         var h=document.getElementById('backHome');close();if(h)h.click();return;
       }
       toggle();return;
@@ -44,7 +44,7 @@
   document.addEventListener('keydown',function(e){if(e.key==='Escape')close()});
 
   /* leaving mobile width resets state */
-  (mq.addEventListener?mq.addEventListener.bind(mq,'change'):mq.addListener.bind(mq))(function(){close();syncEmptyNow()});
+  (mq.addEventListener?mq.addEventListener.bind(mq,'change'):mq.addListener.bind(mq))(function(){close();queueSync()});
 
   /* swipe: right from left edge opens, left anywhere on drawer closes */
   var sx=0,sy=0,tracking=false;
@@ -67,32 +67,25 @@
       .observe(chatPage,{attributes:true,attributeFilter:['class']});
   }
 
-  /* ---- Rooms with an empty sidebar (Global / Announcements): ☰ becomes the ← back-to-menu button, no drawer ---- */
-  function sbHasContent(){
-    var list=document.getElementById('sbList'),foot=document.getElementById('sbFoot');
-    if(list&&((list.textContent||'').trim()||list.querySelector('img,svg,canvas')))return true;
-    if(foot&&((foot.textContent||'').trim()||foot.querySelector('button,input,a')))return true;
-    return false;
+  /* ---- Follow the app's own icon: ← means "back to main menu", anything else (☰) means drawer.
+         We never rewrite the icon ourselves. ---- */
+  var icEl=document.getElementById('menuBtnIcon');
+  function isBackIcon(){
+    var el=document.getElementById('menuBtnIcon');
+    return !!el&&/^[\s]*[\u2190\u2b05\u2039\u25c0\u21a9\u2b60]/.test(el.textContent||'');
   }
-  var nsPending=0;
-  function syncEmpty(){
-    nsPending=0;
-    var empty=!sbHasContent();
-    body.classList.toggle('ms-nosb',empty);
-    var mb=document.getElementById('menuBtn'),ic=document.getElementById('menuBtnIcon');
-    if(mb){mb.classList.toggle('back',empty&&isMobile());mb.title=empty?'Back to main menu':'';}
-    if(ic){
-      if(empty&&isMobile()){ic.dataset.msOld=ic.dataset.msOld||ic.textContent;ic.textContent='←';}
-      else if(ic.dataset.msOld){ic.textContent=ic.dataset.msOld;delete ic.dataset.msOld;}
-    }
-    if(empty)close();
+  var syncPending=0;
+  function syncBack(){
+    syncPending=0;
+    var b=isBackIcon();
+    body.classList.toggle('ms-back',b);
+    if(b)close();
   }
-  function syncEmptyNow(){syncEmpty()}
-  function queueSync(){if(!nsPending)nsPending=requestAnimationFrame(syncEmpty)}
-  syncEmpty();
-  var sbEl=document.getElementById('sidebar');
-  if(sbEl&&window.MutationObserver)
-    new MutationObserver(queueSync).observe(sbEl,{childList:true,subtree:true,characterData:true});
+  function queueSync(){if(!syncPending)syncPending=requestAnimationFrame(syncBack)}
+  syncBack();
+  var mbtn=document.getElementById('menuBtn')||(icEl&&icEl.parentNode);
+  if(mbtn&&window.MutationObserver)
+    new MutationObserver(queueSync).observe(mbtn,{childList:true,subtree:true,characterData:true});
   if(chatPage&&window.MutationObserver)
     new MutationObserver(queueSync).observe(chatPage,{attributes:true,attributeFilter:['class']});
 
