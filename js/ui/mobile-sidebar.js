@@ -11,7 +11,7 @@
 
   function isMobile(){return mq.matches}
   function isOpen(){return body.classList.contains('ms-open')}
-  function open(){if(isMobile()&&!body.classList.contains('ms-nosb'))body.classList.add('ms-open')}
+  function open(){if(isMobile())body.classList.add('ms-open')}
   function close(){body.classList.remove('ms-open')}
   function toggle(){isOpen()?close():open()}
   window.msSidebar={open:open,close:close,toggle:toggle};
@@ -19,7 +19,13 @@
   /* ☰ button: on mobile it ONLY toggles the drawer (capture so older toggle code can't fight it) */
   document.addEventListener('click',function(e){
     var mb=e.target.closest&&e.target.closest('#menuBtn');
-    if(mb&&isMobile()){e.preventDefault();e.stopImmediatePropagation();toggle();return}
+    if(mb&&isMobile()){
+      e.preventDefault();e.stopImmediatePropagation();
+      if(body.classList.contains('ms-nosb')){          /* Global / Announcements: it's a back arrow */
+        var h=document.getElementById('backHome');close();if(h)h.click();return;
+      }
+      toggle();return;
+    }
     if(e.target===backdrop){close();return}
     /* the ← button in the drawer header goes home; close drawer too */
     if(e.target.closest&&e.target.closest('#backHome'))close();
@@ -38,7 +44,7 @@
   document.addEventListener('keydown',function(e){if(e.key==='Escape')close()});
 
   /* leaving mobile width resets state */
-  (mq.addEventListener?mq.addEventListener.bind(mq,'change'):mq.addListener.bind(mq))(function(){close()});
+  (mq.addEventListener?mq.addEventListener.bind(mq,'change'):mq.addListener.bind(mq))(function(){close();syncEmptyNow()});
 
   /* swipe: right from left edge opens, left anywhere on drawer closes */
   var sx=0,sy=0,tracking=false;
@@ -61,7 +67,7 @@
       .observe(chatPage,{attributes:true,attributeFilter:['class']});
   }
 
-  /* ---- Hide the drawer + ☰ when the sidebar has nothing to show (e.g. Global / Announcements) ---- */
+  /* ---- Rooms with an empty sidebar (Global / Announcements): ☰ becomes the ← back-to-menu button, no drawer ---- */
   function sbHasContent(){
     var list=document.getElementById('sbList'),foot=document.getElementById('sbFoot');
     if(list&&((list.textContent||'').trim()||list.querySelector('img,svg,canvas')))return true;
@@ -73,8 +79,15 @@
     nsPending=0;
     var empty=!sbHasContent();
     body.classList.toggle('ms-nosb',empty);
+    var mb=document.getElementById('menuBtn'),ic=document.getElementById('menuBtnIcon');
+    if(mb){mb.classList.toggle('back',empty&&isMobile());mb.title=empty?'Back to main menu':'';}
+    if(ic){
+      if(empty&&isMobile()){ic.dataset.msOld=ic.dataset.msOld||ic.textContent;ic.textContent='←';}
+      else if(ic.dataset.msOld){ic.textContent=ic.dataset.msOld;delete ic.dataset.msOld;}
+    }
     if(empty)close();
   }
+  function syncEmptyNow(){syncEmpty()}
   function queueSync(){if(!nsPending)nsPending=requestAnimationFrame(syncEmpty)}
   syncEmpty();
   var sbEl=document.getElementById('sidebar');
