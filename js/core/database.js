@@ -38,7 +38,7 @@ const DB=(()=>{
     const u=onValue(R(path),s=>{cb(s.val());if(ready)emit()},err=>console.warn('listen denied',path,err.code));
     unsubs.push(u);return u;
   }
-  function stopAll(){SECRET_OWNER_ID=null;SECRET_LOADED=false;unsubs.splice(0).forEach(u=>u());Object.keys(previewUnsubs).forEach(k=>{previewUnsubs[k]();delete previewUnsubs[k]});Object.keys(roomUnsubs).forEach(k=>{roomUnsubs[k]();delete roomUnsubs[k]});if(msgUnsub){msgUnsub();msgUnsub=null}if(reactUnsub){try{reactUnsub()}catch(_){}reactUnsub=null}if(presUnsub){try{presUnsub()}catch(_){}presUnsub=null}if(presenceSelfRef){try{remove(presenceSelfRef).catch(()=>{})}catch(_){}presenceSelfRef=null}if(sessUnsub){try{sessUnsub()}catch(_){}sessUnsub=null}presenceRef=null;mySessionToken=null;sessionConfirmed=false;kicked=false;hideKickOverlay();C.presenceIds=[];msgKey=null}
+  function stopAll(){SECRET_OWNER_ID=null;SECRET_LOADED=false;unsubs.splice(0).forEach(u=>u());Object.keys(previewUnsubs).forEach(k=>{previewUnsubs[k]();delete previewUnsubs[k]});Object.keys(roomUnsubs).forEach(k=>{roomUnsubs[k]();delete roomUnsubs[k]});if(msgUnsub){msgUnsub();msgUnsub=null}if(reactUnsub){try{reactUnsub()}catch(_){}reactUnsub=null}if(presUnsub){try{presUnsub()}catch(_){}presUnsub=null}if(presenceSelfRef){try{remove(presenceSelfRef).catch(()=>{})}catch(_){}presenceSelfRef=null}if(sessUnsub){try{sessUnsub()}catch(_){}sessUnsub=null}presenceRef=null;mySessionToken=null;sessionConfirmed=false;kicked=false;hideKickOverlay();C.presenceIds=[];C.lastReadLoaded=false;msgKey=null}
 
   // ---- Single-active-session enforcement --------------------------------
   // onlineUsers/$id is one shared boolean per account, not one per tab. The old
@@ -168,7 +168,7 @@ const DB=(()=>{
     /* HALLOWEEN:START */ listen('halloween/claimed',v=>{window.HW_CLAIMED=v||{};if(typeof hwRefresh==='function'){try{hwRefresh()}catch(_){}}});listen('halloween/progress/'+myId,v=>{window.HW_PROG=v||{};window.HW_LOADED=true;if(typeof hwRefresh==='function'){try{hwRefresh()}catch(_){}}});listen('halloween/equipped',v=>{window.HW_EQ=v||{};if(typeof hwRefresh==='function'){try{hwRefresh()}catch(_){}}});listen('halloween/intro/'+myId,v=>{window.HW_INTRO=Number(v)||0;window.HW_INTRO_LOADED=true;if(typeof hwMaybeIntro==='function'){try{hwMaybeIntro()}catch(_){}}}); /* HALLOWEEN:END */
     listen('lastSpin/'+myId,v=>{C.lastSpin=Number(v)||0;if(typeof refreshSpinUI==='function'){try{refreshSpinUI()}catch(_){}}});
     listen('friendRequests/'+myId,v=>C.friendReqIn=v||{});
-    listen('lastRead/'+myId,v=>C.lastRead=v||{});
+    listen('lastRead/'+myId,v=>{C.lastRead=v||{};C.lastReadLoaded=true});
     listen('pingSeen/'+myId,v=>{C.pingSeen=v||{}});
     // Rooms: rather than trying to read the whole 'rooms'/'roomMembers' trees (which
     // security rules almost never allow for a giant shared list), keep a small
@@ -825,7 +825,16 @@ const DB=(()=>{
 
     /* --- Friends --- */
     friends:id=>C.friends[id]||[],
-    incoming:me=>Object.keys(C.friendReqIn).map(from=>({from:Number(from),to:me,status:'pending',at:C.friendReqIn[from].at})),
+    // Only requests that can actually be acted on: ignore stale ones from deleted/blocked accounts,
+    // people who are already friends, or myself - otherwise a ghost request keeps a badge lit that
+    // can never be cleared because it never shows up in the Friends list.
+    incoming:me=>Object.keys(C.friendReqIn||{}).map(Number).filter(from=>{
+      if(from===me)return false;
+      const u=C.users[from];if(u&&u.deleted)return false;
+      if((C.blocked[me]||[]).includes(from)||(C.blockedBy[me]||[]).includes(from))return false;
+      if((C.friends[me]||[]).includes(from))return false;
+      return true;
+    }).map(from=>({from,to:me,status:'pending',at:(C.friendReqIn[from]||{}).at})),
     outgoing:me=>(C.friendReqOut[me]||[]),
     async friendReq(from,toUsername){
       let to=C.usernames[toUsername.toLowerCase()];
@@ -1367,20 +1376,27 @@ const DB=(()=>{
         const secs=Math.ceil(DB.muteRemainingMs(senderId)/1000);
         throw new Error('You are muted for '+secs+'s and cannot send messages.');
       }
+      // ---- client-side 1.5s cooldown for non-owners (owners are exempt) ----
+      // Checked FIRST and reserved synchronously (before any await below). The old order checked the
+      // cooldown against the time of the last *finished* send, so on a slow connection several taps all
+      // got through before the first one completed - and the anti-raid check below then banned the
+      // account for what was just a laggy double-tap.
+      const now0=Date.now();
+      if(!isOwner(senderId)){
+        const lastGo=Math.max(DB._lastOk||0,DB._lastStart||0);
+        if(lastGo&&now0-lastGo<CFG.SEND_COOLDOWN_MS){
+          throw new Error('Slow down a little — wait a moment before sending again.');
+        }
+      }
+      DB._lastStart=now0;
       // ---- anti-raid: sliding window on outgoing messages (client-side first line) ----
       // Counts only sends that actually reached Firebase successfully (recorded at the
-      // bottom of this function), not every call to sendMessage — a burst of retries
-      // against errors (permission denied, network hiccups, etc.) never fires this,
-      // only genuinely rapid *successful* spam does.
-      const now0=Date.now();
+      // bottom of this function). Because the cooldown above already spaces real sends out, only
+      // genuine scripted spam can ever reach this.
       DB._sendTimes=(DB._sendTimes||[]).filter(t=>now0-t<CFG.NUKE_WINDOW_MS);
-      if(DB._sendTimes.length>=CFG.NUKE_MSGS){
+      if(!isOwner(senderId)&&DB._sendTimes.length>=CFG.NUKE_MSGS){
         DB.antiNuke(senderId);
         throw new Error('Sending too fast — account banned.');
-      }
-      // ---- client-side 1.5s cooldown for non-owners (owners are exempt) ----
-      if(!isOwner(senderId)&&DB._lastOk&&now0-DB._lastOk<CFG.SEND_COOLDOWN_MS){
-        throw new Error('Slow down a little — wait a moment before sending again.');
       }
       // ---- profanity filter (censors rather than blocks, matching "Hey man, **** YOU" style) ----
       let outText=text;
@@ -1397,8 +1413,13 @@ const DB=(()=>{
       // We try once with `at` stamped right before transmission, and — only if the write is
       // rejected — retry a single time with a freshly-stamped `at`/rate-slot, so a slow
       // upload gets a second chance instead of surfacing a confusing rules error.
+      // The rules reject a message whose `at` is AHEAD of the server clock (at <= now) or more than 20s behind
+      // it. SKEW (the server offset) is only an estimate - on mobile / high-latency connections it can be off
+      // by a few hundred ms, which made the write bounce for "no reason" for some people. So stamp a little in
+      // the past (still far inside the 20s window); every retry backs off further.
+      let _backoff=400;
       const build=()=>{
-        const at=Date.now()+SKEW;
+        const at=Math.round(Date.now()+SKEW-_backoff);
         const m={senderId,at};
         if(outText)m.text=outText;
         if(images&&images.length)m.images=images;
@@ -1424,14 +1445,19 @@ const DB=(()=>{
         try{
           await attemptWrite();
         }catch(e1){
-          // Only worth retrying if this looks like a stale-timestamp miss (large/slow
-          // upload) rather than a real ban/mute/spam block — those would fail again
-          // identically, so don't waste a retry on them.
-          const hasImages=!!(images&&images.length);
-          if(e1.code==='PERMISSION_DENIED'&&hasImages&&!DB.isBanned(senderId)&&!DB.isMuted(senderId)){
-            ({at,m}=build());
-            Object.assign(tmp,m,{images:images||[],pings:pings||[],text:outText||'',replyTo:m.replyTo||null});
-            await attemptWrite();
+          // A PERMISSION_DENIED that is not a real ban/mute is most often a timestamp miss (clock-offset error,
+          // or a slow upload landing late). Retry up to twice with a freshly stamped, further back-dated
+          // `at`/rate-slot; real bans/mutes would fail identically, so those are not retried.
+          let lastErr=e1;
+          if(e1.code==='PERMISSION_DENIED'&&!DB.isBanned(senderId)&&!DB.isMuted(senderId)){
+            let ok=false;
+            for(const back of [1500,4000]){
+              _backoff=back;
+              ({at,m}=build());
+              Object.assign(tmp,m,{images:images||[],pings:pings||[],text:outText||'',replyTo:m.replyTo||null});
+              try{await attemptWrite();ok=true;break}catch(e2){lastErr=e2;if(e2.code!=='PERMISSION_DENIED')break}
+            }
+            if(!ok)throw lastErr;
           }else{
             throw e1;
           }
@@ -1565,25 +1591,36 @@ const DB=(()=>{
         return true;
       });
     },
+    // Unread count for ONE conversation. Counts exactly what the chat would show you as new:
+    //  - not before lastRead has actually loaded (otherwise everything flashes as unread on startup)
+    //  - never my own messages, never from deleted accounts, never from people I blocked / who blocked me
+    //    (those are hidden in the chat, so counting them gave a badge with nothing to read)
+    //  - a conversation I have never opened only counts messages sent after my account existed
+    unreadIn(key,uid){
+      if(!C.lastReadLoaded)return 0;
+      const lr=C.lastRead[key];
+      const born=Number((C.users[uid]||{}).createdAt)||0;
+      const last=(lr===undefined||lr===null)?born:(Number(lr)||0);
+      const blocked=C.blocked[uid]||[],blockedBy=C.blockedBy[uid]||[];
+      let n=0;
+      (C.messages[key]||[]).forEach(m=>{
+        if(m.senderId===uid||!(Number(m.at)>last))return;
+        const s=C.users[m.senderId];if(s&&s.deleted)return;
+        if(blocked.includes(m.senderId)||blockedBy.includes(m.senderId))return;
+        n++;
+      });
+      return n;
+    },
     unreadDMs(uid){
       let n=0;
-      (C.friends[uid]||[]).forEach(f=>{
-        const k=dmKey(uid,f);const last=C.lastRead[k]||0;
-        n+=(C.messages[k]||[]).filter(m=>m.senderId!==uid&&m.at>last).length;
-      });
-      return n+Object.keys(C.friendReqIn).length;
+      (C.friends[uid]||[]).forEach(f=>{n+=DB.unreadIn(dmKey(uid,f),uid)});
+      return n+DB.incoming(uid).length;
     },
     // New announcements since the user last opened the Announcements room (same rule as DMs/rooms).
-    unreadAnnouncements(uid){
-      const last=C.lastRead[CFG.ANNOUNCEMENTS_ROOM]||0;
-      return (C.messages[CFG.ANNOUNCEMENTS_ROOM]||[]).filter(m=>m.senderId!==uid&&m.at>last).length;
-    },
+    unreadAnnouncements(uid){return DB.unreadIn(CFG.ANNOUNCEMENTS_ROOM,uid)},
     unreadRooms(uid){
       let n=0;
-      (C.myRoomIds||[]).forEach(id=>{
-        const last=C.lastRead[id]||0;
-        n+=(C.messages[id]||[]).filter(m=>m.senderId!==uid&&m.at>last).length;
-      });
+      (C.myRoomIds||[]).forEach(id=>{n+=DB.unreadIn(id,uid)});
       return n;
     },
     // called by the UI so a friendship created by the other person becomes a DM on this side too
