@@ -11,7 +11,7 @@
 
   function isMobile(){return mq.matches}
   function isOpen(){return body.classList.contains('ms-open')}
-  function open(){if(isMobile())body.classList.add('ms-open')}
+  function open(){if(isMobile()&&!body.classList.contains('ms-nosb'))body.classList.add('ms-open')}
   function close(){body.classList.remove('ms-open')}
   function toggle(){isOpen()?close():open()}
   window.msSidebar={open:open,close:close,toggle:toggle};
@@ -60,6 +60,28 @@
     new MutationObserver(function(){if(chatPage.classList.contains('hidden'))close()})
       .observe(chatPage,{attributes:true,attributeFilter:['class']});
   }
+
+  /* ---- Hide the drawer + ☰ when the sidebar has nothing to show (e.g. Global / Announcements) ---- */
+  function sbHasContent(){
+    var list=document.getElementById('sbList'),foot=document.getElementById('sbFoot');
+    if(list&&((list.textContent||'').trim()||list.querySelector('img,svg,canvas')))return true;
+    if(foot&&((foot.textContent||'').trim()||foot.querySelector('button,input,a')))return true;
+    return false;
+  }
+  var nsPending=0;
+  function syncEmpty(){
+    nsPending=0;
+    var empty=!sbHasContent();
+    body.classList.toggle('ms-nosb',empty);
+    if(empty)close();
+  }
+  function queueSync(){if(!nsPending)nsPending=requestAnimationFrame(syncEmpty)}
+  syncEmpty();
+  var sbEl=document.getElementById('sidebar');
+  if(sbEl&&window.MutationObserver)
+    new MutationObserver(queueSync).observe(sbEl,{childList:true,subtree:true,characterData:true});
+  if(chatPage&&window.MutationObserver)
+    new MutationObserver(queueSync).observe(chatPage,{attributes:true,attributeFilter:['class']});
 
   /* ---- Mark all as read: find the button wherever the app renders it and restyle it ---- */
   function styleMarkAll(root){
