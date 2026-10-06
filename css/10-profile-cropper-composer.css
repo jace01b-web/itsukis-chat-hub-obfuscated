@@ -186,3 +186,21 @@
   .opt{padding:22px 12px}
   .home-hero .logo{font-size:30px}
 }
+
+/* ===== "Mark all as read" button (home footer + chat topbar) ===== */
+.markread-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;height:38px;padding:0 18px;margin:0;
+  border-radius:40px;border:1px solid rgba(94,234,150,.45);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;line-height:1;white-space:nowrap;
+  color:#eafff2;background:linear-gradient(135deg,rgba(61,220,115,.34),rgba(34,170,95,.16));
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  box-shadow:0 6px 18px rgba(61,220,115,.22),inset 0 1px 0 rgba(255,255,255,.22);transition:transform .15s,filter .15s,box-shadow .15s}
+.markread-btn svg{flex:none;filter:drop-shadow(0 0 4px rgba(94,234,150,.7))}
+.markread-btn:hover{transform:translateY(-1px);filter:brightness(1.12)}
+.markread-btn:active{transform:translateY(0) scale(.97)}
+.markread-btn:disabled{opacity:.6;cursor:default}
+.markread-btn.hidden{display:none!important}
+.markread-btn.mini{height:30px;padding:0 12px;font-size:12px;gap:6px;margin-right:6px;box-shadow:0 4px 12px rgba(61,220,115,.2),inset 0 1px 0 rgba(255,255,255,.2)}
+.markread-btn.mini svg{width:14px;height:14px}
+@media (max-width:640px){
+  .markread-btn.mini{width:30px;padding:0;border-radius:50%}
+  .markread-btn.mini .mr-t{display:none}
+}
