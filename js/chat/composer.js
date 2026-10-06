@@ -144,8 +144,9 @@ async function send(){
   DB.sendMessage(view.roomKey,{senderId:ME.id,text,images:_draftImgs,pings:extractPings(text),replyTo})
     .catch(e=>{
       toast(e.message,'bad');
-      // Refused (banned): don't make the message vanish — restore the draft so it isn't silently lost.
-      if(/banned/i.test(e.message||'')&&msgIn&&!msgIn.value){msgIn.value=text;$('#cc').textContent=text.length}
+      // Refused for ANY reason (cooldown, mute, ban, rules): don't make the message vanish — restore the
+      // draft so it isn't silently lost, as long as they haven't already started typing something else.
+      if(text&&msgIn&&!msgIn.value){msgIn.value=text;$('#cc').textContent=text.length}
     });
   cancelCompose();
   msgIn.value='';msgIn.style.height='auto';$('#cc').textContent=0;

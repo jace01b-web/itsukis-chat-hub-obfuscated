@@ -97,7 +97,7 @@ function renderChat(){
     const rooms=DB.myRooms(ME.id);
     if(!rooms.length)addHTML(list,`<div class="hint" style="padding:6px 10px">No rooms yet.</div>`);
     rooms.forEach(r=>{
-      const unread=DB.messages(r.id).filter(m=>m.senderId!==ME.id&&m.at>(ME.lastRead[r.id]||0)).length;
+      const unread=DB.unreadIn(r.id,ME.id);
       list.appendChild(sbItem('🔒',r.name,view.roomKey===r.id,()=>selectRoom(r.id),unread,null,()=>{
       modalLeaveRoomConfirm(r,async()=>{
         await DB.leaveRoom(ME.id,r.id);
@@ -118,7 +118,7 @@ function renderChat(){
     if(!ME.friends.length)addHTML(list,`<div class="hint" style="padding:6px 10px">Add friends to start chatting.</div>`);
     ME.friends.forEach(fid=>{
       const f=DB.getUser(fid);if(!f)return;const k=DB.dmKey(ME.id,fid);
-      const unread=DB.messages(k).filter(m=>m.senderId!==ME.id&&m.at>(ME.lastRead[k]||0)).length;
+      const unread=DB.unreadIn(k,ME.id);
       list.appendChild(sbItem(null,f.username,view.roomKey===k,()=>{view.dmView='chat';selectRoom(k)},unread,f));
     });
     foot.innerHTML=`<button class="btn small" id="addFr">+ Add Friend</button>`;

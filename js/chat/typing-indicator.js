@@ -15,6 +15,19 @@
   const bar=$('#typingBar');
   let watchKey=null,unsub=null,typers={},lastPush=0,myKey=null,lastSig=null,clearT=null;
   const now=()=>Date.now()+(SKEW||0);
+  // The room that is actually on screen right now (null on the Friends list, home, settings, ...).
+  const currentKey=()=>(ME&&view.page==='chatPage'&&!(view.mode==='dms'&&view.dmView==='friends'))?(view.roomKey||null):null;
+  function tick(){
+    const k=currentKey();
+    if(k!==watchKey){
+      typers={};            // drop the old room's typers immediately
+      hide();
+      watch(k);
+      return;
+    }
+    draw();
+    if(myKey&&(!msgIn.value.trim()||myKey!==k))stopMine();
+  }
   function hide(){
     if(lastSig===null)return;
     lastSig=null;bar.classList.remove('show');
@@ -26,6 +39,7 @@
   function draw(){
     if(!bar)return;
     if(!ME||!watchKey){hide();return}
+    if(watchKey!==currentKey()){tick();return}   // room changed under us: resync instead of showing the old room's typers
     const t=now();
     const ids=Object.keys(typers).map(Number).filter(id=>id!==ME.id&&Number(typers[id])&&t-Number(typers[id])<STALE).sort((a,b)=>a-b);
     if(!ids.length){hide();return}
@@ -48,7 +62,9 @@
     if(unsub){try{unsub()}catch(_){}unsub=null}
     typers={};watchKey=key;draw();
     if(!key)return;
-    try{unsub=onValue(R('typing/'+key),s=>{typers=s.val()||{};draw()},()=>{})}catch(_){}
+    // Tag the callback with the room it was attached for: a late snapshot from a room I have already
+    // left must never be drawn as if it belonged to the room I'm in now.
+    try{unsub=onValue(R('typing/'+key),s=>{if(key!==watchKey)return;typers=s.val()||{};draw()},()=>{})}catch(_){}
   }
   function stopMine(){
     if(myKey&&ME){try{remove(R('typing/'+myKey+'/'+ME.id)).catch(()=>{})}catch(_){}}
@@ -65,9 +81,13 @@
     myKey=view.roomKey;lastPush=t;
     set(r,now()).catch(()=>{});
   });
-  setInterval(()=>{
-    const k=(ME&&view.page==='chatPage')?view.roomKey:null;
-    if(k!==watchKey)watch(k);else draw();
-    if(myKey&&(!msgIn.value.trim()||myKey!==k))stopMine();
-  },1000);
+  setInterval(tick,1000);
+  // Don't wait for the 1s timer when the conversation changes: every path that switches rooms
+  // (Global, DMs, rooms, back to home) goes through DB.watchMessages, so resync right after it.
+  if(typeof DB!=='undefined'&&typeof DB.watchMessages==='function'){
+    const _wm=DB.watchMessages;
+    DB.watchMessages=function(){const r=_wm.apply(this,arguments);try{tick()}catch(_){}return r};
+  }
+  // Also resync on any DB-driven re-render (covers Friends-list <-> chat switches inside DMs).
+  if(typeof DB!=='undefined'&&typeof DB.onChange==='function')DB.onChange(()=>{try{tick()}catch(_){}});
 })();
