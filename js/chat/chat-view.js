@@ -83,6 +83,7 @@ function renderChat(){
     const totalUnread=DB.unreadDMs(ME.id)+DB.unreadRooms(ME.id)+(view.roomKey===CFG.ANNOUNCEMENTS_ROOM?0:DB.unreadAnnouncements(ME.id));
     menuBtnBadge.textContent=totalUnread>99?'99+':totalUnread;
     menuBtnBadge.classList.toggle('show',totalUnread>0);
+    if(typeof refreshMarkRead==='function')refreshMarkRead();
   }else{
     menuBtnIcon.textContent='☰';menuBtn.title='';menuBtnWrap.classList.remove('force-show');
     menuBtn.onclick=()=>sidebar.classList.toggle('open');
