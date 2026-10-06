@@ -1614,7 +1614,28 @@ const DB=(()=>{
     unreadDMs(uid){
       let n=0;
       (C.friends[uid]||[]).forEach(f=>{n+=DB.unreadIn(dmKey(uid,f),uid)});
-      return n+DB.incoming(uid).length;
+      return n+DB.incomingUnseen(uid).length;
+    },
+    // Friend requests that still count toward the badge. "Mark all as read" hides the current ones from the
+    // BADGE only (stored on this device); they stay in Friends & Requests so nothing is lost.
+    _dismissedReqs(uid){try{return JSON.parse(localStorage.getItem('ich_dismissed_req_'+uid)||'[]')}catch(_){return[]}},
+    incomingUnseen(uid){const d=DB._dismissedReqs(uid);return DB.incoming(uid).filter(r=>d.indexOf(r.from)===-1)},
+    unreadTotal(uid){return DB.unreadDMs(uid)+DB.unreadRooms(uid)+DB.unreadAnnouncements(uid)},
+    // Marks every conversation (global, announcements, rooms, DMs) as read in one write, and hides the
+    // current friend-request count from the badge.
+    async markAllRead(uid){
+      const stamp=Math.round(Date.now()+SKEW);
+      const keys=new Set([CFG.GLOBAL_ROOM,CFG.ANNOUNCEMENTS_ROOM]);
+      (C.myRoomIds||[]).forEach(id=>keys.add(id));
+      (C.friends[uid]||[]).forEach(f=>keys.add(dmKey(uid,f)));
+      const upd={};
+      keys.forEach(k=>{
+        const newest=(C.messages[k]||[]).reduce((a,m)=>Math.max(a,Number(m.at)||0),0);
+        upd[k]=Math.max(stamp,newest);
+      });
+      try{localStorage.setItem('ich_dismissed_req_'+uid,JSON.stringify(DB.incoming(uid).map(r=>r.from)))}catch(_){}
+      Object.assign(C.lastRead,upd);emit();                 // instant local update
+      await update(R('lastRead/'+uid),upd);                 // then persist (rules: own lastRead is writable)
     },
     // New announcements since the user last opened the Announcements room (same rule as DMs/rooms).
     unreadAnnouncements(uid){return DB.unreadIn(CFG.ANNOUNCEMENTS_ROOM,uid)},
