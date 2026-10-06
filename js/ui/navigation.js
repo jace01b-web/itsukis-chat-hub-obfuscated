@@ -77,3 +77,33 @@ function refreshMarkRead(){
   ['markReadHome','markReadTop'].forEach(id=>{const b=document.getElementById(id);if(b)b.classList.toggle('hidden',!n)});
 }
 DB.onChange(()=>{try{refreshMarkRead()}catch(_){}});
+
+
+/* ---------- Mobile helpers ----------
+   - Settings button: label wrapped so CSS can collapse it to an icon on phones
+   - tap the dimmed area to close the slide-out sidebar
+   - swipe right from the left edge to open it, swipe left to close it */
+{
+  const sb=document.getElementById('settingsBtn');
+  if(sb&&!sb.querySelector('.rb-t'))sb.innerHTML='⚙️ <span class="rb-t">Settings</span>';
+  const layout=document.querySelector('.chat-layout');
+  if(layout)layout.addEventListener('click',e=>{
+    if(e.target!==layout)return;                       // only the dim layer itself (the ::before), not real content
+    const side=document.getElementById('sidebar');
+    if(side&&side.classList.contains('open'))side.classList.remove('open');
+  });
+  let sx=0,sy=0,track=false;
+  document.addEventListener('touchstart',e=>{
+    const t=e.touches[0];sx=t.clientX;sy=t.clientY;
+    track=e.touches.length===1&&innerWidth<=760&&typeof view!=='undefined'&&view.page==='chatPage';
+  },{passive:true});
+  document.addEventListener('touchend',e=>{
+    if(!track)return;track=false;
+    const t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;
+    if(Math.abs(dx)<70||Math.abs(dx)<Math.abs(dy)*1.8)return;   // must be a clear, mostly-horizontal swipe
+    const side=document.getElementById('sidebar');
+    if(!side||side.classList.contains('gc-hide'))return;
+    if(dx>0&&sx<60)side.classList.add('open');
+    else if(dx<0&&side.classList.contains('open'))side.classList.remove('open');
+  },{passive:true});
+}
