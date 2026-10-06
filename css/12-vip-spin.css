@@ -260,3 +260,15 @@
 .pf-role.fl-fire{border-color:rgba(255,74,15,.6);color:#ff4a0f}
 .pf-role.fl-confetti{border-color:rgba(255,95,192,.6);color:#ff5fc0}
 .pf-vip-timer{display:inline-block;margin-top:8px;font-size:11.5px;font-weight:800;padding:3px 10px;border-radius:999px;color:#3a2a00;background:linear-gradient(135deg,#ffd75e,#ffb31a)}
+
+/* ===== Online list: VIP / Legend / Star / Owner names =====
+   .online-row .nm used to be a plain ellipsis box (overflow:hidden + white-space:nowrap). The tier pill is an
+   inline-flex box whose username has overflow:visible, so inside that box a long name was sliced off with no
+   ellipsis and the pill's glow was cut - it looked broken for permanent VIP (Legend) most of all, since that
+   pill is the widest. Make the cell a flex container so the pill can shrink, and let the USERNAME (not the
+   whole pill) take the ellipsis. */
+.online-row .nm{display:flex;align-items:center;min-width:0;overflow:hidden}
+.online-row .nm>*{min-width:0;max-width:100%}
+.online-row .nm .nm-wrap{flex:0 1 auto;min-width:0;max-width:100%}
+.online-row .nm .nm-wrap .nm-title{flex:none}
+.online-row .nm .nm-wrap .nm-user{flex:0 1 auto;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis}
