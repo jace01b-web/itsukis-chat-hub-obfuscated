@@ -87,3 +87,16 @@
   .vc-dock{bottom:calc(120px + env(safe-area-inset-bottom,0px))}
 }
 @media (prefers-reduced-motion:reduce){.vc-live{animation:none}.vc-tile,.vc-btn{transition:none}}
+
+/* usage chip + popover */
+.vc-head-r{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.vc-usage{position:relative;border:0;border-radius:999px;padding:7px 12px;font:700 12px/1 inherit;font-family:inherit;color:#e3e5e8;cursor:pointer;background:linear-gradient(90deg,rgba(35,165,90,.45) var(--p,0%),rgba(255,255,255,.08) var(--p,0%));white-space:nowrap}
+.vc-usage.warn{background:linear-gradient(90deg,rgba(240,178,50,.55) var(--p,0%),rgba(255,255,255,.08) var(--p,0%))}
+.vc-usage.red{background:linear-gradient(90deg,rgba(218,55,60,.65) var(--p,0%),rgba(255,255,255,.08) var(--p,0%))}
+.vc-usage-pop{right:12px;left:auto;top:52px;width:260px}
+.vc-us-list{max-height:260px;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:2px 4px;color:#dbdee1;font-size:13px}
+.vc-us-row{display:grid;grid-template-columns:1fr auto;gap:4px 8px}
+.vc-us-m{font-weight:700}.vc-us-v{color:#b5bac1}
+.vc-us-bar{grid-column:1/-1;height:5px;border-radius:5px;background:rgba(255,255,255,.1);overflow:hidden}
+.vc-us-bar i{display:block;height:100%;background:#23a55a}
+.vc-us-note{font-size:11px;color:#949ba4;line-height:1.35}
