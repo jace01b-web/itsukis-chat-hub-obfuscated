@@ -2,23 +2,13 @@ ICH (Itsuki's Chat Hub)
 
 EASY links:
 
-[Launcher 1](https://editor.p5js.org/jace01b/full/mYFtQwQgD)
+*Old launchers deleted (blocked)*
 
-[Launcher 2](https://editor.p5js.org/jace01b/full/2nRl7Nr41)
+[Launcher 9](https://gazelle-0br9zq.my.canva.site/ich-launcher-backup-1)
 
-[Launcher 3](https://editor.p5js.org/jace01b/full/1prpxaC-R)
+[Launcher 10](https://gazelle-0br9zq.my.canva.site/ich-launcher)
 
-[Launcher 4](https://editor.p5js.org/jace01b/full/Pd-AaFE8Q)
-
-[Launcher 5](https://editor.p5js.org/jace01b/full/En16520jO)
-
-[Launcher 6](https://editor.p5js.org/jace01b/full/WUTqx4Upg)
-
-[Launcher 7](https://editor.p5js.org/jace01b/full/6_IogozHR)
-
-[Launcher 8](https://editor.p5js.org/jace01b/full/vh0E_CreD)
-
-[Launcher Code](https://github.com/AniItsukiCoded/backups/tree/main)
+[Launcher 11](https://gazelle-0br9zq.my.canva.site/ich)
 
 
 ---
