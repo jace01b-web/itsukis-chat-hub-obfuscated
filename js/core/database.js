@@ -16,7 +16,8 @@ const DB=(()=>{
   let reactUnsub=null;   // follows whichever conversation is open, alongside msgUnsub
   let _rcBase,_rcShownAt=0;   // owner "Reconnect everyone" request tracking
   let presUnsub=null,presenceSelfRef=null;   // scoped "who's here" presence for the open context
-  let presenceRef=null,sessUnsub=null,mySessionToken=null,sessionConfirmed=false,kicked=false;   // single-active-session enforcement
+  let presenceRef=null,sessUnsub=null,mySessionToken=null,sessionConfirmed=false,kicked=false;
+  let rcPending=false,signingOut=false,lastHeal=0;   // rcPending: owner's online check is waiting on this client; signingOut: don't re-mark online while logging out   // single-active-session enforcement
   const previewUnsubs={};
   const roomUnsubs={};
   const fetchingUsers=new Set();
@@ -54,6 +55,16 @@ const DB=(()=>{
   // a Reconnect button that re-claims the session — which in turn kicks
   // whichever client is currently active.
   function genSessionToken(){return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)}
+  /* Self-heal: onlineUsers/$id is one shared boolean per account and only got written on (re)connect. If anything cleared it
+     while this client was still live (another tab/device closing, a network blip, a re-login race) the person showed as
+     "Offline" everywhere until they refreshed. Now a live client notices its own marker is missing and puts it back. */
+  function healPresence(){
+    if(myId==null||kicked||rcPending||signingOut||!presenceRef||!ready)return;
+    if(C.onlineIds.indexOf(myId)>-1)return;
+    const t=Date.now();if(t-lastHeal<8000)return;lastHeal=t;
+    armPresence();armScopedPresence();
+  }
+  setInterval(()=>{try{healPresence()}catch(_){}},30000);
   function armPresence(){
     if(!presenceRef)return;
     onDisconnect(presenceRef).remove();
@@ -145,7 +156,7 @@ const DB=(()=>{
   }
 
   function startListeners(){
-    stopAll();BANNED_LOADED=false;_rcBase=undefined;
+    stopAll();BANNED_LOADED=false;_rcBase=undefined;signingOut=false;rcPending=false;
     presenceRef=R('onlineUsers/'+myId);
     claimSession();watchSession();
     listen('users',v=>C.users=v||{});
@@ -205,6 +216,7 @@ const DB=(()=>{
       C.online=C.onlineIds.length;
       C.onlineIds.forEach(id=>fetchUserIfMissing(id));
       if(ready)emit();   // refresh online pills/lists the moment someone goes offline
+      healPresence();
     });
     // Owner "Reconnect everyone": the owner clears every online marker and bumps reconnectRequest. Everyone with
     // a live client gets a prompt and only shows as online again if they press Reconnect. The first value we
@@ -218,6 +230,7 @@ const DB=(()=>{
       _rcShownAt=Date.now();
       if(kicked)return;
       if(v.by===myId){armPresence();armScopedPresence();return}   // the owner who ran it stays online
+      rcPending=true;
       if(typeof onReconnectCheck==='function')setTimeout(()=>onReconnectCheck(),0);
     });
     // heal my DM memberships as soon as friends load, so messages from a friend always become readable
@@ -430,7 +443,7 @@ const DB=(()=>{
       return ids.length;
     },
     // Called when a user presses "Reconnect" on the owner's check: show as online again.
-    confirmOnline(){if(myId!=null&&!kicked){armPresence();armScopedPresence()}},
+    confirmOnline(){rcPending=false;if(myId!=null&&!kicked){armPresence();armScopedPresence()}},
     settle:async()=>{await Promise.race([authReady,sleep(12000)]);await sessionDone;},
     onChange:f=>{listeners.add(f);return()=>listeners.delete(f)},
     dmKey,watchMessages,
@@ -595,6 +608,7 @@ const DB=(()=>{
       return{needsProfile:!this.currentUser()};
     },
     async signOut(){
+      signingOut=true;
       if(myId!=null&&!kicked)await remove(R('onlineUsers/'+myId)).catch(()=>{});
       if(msgKey!=null&&myId!=null)await remove(R('presence/'+msgKey+'/'+myId)).catch(()=>{});
       if(myId!=null&&mySessionToken){await get(R('sessions/'+myId)).then(s=>{const v=s.val();if(v&&v.token===mySessionToken)return remove(R('sessions/'+myId))}).catch(()=>{})}

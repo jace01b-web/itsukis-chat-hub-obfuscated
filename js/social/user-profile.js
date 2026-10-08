@@ -113,7 +113,7 @@ function openUserProfile(id){
     const isMe=id===ME.id;
     const deleted=!!u.deleted;
     const name=deleted?'Deleted User':displayUsername(u.username);
-    const online=DB.onlineIds().includes(id);
+    const online=isMe||DB.onlineIds().includes(id);   // you're obviously online while looking at your own card
     const owner=isOwner(id);
     const mod=isMod(id);
     const banned=DB.isBanned(id);
