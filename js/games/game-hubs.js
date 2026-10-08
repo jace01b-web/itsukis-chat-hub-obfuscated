@@ -29,18 +29,11 @@ const HUB_SECTIONS=[['apps','Apps'],['hubs','Hubs'],['tools','Tools'],['links','
 const CUSTOM_HUBS=[
   {sec:'apps',name:'MZK',url:'https://raw.githubusercontent.com/Cra-Z-Gaming/VUS/refs/heads/main/MZK',desc:'MZK app.',icon:'MZK',color:'violet'},
   {sec:'apps',name:'VUS Hub Modded',url:'https://raw.githubusercontent.com/AniItsukiCoded/VUS-Hub-Modded/refs/heads/main/VUSHubModded.html',desc:'Modded version of VUS Hub.',icon:'VM',color:'orange'},
+  {sec:'apps',name:'VUS Chat Modded',url:'https://raw.githubusercontent.com/jace01b-web/VUS-Modded/refs/heads/main/index.html',desc:'Modded version of VUS Chat, featuring a mod menu and new UI.',icon:'VC',color:'orange'},
   {sec:'hubs',name:"Nike Hub",url:"https://originfastly.jsdelivr.net/gh/avaisadev/github.com@latest/index.svg",desc:"Both a web proxy and a games hub. More mirrors are under Proxies.",icon:"NH",color:"orange"},
   {sec:'hubs',name:"Dogeub",url:"https://storage.googleapis.com/dogeub/index.html",desc:"Proxy with a search bar plus games. Same family as Otonic. More mirrors are under Proxies.",icon:"DG",color:"yellow"},
   {sec:'hubs',name:"Otonic",url:"https://gscsoccer.com",desc:"Proxy with a search bar plus games. Same family as Dogeub. More mirrors are under Proxies.",icon:"OT",color:"cyan"},
-  {sec:'hubs',name:"Duckmath",url:"https://storage.googleapis.com/mathlessons/duckmath.html",desc:"Duckmath game hub. More mirrors are under Proxies.",icon:"DM",color:"lime"},
-  {sec:'hubs',name:"Noah's Tutoring Hub",url:"https://unpkg.com/noahs-tutoring-hub@1.0.1/index.html",desc:"Noah's Tutoring hub, hosted on a different link.",icon:"NT",color:"blue"},
-  {sec:'hubs',name:"Noah's Tutoring Hub (Algebra)",url:"https://unpkg.com/algebra-calculus-calculator@1.0.0/index.html",desc:"Algebra/calculus calculator version of Noah's Tutoring Hub.",icon:"NT",color:"blue"},
-  {sec:'hubs',name:"Goodnight Math",url:"https://cdn.jsdmirror.com/combine/gh/soonicdatguy/securly.com@latest/classlink.com/math.svg",desc:"Goodnight Math game hub.",icon:"GM",color:"violet"},
-  {sec:'hubs',name:"Goodnight Math (backup 1)",url:"https://pvx2r3wcapbgdrcvz9gf.codedex.me",desc:"Backup mirror of Goodnight Math, handy if the first one is down.",icon:"GM",color:"violet"},
-  {sec:'hubs',name:"Goodnight Math (backup 2)",url:"https://storage.googleapis.com/cloudlift-app-cloud-prod-upload/davessportshopfridley/wLHidAjKFp.svg",desc:"Backup mirror of Goodnight Math, handy if the first one is down.",icon:"GM",color:"violet"},
-  {sec:'hubs',name:"Goodnight Math (backup 3)",url:"https://ts40li1gy8sbjj3xx7db.codedex.me",desc:"Backup mirror of Goodnight Math, handy if the first one is down.",icon:"GM",color:"violet"},
-  {sec:'hubs',name:"Goodnight Math (backup 4)",url:"https://eqmsllyzeq4dy0u6tdnd.codedex.me",desc:"Backup mirror of Goodnight Math, handy if the first one is down.",icon:"GM",color:"violet"},
-  {sec:'hubs',name:"Goodnight Math (backup 5)",url:"https://ozzgj9jml2w4fj2wvtml.codedex.me",desc:"Backup mirror of Goodnight Math, handy if the first one is down.",icon:"GM",color:"violet"}
+  {sec:'hubs',name:"Duckmath",url:"https://storage.googleapis.com/mathlessons/duckmath.html",desc:"Duckmath game hub. More mirrors are under Proxies.",icon:"DM",color:"lime"}
 ];
 let _hubSec='hubs',_pxGroup='',_hubDir=0;
 const GAME_HUB_ALLOWLIST=new Set(Object.keys(HUB_INFO));
