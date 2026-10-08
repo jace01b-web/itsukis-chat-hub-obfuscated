@@ -58,7 +58,7 @@
     });
 
     // Put it right under Zoom, above the "Sessions end after 30 minutes" note.
-    var note = menu.querySelector(".ex-note");
+    var note = menu.querySelector(".ex-note:not(.ex-warn)");
     if (note) menu.insertBefore(a, note);
     else menu.appendChild(a);
   }
