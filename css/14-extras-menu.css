@@ -117,7 +117,47 @@ html.anti-lag .extras{--ex-bg:rgb(24,25,42)}
 html.anti-lag .ex-shell::before,html.anti-lag .ex-shell::after,html.anti-lag .ex-item::before{display:none!important}
 html.anti-lag .extras.open .ex-ic::before{animation:none!important}
 
-/* Voice Channel entry (a button, not a link) */
-button.ex-item{width:100%;border:0;font:inherit;cursor:pointer;text-align:left;margin-top:10px}
-.ex-warn{align-items:flex-start}
-.extras.open .ex-warn{animation:exIn .6s var(--ex-pop) both;animation-delay:.28s}
+/* ==========================================================================
+   EXTRAS v2 - refreshed item cards. Every row gets its own accent colour (--rgb / --c1 / --c2).
+   The Voice Channel row and its warning live in ONE card (.ex-group) so the warning is clearly about voice.
+   ========================================================================== */
+.ex-inner{display:flex;flex-direction:column;gap:10px;padding:2px 12px 14px}
+.ex-cap{padding:6px 4px 2px}
+.ex-item,.ex-group{--rgb:28,107,255;--c1:#62b0ff;--c2:#1c6bff}
+#exZoom{--rgb:40,140,255;--c1:#6cc0ff;--c2:#1c6bff}
+.ex-voice,.ex-group-voice{--rgb:150,92,255;--c1:#ff9a5a;--c2:#8a5cff}
+#exLauncher{--rgb:124,108,255;--c1:#a99bff;--c2:#5a4bff}
+.ex-item,.ex-group{position:relative;border-radius:22px;
+  background:radial-gradient(120% 160% at 0% 0%,rgba(var(--rgb),.34),transparent 62%),linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02)),rgba(18,19,34,.55);
+  box-shadow:inset 0 0 0 1px rgba(var(--rgb),.38),inset 0 1px 0 rgba(255,255,255,.16),0 6px 16px rgba(0,0,0,.22);
+  transition:transform .4s var(--ex-pop),box-shadow .3s ease,background .3s ease}
+.ex-item{padding:12px 14px 12px 12px;gap:13px;width:100%;margin:0;border:0;font:inherit;cursor:pointer;text-align:left}
+.ex-item:hover,.ex-item:focus-visible,.ex-group:hover,.ex-group:focus-within{outline:none;transform:translateY(-2px);
+  box-shadow:inset 0 0 0 1px rgba(var(--rgb),.75),inset 0 1px 0 rgba(255,255,255,.22),0 14px 30px rgba(var(--rgb),.32)}
+.ex-item:hover,.ex-item:focus-visible{transform:translateY(-2px) scale(1.015)}
+.ex-item:active{transform:scale(.975)}
+.ex-ic{width:50px;height:50px;border-radius:16px;
+  background:linear-gradient(145deg,var(--c1),var(--c2))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.6),inset 0 -10px 14px rgba(0,0,0,.2),0 8px 20px rgba(var(--rgb),.55)!important}
+.ex-ic::before{border-color:rgba(var(--rgb),.7)}
+.ex-txt b{font-size:17px;letter-spacing:.01em}
+.ex-txt small{display:flex;align-items:center;gap:6px;font-size:12.5px;color:rgba(224,230,255,.7)}
+.ex-go{width:32px;height:32px;background:rgba(255,255,255,.09);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}
+.ex-item:hover .ex-go{background:linear-gradient(145deg,var(--c1),var(--c2));color:#fff}
+/* voice card: row + warning share one card */
+.ex-group{overflow:hidden;padding:0}
+.ex-group .ex-item{background:none;box-shadow:none;border-radius:0;transform:none!important;animation:none!important}
+.ex-group .ex-item:hover .ex-ic{transform:rotate(-6deg) scale(1.08)}
+.ex-warn{display:flex;gap:10px;align-items:flex-start;padding:10px 14px 12px;font-size:12px;line-height:1.5;text-align:left;
+  color:rgba(255,230,185,.88);border-top:1px dashed rgba(255,190,90,.32);
+  background:linear-gradient(180deg,rgba(255,176,60,.14),rgba(255,176,60,.05))}
+.ex-warn svg{flex:none;width:17px;height:17px;margin-top:1px;color:#ffb84d}
+.ex-warn b{color:#ffd98a;font-weight:800}
+.ex-live{width:8px;height:8px;border-radius:50%;background:#7b7f99;flex:none;display:none}
+.ex-live.on{display:inline-block;background:#3ddc84;box-shadow:0 0 0 0 rgba(61,220,132,.6);animation:exLive 1.8s ease-out infinite}
+@keyframes exLive{70%{box-shadow:0 0 0 7px rgba(61,220,132,0)}100%{box-shadow:0 0 0 0 rgba(61,220,132,0)}}
+/* timer note becomes a slim footer */
+.ex-inner>.ex-note{margin-top:2px;padding:9px 12px;border-radius:16px;font-size:12px}
+.extras.open .ex-group{animation:exIn .6s var(--ex-pop) both;animation-delay:.27s}
+html.anti-lag .ex-live.on{animation:none}
+.ex-txt b{font-size:16.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}

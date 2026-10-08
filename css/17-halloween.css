@@ -38,7 +38,9 @@ html.hw-on{--accent:#ff7a1a;--accent2:#a855ff}
 html.anti-lag .hw-bat,html.anti-lag .hw-gh,html.anti-lag .hw-em,html.anti-lag .hw-fog,html.anti-lag .hw-sp{display:none}
 html.anti-lag .hw-deco *,html.anti-lag .hw-name,html.anti-lag .hw-title,html.anti-lag .hw-modal *,html.anti-lag .hw-hero *{animation:none!important}
 @media (max-width:700px){.hw-deco .hw-x{display:none}.hw-web{width:90px;height:90px}.hw-moon{width:42px}.hw-pk{font-size:26px}}
-@media (prefers-reduced-motion:reduce){.hw-deco *,.hw-name,.hw-title,.hw-modal *,.hw-hero *{animation:none!important}}
+/* NOTE: the background decorations (.hw-deco) are intentionally NOT switched off by prefers-reduced-motion: with animations
+   disabled the bats/ghosts/embers sit off-screen at opacity 0, so the whole scene vanished on those devices. Only Anti-lag turns them off. */
+@media (prefers-reduced-motion:reduce){.hw-name,.hw-title,.hw-modal *,.hw-hero *{animation:none!important}}
 
 /* ===== Launcher parity: entrance animation, ripple, and protection from glass/blur styles ===== */
 :root{--spring:cubic-bezier(.16,1,.3,1)}

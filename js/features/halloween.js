@@ -78,6 +78,24 @@ function hwSetTheme(v,src){
   document.body.appendChild(rp);setTimeout(()=>rp.remove(),1000);
   setTimeout(()=>{hwSync();if(v)hwBurst(true)},160);
 }
+/* Safety net: if 17-halloween.css didn't make it onto this device (blocked/failed fetch), pull the raw file in directly. */
+function hwEnsureCss(){
+  try{
+    const d=document.getElementById('hwDeco');if(!d||window.__hwCssOk)return;
+    if(getComputedStyle(d).position==='fixed'){window.__hwCssOk=true;return}
+    if(window.__hwCssBusy)return;window.__hwCssBusy=true;
+    const m=document.querySelector('meta[name="build-version"]'),q=m&&m.content?'?v='+encodeURIComponent(m.content):'';
+    const urls=['https://raw.githubusercontent.com/jace01b-web/itsukis-chat-hub-obfuscated/main/css/17-halloween.css','https://cdn.jsdelivr.net/gh/jace01b-web/itsukis-chat-hub-obfuscated@main/css/17-halloween.css'];
+    const go=i=>{
+      if(i>=urls.length){window.__hwCssBusy=false;return}
+      fetch(urls[i]+q,{cache:'reload'}).then(r=>{if(!r.ok)throw 0;return r.text()}).then(t=>{
+        const st=document.createElement('style');st.setAttribute('data-css','17-halloween.css (fallback)');st.textContent=t;document.head.appendChild(st);
+        window.__hwCssBusy=false;window.__hwCssOk=getComputedStyle(d).position==='fixed';
+      }).catch(()=>go(i+1));
+    };
+    go(0);
+  }catch(_){}
+}
 function hwDeco(on){
   document.documentElement.classList.toggle('hw-on',on);
   let d=document.getElementById('hwDeco');
@@ -97,7 +115,8 @@ function hwDeco(on){
   for(let i=0;i<16;i++)h+='<i class="hw-em'+(i>7?' hw-x':'')+'" style="--x:'+r(0,100)+'%;--s:'+r(2,5)+'px;--dx:'+r(-60,60)+'px;--d:'+r(9,18)+'s;--t:-'+r(0,16)+'s"></i>';
   h+='<b class="hw-pk l">🎃</b><b class="hw-pk r hw-x">🎃</b>';
   d=document.createElement('div');d.id='hwDeco';d.className='hw-deco';d.setAttribute('aria-hidden','true');d.innerHTML=h;
-  document.body.insertBefore(d,document.body.firstChild);   // first child + z-index 0 = sits behind every page and panel, so it can never cover or shift UI
+  document.body.insertBefore(d,document.body.firstChild);
+  hwEnsureCss();   // first child + z-index 0 = sits behind every page and panel, so it can never cover or shift UI
 }
 /* ---------- season pass ---------- */
 function hwProg(){
@@ -265,6 +284,7 @@ setInterval(async()=>{
 /* ---------- wiring: chat picker hero, settings card, refresh (nothing here touches layout outside the picker/settings) ---------- */
 function hwSync(){
   hwDeco(hwOpen()&&hwWant());
+  hwEnsureCss();
   const gg=document.getElementById('goGlobal');
   if(gg){
     const n=(ME&&hwCanClaim())?hwClaimable():0;let d=gg.querySelector('.hw-dot');

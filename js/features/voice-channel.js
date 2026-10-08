@@ -753,7 +753,14 @@ function mountTile(){
   f.grid.insertBefore(c,t.nextSibling);
   renderTile();
 }
+function renderEx(){
+  var s=$('exVoiceSub'),d=$('exVoiceLive');if(!s)return;
+  var n=0;try{n=activeList().length}catch(e){}
+  s.textContent=S.joining?'Connecting…':(S.joined?('Connected · '+n+' in call'):(n?(n+' in call · tap to join'):'Talk with everyone in Global'));
+  if(d)d.classList.toggle('on',!!(S.joined||n));
+}
 function renderTile(){
+  renderEx();
   var tile=$('vcTile');if(!tile)return;
   tile.classList.toggle('vc-live',!!S.joined);tile.classList.toggle('vc-connecting',!!S.joining);
   var s=tile.querySelector('.vc-tile-sub');if(!s)return;

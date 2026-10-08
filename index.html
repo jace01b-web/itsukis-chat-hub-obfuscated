@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-10-08.01">
+<meta name="build-version" content="2026-10-08.02">
 <title>Itsukis Chat Hub</title>
 <link rel="icon" type="image/png" href="https://aniitsukicoded.github.io/backups/icon.png">
 <!-- RAW-LINK BOOTSTRAP: everything (css + js) is loaded from raw.githubusercontent.com.
@@ -78,8 +78,22 @@
 
   /* prefetch everything in parallel */
   JS.forEach(function(p){blob(RAW+p).catch(function(){});});
+  var JSD="https://cdn.jsdelivr.net/gh/jace01b-web/itsukis-chat-hub-obfuscated@main/";
+  function cssText(f){
+    var urls=[RAW+"css/"+f+".css",JSD+"css/"+f+".css"];
+    function at(i,round){
+      return origFetch.call(window,urls[i]+Q,{cache:round?"reload":"default"}).then(function(r){
+        if(!r.ok)throw new Error(f+" HTTP "+r.status);return r.text();
+      }).catch(function(e){
+        if(i+1<urls.length)return at(i+1,round);
+        if(round<2)return new Promise(function(ok){setTimeout(ok,500*(round+1))}).then(function(){return at(0,round+1)});
+        throw e;
+      });
+    }
+    return at(0,0);
+  }
   var cssDone=Promise.all(CSS.map(function(f){
-    return text(RAW+"css/"+f+".css").then(function(t){return {f:f,t:t};},
+    return cssText(f).then(function(t){return {f:f,t:t};},
       function(e){console.error("[css]",e);return {f:f,t:""};});
   })).then(function(res){
     res.forEach(function(x){
@@ -224,14 +238,16 @@
           <span class="ex-txt"><b>Zoom</b><small>Join the video call</small></span>
           <span class="ex-go" aria-hidden="true"><svg viewBox="0 0 20 20" width="15" height="15"><path d="M6 14 14 6M8 6h6v6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </a>
-        <button class="ex-item ex-voice" role="menuitem" tabindex="-1" id="exVoice" type="button">
-          <span class="ex-ic" aria-hidden="true" style="background:linear-gradient(145deg,#ff9a5a,#8a5cff);box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -10px 14px rgba(0,0,0,.18),0 8px 22px rgba(138,92,255,.5);font-size:24px">🔊</span>
-          <span class="ex-txt"><b>Voice Channel</b><small id="exVoiceSub">Talk with everyone in Global</small></span>
-          <span class="ex-go" aria-hidden="true"><svg viewBox="0 0 20 20" width="15" height="15"><path d="M6 14 14 6M8 6h6v6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-        </button>
-        <div class="ex-note ex-warn">
-          <span aria-hidden="true" style="font-size:22px;line-height:1">⚠️</span>
-          <span><b>Voice Channel</b> doesn't work on school Chromebooks or with ad blockers. On your own device, turn your ad blocker off for this site to use it.</span>
+        <div class="ex-group ex-group-voice">
+          <button class="ex-item ex-voice" role="menuitem" tabindex="-1" id="exVoice" type="button">
+            <span class="ex-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0v-5a3 3 0 0 0-3-3Z" fill="#fff" fill-opacity=".25"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v2.5M8.5 20.5h7"/></svg></span>
+            <span class="ex-txt"><b>Voice Channel</b><small><i class="ex-live" id="exVoiceLive"></i><span id="exVoiceSub">Talk with everyone in Global</span></small></span>
+            <span class="ex-go" aria-hidden="true"><svg viewBox="0 0 20 20" width="15" height="15"><path d="m7.5 4.5 5.5 5.5-5.5 5.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </button>
+          <div class="ex-warn" role="note">
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 2.8 19.5h18.4L12 3.5Z"/><path d="M12 10v4.2M12 17.4v.1"/></svg>
+            <span><b>Voice Channel</b> doesn't work on school Chromebooks or with ad blockers. On your own device, turn your ad blocker off for this site to use it.</span>
+          </div>
         </div>
         <div class="ex-note">
           <span class="ex-timer" aria-hidden="true"><svg viewBox="0 0 32 32" width="32" height="32"><circle class="tr" cx="16" cy="16" r="12"/><circle class="pr" cx="16" cy="16" r="12" pathLength="100"/></svg><b>30</b></span>
