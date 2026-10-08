@@ -17,6 +17,7 @@ let APP_VERSION_LOADED=false;
 // Timeout durations mods are allowed to use, in minutes (must match the rules' allow-list
 // in muted/$id/.validate exactly, or a mod's mute attempt gets rejected server-side).
 const MOD_MUTE_OPTS=[[5,'5 minutes'],[60,'1 hour'],[360,'6 hours'],[720,'12 hours'],[1440,'1 day']];
+const ADMIN_MUTE_OPTS=[[5,'5 minutes'],[60,'1 hour'],[360,'6 hours'],[720,'12 hours'],[1440,'1 day'],[4320,'3 days'],[10080,'7 days']];   // admins: anything up to 7 days (rules cap it)
 const OWNER_MUTE_OPTS=[[5,'5 minutes'],[60,'1 hour'],[1440,'24 hours'],[10080,'7 days']];
 /* ---------- Menu lockout on ban ----------
    isOwner() above now reads live from the real database (owners/$id, populated by

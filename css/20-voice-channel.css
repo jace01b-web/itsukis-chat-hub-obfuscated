@@ -91,7 +91,7 @@
 .vc-eq i{display:block;width:3px;height:100%;border-radius:2px;background:var(--vc-green);transform-origin:bottom;animation:vcEq .7s ease-in-out infinite}
 .vc-eq i:nth-child(2){animation-delay:.18s}.vc-eq i:nth-child(3){animation-delay:.36s}
 .vc-tag{font-size:9px;font-weight:800;letter-spacing:.05em;padding:2px 6px;border-radius:5px}
-.vc-tag:empty{display:none}.vc-tag.owner{background:linear-gradient(135deg,#f6c24a,#e09a1f);color:#2b1d00}.vc-tag.mod{background:linear-gradient(135deg,#6b78ff,#4a55e0);color:#fff}
+.vc-tag:empty{display:none}.vc-tag.owner{background:linear-gradient(135deg,#f6c24a,#e09a1f);color:#2b1d00}.vc-tag.mod{background:linear-gradient(135deg,#6b78ff,#4a55e0);color:#fff}.vc-tag.admin{background:linear-gradient(135deg,#ff7a5c,#e8503a);color:#fff}
 .vc-st{position:absolute;right:8px;bottom:8px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#d1d4d9;transition:color .2s,background .2s}
 .vc-st svg{width:16px;height:16px;animation:vcPopIn .3s var(--vc-spring)}
 .vc-tile.muted .vc-st,.vc-tile.deaf .vc-st{color:var(--vc-red);background:rgba(242,63,67,.16)}

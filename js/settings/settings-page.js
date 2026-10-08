@@ -29,7 +29,7 @@ function openSettings(fromChat){
       <button data-t="music">🎵 Music</button>
       <button data-t="filter">🚫 Filter</button>
       <button data-t="about">ℹ️ About</button>
-      ${(isOwner(ME.id)||isMod(ME.id))?'<button data-t="mod">🛡️ Moderation</button>':''}
+      ${isStaff(ME.id)?'<button data-t="mod">🛡️ Moderation</button>':''}
     </div>
 
     <div data-p="msg">
@@ -184,7 +184,7 @@ function openSettings(fromChat){
       </div>
     </div>
 
-    ${(isOwner(ME.id)||isMod(ME.id))?`<div data-p="mod" class="hidden">
+    ${isStaff(ME.id)?`<div data-p="mod" class="hidden">
       ${isOwner(ME.id)?`<div class="set-card">
         <div class="section-h" style="margin-top:0">🛡️ Content filter</div>
         <div class="toggle-row">
@@ -228,19 +228,19 @@ function openSettings(fromChat){
           <button class="btn" id="modPruneGo" type="button">Clean up now</button>
         </div>
         <div class="hint" id="modPruneStat" style="margin-top:8px">Runs automatically in the background too. Deletes old messages (and their reactions) in Global, VIP and any chat you're in — this shrinks your database and makes chats load faster. Announcements are never auto-deleted.</div>
-      </div>
-      <div class="set-card">
+      </div>`:''}
+      ${(isOwner(ME.id)||isAdmin(ME.id))?`<div class="set-card">
         <div class="section-h" style="margin-top:0">🔨 Ban a user</div>
         <div class="set-grid">
           <div class="field"><label>User ID</label><input type="number" id="modBanId" placeholder="e.g. 42"></div>
         </div>
         <div class="actions" style="justify-content:flex-start;margin-top:10px">
           <button class="btn" style="background:var(--danger)" id="modBanGo">Ban</button>
-          <button class="btn sec" id="modUnbanGo">Unban</button>
+          ${isOwner(ME.id)?'<button class="btn sec" id="modUnbanGo">Unban</button>':''}
         </div>
-        <div class="hint" style="margin-top:8px">Banned accounts show as "Deleted User", reserve their old username so it can't be taken while banned, and can't send messages, change settings, or do anything else — but they stay signed in so they can't ban-evade by making a new account. Unbanning gives them a new generated username (which they can change anytime) and frees their old one for reuse.</div>
-      </div>
-      <div class="set-card">
+        <div class="hint" style="margin-top:8px">${isOwner(ME.id)?'':'Admins can ban anyone except owners and other admins. Only an owner can unban. '}Banned accounts show as "Deleted User", reserve their old username so it can't be taken while banned, and can't send messages, change settings, or do anything else — but they stay signed in so they can't ban-evade by making a new account. Unbanning gives them a new generated username (which they can change anytime) and frees their old one for reuse.</div>
+      </div>`:''}
+      ${isOwner(ME.id)?`      <div class="set-card">
         <div class="section-h" style="margin-top:0">🚀 Version control</div>
         <div class="ver-stats" id="verStats">
           <div class="ver-stat"><label>Your build</label><div class="ver-pill" id="verMyBuild">${esc(MY_BUILD)||'unknown'}</div></div>
@@ -302,15 +302,15 @@ function openSettings(fromChat){
         <div class="set-grid">
           <div class="field"><label>User ID</label><input type="number" id="modMuteId" placeholder="e.g. 42"></div>
           <div class="field"><label>Duration</label><select id="modMuteDur">
-            ${(isOwner(ME.id)?OWNER_MUTE_OPTS:MOD_MUTE_OPTS).map(([m,l])=>`<option value="${m}">${l}</option>`).join('')}</select></div>
+            ${(isOwner(ME.id)?OWNER_MUTE_OPTS:(isAdmin(ME.id)?ADMIN_MUTE_OPTS:MOD_MUTE_OPTS)).map(([m,l])=>`<option value="${m}">${l}</option>`).join('')}</select></div>
         </div>
         <div class="actions" style="justify-content:flex-start;margin-top:10px">
           <button class="btn" style="background:var(--danger)" id="modMuteGo">Mute</button>
           <button class="btn sec" id="modUnmuteGo">Unmute</button>
         </div>
-        <div class="hint" style="margin-top:8px">${isOwner(ME.id)?'Muted users can still read messages and use menus, just can\'t send anything until the mute expires or is lifted.':'Muted users can still read messages and use menus, just can\'t send anything until the timeout expires or is lifted. Timeouts are capped at 1 day, and owners and other mods can\'t be muted.'}</div>
+        <div class="hint" style="margin-top:8px">${isOwner(ME.id)?'Muted users can still read messages and use menus, just can\'t send anything until the mute expires or is lifted.':isAdmin(ME.id)?'Muted users can still read messages and use menus, just can\'t send anything until the mute expires or is lifted. Admins can mute for up to 7 days, and owners and other admins can\'t be muted.':'Muted users can still read messages and use menus, just can\'t send anything until the timeout expires or is lifted. Timeouts are capped at 1 day, and owners, admins and other mods can\'t be muted.'}</div>
       </div>
-      ${isOwner(ME.id)?`<div class="set-card">
+      ${isStaff(ME.id)?`<div class="set-card">
         <div class="section-h" style="margin-top:0">🗑️ Delete messages</div>
         <div class="set-grid">
           <div class="field"><label>User ID</label><input type="number" id="modDelId" placeholder="e.g. 42"></div>
@@ -318,7 +318,7 @@ function openSettings(fromChat){
         <div class="actions" style="justify-content:flex-start;margin-top:10px">
           <button class="btn sec" id="modDelSearch">Find messages</button>
         </div>
-        <div class="hint" style="margin-top:8px">Shows this user's messages in Global Chat and in every room or DM <b>your own account</b> is a member of. It can't reach conversations you're not part of — banning someone also wipes their messages in everything you can reach, and their own client wipes the rest of theirs.</div>
+        <div class="hint" style="margin-top:8px">Shows this user's messages in Global Chat and in every room or DM <b>your own account</b> is a member of. It can't reach conversations you're not part of.${(isOwner(ME.id)||isAdmin(ME.id))?' Banning someone also wipes their messages in everything you can reach, and their own client wipes the rest of theirs.':''}${isOwner(ME.id)?'':' You can\'t delete an owner\'s messages'+(isMod(ME.id)&&!isAdmin(ME.id)?' or an admin\'s':'')+'.'}</div>
         <div id="modDelResults" style="margin-top:12px"></div>
       </div>`:''}
     </div>`:''}
@@ -545,7 +545,7 @@ function openSettings(fromChat){
       finally{btn.disabled=false}
     });
   }
-  if(isOwner(ME.id)||isMod(ME.id)){
+  if(isStaff(ME.id)){
     $$('#modFilterNames')&&$$('#modFilterNames').addEventListener('change',e=>{
       DB.setFilterSettings({filterNames:e.target.checked}).catch(err=>toast(err.message,'bad'));
     });

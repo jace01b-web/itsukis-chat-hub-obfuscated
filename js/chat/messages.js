@@ -261,7 +261,7 @@ function msgEl(m){
   }
   // You can delete your own messages. Owners can delete anyone's; mods can delete anyone's
   // except an owner's (the database rules enforce the same thing).
-  const canDelete=mine||isOwner(ME.id)||(isMod(ME.id)&&!isOwner(m.senderId));
+  const canDelete=mine||isOwner(ME.id)||(isAdmin(ME.id)&&!isOwner(m.senderId))||(isMod(ME.id)&&!isOwner(m.senderId)&&!isAdmin(m.senderId));
   const canEdit=mine&&!!m.text;
   // Discord-style hover bar: a reply arrow starts a reply, edit (own
   // messages only) is a pencil. Deleting stays inline in the meta line

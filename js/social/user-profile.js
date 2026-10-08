@@ -115,7 +115,7 @@ function openUserProfile(id){
     const name=deleted?'Deleted User':displayUsername(u.username);
     const online=isMe||DB.onlineIds().includes(id);   // you're obviously online while looking at your own card
     const owner=isOwner(id);
-    const mod=isMod(id);
+    const mod=isMod(id),admin=isAdmin(id);
     const banned=DB.isBanned(id);
     const muted=DB.isMuted(id);
     const muteMs=muted?DB.muteRemainingMs(id):0;
@@ -144,13 +144,16 @@ function openUserProfile(id){
     }
     const blockBtnHtml=(!isMe&&!deleted&&!blockedMe&&!iBlocked)?`<button class="btn sec small" id="pfBlock" style="width:100%">Block user</button>`:'';
     let modHtml='';
-    const iAmOwner=isOwner(ME.id),iAmMod=isMod(ME.id);
+    const iAmOwner=isOwner(ME.id),iAmAdmin=isAdmin(ME.id),iAmMod=isMod(ME.id);
     if(!isMe&&!deleted&&iAmOwner&&!owner){
       // Owners: full powers — ban/unban plus mute at any duration.
       modHtml=banned
         ?`<button class="btn sec small" id="pfUnban">Unban</button>`
         :`<button class="btn sec small" id="pfMute">🔇 Mute</button><button class="btn danger small" id="pfBan">🔨 Ban</button>`;
-    }else if(!isMe&&!deleted&&iAmMod&&!owner&&!mod&&!banned){
+    }else if(!isMe&&!deleted&&iAmAdmin&&!owner&&!admin&&!banned){
+      // Admins: mute (up to 7 days) and ban — on anyone except owners and other admins. Unbanning stays owner-only.
+      modHtml=`<button class="btn sec small" id="pfMute">🔇 Mute</button><button class="btn danger small" id="pfBan">🔨 Ban</button>`;
+    }else if(!isMe&&!deleted&&iAmMod&&!owner&&!mod&&!admin&&!banned){
       // Mods: mute/unmute only (preset durations, enforced in modalMuteConfirm/DB.muteUser
       // and again server-side by the rules), no ban, and never against an owner or
       // another mod — banned users are owner-only to unban, so mods see nothing there.
@@ -177,7 +180,7 @@ function openUserProfile(id){
         <div style="position:relative;width:fit-content">${av}${online&&!deleted?'<span style="position:absolute;bottom:4px;right:4px;width:18px;height:18px;border-radius:50%;background:#3ddc73;box-shadow:0 0 8px #3ddc73;border:3px solid var(--panel)"></span>':''}</div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap">
           <h2 style="margin:0;font-size:20px">${deleted?esc(name):fullNameHTML(id,esc(name))}</h2>
-          ${mod&&!owner?'<span class="tag" style="background:var(--accent)">Mod</span>':''}
+          ${admin&&!owner?'<span class="tag" style="background:#e8503a">Admin</span>':(mod&&!owner?'<span class="tag" style="background:var(--accent)">Mod</span>':'')}
           ${banned?'<span class="tag" style="background:var(--danger)">Banned</span>':''}
         </div>
         ${(!deleted&&u.pronouns)?`<div class="pf-pron">${esc(u.pronouns)}</div>`:''}

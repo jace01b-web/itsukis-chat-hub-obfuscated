@@ -56,7 +56,7 @@ var I={
  check:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
 };
 
-var S={fb:null,me:null,members:{},forceMap:{},owners:{},mods:{},secret:false,voiceOn:true,banned:false,
+var S={fb:null,me:null,members:{},forceMap:{},owners:{},mods:{},admins:{},secret:false,voiceOn:true,banned:false,
   users:{},userReq:{},tiles:{},unsub:[],sess:[],timers:{},
   client:null,track:null,micErr:false,micMsg:'',sid:'',mref:null,joined:false,joining:false,gen:0,joinAt:0,
   stage:'',slow:false,log:[],err:null,tok:null,q:0,heals:[],healing:false,
@@ -136,6 +136,7 @@ async function bindUser(u){
   watch('voice/forceMuted',function(v){S.forceMap=v||{};applyForce();applyPlayback();render()});
   watch('owners',function(v){S.owners=v||{};render()});
   watch('mods',function(v){S.mods=v||{};render()});
+  watch('admin',function(v){S.admins=v||{};render()});
   watch('secretowner/'+S.me.id,function(v){S.secret=v===1;render()});
   watch('modSettings/voiceEnabled',function(v){S.voiceOn=v!==false;if(!S.voiceOn&&(S.joined||S.joining))cleanup('Voice was turned off by an owner.');render()});
   watch('banned/'+S.me.id,function(v){S.banned=v===true;if(S.banned&&S.joined)cleanup('You are banned.');render()});
@@ -160,10 +161,12 @@ function userOf(id){
 function isOwnerId(id){return S.owners[id]===1}
 function iAmOwner(){return !!S.me&&(S.secret||isOwnerId(S.me.id))}
 function iAmMod(){return !!S.me&&S.mods[S.me.id]===1}
+function iAmAdmin(){return !!S.me&&S.admins[S.me.id]===1}
 function canMod(t){
   if(!S.me||t===S.me.id)return false;
   if(iAmOwner())return !isOwnerId(t);
-  if(iAmMod())return !isOwnerId(t)&&S.mods[t]!==1;
+  if(iAmAdmin())return !isOwnerId(t)&&S.admins[t]!==1;
+  if(iAmMod())return !isOwnerId(t)&&S.mods[t]!==1&&S.admins[t]!==1;
   return false;
 }
 function isForced(id){var f=S.forceMap[id];return !!(f&&typeof f.until==='number'&&f.until>now())}
@@ -858,7 +861,7 @@ function renderView(){
     fillAvatar(t.av,u);
     var nm=u.name+(S.me&&id===S.me.id?' (you)':'');if(t.name.textContent!==nm)t.name.textContent=nm;
     var hue=hueOf(u.name||'?');if(t.hue!==hue){t.hue=hue;t.el.style.setProperty('--h',hue)}
-    var tg=isOwnerId(id)?'OWNER':(S.mods[id]===1?'MOD':'');if(t.tag.textContent!==tg)t.tag.textContent=tg;t.tag.className='vc-tag'+(tg?' '+tg.toLowerCase():'');
+    var tg=isOwnerId(id)?'OWNER':(S.admins[id]===1?'ADMIN':(S.mods[id]===1?'MOD':''));if(t.tag.textContent!==tg)t.tag.textContent=tg;t.tag.className='vc-tag'+(tg?' '+tg.toLowerCase():'');
     var sk=m.deaf?'d':(muted?'m':'o')+(forced?'f':'');
     if(t.st._k!==sk){t.st._k=sk;t.st.innerHTML=m.deaf?I.headOff:(muted?I.micOff:I.mic);t.st.title=forced?'Muted by a moderator':(m.deaf?'Deafened':(muted?'Muted':'Mic on'))}
     t.el.classList.toggle('muted',!!muted);t.el.classList.toggle('forced',forced);t.el.classList.toggle('deaf',!!m.deaf);t.el.classList.toggle('self',!!(S.me&&id===S.me.id));

@@ -35,3 +35,9 @@ function ownersKnown(){return OWNERS_LOADED&&SECRET_LOADED}
 let MODS_CACHE={};
 let MODS_LOADED=false;
 function isMod(id){return MODS_CACHE[Number(id)]===1}
+// admin/$id === 1: a stronger mod (mute up to 7 days, ban users). Same pattern as mods/: read live, never written by the client.
+let ADMINS_CACHE={};
+let ADMINS_LOADED=false;
+function isAdmin(id){return ADMINS_CACHE[Number(id)]===1}
+// Anyone with moderation powers (owner, admin or mod) — used for showing the Moderation tools.
+function isStaff(id){return isOwner(id)||isAdmin(id)||isMod(id)}

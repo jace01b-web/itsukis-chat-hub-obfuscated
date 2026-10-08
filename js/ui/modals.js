@@ -40,7 +40,7 @@ function modalBanConfirm(id,name){
   };
 }
 function modalMuteConfirm(id,name){
-  const opts=isOwner(ME.id)?OWNER_MUTE_OPTS:MOD_MUTE_OPTS;
+  const opts=isOwner(ME.id)?OWNER_MUTE_OPTS:(isAdmin(ME.id)?ADMIN_MUTE_OPTS:MOD_MUTE_OPTS);
   $('#modalRoot').innerHTML=`<div class="modal-bg"><div class="modal" style="max-width:400px;text-align:center">
     <div style="font-size:40px;margin-bottom:6px">🔇</div>
     <h2 style="margin-bottom:8px">Mute ${esc(name)}?</h2>

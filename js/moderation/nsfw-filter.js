@@ -55,7 +55,7 @@ const NSFW={
   },
   // Owner/mod clients: delete recent messages that contain a flagged image.
   async sweep(key,arr){
-    if(!NSFW.on()||!ME||!(isOwner(ME.id)||isMod(ME.id)))return;
+    if(!NSFW.on()||!ME||!(isOwner(ME.id)||isAdmin(ME.id)||isMod(ME.id)))return;
     const cutoff=Date.now()+SKEW-10*60000;
     for(const m of arr){
       if(!m.images||!m.images.length||m.at<cutoff||NSFW.seen.has(key+'|'+m.id))continue;

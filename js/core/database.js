@@ -171,6 +171,7 @@ const DB=(()=>{
       const done=on=>{SECRET_OWNER_ID=on?sid:null;SECRET_LOADED=true;checkBanLock(myId,C.banned);checkForcedVersion();if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}if(ready)emit()};
       unsubs.push(onValue(R('secretowner/'+sid),sn=>done(sn.val()===1),()=>done(false)));}
     listen('mods',v=>{MODS_CACHE=v||{};MODS_LOADED=true;});
+    listen('admin',v=>{ADMINS_CACHE=v||{};ADMINS_LOADED=true;});
     listen('appVersion',v=>{APP_VERSION_CACHE=v||null;APP_VERSION_LOADED=true;checkForcedVersion();});
     listen('dmMembers',v=>C.dmMembers=v||{});
     listen('vip',v=>{C.vip=v||{};if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
@@ -1067,11 +1068,11 @@ const DB=(()=>{
        the rules protect (sending messages, changing settings, etc.) is rejected. */
     _sendTimes:[],
     async antiNuke(id){
-      if(!ownersKnown()||!MODS_LOADED)return; // owners/ or mods/ hasn't loaded yet this session —
+      if(!ownersKnown()||!MODS_LOADED||!ADMINS_LOADED)return; // owners/ or mods/ hasn't loaded yet this session —
       // isOwner()/isMod() could give a false negative for a real owner/mod right now, so
       // refuse to auto-ban anyone until we actually know who they are. A few extra fast
       // messages getting through for one beat is far safer than wrongly banning someone.
-      if(isOwner(id)||isMod(id))return; // owners and mods are never auto-banned by the client-side spam heuristic
+      if(isOwner(id)||isAdmin(id)||isMod(id))return; // owners, admins and mods are never auto-banned by the client-side spam heuristic
       if(DB._nuking)return;DB._nuking=true;
       try{await DB.banUser(id)}catch(e){console.warn('anti-nuke ban failed',e)}
       DB._nuking=false;
@@ -1079,9 +1080,11 @@ const DB=(()=>{
     /* --- Owner / mod moderation --- */
     isOwner(id){return isOwner(id)},
     isMod(id){return isMod(id)},
+    isAdmin(id){return isAdmin(id)},
     async banUser(id){
-      if(!isOwner(myId))throw new Error('Only owners can ban.');
+      if(!isOwner(myId)&&!isAdmin(myId))throw new Error('Only owners and admins can ban.');
       if(isOwner(id))throw new Error('Owners cannot be banned.');
+      if(!isOwner(myId)&&isAdmin(id))throw new Error('Admins cannot ban other admins.');
       await set(R('banned/'+id),true);
       C.banned[id]=true;checkBanLock(myId,C.banned); // update local state immediately; don't wait on the listener round-trip
       await update(R('users/'+id),{deleted:true,username:'Deleted User'});
@@ -1304,17 +1307,22 @@ const DB=(()=>{
       await set(R('muted/'+myId),Date.now()+SKEW+3600000);
     },
     async muteUser(id,durationMs){
-      if(!isOwner(myId)&&!isMod(myId))throw new Error('Only owners and mods can mute.');
+      if(!isOwner(myId)&&!isAdmin(myId)&&!isMod(myId))throw new Error('Only owners, admins and mods can mute.');
       if(isOwner(id))throw new Error('Owners cannot be muted.');
       if(!isOwner(myId)){
-        if(isMod(id))throw new Error('Mods cannot mute other mods.');
-        if(!MOD_MUTE_OPTS.some(([m])=>m*60000===durationMs))throw new Error('Mods can only use the preset timeout durations.');
+        if(isAdmin(id))throw new Error('Admins cannot be muted.');
+        if(isAdmin(myId)){
+          if(!(durationMs>0&&durationMs<=7*86400000))throw new Error('Admins can mute for up to 7 days.');
+        }else{
+          if(isMod(id))throw new Error('Mods cannot mute other mods.');
+          if(!MOD_MUTE_OPTS.some(([m])=>m*60000===durationMs))throw new Error('Mods can only use the preset timeout durations.');
+        }
       }
       const until=Date.now()+SKEW+durationMs;
       await set(R('muted/'+id),until);
     },
     async unmuteUser(id){
-      if(!isOwner(myId)&&!isMod(myId))throw new Error('Only owners and mods can unmute.');
+      if(!isOwner(myId)&&!isAdmin(myId)&&!isMod(myId))throw new Error('Only owners, admins and mods can unmute.');
       // Removing the node (not setting it to `false`) — Firebase rules compare
       // muted/$id's value against `now` with <=, and comparing the boolean `false`
       // to a number never evaluates true in the rules engine, so a stored `false`
@@ -1523,7 +1531,7 @@ const DB=(()=>{
       }catch(e){
         // roll back on failure
         if(before&&arr&&!arr.find(x=>x.id===msgId)){arr.push(before);arr.sort((a,b)=>a.at-b.at);if(key===msgKey)emit()}
-        throw new Error(e.code==='PERMISSION_DENIED'?((isMod(myId)&&!isOwner(myId))?'Permission denied. The database rules need the mod-delete update (messages > $msg > .write).':'Could not delete that message.'):'Delete failed ('+(e.code||e.message)+')');
+        throw new Error(e.code==='PERMISSION_DENIED'?(((isMod(myId)||isAdmin(myId))&&!isOwner(myId))?'Permission denied. You can\'t delete that message (owners\' and admins\' messages are protected from mods, and owners\' from everyone else).':'Could not delete that message.'):'Delete failed ('+(e.code||e.message)+')');
       }
     },
     // Fast bulk delete for the admin panel. Removes everything from the local cache in
