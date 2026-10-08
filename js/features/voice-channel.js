@@ -1,13 +1,21 @@
 /* Voice Channel — Agora RTC (audio only) + Firebase RTDB presence/moderation.
    Self-contained: loaded last (STATIC_LATE in index.html), never touches other modules.
-   Optional overrides before this file runs: window.VC_CONFIG, window.VC_FIREBASE_VERSION, window.VC_ADAPTER. */
+   Optional overrides before this file runs: window.VC_CONFIG, window.VC_FIREBASE_VERSION, window.VC_ADAPTER.
+
+   v2 (2026-10-07): token support (TOKEN_URL), staged join with progress, SDK/token preloading,
+   clearer errors, presence self-heal, live speaking levels, connection quality, shortcuts (M / D),
+   animated tiles. Token server: worker/agora-token-worker.js  (setup: VOICE-SETUP.md). */
 (function(){
 'use strict';
 if(window.__vcLoaded)return;window.__vcLoaded=1;
 
 var CFG=Object.assign({
-  APP_ID:'F37940cb3900495d99a1a5c511db076f',
+  APP_ID:'f37940cb3900495d99a1a5c511db076f',   // App ID is public. NEVER put the App Certificate in this file.
   CHANNEL:'itsukis-hub-voice',
+  /* Token server (Cloudflare Worker, see worker/agora-token-worker.js). Leave '' while your Agora project is in
+     "App ID" (testing) mode; REQUIRED once the App Certificate is enabled, e.g. 'https://agora-token.YOURNAME.workers.dev' */
+  TOKEN_URL:'https://agora-token.jace01b.workers.dev/',
+  TOKEN_CACHE_MS:20*60e3,
   MONTH_LIMIT:10000,         // Agora free minutes per month
   MAX_USERS:12,              // client-side cap (protects your 10,000 free minutes)
   ALONE_MS:3*60e3,           // leave automatically if you're alone this long
@@ -32,20 +40,26 @@ var I={
  head:'<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 3a9 9 0 0 0-9 9v6a3 3 0 0 0 3 3h1v-8H5v-1a7 7 0 0 1 14 0v1h-2v8h1a3 3 0 0 0 3-3v-6a9 9 0 0 0-9-9z"/></svg>',
  headOff:'<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 3a9 9 0 0 0-9 9v6a3 3 0 0 0 3 3h1v-8H5v-1a7 7 0 0 1 14 0v1h-2v8h1a3 3 0 0 0 3-3v-6a9 9 0 0 0-9-9z"/><path d="M3.5 3.5l17 17" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>',
  leave:'<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 9c-3.2 0-6.2.9-8.6 2.6-.5.4-.7 1-.5 1.6l.9 2.3c.2.6.9.9 1.5.7l2.7-1c.5-.2.8-.6.8-1.1V12c.9-.3 1.8-.5 2.8-.5h.8c1 0 1.9.2 2.8.5v1.1c0 .5.3.9.8 1.1l2.7 1c.6.2 1.3-.1 1.5-.7l.9-2.3c.2-.6 0-1.2-.5-1.6C18.2 9.9 15.2 9 12 9z"/></svg>',
- vol:'<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3 10v4h4l5 4V6L7 10H3zm13.5 2a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg>'
+ vol:'<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3 10v4h4l5 4V6L7 10H3zm13.5 2a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg>',
+ spk:'<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3 10v4h4l5 4V6L7 10H3zm13.5 2a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>',
+ warn:'<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2.5 1.8 20.5A1.2 1.2 0 0 0 2.8 22.3h18.4a1.2 1.2 0 0 0 1-1.8L12 2.5zm1 14.5h-2v-2h2v2zm0-4h-2V9h2v4z"/></svg>',
+ retry:'<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 5V2L7 6.5 12 11V8a5 5 0 1 1-5 5H5a7 7 0 1 0 7-8z"/></svg>',
+ copy:'<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z"/></svg>',
+ check:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
 };
 
 var S={fb:null,me:null,members:{},forceMap:{},owners:{},mods:{},secret:false,voiceOn:true,banned:false,
   users:{},userReq:{},tiles:{},unsub:[],sess:[],timers:{},
-  client:null,track:null,micErr:false,sid:'',mref:null,joined:false,joining:false,cancel:false,joinAt:0,
-  mutedLocal:false,deaf:false,wasMuted:false,remote:{},speaking:{},vol:{},localMute:{},
+  client:null,track:null,micErr:false,micMsg:'',sid:'',mref:null,joined:false,joining:false,cancel:false,joinAt:0,
+  stage:'',err:null,tok:null,q:0,heals:[],healing:false,
+  mutedLocal:false,deaf:false,wasMuted:false,remote:{},speaking:{},level:{},vol:{},localMute:{},
   lastActive:now(),aloneSince:0,open:false,sbEl:null,view:null,dock:null,prevIds:null,prunedAt:{},reconnecting:false,usage:{},usageMonth:'',usageUn:null};
 
 /* ---------- toast + sounds ---------- */
 function toast(msg){
-  var w=$('vcToasts');if(!w){w=h('div','vc-toasts');w.id='vcToasts';document.body.appendChild(w)}
+  var w=$('vcToasts');if(!w){w=h('div','vc-toasts');w.id='vcToasts';w.setAttribute('role','status');w.setAttribute('aria-live','polite');document.body.appendChild(w)}
   var t=h('div','vc-toast',msg);w.appendChild(t);
-  setTimeout(function(){t.classList.add('out');setTimeout(function(){t.remove()},300)},4200);
+  setTimeout(function(){t.classList.add('out');setTimeout(function(){t.remove()},320)},4200);
 }
 var AC;
 function beep(a,b){try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();var o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime;
@@ -106,11 +120,12 @@ async function bindUser(u){
   watch('modSettings/voiceEnabled',function(v){S.voiceOn=v!==false;if(!S.voiceOn&&(S.joined||S.joining))cleanup('Voice was turned off by an owner.');render()});
   watch('banned/'+S.me.id,function(v){S.banned=v===true;if(S.banned&&S.joined)cleanup('You are banned.');render()});
   bindUsage();userOf(S.me.id);render();
+  preloadSoon();
 }
 function unbindUser(keep){
   if(!keep&&(S.joined||S.joining))cleanup('');
   S.unsub.forEach(function(f){try{f()}catch(e){}});S.unsub=[];S.usageUn=null;S.usageMonth='';S.usage={};
-  if(!keep){S.me=null;S.members={};render()}
+  if(!keep){S.me=null;S.members={};S.tok=null;S.err=null;render()}
 }
 
 /* ---------- users / roles ---------- */
@@ -132,7 +147,10 @@ function canMod(t){
   return false;
 }
 function isForced(id){var f=S.forceMap[id];return !!(f&&typeof f.until==='number'&&f.until>now())}
-function colorOf(s){var x=0;for(var i=0;i<s.length;i++)x=(x*31+s.charCodeAt(i))>>>0;return 'hsl('+(x%360)+',55%,45%)'}
+function hueOf(s){var x=0;for(var i=0;i<s.length;i++)x=(x*31+s.charCodeAt(i))>>>0;return x%360}
+function colorOf(s){return 'hsl('+hueOf(s)+',55%,45%)'}
+function fmtTime(ms){var s=Math.max(0,Math.floor(ms/1000)),m=Math.floor(s/60),hh=Math.floor(m/60);s%=60;m%=60;
+  return hh?hh+':'+(m<10?'0':'')+m+':'+(s<10?'0':'')+s:m+':'+(s<10?'0':'')+s}
 
 /* ---------- monthly minutes (estimate counted by clients, UTC months) ---------- */
 function monthKey(){var d=new Date();return String(d.getUTCFullYear()*100+d.getUTCMonth()+1)}
@@ -201,95 +219,206 @@ function pruneGhosts(){
   });
 }
 
-/* ---------- Agora ---------- */
+/* ---------- Agora SDK (preloaded while you browse, so joining is instant) ---------- */
 var sdkP=null;
 function loadSdk(){
   if(window.AgoraRTC)return Promise.resolve();
   if(sdkP)return sdkP;
   sdkP=(async function(){
     for(var i=0;i<CFG.SDK_URLS.length;i++){
-      try{await new Promise(function(res,rej){var s=document.createElement('script');s.async=true;s.src=CFG.SDK_URLS[i];s.onload=res;s.onerror=function(){rej()};document.head.appendChild(s)});
-        if(window.AgoraRTC){try{AgoraRTC.setLogLevel(3);AgoraRTC.setParameter('AUDIO_VOLUME_INDICATION_INTERVAL',200)}catch(e){}return}}catch(e){}
+      try{await new Promise(function(res,rej){var s=document.createElement('script');s.async=true;s.src=CFG.SDK_URLS[i];s.onload=res;s.onerror=function(){s.remove();rej()};document.head.appendChild(s)});
+        if(window.AgoraRTC){
+          try{AgoraRTC.setLogLevel(3);AgoraRTC.setParameter('AUDIO_VOLUME_INDICATION_INTERVAL',200)}catch(e){}
+          try{AgoraRTC.onAutoplayFailed=function(){toast('Tap anywhere to turn on voice audio.');document.addEventListener('pointerdown',function f(){document.removeEventListener('pointerdown',f,true);applyPlayback()},true)}}catch(e){}
+          try{AgoraRTC.onMicrophoneChanged=onMicChanged}catch(e){}
+          return}}catch(e){}
     }
-    sdkP=null;throw new Error('Could not load the Agora SDK (blocked by network/adblock?)');
+    sdkP=null;throw Object.assign(new Error('Could not load the Agora SDK (blocked by network or an ad-blocker?)'),{code:'SDK_LOAD'});
   })();
   return sdkP;
 }
+var preloadT=0;
+function preloadSoon(){
+  if(preloadT||window.AgoraRTC)return;
+  var go=function(){loadSdk().catch(noop)};
+  preloadT=1;
+  if(window.requestIdleCallback)requestIdleCallback(go,{timeout:5000});else setTimeout(go,2500);
+}
+function warm(){loadSdk().catch(noop);if(S.me&&CFG.TOKEN_URL)fetchToken().catch(noop)}
 function check(){if(S.cancel)throw new Error('cancelled')}
 
+/* ---------- token ---------- */
+function tokErr(code,msg,status){return Object.assign(new Error(msg),{code:code,status:status})}
+async function fetchToken(force){
+  if(!CFG.TOKEN_URL)return null;
+  if(!force&&S.tok&&now()-S.tok.at<CFG.TOKEN_CACHE_MS)return S.tok.v;
+  var u=S.fb&&S.fb.auth.currentUser;if(!u||!S.me)throw tokErr('TOKEN_AUTH','You need to be signed in.');
+  var idt=await u.getIdToken();
+  var url=CFG.TOKEN_URL+(CFG.TOKEN_URL.indexOf('?')<0?'?':'&')+'channel='+encodeURIComponent(CFG.CHANNEL)+'&uid='+encodeURIComponent(S.me.id);
+  var ctl=window.AbortController?new AbortController():null,to=setTimeout(function(){if(ctl)ctl.abort()},10000),r;
+  try{r=await fetch(url,{headers:{Authorization:'Bearer '+idt},signal:ctl?ctl.signal:undefined,cache:'no-store'})}
+  catch(e){throw tokErr('TOKEN_SERVER','Couldn\'t reach the voice token server.')}
+  finally{clearTimeout(to)}
+  var j=null;try{j=await r.json()}catch(e){}
+  if(!r.ok||!j||!j.token)throw tokErr(r.status===403?'TOKEN_DENIED':'TOKEN_SERVER',(j&&j.error)||('Token server returned '+r.status),r.status);
+  S.tok={v:j.token,at:now()};return j.token;
+}
+async function renewToken(){
+  if(!S.client||!CFG.TOKEN_URL)return;
+  try{var t=await fetchToken(true);await S.client.renewToken(t)}
+  catch(e){setTimeout(function(){if(S.joined)renewToken()},15000)}
+}
+
+/* ---------- friendly errors ---------- */
+function explain(e){
+  var code=(e&&(e.code||e.name))||'',raw=String((e&&e.message)||e||''),all=code+' '+raw,o={code:String(code||'ERROR'),raw:raw,retry:true};
+  var own=iAmOwner();
+  if(/invalid vendor key|INVALID_VENDOR_KEY|vendor key/i.test(all)){
+    o.title='Wrong Agora App ID';o.msg=own?'Agora doesn\'t recognise the App ID in voice-channel.js. Copy it again from the Agora Console (it is all lowercase).':'Voice isn\'t set up correctly yet. Please tell an owner.';o.retry=false;
+  }else if(/dynamic use static key/i.test(all)||(code==='CAN_NOT_GET_GATEWAY_SERVER'&&!CFG.TOKEN_URL)){
+    o.title=own?'Voice needs a token':'Voice isn\'t ready yet';
+    o.msg=own?'Your Agora project has the App Certificate turned on, but no token server is configured. Fix: either switch the project to "App ID" (testing) mode in the Agora Console, or deploy worker/agora-token-worker.js and set TOKEN_URL (see VOICE-SETUP.md).':'The owner still has to finish setting up voice. Try again later.';o.retry=!!own;
+  }else if(/token|DYNAMIC_KEY|NO_AUTHORIZED|CAN_NOT_GET_GATEWAY_SERVER/i.test(all)&&code!=='TOKEN_SERVER'&&code!=='TOKEN_DENIED'){
+    o.title='Voice token was rejected';o.msg=own?'The token server answered, but Agora refused the token. Check that AGORA_APP_ID and AGORA_APP_CERTIFICATE in the Worker match this project, and that CHANNEL matches.':'Voice had a hiccup. Try again in a moment.';
+  }else if(code==='TOKEN_DENIED'){
+    o.title='Voice access denied';o.msg=raw==='banned'?'Banned accounts can\'t use voice.':'The voice server wouldn\'t let this account in ('+raw+').';o.retry=raw!=='banned';
+  }else if(code==='TOKEN_SERVER'||code==='TOKEN_AUTH'){
+    o.title='Couldn\'t get a voice pass';o.msg=raw+(own?' Check TOKEN_URL and that the Worker is deployed.':' Try again in a moment.');
+  }else if(code==='UID_CONFLICT'){
+    o.title='Already connected';o.msg='This account is still connected from another tab or device. Close it, wait a few seconds, and retry.';
+  }else if(code==='SDK_LOAD'){
+    o.title='Audio engine blocked';o.msg='The voice library couldn\'t load. Disable your ad-blocker for this site, or check your network.';
+  }else if(/NETWORK|TIMEOUT|WS_ABORT|SERVER_ERROR|OPERATION_ABORTED|CONNECTION/i.test(all)){
+    o.title='Network problem';o.msg='Couldn\'t reach the voice servers. Check your connection and retry.';
+  }else{
+    o.title='Couldn\'t join voice';o.msg=raw+' If you were muted, banned or just removed, wait a bit and retry.';
+  }
+  return o;
+}
+function setErr(o){S.err=o;render()}
+function info(title,msg,retry){setErr({title:title,msg:msg,code:'',retry:retry!==false,info:true})}
+function micMessage(e){
+  var c=String((e&&(e.code||e.name))||'')+' '+String((e&&e.message)||'');
+  if(/PERMISSION|NotAllowed|denied/i.test(c))return 'Microphone is blocked. Allow it in your browser\'s site settings, then tap the mic.';
+  if(/NOT_READABLE|NotReadable|in use/i.test(c))return 'Another app is using your microphone.';
+  if(/DEVICE_NOT_FOUND|NotFound/i.test(c))return 'No microphone found.';
+  if(/WEB_SECURITY|secure/i.test(c))return 'Browsers only allow the microphone on secure (https) pages.';
+  return 'Couldn\'t open the microphone.';
+}
+async function makeMic(){
+  try{S.micErr=false;S.micMsg='';return await AgoraRTC.createMicrophoneAudioTrack({AEC:true,ANS:true,AGC:true,encoderConfig:'speech_standard'})}
+  catch(e){S.micErr=true;S.micMsg=micMessage(e);return null}
+}
+function onMicChanged(d){
+  try{
+    if(!S.track||!d||!d.device)return;
+    if(d.state==='ACTIVE')S.track.setDevice(d.device.deviceId).catch(noop);
+    else if(d.state==='INACTIVE'){AgoraRTC.getMicrophones().then(function(l){if(l&&l[0])S.track.setDevice(l[0].deviceId).catch(noop)}).catch(noop)}
+  }catch(e){}
+}
+
+/* ---------- join / leave ---------- */
+function setStage(s){S.stage=s;render()}
 async function join(){
   if(S.joined||S.joining)return;
-  S.joining=true;render();
+  S.err=null;S.joining=true;S.cancel=false;S.micErr=false;S.micMsg='';S.stage='prep';S.lastActive=now();render();
   var ready=S.me?true:await ensureReady();
-  S.joining=false;
-  if(!ready){toast('Voice couldn\'t connect to the site\'s Firebase yet. Reload, or see README (Firebase version).');render();return}
-  if(!S.voiceOn){toast('Voice is turned off right now.');return}
-  if(S.banned){toast('Banned accounts can\'t use voice.');return}
-  if(usageTotal(S.usage)>=CFG.MONTH_LIMIT&&!iAmOwner()){toast('Voice has used all '+CFG.MONTH_LIMIT.toLocaleString()+' minutes for this month. It resets on the 1st (UTC).');render();return}
+  if(!ready){S.joining=false;S.stage='';info('Not connected yet','Voice couldn\'t reach the site\'s database yet. Reload the page, then try again.');return}
+  var bail=function(t,m,r){S.joining=false;S.stage='';info(t,m,r)};
+  if(!S.voiceOn)return bail('Voice is off','An owner turned voice off right now.',false);
+  if(S.banned)return bail('Voice unavailable','Banned accounts can\'t use voice.',false);
+  if(usageTotal(S.usage)>=CFG.MONTH_LIMIT&&!iAmOwner())return bail('Out of minutes','Voice has used all '+CFG.MONTH_LIMIT.toLocaleString()+' minutes for this month. It resets on the 1st (UTC).',false);
   var list=activeList();
-  if(list.length>=CFG.MAX_USERS&&!list.some(function(m){return m.id===S.me.id})){toast('Voice is full ('+CFG.MAX_USERS+' max). Try again soon.');return}
-  S.joining=true;S.cancel=false;S.micErr=false;S.lastActive=now();render();
+  if(list.length>=CFG.MAX_USERS&&!list.some(function(m){return m.id===S.me.id}))return bail('Voice is full','There are already '+CFG.MAX_USERS+' people in voice. Try again soon.');
   try{
+    setStage('load');
+    var tokP=fetchToken();tokP.catch(noop);          // token + SDK load in parallel
     await loadSdk();check();
-    try{S.track=await AgoraRTC.createMicrophoneAudioTrack({AEC:true,ANS:true,AGC:true,encoderConfig:'speech_standard'})}
-    catch(e){S.track=null;S.micErr=true;toast('Microphone blocked — joining listen-only. Click the mic to retry.')}
-    check();
+    var token=await tokP;check();
+    try{if(AgoraRTC.checkSystemRequirements&&!AgoraRTC.checkSystemRequirements())throw Object.assign(new Error('This browser doesn\'t support voice calls.'),{code:'NOT_SUPPORTED'})}catch(e){if(e&&e.code==='NOT_SUPPORTED')throw e}
+    setStage('mic');
+    S.track=await makeMic();check();
     var forced=isForced(S.me.id);
     S.mutedLocal=forced||!S.track;S.deaf=false;
     if(S.track&&S.mutedLocal)await S.track.setEnabled(false);
+    setStage('connect');
     S.sid=Math.random().toString(36).slice(2,12)+Math.random().toString(36).slice(2,8);
     S.mref=R('voice/members/'+S.me.id);
-    var t=now();
-    await S.fb.F.set(S.mref,{sid:S.sid,at:t,seen:t,muted:S.mutedLocal,deaf:false});
-    S.fb.F.onDisconnect(S.mref).remove().catch(noop);
-    check();
-    var c=S.client=AgoraRTC.createClient({mode:'rtc',codec:'vp8'});
+    var t=now(),c=S.client=AgoraRTC.createClient({mode:'rtc',codec:'vp8'});
     c.on('user-published',async function(user,type){
       if(type!=='audio')return;
       try{await c.subscribe(user,'audio');S.remote[user.uid]=user;applyPlayback()}catch(e){}
     });
-    c.on('user-left',function(user){delete S.remote[user.uid];delete S.speaking[user.uid]});
+    c.on('user-unpublished',function(user,type){if(type==='audio'){delete S.speaking[String(user.uid)];delete S.level[String(user.uid)]}});
+    c.on('user-left',function(user){delete S.remote[user.uid];delete S.speaking[String(user.uid)];delete S.level[String(user.uid)]});
     c.on('volume-indicator',function(vs){vs.forEach(function(v){
       var id=(v.uid===0||String(v.uid)===S.me.id)?S.me.id:String(v.uid);
-      if(v.level>=6)S.speaking[id]=now()})});
+      if(v.level>=6){S.speaking[id]=now();S.level[id]=v.level}else S.level[id]=0})});
+    c.on('network-quality',function(q){
+      var a=q.uplinkNetworkQuality||0,b=q.downlinkNetworkQuality||0,w=Math.max(a,b);
+      S.q=!w?0:(w<=2?4:(w===3?3:(w===4?2:1)));updQuality()});
+    c.on('token-privilege-will-expire',renewToken);
+    c.on('token-privilege-did-expire',function(){renewToken()});
     c.on('connection-state-change',function(cur,prev,reason){
       S.reconnecting=cur==='RECONNECTING';
       if(cur==='DISCONNECTED'&&S.joined&&reason!=='LEAVE')cleanup('Disconnected from voice ('+reason+').');
       render();
     });
-    await c.join(CFG.APP_ID,CFG.CHANNEL,null,Number(S.me.id));check();
+    // presence write and Agora join run together; either failing aborts the join
+    var pj=c.join(CFG.APP_ID,CFG.CHANNEL,token||null,Number(S.me.id)),pp=S.fb.F.set(S.mref,{sid:S.sid,at:t,seen:t,muted:S.mutedLocal,deaf:false});
+    pj.catch(noop);pp.catch(noop);
+    await Promise.all([pj,pp]);check();
+    S.fb.F.onDisconnect(S.mref).remove().catch(noop);
     try{c.enableAudioVolumeIndicator()}catch(e){}
     if(S.track)await c.publish([S.track]);check();
-    S.joined=true;S.joining=false;S.joinAt=now();S.aloneSince=0;S.prevIds=null;
-    // watch our own record (another tab / removed by mod) and kick signals
+    S.joined=true;S.joining=false;S.stage='';S.err=null;S.joinAt=now();S.aloneSince=0;S.prevIds=null;S.heals=[];
     watch('voice/members/'+S.me.id,function(v){
       if(!S.joined)return;
-      if(v==null){cleanup('You were removed from voice.',true)}
+      if(v==null)selfHeal();
       else if(v.sid!==S.sid){cleanup('You joined voice from another tab, so this one disconnected.',true,true)}
     },S.sess);
     watch('voice/kick/'+S.me.id,function(v){if(S.joined&&typeof v==='number'&&v>S.joinAt-1000)cleanup('A moderator removed you from voice.',true)},S.sess);
     S.timers.hb=setInterval(heartbeat,CFG.HEARTBEAT_MS);
     S.timers.tick=setInterval(tick,1000);
-    S.timers.loc=setInterval(localLevel,150);
+    S.timers.loc=setInterval(localLevel,120);
+    S.timers.spk=setInterval(speakLoop,110);
     S.timers.use=setInterval(countMinute,60000);countMinute();
     beep(520,780);applyForce();rosterChanged();render();
+    if(S.micErr)toast(S.micMsg+' You joined listen-only.');
   }catch(e){
-    var m=e&&e.message==='cancelled'?'':'Couldn\'t join voice: '+((e&&(e.code||e.message))||e)+'. If you were muted, banned or just removed, wait a bit and retry.';
-    await cleanup(m,false,false);
+    if(e&&e.message==='cancelled'){await cleanup('',false,false);return}
+    var ex=explain(e);console.warn('[voice] join failed',e);
+    await cleanup('',false,false);setErr(ex);
   }
+}
+
+/* someone/something deleted our presence record while we're still connected (network blip fired onDisconnect).
+   Unless a moderator kicked us, quietly write it back instead of dropping the call. */
+async function selfHeal(){
+  if(S.healing||!S.joined)return;S.healing=true;
+  try{
+    var k=(await S.fb.F.get(R('voice/kick/'+S.me.id))).val();
+    if(typeof k==='number'&&k>S.joinAt-2000){cleanup('A moderator removed you from voice.',true);return}
+    var t=now();S.heals=S.heals.filter(function(x){return x>t-60e3});
+    if(S.heals.length>=3){cleanup('You were removed from voice.',true);return}
+    S.heals.push(t);
+    await S.fb.F.set(S.mref,{sid:S.sid,at:t,seen:t,muted:S.mutedLocal,deaf:S.deaf});
+    S.fb.F.onDisconnect(S.mref).remove().catch(noop);
+  }catch(e){if(S.joined)cleanup('You were removed from voice.',true)}
+  finally{S.healing=false}
 }
 
 async function cleanup(msg,memberGone,keepMember){
   S.cancel=true;
   var F=S.fb&&S.fb.F;
-  S.joined=false;S.joining=false;
+  S.joined=false;S.joining=false;S.stage='';
   Object.keys(S.timers).forEach(function(k){clearInterval(S.timers[k])});S.timers={};
   S.sess.forEach(function(f){try{f()}catch(e){}});S.sess=[];
   var tr=S.track,cl=S.client,mref=S.mref;
-  S.track=null;S.client=null;S.mref=null;S.remote={};S.speaking={};S.reconnecting=false;S.mutedLocal=false;S.deaf=false;
+  S.track=null;S.client=null;S.mref=null;S.remote={};S.speaking={};S.level={};S.reconnecting=false;S.mutedLocal=false;S.deaf=false;S.q=0;
   try{if(tr){tr.stop();tr.close()}}catch(e){}
   var p=[];
-  if(cl){try{cl.removeAllListeners()}catch(e){}p.push(cl.leave().catch(noop))}
+  if(cl){try{cl.removeAllListeners()}catch(e){}p.push(Promise.resolve().then(function(){return cl.leave()}).catch(noop))}
   if(mref&&F){try{F.onDisconnect(mref).cancel().catch(noop)}catch(e){}
     if(!memberGone&&!keepMember)p.push(F.remove(mref).catch(noop))}
   render();
@@ -297,7 +426,10 @@ async function cleanup(msg,memberGone,keepMember){
   await Promise.all(p);
   S.cancel=false;
 }
-function leave(){if(S.joining&&!S.joined){S.cancel=true;return}cleanup('');beep(780,420)}
+function leave(){
+  if(S.joining&&!S.joined){S.cancel=true;S.stage='cancel';render();return}
+  cleanup('');beep(780,420);
+}
 
 function hardLeave(){
   try{if(S.track)S.track.close()}catch(e){}
@@ -305,6 +437,7 @@ function hardLeave(){
   try{if(S.mref&&S.fb)S.fb.F.remove(S.mref)}catch(e){}
 }
 addEventListener('pagehide',function(e){hardLeave();if(e&&e.persisted)cleanup('')});addEventListener('beforeunload',hardLeave);
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&S.joined){pushState();rosterChanged();applyPlayback()}});
 
 function pushState(){
   if(!S.joined||!S.mref)return;
@@ -320,8 +453,9 @@ async function toggleMute(){
     if(isForced(S.me.id)){toast('A moderator muted you — you can\'t unmute yet.');return}
     if(S.mutedLocal){
       if(!S.track){
-        try{S.track=await AgoraRTC.createMicrophoneAudioTrack({AEC:true,ANS:true,AGC:true,encoderConfig:'speech_standard'});await S.client.publish([S.track]);S.micErr=false}
-        catch(e){S.track=null;toast('Microphone is blocked. Allow it in your browser\'s site settings.');return}
+        var tr=await makeMic();
+        if(!tr){toast(S.micMsg||'Microphone is blocked. Allow it in your browser\'s site settings.');render();return}
+        S.track=tr;try{await S.client.publish([S.track])}catch(e){try{S.track.close()}catch(x){}S.track=null;toast('Couldn\'t start your microphone.');return}
       }else await S.track.setEnabled(true);
       S.mutedLocal=false;
       if(S.deaf){S.deaf=false;applyPlayback()}
@@ -358,17 +492,28 @@ function applyPlayback(){
 
 /* ---------- timers: speaking, idle, alone ---------- */
 function localLevel(){
-  if(!S.track||S.mutedLocal||document.hidden)return;
-  try{if(S.track.getVolumeLevel()>0.05){S.speaking[S.me.id]=now();S.lastActive=now()}}catch(e){}
+  if(!S.track||S.mutedLocal||document.hidden){if(S.me)S.level[S.me.id]=0;return}
+  try{var v=S.track.getVolumeLevel();S.level[S.me.id]=v*100;if(v>0.05){S.speaking[S.me.id]=now();S.lastActive=now()}}catch(e){}
+}
+function speakLoop(){
+  if(!S.joined||!S.me)return;
+  var t=now();
+  Object.keys(S.tiles).forEach(function(id){
+    var tl=S.tiles[id],m=S.members[id],muted=id===S.me.id?S.mutedLocal:!!(m&&m.muted);
+    var sp=(S.speaking[id]||0)>t-420&&!muted&&!isForced(id);
+    if(tl.sp!==sp){tl.sp=sp;tl.el.classList.toggle('speaking',sp)}
+    var lv=sp?Math.min(1,(S.level[id]||0)/55):0;lv=Math.round(lv*20)/20;
+    if(tl.lv!==lv){tl.lv=lv;tl.el.style.setProperty('--lvl',lv)}
+  });
+  if(S.sbEl){Array.prototype.forEach.call(S.sbEl.querySelectorAll('.vc-sb-u'),function(r){
+    var id=r.dataset.id,m=S.members[id],muted=id===S.me.id?S.mutedLocal:!!(m&&m.muted);
+    r.classList.toggle('speaking',(S.speaking[id]||0)>t-420&&!muted)})}
 }
 var lastRoster=0;
 function tick(){
   if(!S.joined)return;
   var t=now();
-  Object.keys(S.tiles).forEach(function(id){
-    var sp=(S.speaking[id]||0)>t-450,m=S.members[id];
-    S.tiles[id].el.classList.toggle('speaking',sp&&!(m&&m.muted)&&!isForced(id));
-  });
+  var tm=$('vcTime');if(tm)tm.textContent=fmtTime(t-S.joinAt);
   if(t-lastRoster>5000){lastRoster=t;applyPlayback();rosterChanged()}
   var others=activeList().filter(function(m){return m.id!==S.me.id}).length;
   if(!others){if(!S.aloneSince)S.aloneSince=t;else if(t-S.aloneSince>CFG.ALONE_MS)cleanup('You left voice because you were alone for a few minutes.')}
@@ -378,6 +523,20 @@ function tick(){
   if(t-S.lastActive>CFG.IDLE_MS)cleanup('You left voice because you were inactive for a while.');
 }
 ['pointerdown','keydown','wheel','touchstart'].forEach(function(ev){document.addEventListener(ev,function(){S.lastActive=now()},{passive:true,capture:true})});
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape')closePop();
+  if(!S.open||!S.joined||e.ctrlKey||e.metaKey||e.altKey)return;
+  var t=e.target;if(t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)))return;
+  var k=(e.key||'').toLowerCase();
+  if(k==='m'){e.preventDefault();toggleMute()}else if(k==='d'){e.preventDefault();toggleDeaf()}
+});
+function updQuality(){
+  [$('vcQ'),$('vcDockQ')].forEach(function(el){
+    if(!el)return;el.classList.toggle('vc-off',!S.joined||!S.q);
+    el.className=el.className.replace(/\bq[1-4]\b/g,'').trim()+(S.q?' q'+S.q:'');
+    el.title='Connection: '+['','poor','weak','good','excellent'][S.q||0];
+  });
+}
 
 /* ---------- moderation actions ---------- */
 async function modMute(id){
@@ -397,6 +556,7 @@ function buildSb(){
   var b=h('button','vc-sb-btn');b.type='button';
   b.innerHTML='<span class="vc-sb-ic">🔊</span><span class="vc-sb-name">Voice Channel</span><span class="vc-sb-count" id="vcSbCount"></span>';
   b.addEventListener('click',function(e){e.stopPropagation();e.preventDefault();openVoice()});
+  b.addEventListener('pointerenter',warm);b.addEventListener('focus',warm);
   el.appendChild(b);el.appendChild(h('div','vc-sb-users'));S.sbEl=el;
 }
 var mounting=false;
@@ -421,9 +581,10 @@ function mountSb(){
 function buildView(main){
   if(S.view&&S.view.parentNode===main)return;
   var v=S.view||h('div');v.id='vcView';
-  v.innerHTML='<div class="vc-head"><div class="vc-title"><span>🔊</span><b>Voice Channel</b><span class="vc-sep"></span><span class="vc-sub" id="vcSub"></span></div>'+
+  v.innerHTML='<div class="vc-head"><div class="vc-title"><span class="vc-title-ic">'+I.spk+'</span><b>Voice Channel</b><span class="vc-sep"></span><span class="vc-sub" id="vcSub" role="status" aria-live="polite"></span>'+
+   '<span class="vc-time vc-off" id="vcTime"></span><span class="vc-q vc-off" id="vcQ"><i></i><i></i><i></i><i></i></span></div>'+
    '<div class="vc-head-r"><button type="button" class="vc-usage" id="vcUsage"></button><button type="button" class="vc-chip vc-off" id="vcPower"></button></div></div>'+
-   '<div class="vc-stage"><div class="vc-grid" id="vcGrid"></div><div class="vc-empty vc-off" id="vcEmpty"><div class="vc-empty-ic">🔊</div><b>No one\'s in voice yet</b><span>Hop in — your mic starts on.</span></div></div>'+
+   '<div class="vc-stage"><div class="vc-grid" id="vcGrid"></div><div class="vc-empty vc-off" id="vcEmpty"><div class="vc-empty-ic"><span class="vc-ring r1"></span><span class="vc-ring r2"></span><span class="vc-ring r3"></span>'+I.mic+'</div><b>No one\'s in voice yet</b><span>Hop in — be the first. Your mic starts on.</span></div></div>'+
    '<div class="vc-bar" id="vcBar"></div>';
   v.addEventListener('click',closePop);
   main.appendChild(v);S.view=v;
@@ -431,6 +592,7 @@ function buildView(main){
   S.tiles={};
 }
 function openVoice(){
+  warm();
   var cp=$('chatPage');
   if(cp&&cp.classList.contains('hidden')){var g=$('goGlobal');if(g)g.click();var n=0;(function w(){if($('sbList')&&S.sbEl&&S.sbEl.parentNode)return showView();if(++n<30)setTimeout(w,100)})();return}
   showView();
@@ -446,7 +608,7 @@ function showView(){
   main.classList.add('vc-open');S.open=true;
   if(S.sbEl)S.sbEl.classList.add('active');
   if(innerWidth<=720){var sb=$('sidebar'),mb=$('menuBtn');if(sb&&mb&&sb.getBoundingClientRect().right>40)mb.click()}
-  render();
+  warm();render();
 }
 function closeView(){
   if(!S.open)return;S.open=false;
@@ -493,13 +655,17 @@ function mountTile(){
   c.id='vcTile';c.setAttribute('role','button');c.setAttribute('tabindex','0');
   c.style.gridColumn='1 / -1';c.style.flex='1 1 100%';
   c.addEventListener('click',function(e){e.preventDefault();e.stopImmediatePropagation();openFromPicker(f.grid)},true);
+  c.addEventListener('pointerenter',warm);c.addEventListener('focus',warm);
   c.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();openFromPicker(f.grid)}});
   f.grid.insertBefore(c,t.nextSibling);
   renderTile();
 }
 function renderTile(){
-  var s=document.querySelector('#vcTile .vc-tile-sub');if(!s)return;
-  var n=activeList().length;s.textContent=n?n+' in call':'Tap to join';
+  var tile=$('vcTile');if(!tile)return;
+  tile.classList.toggle('vc-live',!!S.joined);tile.classList.toggle('vc-connecting',!!S.joining);
+  var s=tile.querySelector('.vc-tile-sub');if(!s)return;
+  var n=activeList().length;
+  s.textContent=S.joining?'Connecting…':(S.joined?(n+' in call · Connected'):(n?n+' in call':'Tap to join'));
 }
 function openFromPicker(grid){
   var g=null;Array.prototype.forEach.call(grid.children,function(c){if(c.id!=='vcTile'&&/Global Chat/i.test(c.textContent))g=c});
@@ -508,17 +674,25 @@ function openFromPicker(grid){
 }
 
 /* ---------- UI: dock ---------- */
+function clampDock(){
+  var d=S.dock;if(!d||!d.style.left)return;
+  var x=Math.max(4,Math.min(innerWidth-d.offsetWidth-4,parseInt(d.style.left)||0)),y=Math.max(4,Math.min(innerHeight-d.offsetHeight-4,parseInt(d.style.top)||0));
+  d.style.left=x+'px';d.style.top=y+'px';
+}
 function buildDock(){
   var d=h('div','vc-dock vc-off');d.id='vcDock';
-  d.innerHTML='<div class="vc-dock-info" id="vcDockInfo"><span class="vc-live"></span><div><b>Voice Connected</b><small id="vcDockSub"></small></div></div><div class="vc-dock-btns" id="vcDockBtns"></div>';
+  d.innerHTML='<div class="vc-dock-info" id="vcDockInfo"><span class="vc-live"></span><div><b>Voice Connected</b><small id="vcDockSub"></small></div><span class="vc-q vc-off" id="vcDockQ"><i></i><i></i><i></i><i></i></span></div><div class="vc-dock-btns" id="vcDockBtns"></div>';
   document.body.appendChild(d);S.dock=d;
   try{var p=JSON.parse(localStorage.getItem('vcDockPos')||'null');if(p){d.style.left=p.x+'px';d.style.top=p.y+'px';d.style.right='auto';d.style.bottom='auto'}}catch(e){}
   var info=$('vcDockInfo'),sx,sy,ox,oy,mv=false,down=false;
   info.addEventListener('pointerdown',function(e){down=true;mv=false;sx=e.clientX;sy=e.clientY;var r=d.getBoundingClientRect();ox=r.left;oy=r.top;info.setPointerCapture(e.pointerId)});
   info.addEventListener('pointermove',function(e){if(!down)return;if(Math.abs(e.clientX-sx)+Math.abs(e.clientY-sy)>6)mv=true;if(!mv)return;
+    d.classList.add('dragging');
     var x=Math.max(4,Math.min(innerWidth-d.offsetWidth-4,ox+e.clientX-sx)),y=Math.max(4,Math.min(innerHeight-d.offsetHeight-4,oy+e.clientY-sy));
     d.style.left=x+'px';d.style.top=y+'px';d.style.right='auto';d.style.bottom='auto'});
-  info.addEventListener('pointerup',function(){down=false;if(mv){try{localStorage.setItem('vcDockPos',JSON.stringify({x:parseInt(d.style.left),y:parseInt(d.style.top)}))}catch(e){}}else openVoice()});
+  info.addEventListener('pointerup',function(){down=false;d.classList.remove('dragging');if(mv){try{localStorage.setItem('vcDockPos',JSON.stringify({x:parseInt(d.style.left),y:parseInt(d.style.top)}))}catch(e){}}else openVoice()});
+  info.addEventListener('pointercancel',function(){down=false;d.classList.remove('dragging')});
+  clampDock();
 }
 
 /* ---------- render ---------- */
@@ -526,15 +700,16 @@ function btn(cls,icon,title,fn,label){
   var b=h('button','vc-btn '+cls);b.type='button';b.title=title;b.setAttribute('aria-label',title);b.innerHTML=icon+(label?'<span>'+label+'</span>':'');
   b.addEventListener('click',function(e){e.stopPropagation();fn()});return b;
 }
-function render(){try{renderSb();renderTile();renderView();renderDock()}catch(e){console.error('[voice]',e)}}
+function render(){try{renderSb();renderTile();renderView();renderDock();updQuality()}catch(e){console.error('[voice]',e)}}
 function renderSb(){
   var el=S.sbEl;if(!el)return;
   var list=activeList(),c=el.querySelector('#vcSbCount'),box=el.querySelector('.vc-sb-users');
   if(c)c.textContent=list.length?String(list.length):'';
+  el.classList.toggle('vc-live',!!S.joined);
   var key=list.map(function(m){return m.id+(m.muted?'m':'')+(m.deaf?'d':'')+(isForced(m.id)?'f':'')+userOf(m.id).name}).join('|');
   if(box._k===key)return;box._k=key;box.textContent='';
   list.slice(0,8).forEach(function(m){
-    var u=userOf(m.id),r=h('div','vc-sb-u'),a=h('span','vc-sb-av');fillAvatar(a,u);
+    var u=userOf(m.id),r=h('div','vc-sb-u'),a=h('span','vc-sb-av');fillAvatar(a,u);r.dataset.id=m.id;
     r.appendChild(a);r.appendChild(h('span','vc-sb-un',u.name));
     if(m.deaf||m.muted||isForced(m.id)){var s=h('span','vc-sb-st');s.innerHTML=m.deaf?I.headOff:I.micOff;r.appendChild(s)}
     box.appendChild(r)});
@@ -547,11 +722,17 @@ function fillAvatar(av,u){
 }
 function tileFor(id){
   var t=S.tiles[id];if(t)return t;
-  var el=h('div','vc-tile'),av=h('div','vc-av'),nm=h('div','vc-nm'),name=h('span','vc-nm-t'),tag=h('span','vc-tag'),st=h('div','vc-st');
-  el.dataset.id=id;nm.appendChild(name);nm.appendChild(tag);el.appendChild(av);el.appendChild(nm);el.appendChild(st);
+  var el=h('div','vc-tile'),glow=h('div','vc-glow'),avw=h('div','vc-avw'),ring=h('i','vc-ring-s'),av=h('div','vc-av'),
+      nm=h('div','vc-nm'),eq=h('span','vc-eq'),name=h('span','vc-nm-t'),tag=h('span','vc-tag'),st=h('div','vc-st');
+  eq.innerHTML='<i></i><i></i><i></i>';
+  el.dataset.id=id;el.setAttribute('role','button');el.setAttribute('tabindex','0');
+  avw.appendChild(ring);avw.appendChild(av);nm.appendChild(eq);nm.appendChild(name);nm.appendChild(tag);
+  el.appendChild(glow);el.appendChild(avw);el.appendChild(nm);el.appendChild(st);
   el.addEventListener('click',function(e){e.stopPropagation();showPop(id,el)});
-  return S.tiles[id]={el:el,av:av,name:name,tag:tag,st:st};
+  el.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();showPop(id,el)}});
+  return S.tiles[id]={el:el,av:av,name:name,tag:tag,st:st,sp:false,lv:0};
 }
+function nth(grid,i){var n=0;for(var c=grid.firstElementChild;c;c=c.nextElementSibling){if(c.classList.contains('leaving'))continue;if(n++===i)return c}return null}
 function renderView(){
   var v=S.view;if(!v||!S.open)return;
   var list=activeList(),grid=$('vcGrid');if(!grid)return;
@@ -560,38 +741,72 @@ function renderView(){
     var id=m.id,t=tileFor(id),u=userOf(id),forced=isForced(id),muted=m.muted||forced;keep[id]=1;
     fillAvatar(t.av,u);
     var nm=u.name+(S.me&&id===S.me.id?' (you)':'');if(t.name.textContent!==nm)t.name.textContent=nm;
+    var hue=hueOf(u.name||'?');if(t.hue!==hue){t.hue=hue;t.el.style.setProperty('--h',hue)}
     var tg=isOwnerId(id)?'OWNER':(S.mods[id]===1?'MOD':'');if(t.tag.textContent!==tg)t.tag.textContent=tg;t.tag.className='vc-tag'+(tg?' '+tg.toLowerCase():'');
     var sk=m.deaf?'d':(muted?'m':'o')+(forced?'f':'');
     if(t.st._k!==sk){t.st._k=sk;t.st.innerHTML=m.deaf?I.headOff:(muted?I.micOff:I.mic);t.st.title=forced?'Muted by a moderator':(m.deaf?'Deafened':(muted?'Muted':'Mic on'))}
     t.el.classList.toggle('muted',!!muted);t.el.classList.toggle('forced',forced);t.el.classList.toggle('deaf',!!m.deaf);t.el.classList.toggle('self',!!(S.me&&id===S.me.id));
-    if(grid.children[i]!==t.el)grid.insertBefore(t.el,grid.children[i]||null);
+    var cur=nth(grid,i);if(cur!==t.el)grid.insertBefore(t.el,cur);
   });
-  Object.keys(S.tiles).forEach(function(id){if(!keep[id]){S.tiles[id].el.remove();delete S.tiles[id]}});
+  Object.keys(S.tiles).forEach(function(id){
+    if(keep[id])return;
+    var el=S.tiles[id].el;delete S.tiles[id];el.classList.add('leaving');setTimeout(function(){el.remove()},260);
+  });
   grid.classList.toggle('few',list.length<=2);
   $('vcEmpty').classList.toggle('vc-off',list.length>0||!S.voiceOn);
-  var sub=$('vcSub');if(sub)sub.textContent=!S.voiceOn?'Turned off':(list.length?list.length+' in voice'+(S.reconnecting?' · reconnecting…':''):'Empty');
+  var sub=$('vcSub');if(sub){var st=!S.voiceOn?'Turned off':(list.length?list.length+' in voice'+(S.reconnecting?' · reconnecting…':''):'Empty');if(sub.textContent!==st)sub.textContent=st;sub.classList.toggle('reconnecting',!!S.reconnecting)}
+  var tm=$('vcTime');if(tm){tm.classList.toggle('vc-off',!S.joined);if(S.joined)tm.textContent=fmtTime(now()-S.joinAt)}
   var pw=$('vcPower');if(pw){pw.classList.toggle('vc-off',!iAmOwner());pw.textContent=S.voiceOn?'Voice: ON':'Voice: OFF';pw.classList.toggle('red',!S.voiceOn)}
   renderBar();
 }
+var STEPS=[['load','Audio engine'],['mic','Microphone'],['connect','Connecting']];
+function stepIdx(s){for(var i=0;i<STEPS.length;i++)if(STEPS[i][0]===s)return i;return s==='prep'?-1:(s==='cancel'?-2:STEPS.length)}
 function renderBar(){
   var bar=$('vcBar');if(!bar)return;
   var full=S.me&&activeList().length>=CFG.MAX_USERS&&!S.joined;
-  var key=[S.joined,S.joining,S.mutedLocal,S.deaf,S.me&&isForced(S.me.id),!!S.track,S.voiceOn,S.banned,!!full].join();
+  var key=[S.joined,S.joining,S.stage,S.mutedLocal,S.deaf,S.me&&isForced(S.me.id),!!S.track,S.micErr,S.voiceOn,S.banned,!!full,S.err&&(S.err.code+S.err.title),iAmOwner()].join();
   if(bar._k===key)return;bar._k=key;bar.textContent='';
   if(!S.voiceOn){bar.appendChild(h('div','vc-note','Voice is turned off by an owner right now.'));return}
   if(S.joined){
     var forced=S.me&&isForced(S.me.id);
-    bar.appendChild(btn('mic'+(S.mutedLocal?' off':''),S.mutedLocal?I.micOff:I.mic,forced?'Muted by a moderator':(S.mutedLocal?'Unmute':'Mute'),toggleMute));
-    bar.appendChild(btn('deaf'+(S.deaf?' off':''),S.deaf?I.headOff:I.head,S.deaf?'Undeafen':'Deafen',toggleDeaf));
+    bar.classList.add('vc-bar-live');
+    bar.appendChild(btn('mic'+(S.mutedLocal?' off':''),S.mutedLocal?I.micOff:I.mic,(forced?'Muted by a moderator':(S.mutedLocal?'Unmute (M)':'Mute (M)')),toggleMute));
+    bar.appendChild(btn('deaf'+(S.deaf?' off':''),S.deaf?I.headOff:I.head,S.deaf?'Undeafen (D)':'Deafen (D)',toggleDeaf));
     bar.appendChild(btn('leave',I.leave,'Disconnect',leave));
-  }else{
-    var j=h('button','vc-join');j.type='button';
-    j.textContent=S.joining?'Connecting…':(full?'Voice is full':(S.banned?'Unavailable':'Join Voice'));
-    j.disabled=S.joining||!!full||S.banned;
-    j.addEventListener('click',function(e){e.stopPropagation();join()});
-    bar.appendChild(j);
-    bar.appendChild(h('div','vc-note','Audio only · your mic starts on · leaving or closing the tab disconnects you'));
+    if(S.micErr)bar.appendChild(h('div','vc-note vc-note-warn','Listen-only: '+(S.micMsg||'microphone unavailable')));
+    else bar.appendChild(h('div','vc-note','Shortcuts: M mute · D deafen'));
+    return;
   }
+  bar.classList.remove('vc-bar-live');
+  if(S.joining){
+    var idx=stepIdx(S.stage),box=h('div','vc-steps');
+    STEPS.forEach(function(s,i){
+      var st=h('div','vc-step'+(i<idx?' done':(i===idx?' active':'')));
+      var dot=h('span','vc-step-dot');if(i<idx)dot.innerHTML=I.check;st.appendChild(dot);st.appendChild(h('span','vc-step-t',s[1]));
+      if(i<STEPS.length-1)st.appendChild(h('i','vc-step-line'));box.appendChild(st)});
+    bar.appendChild(box);
+    var cb=h('button','vc-cancel',S.stage==='cancel'?'Cancelling…':'Cancel');cb.type='button';cb.disabled=S.stage==='cancel';
+    cb.addEventListener('click',function(e){e.stopPropagation();leave()});bar.appendChild(cb);
+    if(S.stage==='mic')bar.appendChild(h('div','vc-note','If your browser asks, allow the microphone.'));
+    return;
+  }
+  if(S.err){
+    var e=S.err,card=h('div','vc-err'+(e.info?' info':'')),ic=h('div','vc-err-ic');ic.innerHTML=I.warn;
+    var tx=h('div','vc-err-tx');tx.appendChild(h('b',null,e.title));tx.appendChild(h('span',null,e.msg));
+    card.appendChild(ic);card.appendChild(tx);
+    var row=h('div','vc-err-btns');
+    if(e.retry){var rb=h('button','vc-err-b main');rb.type='button';rb.innerHTML=I.retry+'<span>Try again</span>';rb.addEventListener('click',function(ev){ev.stopPropagation();S.err=null;join()});row.appendChild(rb)}
+    if(e.code||e.raw){var cp=h('button','vc-err-b');cp.type='button';cp.innerHTML=I.copy+'<span>Copy details</span>';
+      cp.addEventListener('click',function(ev){ev.stopPropagation();var txt='['+(e.code||'ERROR')+'] '+(e.raw||e.msg);try{navigator.clipboard.writeText(txt).then(function(){toast('Copied')},function(){toast(txt)})}catch(x){toast(txt)}});row.appendChild(cp)}
+    var dm=h('button','vc-err-b');dm.type='button';dm.textContent='Dismiss';dm.addEventListener('click',function(ev){ev.stopPropagation();S.err=null;render()});row.appendChild(dm);
+    card.appendChild(row);bar.appendChild(card);return;
+  }
+  var j=h('button','vc-join');j.type='button';
+  j.innerHTML='<span class="vc-join-ic">'+I.mic+'</span><span>'+(full?'Voice is full':(S.banned?'Unavailable':'Join Voice'))+'</span>';
+  j.disabled=!!full||S.banned;
+  j.addEventListener('click',function(e){e.stopPropagation();join()});
+  bar.appendChild(j);
+  bar.appendChild(h('div','vc-note','Audio only · your mic starts on · leaving or closing the tab disconnects you'));
 }
 function renderDock(){
   if(!S.dock)buildDock();
@@ -614,6 +829,7 @@ function showPop(id,anchor){
   var uid=Number(id);
   if(!me&&S.joined){n++;
     var row=h('div','vc-pop-row');row.innerHTML=I.vol;var sl=document.createElement('input');sl.type='range';sl.min=0;sl.max=200;sl.value=S.vol[uid]!=null?S.vol[uid]:100;
+    sl.setAttribute('aria-label','Volume');
     sl.addEventListener('input',function(){S.vol[uid]=+sl.value;applyPlayback()});row.appendChild(sl);p.appendChild(row);
     var lm=h('button','vc-pop-b',S.localMute[uid]?'Unmute for me':'Mute for me');lm.type='button';
     lm.addEventListener('click',function(){S.localMute[uid]=!S.localMute[uid];applyPlayback();closePop()});p.appendChild(lm)}
@@ -640,11 +856,11 @@ function boot(){
   },true);
   var cp=$('chatPage');
   if(cp)new MutationObserver(function(){if(cp.classList.contains('hidden')){closeView();mountSb()}else mountSb();renderDock()}).observe(cp,{attributes:true,attributeFilter:['class']});
-  addEventListener('resize',function(){var m=document.querySelector('#chatPage .main'),tb=m&&m.querySelector('.topbar');if(tb)m.style.setProperty('--vc-top',tb.offsetHeight+'px')});
+  addEventListener('resize',function(){var m=document.querySelector('#chatPage .main'),tb=m&&m.querySelector('.topbar');if(tb)m.style.setProperty('--vc-top',tb.offsetHeight+'px');clampDock()});
   var tt=0;new MutationObserver(function(){if(tt)return;tt=setTimeout(function(){tt=0;mountTile()},500)}).observe(document.body,{childList:true,subtree:true});
   mountTile();
   fbBoot(0);
 }
-window.__vcDiag=function(){return {fb:!!S.fb,me:S.me,joined:S.joined,members:S.members,voiceOn:S.voiceOn,sdk:!!window.AgoraRTC}};
+window.__vcDiag=function(){return {fb:!!S.fb,me:S.me,joined:S.joined,stage:S.stage,err:S.err,members:S.members,voiceOn:S.voiceOn,sdk:!!window.AgoraRTC,tokenUrl:!!CFG.TOKEN_URL,appId:CFG.APP_ID}};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
