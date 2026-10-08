@@ -2,14 +2,49 @@ ICH (Itsuki's Chat Hub)
 
 EASY links:
 
-*Old launchers deleted (blocked)*
+Canva:
 
-[Launcher 9](https://gazelle-0br9zq.my.canva.site/ich-launcher-backup-1)
+[Launcher 1](https://gazelle-0br9zq.my.canva.site/ich-launcher-backup-1)
 
-[Launcher 10](https://gazelle-0br9zq.my.canva.site/ich-launcher)
+[Launcher 2](https://gazelle-0br9zq.my.canva.site/ich-launcher)
 
-[Launcher 11](https://gazelle-0br9zq.my.canva.site/ich)
+[Launcher 3](https://gazelle-0br9zq.my.canva.site/ich)
 
+[Launcher 4](https://itsukischathub.my.canva.site/)
+
+Google Sites:
+
+[Launcher 1](https://sites.google.com/view/itsukis-chat-hub/main)
+
+[Launcher 2](https://sites.google.com/view/itsukis-chat-hub-launcher/home_1)
+
+[Launcher 3](https://sites.google.com/view/ich-launcher/home)
+
+Vercel:
+
+[Launcher 1](https://itsukis-chat-hub.vercel.app/)
+
+[Launcher 2](https://ich-launcher.vercel.app)
+
+[Launcher 3](https://ich-by-suki.vercel.app)
+
+p5js:
+
+[Launcher 1](https://editor.p5js.org/jace01b/sketches/mYFtQwQgD)
+
+[Launcher 2](https://editor.p5js.org/jace01b/full/WUTqx4Upg)
+
+[Launcher 3](https://editor.p5js.org/jace01b/full/1prpxaC-R)
+
+Base44:
+
+*Base44 lwk annoying so I didnt do any uploads on it lol*
+
+Download The Launcher:
+
+[Download - Github](https://github.com/AniItsukiCoded/backups/blob/main/(USE)%20-%20Launcher%20Loader.html)
+
+*or download the launcher inside of the website in the 'EXTRAS' tab!*
 
 ---
 
