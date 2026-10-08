@@ -219,3 +219,8 @@
 @media (prefers-reduced-motion:reduce){
   #vcView *,#vcView,.vc-dock,.vc-dock *,.vc-toast,.vc-sb *,#vcTile *,#vcTile{animation:none!important;transition:none!important}
 }
+
+/* ---------- v2.1 additions: slow-connect hint + connection test output ---------- */
+.vc-slow{color:var(--vc-amber);max-width:460px;animation:vcFadeUp .4s var(--vc-ease) both}
+.vc-test{grid-column:1/-1;margin:2px 0 0;padding:10px 12px;border-radius:10px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);color:#d5d8dd;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;animation:vcFadeUp .35s var(--vc-ease) both;user-select:text;-webkit-user-select:text}
+.vc-err-b:disabled{opacity:.6;cursor:default}

@@ -4,7 +4,10 @@
 
    v2 (2026-10-07): token support (TOKEN_URL), staged join with progress, SDK/token preloading,
    clearer errors, presence self-heal, live speaking levels, connection quality, shortcuts (M / D),
-   animated tiles. Token server: worker/agora-token-worker.js  (setup: VOICE-SETUP.md). */
+   animated tiles. Token server: worker/agora-token-worker.js  (setup: VOICE-SETUP.md).
+   v2.1 (2026-10-08): join can no longer hang or leak (per-step timeouts, working Cancel, hard cleanup that always
+   leaves the Agora channel + closes the mic), minutes counted only after 60s connected, presence written only after a
+   real connection, event log in "Copy details", built-in connection test (__vcTest()). */
 (function(){
 'use strict';
 if(window.__vcLoaded)return;window.__vcLoaded=1;
@@ -14,8 +17,13 @@ var CFG=Object.assign({
   CHANNEL:'itsukis-hub-voice',
   /* Token server (Cloudflare Worker, see worker/agora-token-worker.js). Leave '' while your Agora project is in
      "App ID" (testing) mode; REQUIRED once the App Certificate is enabled, e.g. 'https://agora-token.YOURNAME.workers.dev' */
-  TOKEN_URL:'https://agora-token.jace01b.workers.dev/',
+  TOKEN_URL:'https://agora-token.jace01b.workers.dev',
   TOKEN_CACHE_MS:20*60e3,
+  SDK_TIMEOUT_MS:15e3,       // loading the Agora library
+  JOIN_TIMEOUT_MS:15e3,      // Agora gateway handshake
+  PUBLISH_TIMEOUT_MS:12e3,   // audio connection (WebRTC/UDP) - the usual place a VPN/firewall/blocker causes a hang
+  GUARD_MS:45e3,             // absolute cap on the connect phase; past this everything is torn down
+  SLOW_HINT_MS:6e3,          // show the "taking longer than usual" hint after this long
   MONTH_LIMIT:10000,         // Agora free minutes per month
   MAX_USERS:12,              // client-side cap (protects your 10,000 free minutes)
   ALONE_MS:3*60e3,           // leave automatically if you're alone this long
@@ -50,10 +58,22 @@ var I={
 
 var S={fb:null,me:null,members:{},forceMap:{},owners:{},mods:{},secret:false,voiceOn:true,banned:false,
   users:{},userReq:{},tiles:{},unsub:[],sess:[],timers:{},
-  client:null,track:null,micErr:false,micMsg:'',sid:'',mref:null,joined:false,joining:false,cancel:false,joinAt:0,
-  stage:'',err:null,tok:null,q:0,heals:[],healing:false,
+  client:null,track:null,micErr:false,micMsg:'',sid:'',mref:null,joined:false,joining:false,gen:0,joinAt:0,
+  stage:'',slow:false,log:[],err:null,tok:null,q:0,heals:[],healing:false,
   mutedLocal:false,deaf:false,wasMuted:false,remote:{},speaking:{},level:{},vol:{},localMute:{},
   lastActive:now(),aloneSince:0,open:false,sbEl:null,view:null,dock:null,prevIds:null,prunedAt:{},reconnecting:false,usage:{},usageMonth:'',usageUn:null};
+
+/* ---------- event log (shown in "Copy details" so problems can be diagnosed) + timeouts ---------- */
+var T0=now();
+var released=typeof WeakSet==='function'?new WeakSet():null;   // mic tracks / Agora clients that cleanup() already closed
+function markReleased(o){try{if(released&&o)released.add(o)}catch(e){}}
+function isReleased(o){return !!(released&&released.has(o))}
+function dbg(m){var l=S.log;l.push('+'+((now()-T0)/1000).toFixed(1)+'s '+m);if(l.length>60)l.shift();try{console.debug('[voice]',m)}catch(e){}}
+function withTimeout(p,ms,code,msg){
+  var to;
+  return Promise.race([Promise.resolve(p),new Promise(function(_,rej){to=setTimeout(function(){rej(Object.assign(new Error(msg||code),{code:code}))},ms)})])
+    .then(function(v){clearTimeout(to);return v},function(e){clearTimeout(to);throw e});
+}
 
 /* ---------- toast + sounds ---------- */
 function toast(msg){
@@ -229,6 +249,7 @@ function loadSdk(){
       try{await new Promise(function(res,rej){var s=document.createElement('script');s.async=true;s.src=CFG.SDK_URLS[i];s.onload=res;s.onerror=function(){s.remove();rej()};document.head.appendChild(s)});
         if(window.AgoraRTC){
           try{AgoraRTC.setLogLevel(3);AgoraRTC.setParameter('AUDIO_VOLUME_INDICATION_INTERVAL',200)}catch(e){}
+          try{AgoraRTC.disableLogUpload()}catch(e){}   // fewer third-party requests for blockers to choke on
           try{AgoraRTC.onAutoplayFailed=function(){toast('Tap anywhere to turn on voice audio.');document.addEventListener('pointerdown',function f(){document.removeEventListener('pointerdown',f,true);applyPlayback()},true)}}catch(e){}
           try{AgoraRTC.onMicrophoneChanged=onMicChanged}catch(e){}
           return}}catch(e){}
@@ -245,7 +266,6 @@ function preloadSoon(){
   if(window.requestIdleCallback)requestIdleCallback(go,{timeout:5000});else setTimeout(go,2500);
 }
 function warm(){loadSdk().catch(noop);if(S.me&&CFG.TOKEN_URL)fetchToken().catch(noop)}
-function check(){if(S.cancel)throw new Error('cancelled')}
 
 /* ---------- token ---------- */
 function tokErr(code,msg,status){return Object.assign(new Error(msg),{code:code,status:status})}
@@ -257,7 +277,7 @@ async function fetchToken(force){
   var url=CFG.TOKEN_URL+(CFG.TOKEN_URL.indexOf('?')<0?'?':'&')+'channel='+encodeURIComponent(CFG.CHANNEL)+'&uid='+encodeURIComponent(S.me.id);
   var ctl=window.AbortController?new AbortController():null,to=setTimeout(function(){if(ctl)ctl.abort()},10000),r;
   try{r=await fetch(url,{headers:{Authorization:'Bearer '+idt},signal:ctl?ctl.signal:undefined,cache:'no-store'})}
-  catch(e){throw tokErr('TOKEN_SERVER','Couldn\'t reach the voice token server.')}
+  catch(e){throw tokErr('TOKEN_SERVER','Couldn\'t reach the voice token server (an ad-blocker/VPN may be blocking it, or the Worker URL is wrong).')}
   finally{clearTimeout(to)}
   var j=null;try{j=await r.json()}catch(e){}
   if(!r.ok||!j||!j.token)throw tokErr(r.status===403?'TOKEN_DENIED':'TOKEN_SERVER',(j&&j.error)||('Token server returned '+r.status),r.status);
@@ -271,25 +291,33 @@ async function renewToken(){
 
 /* ---------- friendly errors ---------- */
 function explain(e){
-  var code=(e&&(e.code||e.name))||'',raw=String((e&&e.message)||e||''),all=code+' '+raw,o={code:String(code||'ERROR'),raw:raw,retry:true};
+  var code=String((e&&(e.code||e.name))||''),raw=String((e&&e.message)||e||''),all=code+' '+raw,o={code:code||'ERROR',raw:raw,retry:true};
   var own=iAmOwner();
-  if(/invalid vendor key|INVALID_VENDOR_KEY|vendor key/i.test(all)){
+  var BLOCK='Something on your device or network is blocking the voice connection. Turn off ad/tracker blockers for this site (Opera GX: the shield icon in the address bar), pause any VPN or proxy, and make sure nothing blocks UDP/WebRTC. Then try again.';
+  if(/invalid vendor key|INVALID_VENDOR_KEY|can not find appid/i.test(all)){
     o.title='Wrong Agora App ID';o.msg=own?'Agora doesn\'t recognise the App ID in voice-channel.js. Copy it again from the Agora Console (it is all lowercase).':'Voice isn\'t set up correctly yet. Please tell an owner.';o.retry=false;
-  }else if(/dynamic use static key/i.test(all)||(code==='CAN_NOT_GET_GATEWAY_SERVER'&&!CFG.TOKEN_URL)){
+  }else if(/dynamic use static key/i.test(all)){
     o.title=own?'Voice needs a token':'Voice isn\'t ready yet';
-    o.msg=own?'Your Agora project has the App Certificate turned on, but no token server is configured. Fix: either switch the project to "App ID" (testing) mode in the Agora Console, or deploy worker/agora-token-worker.js and set TOKEN_URL (see VOICE-SETUP.md).':'The owner still has to finish setting up voice. Try again later.';o.retry=!!own;
-  }else if(/token|DYNAMIC_KEY|NO_AUTHORIZED|CAN_NOT_GET_GATEWAY_SERVER/i.test(all)&&code!=='TOKEN_SERVER'&&code!=='TOKEN_DENIED'){
-    o.title='Voice token was rejected';o.msg=own?'The token server answered, but Agora refused the token. Check that AGORA_APP_ID and AGORA_APP_CERTIFICATE in the Worker match this project, and that CHANNEL matches.':'Voice had a hiccup. Try again in a moment.';
+    o.msg=own?(CFG.TOKEN_URL?'Agora got no usable token even though TOKEN_URL is set. Reload the page and retry.':'Your Agora project has the App Certificate turned on, but no token server is configured. Either switch the project to "App ID" mode in the Agora Console, or deploy worker/agora-token-worker.js and set TOKEN_URL (see VOICE-SETUP.md).'):'The owner still has to finish setting up voice. Try again later.';o.retry=!!own;
+  }else if(/invalid token|token.*(expire|invalid|fail)|authorized failed|DYNAMIC_KEY|TOKEN_EXPIRED/i.test(all)&&!/^TOKEN_(SERVER|DENIED|AUTH)$/.test(code)){
+    o.title='Voice token was rejected';o.msg=own?'The token server answered, but Agora refused the token. Check that AGORA_APP_ID and AGORA_APP_CERTIFICATE in the Worker belong to this same project, and that CHANNEL matches.':'Voice had a hiccup. Try again in a moment.';
   }else if(code==='TOKEN_DENIED'){
     o.title='Voice access denied';o.msg=raw==='banned'?'Banned accounts can\'t use voice.':'The voice server wouldn\'t let this account in ('+raw+').';o.retry=raw!=='banned';
   }else if(code==='TOKEN_SERVER'||code==='TOKEN_AUTH'){
     o.title='Couldn\'t get a voice pass';o.msg=raw+(own?' Check TOKEN_URL and that the Worker is deployed.':' Try again in a moment.');
-  }else if(code==='UID_CONFLICT'){
+  }else if(/UID_CONFLICT|UID_BANNED/i.test(all)){
     o.title='Already connected';o.msg='This account is still connected from another tab or device. Close it, wait a few seconds, and retry.';
   }else if(code==='SDK_LOAD'){
     o.title='Audio engine blocked';o.msg='The voice library couldn\'t load. Disable your ad-blocker for this site, or check your network.';
-  }else if(/NETWORK|TIMEOUT|WS_ABORT|SERVER_ERROR|OPERATION_ABORTED|CONNECTION/i.test(all)){
-    o.title='Network problem';o.msg='Couldn\'t reach the voice servers. Check your connection and retry.';
+  }else if(code==='NOT_SUPPORTED'){
+    o.title='Browser not supported';o.msg=raw;o.retry=false;
+  }else if(code==='PRESENCE_TIMEOUT'){
+    o.title='Database didn\'t answer';o.msg='Connected to the voice servers, but the site database didn\'t confirm your join. Check your connection and retry.';
+  }else if(/PERMISSION_DENIED/i.test(all)){
+    o.title='Voice wouldn\'t let you in';o.msg='If a moderator just muted or removed you, wait about 2 minutes and try again. Voice may also be turned off.';
+  }else if(/JOIN_TIMEOUT|PUBLISH_TIMEOUT|GUARD_TIMEOUT|CAN_NOT_GET_GATEWAY_SERVER|NETWORK|TIMEOUT|WS_ABORT|SERVER_ERROR|OPERATION_ABORTED|CONNECTION|NO_CANDIDATES|ICE/i.test(all)){
+    o.title=/PUBLISH_TIMEOUT|NO_CANDIDATES|ICE/i.test(all)?'Audio connection blocked':'Couldn\'t reach the voice servers';
+    o.msg=BLOCK+(own?' If it still fails with everything off, make sure AGORA_APP_ID and AGORA_APP_CERTIFICATE in the Worker belong to the same enabled Agora project.':'');
   }else{
     o.title='Couldn\'t join voice';o.msg=raw+' If you were muted, banned or just removed, wait a bit and retry.';
   }
@@ -317,34 +345,51 @@ function onMicChanged(d){
   }catch(e){}
 }
 
-/* ---------- join / leave ---------- */
+/* ---------- join / leave ----------
+   Every attempt gets a generation number. cleanup() bumps it, so an attempt that was cancelled, timed out or
+   superseded can never come back to life later - it only releases whatever it created (mic, Agora client).
+   Every network step has a timeout, so "Connecting" can never hang forever. */
 function setStage(s){S.stage=s;render()}
 async function join(){
   if(S.joined||S.joining)return;
-  S.err=null;S.joining=true;S.cancel=false;S.micErr=false;S.micMsg='';S.stage='prep';S.lastActive=now();render();
+  var gen=++S.gen,track=null,c=null;
+  var alive=function(){if(gen!==S.gen)throw Object.assign(new Error('cancelled'),{code:'CANCELLED'})};
+  S.log=[];dbg('join start (token server '+(CFG.TOKEN_URL?'on':'off')+', '+(navigator.onLine===false?'OFFLINE':'online')+')');
+  S.err=null;S.joining=true;S.micErr=false;S.micMsg='';S.stage='prep';S.slow=false;S.lastActive=now();render();
   var ready=S.me?true:await ensureReady();
-  if(!ready){S.joining=false;S.stage='';info('Not connected yet','Voice couldn\'t reach the site\'s database yet. Reload the page, then try again.');return}
+  if(gen!==S.gen)return;
   var bail=function(t,m,r){S.joining=false;S.stage='';info(t,m,r)};
+  if(!ready)return bail('Not connected yet','Voice couldn\'t reach the site\'s database yet. Reload the page, then try again.');
   if(!S.voiceOn)return bail('Voice is off','An owner turned voice off right now.',false);
   if(S.banned)return bail('Voice unavailable','Banned accounts can\'t use voice.',false);
   if(usageTotal(S.usage)>=CFG.MONTH_LIMIT&&!iAmOwner())return bail('Out of minutes','Voice has used all '+CFG.MONTH_LIMIT.toLocaleString()+' minutes for this month. It resets on the 1st (UTC).',false);
   var list=activeList();
   if(list.length>=CFG.MAX_USERS&&!list.some(function(m){return m.id===S.me.id}))return bail('Voice is full','There are already '+CFG.MAX_USERS+' people in voice. Try again soon.');
   try{
-    setStage('load');
+    S.timers.slow=setTimeout(function(){if(gen===S.gen&&S.joining&&!S.joined){S.slow=true;render()}},CFG.SLOW_HINT_MS);
+    setStage('load');dbg('loading engine + token');
     var tokP=fetchToken();tokP.catch(noop);          // token + SDK load in parallel
-    await loadSdk();check();
-    var token=await tokP;check();
-    try{if(AgoraRTC.checkSystemRequirements&&!AgoraRTC.checkSystemRequirements())throw Object.assign(new Error('This browser doesn\'t support voice calls.'),{code:'NOT_SUPPORTED'})}catch(e){if(e&&e.code==='NOT_SUPPORTED')throw e}
+    await withTimeout(loadSdk(),CFG.SDK_TIMEOUT_MS,'SDK_LOAD','The voice library took too long to load.');alive();
+    var token=await tokP;alive();dbg('engine ready, token '+(token?'ok':'not used'));
+    var sysOk=true;try{sysOk=!AgoraRTC.checkSystemRequirements||AgoraRTC.checkSystemRequirements()}catch(x){}
+    if(!sysOk)throw Object.assign(new Error('This browser doesn\'t support voice calls.'),{code:'NOT_SUPPORTED'});
+
     setStage('mic');
-    S.track=await makeMic();check();
+    track=await makeMic();alive();S.track=track;dbg(track?'mic ok':'no mic: '+S.micMsg);
     var forced=isForced(S.me.id);
-    S.mutedLocal=forced||!S.track;S.deaf=false;
-    if(S.track&&S.mutedLocal)await S.track.setEnabled(false);
+    S.mutedLocal=forced||!track;S.deaf=false;
+    if(track&&S.mutedLocal){await track.setEnabled(false);alive()}
+
     setStage('connect');
+    // absolute cap on the connect phase: whatever is still stuck after this gets torn down (frees the Agora channel + mic)
+    S.timers.guard=setTimeout(function(){
+      if(gen!==S.gen||S.joined)return;
+      dbg('guard timeout - tearing everything down');
+      var ex=explain({code:'GUARD_TIMEOUT',message:'The connection never finished.'});
+      cleanup('').then(function(){setErr(ex)});
+    },CFG.GUARD_MS);
     S.sid=Math.random().toString(36).slice(2,12)+Math.random().toString(36).slice(2,8);
-    S.mref=R('voice/members/'+S.me.id);
-    var t=now(),c=S.client=AgoraRTC.createClient({mode:'rtc',codec:'vp8'});
+    c=S.client=AgoraRTC.createClient({mode:'rtc',codec:'vp8'});
     c.on('user-published',async function(user,type){
       if(type!=='audio')return;
       try{await c.subscribe(user,'audio');S.remote[user.uid]=user;applyPlayback()}catch(e){}
@@ -360,18 +405,26 @@ async function join(){
     c.on('token-privilege-will-expire',renewToken);
     c.on('token-privilege-did-expire',function(){renewToken()});
     c.on('connection-state-change',function(cur,prev,reason){
+      dbg('agora '+prev+' -> '+cur+(reason?' ('+reason+')':''));
       S.reconnecting=cur==='RECONNECTING';
       if(cur==='DISCONNECTED'&&S.joined&&reason!=='LEAVE')cleanup('Disconnected from voice ('+reason+').');
       render();
     });
-    // presence write and Agora join run together; either failing aborts the join
-    var pj=c.join(CFG.APP_ID,CFG.CHANNEL,token||null,Number(S.me.id)),pp=S.fb.F.set(S.mref,{sid:S.sid,at:t,seen:t,muted:S.mutedLocal,deaf:false});
-    pj.catch(noop);pp.catch(noop);
-    await Promise.all([pj,pp]);check();
+    dbg('agora join');
+    await withTimeout(c.join(CFG.APP_ID,CFG.CHANNEL,token||null,Number(S.me.id)),CFG.JOIN_TIMEOUT_MS,'JOIN_TIMEOUT','Agora didn\'t answer in time.');alive();
+    dbg('agora joined');
+    try{c.enableAudioVolumeIndicator()}catch(x){}
+    // from here on we really are in the Agora channel. Audio + our roster entry are set up together;
+    // we only show up in the roster for others once the connection is real.
+    S.mref=R('voice/members/'+S.me.id);var t=now();
+    var pub=track?withTimeout(c.publish([track]),CFG.PUBLISH_TIMEOUT_MS,'PUBLISH_TIMEOUT','The audio connection didn\'t come up.'):Promise.resolve();
+    var pres=withTimeout(S.fb.F.set(S.mref,{sid:S.sid,at:t,seen:t,muted:S.mutedLocal,deaf:false}),8000,'PRESENCE_TIMEOUT','The database didn\'t confirm your join.');
+    pub.catch(noop);pres.catch(noop);
+    await Promise.all([pub,pres]);alive();
+    dbg('audio + presence ok');
     S.fb.F.onDisconnect(S.mref).remove().catch(noop);
-    try{c.enableAudioVolumeIndicator()}catch(e){}
-    if(S.track)await c.publish([S.track]);check();
-    S.joined=true;S.joining=false;S.stage='';S.err=null;S.joinAt=now();S.aloneSince=0;S.prevIds=null;S.heals=[];
+    S.joined=true;S.joining=false;S.stage='';S.slow=false;S.err=null;S.joinAt=now();S.aloneSince=0;S.prevIds=null;S.heals=[];
+    clearTimeout(S.timers.slow);clearTimeout(S.timers.guard);delete S.timers.slow;delete S.timers.guard;
     watch('voice/members/'+S.me.id,function(v){
       if(!S.joined)return;
       if(v==null)selfHeal();
@@ -382,13 +435,22 @@ async function join(){
     S.timers.tick=setInterval(tick,1000);
     S.timers.loc=setInterval(localLevel,120);
     S.timers.spk=setInterval(speakLoop,110);
-    S.timers.use=setInterval(countMinute,60000);countMinute();
+    S.timers.use=setInterval(countMinute,60000);   // first minute is counted after 60s connected, not at the instant of joining
     beep(520,780);applyForce();rosterChanged();render();
+    dbg('connected');
     if(S.micErr)toast(S.micMsg+' You joined listen-only.');
   }catch(e){
-    if(e&&e.message==='cancelled'){await cleanup('',false,false);return}
-    var ex=explain(e);console.warn('[voice] join failed',e);
-    await cleanup('',false,false);setErr(ex);
+    if(gen!==S.gen||(e&&e.message==='cancelled')){
+      // this attempt was cancelled / superseded: cleanup() already ran, just release anything it created afterwards
+      dbg('attempt released'+(e&&e.message&&e.message!=='cancelled'?' ('+e.message+')':''));
+      try{if(track&&track!==S.track&&!isReleased(track)){markReleased(track);track.stop();track.close()}}catch(x){}
+      try{if(c&&c!==S.client&&!isReleased(c)){markReleased(c);c.removeAllListeners();Promise.resolve().then(function(){return c.leave()}).catch(noop)}}catch(x){}
+      return;
+    }
+    dbg('FAILED '+String((e&&(e.code||e.name))||'')+': '+String((e&&e.message)||e));
+    console.warn('[voice] join failed',e);
+    var ex=explain(e);
+    await cleanup('');setErr(ex);
   }
 }
 
@@ -408,27 +470,62 @@ async function selfHeal(){
   finally{S.healing=false}
 }
 
+/* Tears EVERYTHING down: Agora channel (stops the minute meter), microphone, roster entry, timers.
+   Safe to call at any time, any number of times. */
 async function cleanup(msg,memberGone,keepMember){
-  S.cancel=true;
+  S.gen++;                       // invalidates any join attempt that is still in flight
   var F=S.fb&&S.fb.F;
-  S.joined=false;S.joining=false;S.stage='';
-  Object.keys(S.timers).forEach(function(k){clearInterval(S.timers[k])});S.timers={};
+  S.joined=false;S.joining=false;S.stage='';S.slow=false;
+  Object.keys(S.timers).forEach(function(k){clearInterval(S.timers[k]);clearTimeout(S.timers[k])});S.timers={};
   S.sess.forEach(function(f){try{f()}catch(e){}});S.sess=[];
   var tr=S.track,cl=S.client,mref=S.mref;
   S.track=null;S.client=null;S.mref=null;S.remote={};S.speaking={};S.level={};S.reconnecting=false;S.mutedLocal=false;S.deaf=false;S.q=0;
+  markReleased(tr);markReleased(cl);
   try{if(tr){tr.stop();tr.close()}}catch(e){}
   var p=[];
   if(cl){try{cl.removeAllListeners()}catch(e){}p.push(Promise.resolve().then(function(){return cl.leave()}).catch(noop))}
   if(mref&&F){try{F.onDisconnect(mref).cancel().catch(noop)}catch(e){}
     if(!memberGone&&!keepMember)p.push(F.remove(mref).catch(noop))}
+  dbg('cleanup'+(msg?': '+msg:''));
   render();
   if(msg)toast(msg);
-  await Promise.all(p);
-  S.cancel=false;
+  await Promise.race([Promise.all(p),sleep(3000)]);   // never let a stuck leave() block the UI
 }
 function leave(){
-  if(S.joining&&!S.joined){S.cancel=true;S.stage='cancel';render();return}
-  cleanup('');beep(780,420);
+  var was=S.joined;dbg(was?'left the call':'cancelled by user');
+  cleanup('');if(was)beep(780,420);
+}
+
+/* ---------- connection test: tells you WHICH thing is blocked (button on the error card, or __vcTest() in the console) ---------- */
+function stunProbe(){
+  return new Promise(function(res){
+    var found={host:0,srflx:0,relay:0},pc;
+    try{pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]})}catch(e){return res(null)}
+    var fin=false,done=function(){if(fin)return;fin=true;clearTimeout(to);try{pc.close()}catch(e){}res(found)};
+    var to=setTimeout(done,4500);
+    pc.onicecandidate=function(ev){if(!ev.candidate){done();return}var m=/ typ (\w+)/.exec(ev.candidate.candidate);if(m&&found[m[1]]!=null)found[m[1]]++};
+    try{pc.createDataChannel('t');pc.createOffer().then(function(o){return pc.setLocalDescription(o)}).catch(done)}catch(e){done()}
+  });
+}
+async function selfTest(){
+  var out=['Voice connection test'],ok=function(m){out.push('OK    '+m)},bad=function(m){out.push('FAIL  '+m)};
+  if(navigator.onLine===false)bad('Browser says you are offline');else ok('Browser is online');
+  try{await withTimeout(loadSdk(),8000,'SDK_LOAD');ok('Agora audio engine loaded')}
+  catch(e){bad('Agora audio engine did not load - an ad-blocker or network filter is blocking cdn.jsdelivr.net / agora.io')}
+  if(CFG.TOKEN_URL){
+    try{await withTimeout(fetch(CFG.TOKEN_URL,{mode:'no-cors',cache:'no-store'}),8000,'T');ok('Token server reachable')}
+    catch(e){bad('Token server NOT reachable ('+CFG.TOKEN_URL+') - blocked by an ad-blocker/VPN, or the Worker URL is wrong')}
+    if(S.me){try{await fetchToken(true);ok('Got a voice token for your account')}catch(e){bad('Voice token failed: '+String((e&&e.message)||e))}}
+    else bad('Not signed in yet - can\'t test a token');
+  }else out.push('INFO  No token server configured (TOKEN_URL is empty)');
+  try{var st=await navigator.permissions.query({name:'microphone'});out.push((st.state==='denied'?'FAIL  ':'OK    ')+'Microphone permission: '+st.state)}catch(e){out.push('INFO  Microphone permission: unknown')}
+  var f=await stunProbe();
+  if(!f)bad('WebRTC is unavailable - a browser setting or extension blocks it');
+  else if(f.srflx||f.relay)ok('UDP route to the internet works');
+  else bad('No UDP route found - voice can\'t connect. A VPN, firewall, WebRTC-blocking extension or the browser\'s ad/tracker blocker is the usual cause.');
+  out.push('INFO  '+(location.origin||location.href)+' | '+String(navigator.userAgent).slice(0,100));
+  var txt=out.join('\n');try{console.log(txt)}catch(e){}
+  return txt;
 }
 
 function hardLeave(){
@@ -764,7 +861,7 @@ function stepIdx(s){for(var i=0;i<STEPS.length;i++)if(STEPS[i][0]===s)return i;r
 function renderBar(){
   var bar=$('vcBar');if(!bar)return;
   var full=S.me&&activeList().length>=CFG.MAX_USERS&&!S.joined;
-  var key=[S.joined,S.joining,S.stage,S.mutedLocal,S.deaf,S.me&&isForced(S.me.id),!!S.track,S.micErr,S.voiceOn,S.banned,!!full,S.err&&(S.err.code+S.err.title),iAmOwner()].join();
+  var key=[S.joined,S.joining,S.stage,S.mutedLocal,S.deaf,S.me&&isForced(S.me.id),!!S.track,S.micErr,S.voiceOn,S.banned,!!full,S.err&&(S.err.code+S.err.title+(S.err.testing?'T':'')+(S.err.test?S.err.test.length:0)),iAmOwner(),S.slow].join();
   if(bar._k===key)return;bar._k=key;bar.textContent='';
   if(!S.voiceOn){bar.appendChild(h('div','vc-note','Voice is turned off by an owner right now.'));return}
   if(S.joined){
@@ -788,6 +885,7 @@ function renderBar(){
     var cb=h('button','vc-cancel',S.stage==='cancel'?'Cancelling…':'Cancel');cb.type='button';cb.disabled=S.stage==='cancel';
     cb.addEventListener('click',function(e){e.stopPropagation();leave()});bar.appendChild(cb);
     if(S.stage==='mic')bar.appendChild(h('div','vc-note','If your browser asks, allow the microphone.'));
+    else if(S.slow)bar.appendChild(h('div','vc-note vc-slow','Taking longer than usual… ad-blockers, VPNs and firewalls can stall voice. It gives up on its own after a short while, or you can cancel.'));
     return;
   }
   if(S.err){
@@ -797,9 +895,13 @@ function renderBar(){
     var row=h('div','vc-err-btns');
     if(e.retry){var rb=h('button','vc-err-b main');rb.type='button';rb.innerHTML=I.retry+'<span>Try again</span>';rb.addEventListener('click',function(ev){ev.stopPropagation();S.err=null;join()});row.appendChild(rb)}
     if(e.code||e.raw){var cp=h('button','vc-err-b');cp.type='button';cp.innerHTML=I.copy+'<span>Copy details</span>';
-      cp.addEventListener('click',function(ev){ev.stopPropagation();var txt='['+(e.code||'ERROR')+'] '+(e.raw||e.msg);try{navigator.clipboard.writeText(txt).then(function(){toast('Copied')},function(){toast(txt)})}catch(x){toast(txt)}});row.appendChild(cp)}
+      cp.addEventListener('click',function(ev){ev.stopPropagation();var txt='['+(e.code||'ERROR')+'] '+(e.raw||e.msg)+'\n'+S.log.join('\n')+(e.test?'\n\n'+e.test:'');try{navigator.clipboard.writeText(txt).then(function(){toast('Copied')},function(){toast('Couldn\'t copy - open the browser console instead')})}catch(x){toast('Couldn\'t copy - open the browser console instead')}});row.appendChild(cp)}
+    if(!e.info){var tb=h('button','vc-err-b');tb.type='button';tb.disabled=!!e.testing;tb.innerHTML='<span>'+(e.testing?'Testing…':'Run connection test')+'</span>';
+      tb.addEventListener('click',function(ev){ev.stopPropagation();e.testing=true;render();selfTest().then(function(t){e.test=t;e.testing=false;render()},function(){e.testing=false;render()})});row.appendChild(tb)}
     var dm=h('button','vc-err-b');dm.type='button';dm.textContent='Dismiss';dm.addEventListener('click',function(ev){ev.stopPropagation();S.err=null;render()});row.appendChild(dm);
-    card.appendChild(row);bar.appendChild(card);return;
+    card.appendChild(row);
+    if(e.test)card.appendChild(h('pre','vc-test',e.test));
+    bar.appendChild(card);return;
   }
   var j=h('button','vc-join');j.type='button';
   j.innerHTML='<span class="vc-join-ic">'+I.mic+'</span><span>'+(full?'Voice is full':(S.banned?'Unavailable':'Join Voice'))+'</span>';
@@ -861,6 +963,8 @@ function boot(){
   mountTile();
   fbBoot(0);
 }
-window.__vcDiag=function(){return {fb:!!S.fb,me:S.me,joined:S.joined,stage:S.stage,err:S.err,members:S.members,voiceOn:S.voiceOn,sdk:!!window.AgoraRTC,tokenUrl:!!CFG.TOKEN_URL,appId:CFG.APP_ID}};
+window.__vcDiag=function(){return {fb:!!S.fb,me:S.me,joined:S.joined,joining:S.joining,stage:S.stage,gen:S.gen,err:S.err&&{code:S.err.code,title:S.err.title},members:S.members,voiceOn:S.voiceOn,sdk:!!window.AgoraRTC,tokenUrl:CFG.TOKEN_URL,appId:CFG.APP_ID,log:S.log.slice(-40)}};
+window.__vcTest=selfTest;                 // console: await __vcTest()
+window.__vcApi={join:join,leave:leave};   // console / automated tests
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
