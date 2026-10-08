@@ -57,8 +57,8 @@
         });
     });
 
-    // Put it right under Zoom, above the "Sessions end after 30 minutes" note.
-    var note = menu.querySelector(".ex-note:not(.ex-warn)");
+    // Put it right under Zoom, above the Voice Channel card (and the "Sessions end" note).
+    var note = menu.querySelector(".ex-group") || menu.querySelector(".ex-note");
     if (note) menu.insertBefore(a, note);
     else menu.appendChild(a);
   }
