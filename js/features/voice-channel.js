@@ -293,7 +293,7 @@ async function renewToken(){
 function explain(e){
   var code=String((e&&(e.code||e.name))||''),raw=String((e&&e.message)||e||''),all=code+' '+raw,o={code:code||'ERROR',raw:raw,retry:true};
   var own=iAmOwner();
-  var BLOCK='Something on your device or network is blocking the voice connection. Turn off ad/tracker blockers for this site (Opera GX: the shield icon in the address bar), pause any VPN or proxy, and make sure nothing blocks UDP/WebRTC. Then try again.';
+  var BLOCK='Something on your device or network is blocking the voice connection. Turn off ad/tracker blockers for this site (Opera GX: the shield icon in the address bar), pause any VPN or proxy, and make sure nothing blocks UDP/WebRTC. Then try again. Voice does not work on school Chromebooks or managed school networks.';
   if(/invalid vendor key|INVALID_VENDOR_KEY|can not find appid/i.test(all)){
     o.title='Wrong Agora App ID';o.msg=own?'Agora doesn\'t recognise the App ID in voice-channel.js. Copy it again from the Agora Console (it is all lowercase).':'Voice isn\'t set up correctly yet. Please tell an owner.';o.retry=false;
   }else if(/dynamic use static key/i.test(all)){
@@ -658,18 +658,14 @@ function buildSb(){
 }
 var mounting=false;
 function mountSb(){
+  /* The voice channel now lives in the Extras menu (index.html #exVoice), so the Global sidebar entry is no
+     longer inserted. S.sbEl is still built (detached) because the count/active-state code uses it. */
   var list=$('sbList');if(!list||mounting)return;mounting=true;
   try{
     if(!S.sbEl)buildSb();
     var txt='';Array.prototype.forEach.call(list.children,function(c){if(c!==S.sbEl)txt+=' '+c.textContent});
-    if(!/announcements|global/i.test(txt)){if(S.sbEl.parentNode)S.sbEl.remove();if(S.open)closeView();return}
-    var anchor=null;
-    ['vip','announcements','global'].some(function(k){
-      var re=new RegExp(k,'i');
-      return Array.prototype.some.call(list.children,function(c){if(c!==S.sbEl&&re.test(c.textContent)&&c.textContent.length<400){anchor=c;return true}});
-    });
-    if(anchor){if(S.sbEl.previousSibling!==anchor||S.sbEl.parentNode!==list)list.insertBefore(S.sbEl,anchor.nextSibling)}
-    else if(S.sbEl.parentNode!==list)list.appendChild(S.sbEl);
+    if(S.sbEl.parentNode)S.sbEl.remove();
+    if(!/announcements|global/i.test(txt)){if(S.open)closeView();return}
     renderSb();
   }finally{mounting=false}
 }
@@ -691,7 +687,7 @@ function buildView(main){
 function openVoice(){
   warm();
   var cp=$('chatPage');
-  if(cp&&cp.classList.contains('hidden')){var g=$('goGlobal');if(g)g.click();var n=0;(function w(){if($('sbList')&&S.sbEl&&S.sbEl.parentNode)return showView();if(++n<30)setTimeout(w,100)})();return}
+  if(cp&&cp.classList.contains('hidden')){var g=$('goGlobal');if(g)g.click();var n=0;(function w(){if(/announcements|global/i.test(($('sbList')||{}).textContent||''))return showView();if(++n<30)setTimeout(w,100)})();return}
   showView();
   if(!S.me)ensureReady();
 }
@@ -908,7 +904,7 @@ function renderBar(){
   j.disabled=!!full||S.banned;
   j.addEventListener('click',function(e){e.stopPropagation();join()});
   bar.appendChild(j);
-  bar.appendChild(h('div','vc-note','Audio only · your mic starts on · leaving or closing the tab disconnects you'));
+  bar.appendChild(h('div','vc-note','Audio only · your mic starts on · leaving or closing the tab disconnects you · doesn\'t work on school Chromebooks or with ad blockers'));
 }
 function renderDock(){
   if(!S.dock)buildDock();
@@ -959,12 +955,16 @@ function boot(){
   var cp=$('chatPage');
   if(cp)new MutationObserver(function(){if(cp.classList.contains('hidden')){closeView();mountSb()}else mountSb();renderDock()}).observe(cp,{attributes:true,attributeFilter:['class']});
   addEventListener('resize',function(){var m=document.querySelector('#chatPage .main'),tb=m&&m.querySelector('.topbar');if(tb)m.style.setProperty('--vc-top',tb.offsetHeight+'px');clampDock()});
-  var tt=0;new MutationObserver(function(){if(tt)return;tt=setTimeout(function(){tt=0;mountTile()},500)}).observe(document.body,{childList:true,subtree:true});
-  mountTile();
-  fbBoot(0);
+    fbBoot(0);
 }
 window.__vcDiag=function(){return {fb:!!S.fb,me:S.me,joined:S.joined,joining:S.joining,stage:S.stage,gen:S.gen,err:S.err&&{code:S.err.code,title:S.err.title},members:S.members,voiceOn:S.voiceOn,sdk:!!window.AgoraRTC,tokenUrl:CFG.TOKEN_URL,appId:CFG.APP_ID,log:S.log.slice(-40)}};
 window.__vcTest=selfTest;                 // console: await __vcTest()
 window.__vcApi={join:join,leave:leave};   // console / automated tests
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+function wireExtras(){
+  var b=$('exVoice');if(!b||b.__vc)return;b.__vc=1;
+  b.addEventListener('click',function(e){e.preventDefault();openVoice()});
+  b.addEventListener('pointerenter',warm);b.addEventListener('focus',warm);
+}
+function startAll(){wireExtras();boot()}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startAll);else startAll();
 })();

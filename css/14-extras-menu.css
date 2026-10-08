@@ -116,3 +116,8 @@
 html.anti-lag .extras{--ex-bg:rgb(24,25,42)}
 html.anti-lag .ex-shell::before,html.anti-lag .ex-shell::after,html.anti-lag .ex-item::before{display:none!important}
 html.anti-lag .extras.open .ex-ic::before{animation:none!important}
+
+/* Voice Channel entry (a button, not a link) */
+button.ex-item{width:100%;border:0;font:inherit;cursor:pointer;text-align:left;margin-top:10px}
+.ex-warn{align-items:flex-start}
+.extras.open .ex-warn{animation:exIn .6s var(--ex-pop) both;animation-delay:.28s}
