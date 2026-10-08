@@ -11,6 +11,15 @@ const hwNow=()=>Date.now()+(typeof SKEW==='number'?SKEW:0);
 const hwOpen=()=>hwNow()>=HW.S&&hwNow()<=HW.E;
 const hwCanClaim=()=>hwNow()>=HW.S&&hwNow()<=HW.E+HW.G;
 const hwCum=n=>2*n*n+13*n;
+/* Finishing the WHOLE pass (all 30 levels claimed) keeps the Halloween theme forever. Everyone else loses the theme and its
+   switch when the event ends. A tiny local flag avoids a flash of the normal look on load, before the claimed list arrives. */
+const hwForever=id=>{
+  if(id==null)return false;
+  if(Math.min(HW.N,Math.max(0,Number((window.HW_CLAIMED||{})[id])||0))>=HW.N)return true;
+  if(!window.HW_CLAIMED){try{return localStorage.getItem('ich.hwForever')===String(id)}catch(_){}}
+  return false;
+};
+const hwThemeAvail=()=>hwOpen()||(typeof ME!=='undefined'&&!!ME&&hwForever(ME.id));
 // [emoji, name, kind(b=badge, n=name effect, t=title pill + name effect), fx]
 const HW_R=[
  ['🍬','Candy Corn','b'],['🕯️','Candlelight','b'],['🦇','Bat Wings','b'],['🍭','Sweet Tooth','b'],['🕸️','Cobweb','n','web'],
@@ -173,7 +182,7 @@ function hwModal(){
   if(!ME||!hwCanClaim())return;
   const root=document.getElementById('modalRoot');if(!root)return;
   root.innerHTML='<div class="modal-bg" id="hwBg"><div class="modal hw-modal" role="dialog" aria-modal="true" aria-label="Halloween Season Pass"><button class="hw-help" id="hwHelp" type="button" aria-label="How the Halloween Pass works" title="How it works">?</button><button class="hw-x" id="hwX" type="button" aria-label="Close">✕</button>'
-    +'<div class="hw-head"><span class="hw-big">🎃</span><h2>Halloween Season Pass</h2><p>Spend time online to level up. '+HW.N+' levels of spooky badges, name effects and permanent roles. Every level takes a little longer than the last.</p><div id="hwHeadStats"></div></div>'
+    +'<div class="hw-head"><span class="hw-big">🎃</span><h2>Halloween Season Pass</h2><p>Spend time online to level up. '+HW.N+' levels of spooky badges, name effects and permanent roles. Every level takes a little longer than the last. <b>Claim all '+HW.N+' levels to keep the Halloween theme forever</b> — after the event ends, everyone else loses it.</p><div id="hwHeadStats"></div></div>'
     +'<div class="hw-list"></div><div class="hw-foot"><button class="hw-btn" id="hwAll" type="button" disabled>Nothing to claim yet</button><button class="hw-btn" id="hwCos" type="button" style="flex:none;background:rgba(255,255,255,.1);color:var(--text);box-shadow:none">✨ Customize</button></div></div></div>';
   const close=()=>{const bg=document.getElementById('hwBg');if(!bg)return;clearInterval(_hwTimer);bg.classList.add('closing');setTimeout(()=>{if(document.getElementById('hwBg'))root.innerHTML=''},220)};
   document.getElementById('hwBg').onclick=e=>{if(e.target.id==='hwBg')close();const b=e.target.closest&&e.target.closest('.hw-btn[data-l]');if(b)hwClaim(+b.dataset.l)};
@@ -283,7 +292,8 @@ setInterval(async()=>{
 },15000);
 /* ---------- wiring: chat picker hero, settings card, refresh (nothing here touches layout outside the picker/settings) ---------- */
 function hwSync(){
-  hwDeco(hwOpen()&&hwWant());
+  try{if(ME&&window.HW_CLAIMED){if(hwForever(ME.id))localStorage.setItem('ich.hwForever',String(ME.id));else if(localStorage.getItem('ich.hwForever')===String(ME.id))localStorage.removeItem('ich.hwForever')}}catch(_){}
+  hwDeco(hwThemeAvail()&&hwWant());
   hwEnsureCss();
   const gg=document.getElementById('goGlobal');
   if(gg){
@@ -318,10 +328,10 @@ function hwPickerInject(){
 {const o=modalGlobalChoice;modalGlobalChoice=function(){const x=o.apply(this,arguments);try{hwPickerInject()}catch(e){console.warn('halloween picker',e)}return x}}
 function hwSettingsInject(){
   const a=document.getElementById('sAntiLag');
-  if(!a||document.getElementById('sHwTheme')||!hwCanClaim())return;
+  if(!a||document.getElementById('sHwOpen')||!(hwCanClaim()||hwThemeAvail()))return;
   const c=a.closest('.set-card');if(!c)return;
-  c.insertAdjacentHTML('afterend','<div class="set-card"><div class="section-h" style="margin-top:0">🎃 Halloween event</div><div class="toggle-row" style="margin-bottom:0"><div><div style="font-weight:600;font-size:14px">Halloween theme</div><div class="hint" style="margin-top:2px">Spooky decorations (bats, ghosts, fog, cobwebs) and the orange/purple look across the app. Turn off for the normal look. Your Halloween roles and name effects stay either way. Saved to your account.</div></div><label class="switch"><input type="checkbox" id="sHwTheme" '+(hwWant()?'checked':'')+'><span class="slider"></span></label></div><button class="btn" id="sHwOpen" type="button" style="margin-top:12px;width:100%">🎃 Open Halloween Pass</button><button class="btn sec" id="sHwCos" type="button" style="margin-top:8px;width:100%">✨ Customize name, title &amp; badge</button></div>');
-  document.getElementById('sHwTheme').addEventListener('change',e=>hwSetTheme(e.target.checked,e.target));
+  c.insertAdjacentHTML('afterend','<div class="set-card"><div class="section-h" style="margin-top:0">🎃 Halloween event</div>'+(hwThemeAvail()?'<div class="toggle-row" style="margin-bottom:0"><div><div style="font-weight:600;font-size:14px">Halloween theme</div><div class="hint" style="margin-top:2px">Spooky decorations (bats, ghosts, fog, cobwebs) and the orange/purple look across the app. Turn off for the normal look. Your Halloween roles and name effects stay either way. Saved to your account.</div></div><label class="switch"><input type="checkbox" id="sHwTheme" '+(hwWant()?'checked':'')+'><span class="slider"></span></label></div>':'<div class="hint" style="margin-bottom:0">The Halloween theme has ended. Only players who finished all 30 levels of the pass keep it. Your Halloween roles and name effects stay.</div>')+'<button class="btn" id="sHwOpen" type="button" style="margin-top:12px;width:100%">🎃 Open Halloween Pass</button><button class="btn sec" id="sHwCos" type="button" style="margin-top:8px;width:100%">✨ Customize name, title &amp; badge</button></div>');
+  const _ht=document.getElementById('sHwTheme');if(_ht)_ht.addEventListener('change',e=>hwSetTheme(e.target.checked,e.target));
   document.getElementById('sHwOpen').onclick=hwModal;
   document.getElementById('sHwCos').onclick=openCosmetics;
 }

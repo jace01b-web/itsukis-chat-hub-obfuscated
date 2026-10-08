@@ -1634,12 +1634,12 @@ const DB=(()=>{
     // BADGE only (stored on this device); they stay in Friends & Requests so nothing is lost.
     _dismissedReqs(uid){try{return JSON.parse(localStorage.getItem('ich_dismissed_req_'+uid)||'[]')}catch(_){return[]}},
     incomingUnseen(uid){const d=DB._dismissedReqs(uid);return DB.incoming(uid).filter(r=>d.indexOf(r.from)===-1)},
-    unreadTotal(uid){return DB.unreadDMs(uid)+DB.unreadRooms(uid)+DB.unreadAnnouncements(uid)},
+    unreadTotal(uid){return DB.unreadDMs(uid)+DB.unreadRooms(uid)},   // announcements are NOT part of "Mark all as read" (they keep their own badge)
     // Marks every conversation (global, announcements, rooms, DMs) as read in one write, and hides the
     // current friend-request count from the badge.
     async markAllRead(uid){
       const stamp=Math.round(Date.now()+SKEW);
-      const keys=new Set([CFG.GLOBAL_ROOM,CFG.ANNOUNCEMENTS_ROOM]);
+      const keys=new Set([CFG.GLOBAL_ROOM]);   // announcements are left alone on purpose
       (C.myRoomIds||[]).forEach(id=>keys.add(id));
       (C.friends[uid]||[]).forEach(f=>keys.add(dmKey(uid,f)));
       const upd={};

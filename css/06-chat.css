@@ -175,3 +175,12 @@
   box-shadow:0 2px 8px rgba(0,0,0,.45),0 0 0 2px rgba(255,255,255,.9);pointer-events:none;
   transform:scale(0);opacity:0;transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .2s ease}
 .ann-badge.show{transform:scale(1);opacity:1}
+
+/* friend search in the DM sidebar */
+.sb-search{position:relative;display:flex;align-items:center;gap:8px;margin:2px 2px 8px;padding:0 10px;height:36px;border-radius:12px;color:var(--muted);
+  background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px rgba(255,255,255,.09);transition:box-shadow .2s ease,background .2s ease}
+.sb-search:focus-within{background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1.5px rgba(124,108,255,.75),0 0 0 3px rgba(124,108,255,.16);color:var(--text)}
+.sb-search input{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;color:var(--text);font:inherit;font-size:13.5px;padding:0;box-shadow:none}
+.sb-search input::placeholder{color:var(--muted)}
+.sb-search-x{flex:none;width:20px;height:20px;border-radius:50%;border:0;background:rgba(255,255,255,.12);color:var(--text);font-size:10px;line-height:20px;padding:0;cursor:pointer}
+.sb-search-x:hover{background:rgba(255,255,255,.22)}

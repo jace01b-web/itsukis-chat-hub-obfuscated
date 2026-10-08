@@ -89,6 +89,7 @@ function renderChat(){
     menuBtn.onclick=()=>sidebar.classList.toggle('open');
     menuBtnBadge.classList.remove('show');
   }
+  const _fqEl=document.getElementById('sbFriendQ'),_fqFocus=!!_fqEl&&document.activeElement===_fqEl,_fqPos=_fqFocus?_fqEl.selectionStart:0;   // keep typing focus across live re-renders
   const list=$('#sbList'),foot=$('#sbFoot');list.innerHTML='';foot.innerHTML='';
 
   if(g&&view.section==='rooms'){
@@ -117,11 +118,35 @@ function renderChat(){
     list.appendChild(sbItem('👥','Friends & Requests',view.dmView==='friends',()=>{view.dmView='friends';view.roomKey=null;renderChat()},inc.length));
     addHTML(list,`<div class="sb-section">Direct Messages</div>`);
     if(!ME.friends.length)addHTML(list,`<div class="hint" style="padding:6px 10px">Add friends to start chatting.</div>`);
+    if(ME.friends.length){
+      const sr=document.createElement('div');sr.className='sb-search';
+      sr.innerHTML='<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4-4"/></svg><input id="sbFriendQ" type="text" placeholder="Search friends" autocomplete="off" spellcheck="false" aria-label="Search friends"><button type="button" class="sb-search-x" id="sbFriendX" aria-label="Clear search" hidden>✕</button>';
+      list.appendChild(sr);
+    }
     ME.friends.forEach(fid=>{
       const f=DB.getUser(fid);if(!f)return;const k=DB.dmKey(ME.id,fid);
       const unread=DB.unreadIn(k,ME.id);
-      list.appendChild(sbItem(null,f.username,view.roomKey===k,()=>{view.dmView='chat';selectRoom(k)},unread,f));
+      const it=sbItem(null,f.username,view.roomKey===k,()=>{view.dmView='chat';selectRoom(k)},unread,f);
+      it.classList.add('sb-friend');it.dataset.fname=String(f.username).toLowerCase();
+      list.appendChild(it);
     });
+    {
+      const q=document.getElementById('sbFriendQ'),x=document.getElementById('sbFriendX');
+      if(q){
+        const none=document.createElement('div');none.className='hint sb-nomatch';none.style.cssText='padding:6px 10px;display:none';none.textContent='No friends match.';list.appendChild(none);
+        const apply=()=>{
+          const t=(view.friendQ||'').trim().toLowerCase();let shown=0;
+          list.querySelectorAll('.sb-friend').forEach(el=>{const ok=!t||el.dataset.fname.indexOf(t)>-1;el.style.display=ok?'':'none';if(ok)shown++});
+          none.style.display=(t&&!shown)?'':'none';x.hidden=!t;
+        };
+        q.value=view.friendQ||'';
+        q.addEventListener('input',()=>{view.friendQ=q.value;apply()});
+        q.addEventListener('keydown',e=>{if(e.key==='Escape'&&q.value){e.stopPropagation();q.value='';view.friendQ='';apply()}});
+        x.onclick=()=>{q.value='';view.friendQ='';apply();q.focus()};
+        apply();
+        if(_fqFocus){q.focus({preventScroll:true});try{q.setSelectionRange(_fqPos,_fqPos)}catch(_){}}
+      }
+    }
     foot.innerHTML=`<button class="btn small" id="addFr">+ Add Friend</button>`;
     $('#addFr').onclick=modalAddFriend;
   }
