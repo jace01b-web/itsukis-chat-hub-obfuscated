@@ -73,13 +73,13 @@ function fullNameHTML(id,escapedName){
 function profileRolesHTML(id){
   let out='';
   try{
-    const v=DB.vipInfo(id,true);
+    const v=DB.vipInfo(id,true,true);   // profile card ignores the person's hidden tags (those only change their name)
     if(v&&v.kind==='owner')out+='<span class="pf-role owner-role">\u{1F531} Owner</span>';
     else if(v&&v.kind==='perm')out+='<span class="pf-role vip-perm">\u{1F48E} VIP \u00B7 Forever</span>';
     else if(v&&v.kind==='day')out+='<span class="pf-role vip-day">\u{1F31E} VIP \u2014 1 Day</span>';
     const live=DB.flairOf(id),roles=DB.rolesOf(id);
     const seen={};
-    const hf=tagHidden(id,'flair'),hc=tagHidden(id,'confetti');
+    const hf=false,hc=false;   // hiding a tag never removes it from the profile
     if(!hf&&live&&VIP_FLAIRS[live]){seen[live]=1;out+='<span class="pf-role fl-'+live+'">'+VIP_FLAIRS[live].e+' '+VIP_FLAIRS[live].n+'</span>'}
     if(!hf)NAME_STYLE_PRESETS.forEach(p=>{if(roles[p]===true&&!seen[p]&&VIP_FLAIRS[p]){seen[p]=1;out+='<span class="pf-role fl-'+p+'">'+VIP_FLAIRS[p].e+' '+VIP_FLAIRS[p].n+'</span>'}});
     if(!hc&&roles.confetti===true)out+='<span class="pf-role fl-confetti">\u{1F389} Confetti Blast</span>';

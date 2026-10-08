@@ -665,7 +665,7 @@ function mountSb(){
     if(!S.sbEl)buildSb();
     var txt='';Array.prototype.forEach.call(list.children,function(c){if(c!==S.sbEl)txt+=' '+c.textContent});
     if(S.sbEl.parentNode)S.sbEl.remove();
-    if(!/announcements|global/i.test(txt)){if(S.open)closeView();return}
+    if(/friends & requests|direct messages/i.test(txt)){if(S.open)closeView();return}
     renderSb();
   }finally{mounting=false}
 }
@@ -687,7 +687,23 @@ function buildView(main){
 function openVoice(){
   warm();
   var cp=$('chatPage');
-  if(cp&&cp.classList.contains('hidden')){var g=$('goGlobal');if(g)g.click();var n=0;(function w(){if(/announcements|global/i.test(($('sbList')||{}).textContent||''))return showView();if(++n<30)setTimeout(w,100)})();return}
+  if(cp&&cp.classList.contains('hidden')){
+    /* From the home screen (Extras): "Itsukis Chat" only opens the chooser (VIP / Global / Rooms / Announcements / Pass), so
+       open it, press "Global Chat" for the person, wait for the chat page, then show the voice channel inside it. */
+    var n=0,openedPicker=false,pickedGlobal=false,landed=false;
+    (function step(){
+      var c2=$('chatPage');
+      if(c2&&!c2.classList.contains('hidden')){
+        if(!landed){landed=true;setTimeout(function(){showView();if(!S.me)ensureReady()},150)}
+        return;
+      }
+      var gc=$('gcGlobal');
+      if(gc){if(!pickedGlobal){pickedGlobal=true;gc.click()}}
+      else if(!openedPicker&&!$('gcBg')){var g=$('goGlobal');if(g){openedPicker=true;g.click()}}
+      if(++n<80)setTimeout(step,120);
+    })();
+    return;
+  }
   showView();
   if(!S.me)ensureReady();
 }

@@ -448,8 +448,12 @@ const DB=(()=>{
     onChange:f=>{listeners.add(f);return()=>listeners.delete(f)},
     dmKey,watchMessages,
     // VIP status: owners always count; otherwise a permanent flag or an unexpired 'until'.
-    vipInfo:(id,pub)=>{id=Number(id);if(isOwner(id)&&!(pub&&!isShownOwner(id)))return{kind:'owner'};   // pub=true: display use, a secret owner falls through to their normal VIP status
-      if(pub&&tagHidden(id,'vip'))return null;
+    vipInfo:(id,pub,ignoreHidden)=>{id=Number(id);
+      /* pub=true: display use, a secret owner falls through to their normal VIP status. ignoreHidden=true (profile card): the person's
+         "hide this tag" choice only affects their NAME, so the profile still shows what they really have. */
+      const shownOwner=OWNERS_CACHE[id]===1&&(ignoreHidden||!tagHidden(id,'owner'));
+      if(isOwner(id)&&!(pub&&!shownOwner))return{kind:'owner'};
+      if(pub&&!ignoreHidden&&tagHidden(id,'vip'))return null;
       const v=C.vip[id];if(!v)return null;
       if(v.perm===true)return{kind:'perm'};
       if(typeof v.until==='number'&&v.until>Date.now()+SKEW)return{kind:'day',until:v.until};
