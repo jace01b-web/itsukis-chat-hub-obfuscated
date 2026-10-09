@@ -62,7 +62,8 @@ function renderChat(){
   updateMuteLock();
   renderComposeContext();
   const g=view.mode==='global';
-  const globalOnly=g&&view.section!=='rooms';
+  const dlSrv=typeof DiscordShell!=='undefined'&&DiscordShell.serverMode();   // Discord look on desktop: Global Chat/Rooms get a server-style channel list
+  const globalOnly=g&&view.section!=='rooms'&&!dlSrv;
   $('#sbTitle').textContent=g?'Itsukis Chat':'Itsuki DMs';
   renderOnlinePill(g);
   const sidebar=$('#sidebar'),menuBtn=$('#menuBtn'),menuBtnWrap=$('#menuBtnWrap'),menuBtnIcon=$('#menuBtnIcon'),menuBtnBadge=$('#menuBtnBadge');
@@ -92,7 +93,9 @@ function renderChat(){
   const _fqEl=document.getElementById('sbFriendQ'),_fqFocus=!!_fqEl&&document.activeElement===_fqEl,_fqPos=_fqFocus?_fqEl.selectionStart:0;   // keep typing focus across live re-renders
   const list=$('#sbList'),foot=$('#sbFoot');list.innerHTML='';foot.innerHTML='';
 
-  if(g&&view.section==='rooms'){
+  if(dlSrv){
+    DiscordShell.renderChannels(list,foot);
+  }else if(g&&view.section==='rooms'){
     // Entered via "Rooms": just the room switcher, no Global Chat entry —
     // the back arrow is the only way out, straight to the main menu.
     addHTML(list,`<div class="sb-section">My Rooms</div>`);

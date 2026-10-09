@@ -132,19 +132,91 @@ const DiscordShell=(function(){
     }
   }
 
+  /* ---------- server view: Global Chat / Rooms get a channel list on the left and a member list on the right ---------- */
+  function desktop(){return !!(window.matchMedia&&window.matchMedia('(min-width:821px)').matches)}
+  function serverMode(){return on()&&desktop()&&!!ME&&view.mode==='global'}
+  function renderChannels(list,foot){
+    let online=0;try{online=DB.onlineIds().length}catch(_){}
+    addHTML(list,`<div class="dl-server-head"><b>Itsukis Chat</b><span>${online} online</span></div>`);
+    const cur=view.roomKey;
+    const open=sec=>()=>openChat('global',sec);
+    let annN=0;try{annN=DB.unreadAnnouncements(ME.id)}catch(_){}
+    const vip=!!DB.vipInfo(ME.id);
+    addHTML(list,`<div class="sb-section">Text Channels</div>`);
+    list.appendChild(sbItem('#','global-chat',cur===CFG.GLOBAL_ROOM,open(null)));
+    list.appendChild(sbItem('#','announcements',cur===CFG.ANNOUNCEMENTS_ROOM,open('announcements'),annN));
+    list.appendChild(sbItem(vip?'#':'🔒','vip-lounge',cur===CFG.VIP_ROOM,open('vip')));
+    addHTML(list,`<div class="sb-section">Rooms<button type="button" class="sb-plus" id="sbNewRoom" title="Create a room" aria-label="Create a room">+</button></div>`);
+    const np=document.getElementById('sbNewRoom');if(np)np.onclick=e=>{e.stopPropagation();modalCreateRoom()};
+    const rooms=DB.myRooms(ME.id);
+    rooms.forEach(r=>{
+      const unread=DB.unreadIn(r.id,ME.id);
+      list.appendChild(sbItem('#',r.name,cur===r.id,()=>{view.mode='global';view.section='rooms';selectRoom(r.id)},unread,null,()=>{
+        modalLeaveRoomConfirm(r,async()=>{
+          await DB.leaveRoom(ME.id,r.id);
+          if(view.roomKey===r.id){view.roomKey=CFG.GLOBAL_ROOM;view.section=null;DB.watchMessages(view.roomKey)}
+          render();renderChat();
+        });
+      }));
+    });
+    list.appendChild(sbItem('🔑','Join a room',false,modalJoinRoom));
+    foot.innerHTML='';
+  }
+  let showMembers=true;
+  try{showMembers=localStorage.getItem('ich.dlMembers')!=='0'}catch(_){}
+  function ensureMembersBtn(){
+    let b=document.getElementById('dlMembersBtn');
+    if(!b){
+      const tbr=document.querySelector('.topbar .tb-right');if(!tbr)return null;
+      b=document.createElement('button');b.id='dlMembersBtn';b.type='button';b.title='Member list';b.setAttribute('aria-label','Show or hide the member list');
+      b.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M14 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM2 20c0-3.3 3.6-5 8-5s8 1.7 8 5v1H2zM19 8.5a3 3 0 0 0-1.3-2.5 4 4 0 0 1 0 5 3 3 0 0 0 1.3-2.5zM20 15.3c1.6.7 2.8 1.8 3 3.7h-3z"/></svg>';
+      b.onclick=()=>{showMembers=!showMembers;try{localStorage.setItem('ich.dlMembers',showMembers?'1':'0')}catch(_){}renderMembers()};
+      tbr.insertBefore(b,tbr.firstChild);
+    }
+    return b;
+  }
+  function renderMembers(){
+    const m=document.getElementById('dlMembers'),btn=ensureMembersBtn();
+    const srv=serverMode();
+    if(btn){btn.hidden=!srv;btn.classList.toggle('active',showMembers)}
+    if(!m)return;
+    const vis=srv&&showMembers;
+    m.classList.toggle('show',vis);
+    if(!vis){m.innerHTML='';return}
+    const key=view.roomKey;
+    const isRoom=key&&key!==CFG.GLOBAL_ROOM&&key!==CFG.ANNOUNCEMENTS_ROOM&&key!==CFG.VIP_ROOM;
+    let ids=[];try{ids=(isRoom?DB.presenceIds():DB.onlineIds()).slice()}catch(_){}
+    if(ME&&ids.indexOf(ME.id)<0)ids.push(ME.id);
+    const groups=[['Owner',[]],['Admins',[]],['Moderators',[]],['VIP',[]],['Online',[]]];
+    ids.forEach(id=>{
+      const g=isOwner(id)?0:isAdmin(id)?1:isMod(id)?2:(DB.vipInfo(id)?3:4);
+      groups[g][1].push(id);
+    });
+    const nameOf=id=>{const u=DB.getUser(id);return u?displayUsername(u.username):'Loading…'};
+    m.innerHTML=groups.filter(g=>g[1].length).map(([label,arr])=>{
+      arr.sort((a,b)=>nameOf(a).toLowerCase().localeCompare(nameOf(b).toLowerCase()));
+      return `<div class="dl-mem-h">${label} — ${arr.length}</div>`+arr.map(id=>{
+        const u=DB.getUser(id)||{id,username:'User '+id};
+        return `<div class="dl-mem" data-open-profile="${id}"><span class="dl-fr-av">${avatarHtml(u,u.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot"></i></span><span class="dl-mem-nm">${fullNameHTML(id,esc(nameOf(id)))}</span></div>`;
+      }).join('');
+    }).join('')||'<div class="dl-mem-h">Nobody online</div>';
+  }
+  document.addEventListener('click',e=>{const r=e.target.closest&&e.target.closest('#dlMembers [data-open-profile]');if(r)openUserProfile(Number(r.dataset.openProfile))});
+
   /* ---------- refresh (called from renderChat, and when Discord look is switched) ---------- */
   function refresh(switched){
     if(!on()){
       const was=lastOn;lastOn=false;
+      try{renderMembers()}catch(_){}
       if(switched&&was&&view.page==='chatPage'&&typeof renderChat==='function'){renderedKey=null;renderChat()}
       return;
     }
     lastOn=true;
     if(!ME)return;
-    renderRail();renderUser();
+    renderRail();renderUser();renderMembers();
     // switched on while a chat is open: rebuild message rows (grouping) and the friends page in the new look
     if(switched&&view.page==='chatPage'&&typeof renderChat==='function'){renderedKey=null;renderChat()}
   }
   document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#dlRail'))railClick(e)});
-  return{refresh,renderFriends,on};
+  return{refresh,renderFriends,on,serverMode,renderChannels};
 })();

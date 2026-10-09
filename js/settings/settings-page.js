@@ -21,7 +21,9 @@ function openSettings(fromChat){
       <div class="msg me"><div class="msg-row"><div class="avatar" style="width:28px;height:28px;font-size:11px">Y</div><div class="msg-body"><div class="meta">You</div><div class="bubble">Looking great 🔥</div></div></div></div>
     </div>
 
+    <button type="button" class="dl-set-x" id="sX" aria-label="Close settings" title="Close">✕</button>
     <div class="modal-tabs" id="sTabs">
+      <div class="dl-set-user"><span class="dl-set-av">${avatarHtml(ME,ME.username,'width:40px;height:40px;font-size:16px')}</span><span class="dl-set-nm"><b>${esc(displayUsername(ME.username))}</b><small>User Settings</small></span></div>
       <button data-t="msg" class="active">💬 Messages</button>
       <button data-t="bg">🖼️ Background</button>
       <button data-t="ui">🎨 Theme</button>
@@ -931,6 +933,7 @@ function openSettings(fromChat){
   };
   const closeRevert=()=>{if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();closeModalAnimated(root,()=>{applyStyle(document.documentElement,ME.settings);refitAllAvatars();MusicPlayer.applyPrefs(ME.settings.music)})};
   $$('#sCancel').onclick=closeRevert;
+  $$('#sX').onclick=closeRevert;
   $$('#sReset').onclick=()=>{
     Object.assign(s,{meBubble:'#7c6cff',meText:'#ffffff',radius:16,font:'system',customFont:'',size:15,bold:false,italic:false,bgType:'gradient',bgColor:'#2a1f5c',bgColor2:'#7c2f66',bgImage:'',bgFit:'cover',bgBlur:0,bgDim:30,uiOpacity:50,uiBlur:18,autoScrollBottom:true,filterLocal:true,pings:{everyone:true,sound:true,desktop:true},music:{enabled:true,volume:15,shuffle:true}});
     if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();
