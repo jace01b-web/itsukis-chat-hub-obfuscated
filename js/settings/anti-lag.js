@@ -56,11 +56,25 @@ const DiscordLook=(function(){
     v=!!v;cache(v);apply(v);
     if(typeof ME!=='undefined'&&ME&&ME.id!=null)DB.setSettingKey(ME.id,'discordLook',v).catch(()=>{});
   }
+  // ---- theme (only has a visible effect while Discord look is on) ----
+  const TKEY='ich.discordTheme',DEFAULT_THEME='ash';
+  function themes(){return window.DL_THEMES||[]}
+  function validTheme(id){return themes().some(t=>t.id===id)}
+  function theme(){return de.getAttribute('data-dl-theme')||DEFAULT_THEME}
+  function applyTheme(id){if(validTheme(id))de.setAttribute('data-dl-theme',id)}
+  function setTheme(id){
+    if(!validTheme(id))return;
+    try{localStorage.setItem(TKEY,id)}catch(_){}
+    applyTheme(id);
+    if(typeof ME!=='undefined'&&ME&&ME.id!=null)DB.setSettingKey(ME.id,'discordTheme',id).catch(()=>{});
+  }
   function sync(){
     if(typeof ME==='undefined'||!ME||!ME.settings)return;
     const v=ME.settings.discordLook;
     if(typeof v==='boolean'&&v!==on()){cache(v);apply(v)}
+    const t=ME.settings.discordTheme;
+    if(typeof t==='string'&&validTheme(t)&&t!==theme()){try{localStorage.setItem(TKEY,t)}catch(_){}applyTheme(t)}
   }
-  window.addEventListener('storage',e=>{if(e.key===KEY)apply(e.newValue==='1')});
-  return{on,set,sync};
+  window.addEventListener('storage',e=>{if(e.key===KEY)apply(e.newValue==='1');if(e.key===TKEY&&e.newValue)applyTheme(e.newValue)});
+  return{on,set,sync,theme,setTheme,themes};
 })();

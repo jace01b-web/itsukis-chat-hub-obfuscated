@@ -108,6 +108,16 @@ function openSettings(fromChat){
           <label class="switch"><input type="checkbox" id="sDiscordLook" ${DiscordLook.on()?'checked':''}><span class="slider"></span></label>
         </div>
       </div>
+      <div class="set-card dl-only" id="dlThemeCard">
+        <div class="section-h" style="margin-top:0">🎨 Theme <span class="hint" style="font-weight:400">(Discord look)</span></div>
+        <div class="dl-sub" style="margin-top:0">Default themes</div>
+        <div class="dl-themes" id="dlDefaultThemes">${DiscordLook.themes().filter(t=>t.group==='default').map(t=>`<button type="button" class="dl-sw${DiscordLook.theme()===t.id?' active':''}" data-dl-theme="${t.id}" title="${esc(t.name)}" aria-label="${esc(t.name)} theme" style="background:${t.sw}"></button>`).join('')}</div>
+        <div class="dl-sub">Color themes</div>
+        <div class="hint" style="margin-top:2px">Gradient backgrounds. Pick one to recolor the whole layout.</div>
+        <div class="dl-themes" id="dlColorThemes">${DiscordLook.themes().filter(t=>t.group==='color').map(t=>`<button type="button" class="dl-sw${DiscordLook.theme()===t.id?' active':''}" data-dl-theme="${t.id}" title="${esc(t.name)}" aria-label="${esc(t.name)} theme" style="background:${t.sw}"></button>`).join('')}</div>
+        <div class="dl-sw-name" id="dlThemeName">${esc((DiscordLook.themes().find(t=>t.id===DiscordLook.theme())||{}).name||'')}</div>
+        <div class="hint" style="margin-top:6px">Only shown while Discord look is on. Saved to your account.</div>
+      </div>
     </div>
 
     <div data-p="ping" class="hidden">
@@ -886,6 +896,12 @@ function openSettings(fromChat){
   // Anti-lag is an account setting (synced across devices); applied instantly and saved straight away.
   $$('#sAntiLag').addEventListener('change',e=>AntiLag.set(e.target.checked));
   $$('#sDiscordLook').addEventListener('change',e=>DiscordLook.set(e.target.checked));
+  $$('#dlThemeCard')&&$$('#dlThemeCard').addEventListener('click',e=>{
+    const b=e.target.closest('[data-dl-theme]');if(!b)return;
+    DiscordLook.setTheme(b.dataset.dlTheme);
+    $$('#dlThemeCard').querySelectorAll('[data-dl-theme]').forEach(x=>x.classList.toggle('active',x===b));
+    const nm=$$('#dlThemeName');if(nm)nm.textContent=b.title;
+  });
   // Flipping this on has to ask the browser for permission right here, inside the click
   // handler — browsers require a real user gesture for the prompt to reliably show at all,
   // and this is the ONLY place in the app permission is ever requested (see the notes above
