@@ -14,6 +14,7 @@ const DB=(()=>{
   const unsubs=[];         // base listeners
   let msgUnsub=null,msgKey=null;
   let reactUnsub=null;   // follows whichever conversation is open, alongside msgUnsub
+  let _svOff=0,_annSeen=null;const LIVE_ANN_MS=10000;   // live announcements: server clock offset, last shown id, on-screen time
   let _rcBase,_rcShownAt=0;   // owner "Reconnect everyone" request tracking
   let presUnsub=null,presenceSelfRef=null;   // scoped "who's here" presence for the open context
   let presenceRef=null,sessUnsub=null,mySessionToken=null,sessionConfirmed=false,kicked=false;
@@ -234,6 +235,17 @@ const DB=(()=>{
       rcPending=true;
       if(typeof onReconnectCheck==='function')setTimeout(()=>onReconnectCheck(),0);
     });
+    // Owner "Announcement": a short broadcast every signed-in client shows as a non-blocking banner for 10s.
+    // liveAnnouncement = {id,at,by,text,kind}. We only show one that is still fresh (<10s old by SERVER time), so
+    // reloading later never replays an old one, and the sender's serverTimestamp double-fire is de-duped by id.
+    listen('.info/serverTimeOffset',v=>{_svOff=Number(v)||0});
+    listen('liveAnnouncement',v=>{
+      if(!v||typeof v!=='object'||typeof v.text!=='string'||!v.id||v.id===_annSeen)return;
+      const age=Date.now()+_svOff-(Number(v.at)||0);
+      if(!(age>=-5000&&age<LIVE_ANN_MS-800))return;      // too old (or no timestamp yet) -> ignore
+      _annSeen=v.id;
+      if(typeof onLiveAnnouncement==='function')setTimeout(()=>onLiveAnnouncement(v,Math.max(1500,LIVE_ANN_MS-Math.max(0,age))),0);
+    });
     // heal my DM memberships as soon as friends load, so messages from a friend always become readable
     
   }
@@ -442,6 +454,21 @@ const DB=(()=>{
       await set(R('reconnectRequest'),{at:serverTimestamp(),by:myId});
       armPresence();armScopedPresence();
       return ids.length;
+    },
+    // Owner only: broadcast a live announcement (10s banner on every client) and, optionally, keep a copy in the Announcements chat.
+    async sendLiveAnnouncement(text,{kind='info',alsoPost=true}={}){
+      if(!isOwner(myId))throw new Error('Only owners can send announcements.');
+      text=String(text||'').replace(/[\u0000-\u0008\u000B-\u001F\u007F]/g,'').replace(/\n{3,}/g,'\n\n').trim().slice(0,300);
+      if(!text)throw new Error('Type an announcement first.');
+      if(!['info','event','warn'].includes(kind))kind='info';
+      const id=Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+      let live=true;
+      try{await set(R('liveAnnouncement'),{id,at:serverTimestamp(),by:myId,text,kind})}
+      catch(e){live=false;console.warn('liveAnnouncement denied',e&&e.code)}
+      let posted=false;
+      if(alsoPost){try{await DB.sendMessage(CFG.ANNOUNCEMENTS_ROOM,{senderId:myId,text:text,images:[],pings:[]});posted=true}catch(e){console.warn('announcement chat post failed',e&&e.message)}}
+      if(!live&&!posted)throw new Error('Could not send ('+'database rules blocked liveAnnouncement'+').');
+      return{live,posted};
     },
     // Called when a user presses "Reconnect" on the owner's check: show as online again.
     confirmOnline(){rcPending=false;if(myId!=null&&!kicked){armPresence();armScopedPresence()}},
@@ -851,7 +878,6 @@ const DB=(()=>{
       if(from===me)return false;
       const u=C.users[from];if(u&&u.deleted)return false;
       if((C.blocked[me]||[]).includes(from)||(C.blockedBy[me]||[]).includes(from))return false;
-      if((C.friends[me]||[]).includes(from))return false;
       return true;
     }).map(from=>({from,to:me,status:'pending',at:(C.friendReqIn[from]||{}).at})),
     outgoing:me=>(C.friendReqOut[me]||[]),
@@ -922,8 +948,32 @@ const DB=(()=>{
       C.friendReqOut[me]=(C.friendReqOut[me]||[]).filter(r=>r.to!==other);emit();
     },
     async removeFriend(me,other){
-      await remove(R(`friends/${me}/${other}`));
-      C.friends[me]=(C.friends[me]||[]).filter(x=>x!==other);emit();
+      me=Number(me);other=Number(other);
+      const before=(C.friends[me]||[]).slice();
+      // optimistic: drop them from my list immediately so the UI never looks stuck
+      C.friends[me]=before.filter(x=>x!==other);
+      delete C.friendReqIn[other];
+      emit();
+      // my side first (I own friends/me/*) - this is the one that must succeed
+      try{await remove(R(`friends/${me}/${other}`))}
+      catch(e){
+        console.error('removeFriend failed',e);
+        C.friends[me]=before;emit();   // roll back so the list matches the server
+        throw new Error('Could not remove friend ('+(e.code||e.message)+')');
+      }
+      // their side too, awaited, so they stop seeing me as a friend (rules may refuse this - then they can remove me themselves)
+      let both=true;
+      try{await remove(R(`friends/${other}/${me}`))}catch(e){both=false;console.warn('could not clear their side of the friendship',e&&e.code)}
+      // clear any leftover request markers either way, so the two of you can re-add each other cleanly
+      await Promise.all([
+        remove(R(`friendRequests/${me}/${other}`)).catch(()=>{}),
+        remove(R(`sentRequests/${other}/${me}`)).catch(()=>{}),
+        remove(R(`friendRequests/${other}/${me}`)).catch(()=>{}),
+        remove(R(`sentRequests/${me}/${other}`)).catch(()=>{})
+      ]);
+      C.friendReqOut[me]=(C.friendReqOut[me]||[]).filter(r=>r.to!==other);
+      emit();
+      return{both};
     },
     isFriend:(me,other)=>(C.friends[me]||[]).includes(other),
     /* --- Blocking ---
