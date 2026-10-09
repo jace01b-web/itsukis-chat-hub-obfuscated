@@ -28,7 +28,8 @@ window.APP_MANIFEST={
     "15-anti-lag.css",
     "16-rules-modal.css",
     "17-halloween.css",
-    "18-music-profile-cosmetics.css"
+    "18-music-profile-cosmetics.css",
+    "22-discord-look.css"
   ],
   js:[
     "core/firebase-imports.js",

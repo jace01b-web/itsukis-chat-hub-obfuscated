@@ -116,22 +116,22 @@ function hideKickOverlay(){
 /* ---------- Owner live announcement banner ----------
    database.js calls this for every signed-in client when an owner sends an announcement (v={id,text,kind,by}).
    Non-blocking: sits at the top for ms milliseconds (<=10s) and can be dismissed early. */
-let ANN_BANNER=null,ANN_TIMER=null;
-function onLiveAnnouncement(v,ms){
+let OWNANN_BANNER=null,OWNANN_TIMER=null;
+function ownerAnnouncementBanner(v,ms){
   if(!v||typeof v.text!=='string')return;
-  if(ANN_BANNER){clearTimeout(ANN_TIMER);try{ANN_BANNER.remove()}catch(_){}ANN_BANNER=null}
+  if(OWNANN_BANNER){clearTimeout(OWNANN_TIMER);try{OWNANN_BANNER.remove()}catch(_){}OWNANN_BANNER=null}
   const kind=['info','event','warn'].includes(v.kind)?v.kind:'info';
   const icon={info:'📢',event:'🎉',warn:'⚠️'}[kind];
   const el=document.createElement('div');
-  el.className='live-ann live-ann-'+kind;el.setAttribute('role','alert');
-  el.innerHTML='<span class="live-ann-ic">'+icon+'</span><div class="live-ann-body"><b>Announcement</b><div class="live-ann-text"></div></div><button class="live-ann-x" type="button" aria-label="Dismiss">✕</button>'
-    +'<div class="live-ann-bar" style="animation-duration:'+Math.max(1500,ms||10000)+'ms"></div>';
-  el.querySelector('.live-ann-text').textContent=v.text;      // textContent: never render announcement text as HTML
-  document.body.appendChild(el);ANN_BANNER=el;
+  el.className='ownann ownann-'+kind;el.setAttribute('role','alert');
+  el.innerHTML='<span class="ownann-ic">'+icon+'</span><div class="ownann-body"><b>Announcement</b><div class="ownann-text"></div></div><button class="ownann-x" type="button" aria-label="Dismiss">✕</button>'
+    +'<div class="ownann-bar" style="animation-duration:'+Math.max(1500,ms||10000)+'ms"></div>';
+  el.querySelector('.ownann-text').textContent=v.text;      // textContent: never render announcement text as HTML
+  document.body.appendChild(el);OWNANN_BANNER=el;
   try{if(typeof beep==='function')beep()}catch(_){}
-  const close=()=>{if(ANN_BANNER!==el)return;clearTimeout(ANN_TIMER);ANN_BANNER=null;el.classList.add('closing');setTimeout(()=>{try{el.remove()}catch(_){}},260)};
-  el.querySelector('.live-ann-x').onclick=close;
-  ANN_TIMER=setTimeout(close,Math.max(1500,ms||10000));
+  const close=()=>{if(OWNANN_BANNER!==el)return;clearTimeout(OWNANN_TIMER);OWNANN_BANNER=null;el.classList.add('closing');setTimeout(()=>{try{el.remove()}catch(_){}},260)};
+  el.querySelector('.ownann-x').onclick=close;
+  OWNANN_TIMER=setTimeout(close,Math.max(1500,ms||10000));
 }
 
 /* ---------- Owner "Reconnect everyone" prompt ----------

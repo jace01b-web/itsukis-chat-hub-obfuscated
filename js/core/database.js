@@ -244,7 +244,8 @@ const DB=(()=>{
       const age=Date.now()+_svOff-(Number(v.at)||0);
       if(!(age>=-5000&&age<LIVE_ANN_MS-800))return;      // too old (or no timestamp yet) -> ignore
       _annSeen=v.id;
-      if(typeof onLiveAnnouncement==='function')setTimeout(()=>onLiveAnnouncement(v,Math.max(1500,LIVE_ANN_MS-Math.max(0,age))),0);
+      {const _ah=typeof onLiveAnnouncement==='function'?onLiveAnnouncement:(typeof ownerAnnouncementBanner==='function'?ownerAnnouncementBanner:null);   // a dedicated live-announce.js wins if the repo has one
+        if(_ah)setTimeout(()=>_ah(v,Math.max(1500,LIVE_ANN_MS-Math.max(0,age))),0)}
     });
     // heal my DM memberships as soon as friends load, so messages from a friend always become readable
     

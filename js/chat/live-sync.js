@@ -36,6 +36,7 @@ DB.onChange(()=>{
     _selfPurged=true;
     DB.confirmBannedOnServer(ME.id).then(ok=>{if(ok)return DB.purgeUserMessages(ME.id);_selfPurged=false}).catch(()=>{_selfPurged=false});
   }
+  if(typeof DiscordLook!=='undefined')DiscordLook.sync();
   if(typeof AntiLag!=='undefined')AntiLag.sync();        // cross-device: account setting wins
   if(typeof startCleanupLoop==='function')startCleanupLoop();
   if(!_restoringAccount&&Date.now()-_lastRestoreTry>30000&&DB.needsUnbanRestore()){

@@ -94,18 +94,18 @@
 .list-row .nm{flex:1}
 
 /* ---------- Owner live announcement banner ---------- */
-.live-ann{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:99990;width:min(560px,calc(100vw - 24px));display:flex;align-items:flex-start;gap:12px;padding:14px 16px 16px;border-radius:16px;background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--accent);box-shadow:0 18px 50px rgba(0,0,0,.5);color:var(--text);overflow:hidden;animation:liveAnnIn .4s cubic-bezier(.16,1.15,.3,1) both}
-.live-ann.closing{animation:liveAnnOut .24s ease forwards}
-.live-ann-event{border-left-color:var(--ok)}
-.live-ann-warn{border-left-color:var(--danger)}
-.live-ann-ic{font-size:22px;line-height:1.2}
-.live-ann-body{flex:1;min-width:0;font-size:14px}
-.live-ann-text{margin-top:2px;white-space:pre-wrap;overflow-wrap:anywhere}
-.live-ann-x{background:none;border:0;color:var(--muted);cursor:pointer;font-size:16px;padding:2px 4px}
-.live-ann-x:hover{color:var(--text)}
-.live-ann-bar{position:absolute;left:0;bottom:0;height:3px;width:100%;background:var(--accent);transform-origin:left;animation:liveAnnBar linear forwards}
-.live-ann-event .live-ann-bar{background:var(--ok)}
-.live-ann-warn .live-ann-bar{background:var(--danger)}
-@keyframes liveAnnIn{from{opacity:0;transform:translate(-50%,-24px)}to{opacity:1;transform:translate(-50%,0)}}
-@keyframes liveAnnOut{to{opacity:0;transform:translate(-50%,-16px)}}
-@keyframes liveAnnBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+.ownann{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:99990;width:min(560px,calc(100vw - 24px));display:flex;align-items:flex-start;gap:12px;padding:14px 16px 16px;border-radius:16px;background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--accent);box-shadow:0 18px 50px rgba(0,0,0,.5);color:var(--text);overflow:hidden;animation:ownAnnIn .4s cubic-bezier(.16,1.15,.3,1) both}
+.ownann.closing{animation:ownAnnOut .24s ease forwards}
+.ownann-event{border-left-color:var(--ok)}
+.ownann-warn{border-left-color:var(--danger)}
+.ownann-ic{font-size:22px;line-height:1.2}
+.ownann-body{flex:1;min-width:0;font-size:14px}
+.ownann-text{margin-top:2px;white-space:pre-wrap;overflow-wrap:anywhere}
+.ownann-x{background:none;border:0;color:var(--muted);cursor:pointer;font-size:16px;padding:2px 4px}
+.ownann-x:hover{color:var(--text)}
+.ownann-bar{position:absolute;left:0;bottom:0;height:3px;width:100%;background:var(--accent);transform-origin:left;animation:ownAnnBar linear forwards}
+.ownann-event .ownann-bar{background:var(--ok)}
+.ownann-warn .ownann-bar{background:var(--danger)}
+@keyframes ownAnnIn{from{opacity:0;transform:translate(-50%,-24px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes ownAnnOut{to{opacity:0;transform:translate(-50%,-16px)}}
+@keyframes ownAnnBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}

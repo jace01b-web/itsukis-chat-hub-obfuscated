@@ -1,0 +1,154 @@
+/* ==========================================================================
+ * css/22-discord-look.css
+ * "Discord look" - an OPTIONAL flat, Discord-style layout (Settings > Interface). OFF by default.
+ * Everything is scoped to html.discord-look, so with the setting off this file changes nothing.
+ * Flat dark palette, square-ish panels, bubble-less messages with the avatar on the left and the
+ * name + time on one line, hover-highlighted rows, and a single rounded message box.
+ * ========================================================================== */
+
+html.discord-look{
+  --bg:#313338; --bg2:#2b2d31; --panel:#2b2d31; --panel2:#383a40;
+  --text:#dbdee1; --muted:#949ba4; --accent:#5865f2; --accent2:#eb459e;
+  --danger:#f23f43; --ok:#23a55a; --border:rgba(255,255,255,.06);
+  --radius:8px;
+  --ui-alpha:1; --ui-blur:0px;
+  --ui-panel:#2b2d31; --ui-panel2:#383a40; --ui-bg2:#1e1f22;
+  --glass-edge-soft:transparent;
+}
+html.discord-look body{font-family:"gg sans","Noto Sans","Helvetica Neue",Helvetica,Arial,sans-serif;background:#313338}
+html.discord-look .bgfx{display:none!important}
+
+/* ---- flatten the liquid-glass panels ---- */
+html.discord-look .sidebar,html.discord-look .topbar,html.discord-look .composer,
+html.discord-look .card,html.discord-look .modal,html.discord-look .userchip,html.discord-look .online-pill,
+html.discord-look .opt,html.discord-look .np.show{
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border-radius:0;box-shadow:none;text-shadow:none;transform:none;
+}
+html.discord-look .sidebar::before,html.discord-look .sidebar::after,
+html.discord-look .topbar::before,html.discord-look .topbar::after,
+html.discord-look .composer::before,html.discord-look .composer::after{display:none!important}
+html.discord-look .modal,html.discord-look .card{border-radius:8px;background:#313338;border:1px solid rgba(255,255,255,.06)}
+html.discord-look .modal::before,html.discord-look .modal::after,html.discord-look .card::before,html.discord-look .card::after{display:none!important}
+html.discord-look .btn{background:#5865f2;border-radius:3px;box-shadow:none;font-weight:500;padding:9px 16px}
+html.discord-look .btn:hover{background:#4752c4;filter:none}
+html.discord-look .btn.sec{background:#4e5058;color:#fff}
+html.discord-look .btn.sec:hover{background:#6d6f78}
+
+/* ---- sidebar (channel / DM list) ---- */
+html.discord-look .sidebar{width:260px;background:#2b2d31;border-right:0}
+html.discord-look .sb-head{padding:0 12px;height:48px;border-bottom:1px solid #1f2023;box-shadow:0 1px 0 rgba(0,0,0,.1)}
+html.discord-look .sb-head .back{background:transparent;border-radius:4px}
+html.discord-look .sb-head .back:hover{background:#35373c}
+html.discord-look .sb-title{font-weight:600;font-size:15px}
+html.discord-look .sb-list{padding:8px}
+html.discord-look .sb-section{font-size:12px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;padding:16px 8px 4px}
+html.discord-look .sb-item{padding:6px 8px;border-radius:4px;gap:12px;color:#949ba4;font-weight:500;margin-bottom:2px}
+html.discord-look .sb-item:hover{background:#35373c;color:#dbdee1;backdrop-filter:none}
+html.discord-look .sb-item.active,html.discord-look .sb-item.active:hover{background:#404249;color:#fff;box-shadow:none!important;backdrop-filter:none}
+html.discord-look .sb-search{border-radius:4px;background:#1e1f22;box-shadow:none}
+html.discord-look .sb-search:focus-within{box-shadow:none;background:#1e1f22}
+html.discord-look .sb-foot{background:#232428;border-top:0;padding:8px}
+html.discord-look .badge,html.discord-look .mb-badge{background:#f23f43;color:#fff;box-shadow:none}
+
+/* ---- top bar ---- */
+html.discord-look .topbar{background:#313338;padding:0 16px;height:48px;border-bottom:0;box-shadow:0 1px 0 rgba(0,0,0,.2),0 1px 2px rgba(0,0,0,.06)}
+html.discord-look .topbar h2{font-size:16px;font-weight:600;color:#f2f3f5}
+html.discord-look .topbar .btn.small{padding:5px 10px;font-size:13px}
+html.discord-look .online-pill{background:transparent;border:1px solid rgba(255,255,255,.12);border-radius:12px}
+
+/* ---- messages: flat rows, avatar left, name + time on one line ---- */
+html.discord-look .messages{padding:16px 0;gap:0}
+html.discord-look .msg,html.discord-look .msg.me{align-self:stretch;align-items:stretch;max-width:100%;width:100%;padding:4px 48px 4px 16px;border-radius:0}
+html.discord-look .msg:hover{background:rgba(2,2,2,.06)}
+html.discord-look .msg .msg-row,html.discord-look .msg.me .msg-row{flex-direction:row;align-items:flex-start;gap:16px}
+html.discord-look .msg-row .avatar{width:40px;height:40px;margin-top:2px}
+html.discord-look .msg-body,html.discord-look .msg.me .msg-body{align-items:flex-start;flex:1;min-width:0}
+html.discord-look .msg .meta,html.discord-look .msg.me .meta{margin:0 0 2px;min-height:22px;justify-content:flex-start;flex-direction:row;text-align:left;font-size:12px;font-weight:500;color:#949ba4;text-shadow:none}
+html.discord-look .msg.me .meta{flex-direction:row-reverse;justify-content:flex-end}
+html.discord-look .msg .meta .nm-sep{display:none}
+html.discord-look .msg .meta>span[data-open-profile]{font-size:16px;font-weight:500}
+html.discord-look .bubble,html.discord-look .msg.me .bubble{background:none!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+  padding:0;border-radius:0;color:#dbdee1;text-shadow:none;font-size:var(--m-size,16px);line-height:1.375;max-width:100%;width:100%;animation:none}
+html.discord-look .bubble.pinged{outline:0;background:rgba(250,166,26,.1)!important;box-shadow:inset 2px 0 0 #f0b232!important}
+html.discord-look .bubble.img-only{margin-top:2px}
+html.discord-look .bubble.jumbo-emoji{font-size:3rem;line-height:1.25;padding:0}
+html.discord-look .bubble .imgs{margin-top:4px}
+html.discord-look .bubble .imgs img{border-radius:8px}
+html.discord-look .mention{background:rgba(88,101,242,.3);color:#c9cdfb;border-radius:3px;padding:0 2px;font-weight:500}
+html.discord-look .mention:hover{background:#5865f2;color:#fff;text-decoration:none}
+html.discord-look .mention.me{background:rgba(250,166,26,.15);color:#f0b232;box-shadow:none}
+html.discord-look .bubble a{color:#00a8fc;text-decoration:none;word-break:normal;overflow-wrap:anywhere}
+html.discord-look .bubble a:hover{text-decoration:underline}
+html.discord-look .edited-tag{font-size:10px;color:#949ba4}
+html.discord-look .reply-ref,html.discord-look .msg.me .reply-ref{justify-content:flex-start;flex-direction:row;text-align:left;padding-left:56px;padding-right:0}
+html.discord-look .msg.me .reply-ref .rr-elbow{transform:none;margin-left:0}
+html.discord-look .reactions-row,html.discord-look .msg.me .reactions-row{justify-content:flex-start}
+html.discord-look .reaction-pill{background:#2b2d31;border:1px solid transparent;border-radius:8px;padding:2px 6px;backdrop-filter:none;box-shadow:none}
+html.discord-look .reaction-pill:hover{background:#2b2d31;border-color:#5a5d66;transform:none}
+html.discord-look .reaction-pill.mine{background:rgba(88,101,242,.15)!important;border-color:#5865f2!important}
+html.discord-look .msg-hover-bar,html.discord-look .msg.me .msg-hover-bar{top:-16px;right:12px;left:auto;background:#313338;border:1px solid #26272b;border-radius:8px;box-shadow:0 0 0 1px rgba(0,0,0,.04),0 2px 10px rgba(0,0,0,.2);backdrop-filter:none}
+html.discord-look .msg-hover-bar button:hover{background:#383a40}
+html.discord-look .date-sep{align-self:stretch;display:flex;align-items:center;gap:8px;margin:16px 16px 8px;padding:0;background:none;border-radius:0;box-shadow:none;backdrop-filter:none;font-size:12px;font-weight:600;color:#949ba4}
+html.discord-look .date-sep::before,html.discord-look .date-sep::after{content:"";flex:1;height:1px;background:#3f4147}
+html.discord-look .sys{background:none;box-shadow:none;backdrop-filter:none}
+
+/* ---- composer: one rounded message box ---- */
+html.discord-look .composer{background:#313338;border-top:0;padding:0 16px 24px}
+html.discord-look .composer .row{background:#383a40;border-radius:8px;align-items:center;gap:2px;padding:0 6px}
+html.discord-look .row textarea{background:transparent!important;border:0!important;box-shadow:none!important;border-radius:0;padding:11px 8px;font-size:16px;color:#dbdee1}
+html.discord-look .icon-btn{background:transparent;border:0;border-radius:4px;width:36px;height:36px;filter:grayscale(.6);opacity:.85}
+html.discord-look .icon-btn:hover{background:transparent;filter:none;opacity:1}
+html.discord-look .send{background:transparent;box-shadow:none;border-radius:4px;width:36px;height:36px;color:#5865f2}
+html.discord-look .send:hover{color:#fff}
+html.discord-look .charcount{display:none}
+html.discord-look .typing-bar{color:#dbdee1}
+html.discord-look .mention-pop,html.discord-look .emoji-pop,html.discord-look .cp-pop,html.discord-look .csel-menu{background:#2b2d31;border:1px solid #1e1f22;border-radius:8px;box-shadow:0 8px 16px rgba(0,0,0,.35);backdrop-filter:none}
+html.discord-look .mention-pop div:hover,html.discord-look .mention-pop div.sel{background:#404249}
+
+/* ---- lists / settings surfaces ---- */
+html.discord-look .list-row,html.discord-look .set-card,html.discord-look .empty{background:#2b2d31;border-color:rgba(255,255,255,.04);border-radius:8px;box-shadow:none;backdrop-filter:none}
+html.discord-look input,html.discord-look select,html.discord-look textarea{border-radius:3px}
+html.discord-look .field input,html.discord-look .field select,html.discord-look .field textarea{background:#1e1f22;border-color:transparent;border-radius:3px}
+html.discord-look .field input:focus,html.discord-look .field select:focus,html.discord-look .field textarea:focus{border-color:#5865f2}
+
+/* ---- scrollbars ---- */
+html.discord-look .messages,html.discord-look .sb-list{scrollbar-width:thin;scrollbar-color:#1a1b1e #2b2d31}
+html.discord-look .messages::-webkit-scrollbar,html.discord-look .sb-list::-webkit-scrollbar{width:14px}
+html.discord-look .messages::-webkit-scrollbar-thumb,html.discord-look .sb-list::-webkit-scrollbar-thumb{background:#1a1b1e;border:3px solid #313338;border-radius:8px}
+html.discord-look .messages::-webkit-scrollbar-track{background:#2b2d31}
+
+/* ---- phones: keep rows compact ---- */
+@media (max-width:640px){
+  html.discord-look .msg,html.discord-look .msg.me{padding:4px 12px}
+  html.discord-look .msg .msg-row{gap:12px}
+  html.discord-look .reply-ref,html.discord-look .msg.me .reply-ref{padding-left:52px}
+}
+
+/* ---- beat the glass theme's !important gradients, frosted edges and glows ---- */
+html.discord-look .sidebar{background:#2b2d31!important;border:0!important;box-shadow:none!important;border-radius:0!important}
+html.discord-look .topbar{background:#313338!important;border:0!important;box-shadow:0 1px 0 rgba(0,0,0,.2),0 1px 2px rgba(0,0,0,.06)!important;border-radius:0!important}
+html.discord-look .composer{background:#313338!important;border:0!important;box-shadow:none!important;border-radius:0!important}
+html.discord-look .userchip,html.discord-look .opt,html.discord-look .np.show{background:#2b2d31!important;border:1px solid rgba(255,255,255,.06)!important;box-shadow:none!important;border-radius:8px!important}
+html.discord-look .online-pill{background:transparent!important;border:1px solid rgba(255,255,255,.12)!important;box-shadow:none!important;border-radius:12px!important}
+html.discord-look .card,html.discord-look .modal{background:#313338!important;border:1px solid rgba(255,255,255,.06)!important;box-shadow:0 8px 24px rgba(0,0,0,.35)!important;border-radius:8px!important}
+html.discord-look .avatar,html.discord-look .music-note,html.discord-look .np-ic{box-shadow:none!important}
+html.discord-look .btn,html.discord-look .btn.small{box-shadow:none!important;border:0!important}
+html.discord-look .btn.sec{background:#4e5058!important}
+html.discord-look .icon-btn,html.discord-look .send{background:transparent!important;border:0!important;box-shadow:none!important}
+html.discord-look .sb-head,html.discord-look .sb-head .back,html.discord-look .sb-foot{background:transparent!important;box-shadow:none!important;border-left:0;border-right:0}
+html.discord-look .sb-head{border-bottom:1px solid #1f2023}
+html.discord-look .sb-foot{background:#232428!important;border:0}
+html.discord-look .sb-head .back{border:0!important}
+html.discord-look .date-sep,html.discord-look .sys{background:none!important;border:0!important;box-shadow:none!important;border-radius:0!important}
+html.discord-look .list-row,html.discord-look .empty,html.discord-look .mention-pop,html.discord-look .emoji-pop,html.discord-look .cp-pop,html.discord-look .csel-menu,html.discord-look .toast{box-shadow:0 4px 14px rgba(0,0,0,.25)!important;border-color:rgba(255,255,255,.05)!important;border-radius:8px!important;background:#2b2d31!important}
+html.discord-look .msg-hover-bar{background:#313338!important;border:1px solid #26272b!important;box-shadow:0 2px 10px rgba(0,0,0,.2)!important}
+html.discord-look .reaction-pill{background:#2b2d31!important;border:1px solid transparent!important;box-shadow:none!important}
+html.discord-look .reaction-pill.mine{background:rgba(88,101,242,.15)!important;border-color:#5865f2!important}
+html.discord-look .sb-item.active{background:#404249!important}
+html.discord-look .composer .row{background:#383a40!important;box-shadow:none!important;border:0!important}
+/* edge-to-edge instead of the floating glass panels */
+@media(min-width:761px){
+  html.discord-look .chat-layout{gap:0;padding:0}
+  html.discord-look .main{gap:0}
+}
+html.discord-look .composer .row .icon-btn,html.discord-look .composer .row .send{background:transparent!important;border:0!important;box-shadow:none!important;width:36px;height:36px}

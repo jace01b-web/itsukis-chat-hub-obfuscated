@@ -42,3 +42,25 @@ const AntiLag=(function(){
   window.addEventListener('storage',e=>{if(e.key===KEY)apply(e.newValue==='1')});
   return{on,set,sync};
 })();
+
+/* ===== Discord look (saved to the ACCOUNT, OFF by default) =====
+   Same pattern as Anti-lag: users/$id/settings/discordLook follows you across devices, localStorage is just a
+   fast cache read by js/early/anti-lag-boot.js before first paint. All styling lives in css/22-discord-look.css
+   under html.discord-look, so with this off nothing about the normal look changes. */
+const DiscordLook=(function(){
+  const KEY='ich.discordLook',de=document.documentElement;
+  function on(){return de.classList.contains('discord-look')}
+  function apply(v){de.classList.toggle('discord-look',!!v)}
+  function cache(v){try{localStorage.setItem(KEY,v?'1':'0')}catch(_){}}
+  function set(v){
+    v=!!v;cache(v);apply(v);
+    if(typeof ME!=='undefined'&&ME&&ME.id!=null)DB.setSettingKey(ME.id,'discordLook',v).catch(()=>{});
+  }
+  function sync(){
+    if(typeof ME==='undefined'||!ME||!ME.settings)return;
+    const v=ME.settings.discordLook;
+    if(typeof v==='boolean'&&v!==on()){cache(v);apply(v)}
+  }
+  window.addEventListener('storage',e=>{if(e.key===KEY)apply(e.newValue==='1')});
+  return{on,set,sync};
+})();

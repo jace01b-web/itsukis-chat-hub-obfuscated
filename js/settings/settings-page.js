@@ -98,6 +98,16 @@ function openSettings(fromChat){
           <label class="switch"><input type="checkbox" id="sAntiLag" ${AntiLag.on()?'checked':''}><span class="slider"></span></label>
         </div>
       </div>
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">💬 Layout</div>
+        <div class="toggle-row" style="margin-bottom:0">
+          <div>
+            <div style="font-weight:600;font-size:14px">Discord look</div>
+            <div class="hint" style="margin-top:2px">Off by default. Switches the site to a flat, Discord-style layout: dark grey panels, no glass blur, and messages shown as plain rows with the avatar on the left and the name and time on one line instead of chat bubbles. Your custom background is hidden while it's on. Saved to your account, so it follows you to every device.</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="sDiscordLook" ${DiscordLook.on()?'checked':''}><span class="slider"></span></label>
+        </div>
+      </div>
     </div>
 
     <div data-p="ping" class="hidden">
@@ -797,6 +807,7 @@ function openSettings(fromChat){
     s.bgBlur=+$$('#sBlur').value;s.bgDim=+$$('#sDim').value;
     s.uiOpacity=+$$('#sUiO').value;s.uiBlur=+$$('#sUiB').value;
     s.autoScrollBottom=$$('#sAutoScroll').checked;
+    s.discordLook=DiscordLook.on();
     s.antiLag=AntiLag.on();   // keep the Save payload in step with the toggle (it saves itself instantly)
     s.filterLocal=$$('#sFilterLocal').checked;
     s.pings={everyone:$$('#sPe').checked,sound:$$('#sPs').checked,desktop:$$('#sPd').checked};
@@ -874,6 +885,7 @@ function openSettings(fromChat){
   $$('#sMusicBg').addEventListener('change',e=>MusicPlayer.setBackground(e.target.checked));
   // Anti-lag is an account setting (synced across devices); applied instantly and saved straight away.
   $$('#sAntiLag').addEventListener('change',e=>AntiLag.set(e.target.checked));
+  $$('#sDiscordLook').addEventListener('change',e=>DiscordLook.set(e.target.checked));
   // Flipping this on has to ask the browser for permission right here, inside the click
   // handler — browsers require a real user gesture for the prompt to reliably show at all,
   // and this is the ONLY place in the app permission is ever requested (see the notes above
