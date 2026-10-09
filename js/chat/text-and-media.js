@@ -17,6 +17,16 @@ function hexToRgba(hex,alpha){
   if(Number.isNaN(n))return `rgba(124,108,255,${alpha})`;
   return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${alpha})`;
 }
+/* Discord-style "jumbo" emoji: a message whose text is ONLY emoji (up to 27, spaces allowed) is shown big.
+   Works with or without attached images. Handles skin tones, ZWJ sequences, flags and keycaps. */
+const _EMOJI_UNIT='(?:\\p{Regional_Indicator}{2}|[0-9#*]\\uFE0F?\\u20E3|\\p{Extended_Pictographic}(?:\\uFE0F|\\p{Emoji_Modifier})?(?:\\u200D\\p{Extended_Pictographic}(?:\\uFE0F|\\p{Emoji_Modifier})?)*)';
+let _EMOJI_ONLY_RE=null;
+try{_EMOJI_ONLY_RE=new RegExp('^(?:\\s*'+_EMOJI_UNIT+')+\\s*$','u');var _EMOJI_UNIT_RE=new RegExp(_EMOJI_UNIT,'gu')}catch(_){}
+function isEmojiOnly(t){
+  if(!_EMOJI_ONLY_RE||typeof t!=='string'||!t.trim())return false;
+  if(!_EMOJI_ONLY_RE.test(t))return false;
+  return(t.match(_EMOJI_UNIT_RE)||[]).length<=27;
+}
 function fmtText(t){
   if(!t)return'';
   let s=esc(t);

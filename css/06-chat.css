@@ -184,3 +184,8 @@
 .sb-search input::placeholder{color:var(--muted)}
 .sb-search-x{flex:none;width:20px;height:20px;border-radius:50%;border:0;background:rgba(255,255,255,.12);color:var(--text);font-size:10px;line-height:20px;padding:0;cursor:pointer}
 .sb-search-x:hover{background:rgba(255,255,255,.22)}
+
+/* Emoji-only messages (with or without images) render big with no bubble, like Discord */
+.bubble.jumbo-emoji{background:none;box-shadow:none;padding:2px 0;font-size:3rem;line-height:1.2}
+.msg.me .bubble.jumbo-emoji{background:none;color:inherit}
+.bubble.jumbo-emoji .imgs{margin-top:6px;font-size:var(--m-size,15px)}
