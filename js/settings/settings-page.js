@@ -12,7 +12,7 @@ function openSettings(fromChat){
   const s={...orig,pings:{...orig.pings}};
   const root=$('#modalRoot');
   root.innerHTML=`<div class="modal-bg"><div class="modal wide">
-    <h2>⚙️ Settings</h2>
+    <h2 id="sTitle">⚙️ Settings</h2>
     <div class="hint">Everything is private except your bubble &amp; text color — that's how <b>everyone</b> sees your messages.</div>
 
     <div class="preview-box" id="pvBox">
@@ -21,17 +21,20 @@ function openSettings(fromChat){
       <div class="msg me"><div class="msg-row"><div class="avatar" style="width:28px;height:28px;font-size:11px">Y</div><div class="msg-body"><div class="meta">You</div><div class="bubble">Looking great 🔥</div></div></div></div>
     </div>
 
-    <button type="button" class="dl-set-x" id="sX" aria-label="Close settings" title="Close">✕</button>
+    <button type="button" class="dl-set-x" id="sX" aria-label="Close settings" title="Close (Esc)">✕</button>
     <div class="modal-tabs" id="sTabs">
-      <div class="dl-set-user"><span class="dl-set-av">${avatarHtml(ME,ME.username,'width:40px;height:40px;font-size:16px')}</span><span class="dl-set-nm"><b>${esc(displayUsername(ME.username))}</b><small>User Settings</small></span></div>
-      <button data-t="msg" class="active">💬 Messages</button>
-      <button data-t="bg">🖼️ Background</button>
-      <button data-t="ui">🎨 Theme</button>
-      <button data-t="ping">🔔 Pings</button>
-      <button data-t="music">🎵 Music</button>
-      <button data-t="filter">🚫 Filter</button>
-      <button data-t="about">ℹ️ About</button>
-      ${isStaff(ME.id)?'<button data-t="mod">🛡️ Moderation</button>':''}
+      <div class="dl-set-user" id="sProfile" role="button" tabindex="0" title="Edit your profile"><span class="dl-set-av">${avatarHtml(ME,ME.username,'width:40px;height:40px;font-size:16px')}</span><span class="dl-set-nm"><b>${esc(displayUsername(ME.username))}</b><small>Edit Profiles <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" fill="currentColor"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z"/></svg></small></span></div>
+      <div class="dl-set-search"><input id="sSearch" type="text" placeholder="Search" autocomplete="off" spellcheck="false" aria-label="Search settings"></div>
+      <div class="dl-set-h">User Settings</div>
+      <button data-t="msg" class="active"><i class="dl-e">💬 </i>Messages</button>
+      <button data-t="bg"><i class="dl-e">🖼️ </i>Background</button>
+      <button data-t="ui"><i class="dl-e">🎨 </i>Theme</button>
+      <button data-t="ping"><i class="dl-e">🔔 </i>Pings</button>
+      <button data-t="music"><i class="dl-e">🎵 </i>Music</button>
+      <button data-t="filter"><i class="dl-e">🚫 </i>Filter</button>
+      <div class="dl-set-sep"></div><div class="dl-set-h">App</div>
+      <button data-t="about"><i class="dl-e">ℹ️ </i>About</button>
+      ${isStaff(ME.id)?'<div class="dl-set-sep"></div><div class="dl-set-h">Staff</div><button data-t="mod"><i class="dl-e">🛡️ </i>Moderation</button>':''}
     </div>
 
     <div data-p="msg">
@@ -509,6 +512,8 @@ function openSettings(fromChat){
   $('#sTabs') && root.querySelectorAll('#sTabs button').forEach(b=>b.onclick=()=>{
     root.querySelectorAll('#sTabs button').forEach(x=>x.classList.toggle('active',x===b));
     root.querySelectorAll('[data-p]').forEach(p=>p.classList.toggle('hidden',p.dataset.p!==b.dataset.t));
+    const ttl=root.querySelector('#sTitle');
+    if(ttl&&typeof DiscordLook!=='undefined'&&DiscordLook.on()){const e=b.querySelector('.dl-e');ttl.textContent=b.textContent.replace(e?e.textContent:'','').trim()}
     if(b.dataset.t==='music'&&!musicMounted){
       musicMounted=true;
       setupMusicSearch();
@@ -934,6 +939,17 @@ function openSettings(fromChat){
   const closeRevert=()=>{if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();closeModalAnimated(root,()=>{applyStyle(document.documentElement,ME.settings);refitAllAvatars();MusicPlayer.applyPrefs(ME.settings.music)})};
   $$('#sCancel').onclick=closeRevert;
   $$('#sX').onclick=closeRevert;
+  // Discord look: the profile card at the top of the nav opens your account/profile (settings are reverted first, like Cancel)
+  const goAccount=()=>{if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();closeModalAnimated(root,()=>{applyStyle(document.documentElement,ME.settings);refitAllAvatars();MusicPlayer.applyPrefs(ME.settings.music);openAccount()})};
+  const t0=root.querySelector('#sTitle');if(t0&&typeof DiscordLook!=='undefined'&&DiscordLook.on())t0.textContent='Messages';
+  const prof=root.querySelector('#sProfile');
+  if(prof){prof.onclick=goAccount;prof.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();goAccount()}}}
+  const srch=root.querySelector('#sSearch');
+  if(srch)srch.addEventListener('input',()=>{
+    const q=srch.value.trim().toLowerCase();
+    root.querySelectorAll('#sTabs button[data-t]').forEach(b=>{b.style.display=(!q||b.textContent.toLowerCase().includes(q))?'':'none'});
+    root.querySelectorAll('#sTabs .dl-set-h,#sTabs .dl-set-sep').forEach(h=>{h.style.display=q?'none':''});
+  });
   $$('#sReset').onclick=()=>{
     Object.assign(s,{meBubble:'#7c6cff',meText:'#ffffff',radius:16,font:'system',customFont:'',size:15,bold:false,italic:false,bgType:'gradient',bgColor:'#2a1f5c',bgColor2:'#7c2f66',bgImage:'',bgFit:'cover',bgBlur:0,bgDim:30,uiOpacity:50,uiBlur:18,autoScrollBottom:true,filterLocal:true,pings:{everyone:true,sound:true,desktop:true},music:{enabled:true,volume:15,shuffle:true}});
     if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();
