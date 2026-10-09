@@ -196,6 +196,26 @@ function openSettings(fromChat){
         </div>
       </div>
       <div class="set-card">
+        <div class="section-h" style="margin-top:0">📢 Announcement</div>
+        <div class="field"><label>Message</label><textarea id="modAnnText" maxlength="300" rows="3" placeholder="e.g. Server restarting in 5 minutes!" style="width:100%;resize:vertical"></textarea></div>
+        <div class="set-grid" style="margin-top:10px">
+          <div class="field"><label>Style</label><select id="modAnnKind">
+            <option value="info">ℹ️ Info</option>
+            <option value="event">🎉 Event</option>
+            <option value="warn">⚠️ Warning</option>
+          </select></div>
+          <div class="field"><label>Also post in Announcements chat</label><select id="modAnnPost">
+            <option value="1">Yes</option>
+            <option value="0">No, banner only</option>
+          </select></div>
+        </div>
+        <div class="actions" style="justify-content:flex-start;margin-top:10px">
+          <button class="btn" id="modAnnGo" type="button">Send announcement</button>
+          <span class="hint" id="modAnnCount" style="align-self:center">0 / 300</span>
+        </div>
+        <div class="hint" style="margin-top:8px">Shows a banner for 10 seconds on every signed-in client that's open right now, and (if enabled) keeps a copy in the Announcements chat for everyone else.</div>
+      </div>
+      <div class="set-card">
         <div class="section-h" style="margin-top:0">🎨 Custom usernames</div>
         <div class="toggle-row">
           <div>
@@ -549,6 +569,21 @@ function openSettings(fromChat){
     $$('#modFilterNames')&&$$('#modFilterNames').addEventListener('change',e=>{
       DB.setFilterSettings({filterNames:e.target.checked}).catch(err=>toast(err.message,'bad'));
     });
+    if($$('#modAnnGo')){
+      const ta=$$('#modAnnText'),cnt=$$('#modAnnCount');
+      ta.addEventListener('input',()=>{cnt.textContent=ta.value.length+' / 300'});
+      $$('#modAnnGo').onclick=async()=>{
+        const btn=$$('#modAnnGo'),text=ta.value.trim();
+        if(!text){toast('Type an announcement first.','bad');return}
+        btn.disabled=true;btn.textContent='Sending…';
+        try{
+          const r=await DB.sendLiveAnnouncement(text,{kind:$$('#modAnnKind').value,alsoPost:$$('#modAnnPost').value==='1'});
+          toast(r.live?'Announcement sent'+(r.posted?' and posted to the Announcements chat.':'.'):'Posted to the Announcements chat (live banner was blocked by the database rules).');
+          ta.value='';cnt.textContent='0 / 300';
+        }catch(err){toast(err.message,'bad')}
+        finally{btn.disabled=false;btn.textContent='Send announcement'}
+      };
+    }
     $$('#modCustomNames')&&$$('#modCustomNames').addEventListener('change',e=>{
       DB.setFilterSettings({customNames:e.target.checked}).catch(err=>{toast(err.message,'bad');e.target.checked=!e.target.checked});
     });

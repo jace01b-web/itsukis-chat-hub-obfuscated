@@ -86,7 +86,7 @@ function renderFriends(){
     if(!ME.friends.length)body.innerHTML='<div class="empty">No friends yet. Add someone by username!</div>';
     ME.friends.forEach(f=>row(f,[
       ['Message','',()=>{view.dmView='chat';selectRoom(DB.dmKey(ME.id,f))}],
-      ['Remove','danger',()=>{if(confirm('Remove this friend?')){DB.removeFriend(ME.id,f).then(()=>{ME=DB.currentUser();renderChat()})}}]
+      ['Remove','danger',()=>{const fu=DB.getUser(f)||{username:'User '+f};modalUnfriendConfirm(f,fu.username,async()=>{await DB.removeFriend(ME.id,f);ME=DB.currentUser();renderChat()})}]
     ]));
   }else if(friendTab==='incoming'){
     if(!inc.length)body.innerHTML='<div class="empty">No pending requests.</div>';

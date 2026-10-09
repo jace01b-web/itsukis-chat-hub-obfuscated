@@ -244,8 +244,8 @@ function openUserProfile(id){
       catch(e){toast(e.message,'bad')}
     };
     if(el2('pfRemove'))el2('pfRemove').onclick=()=>{
-      if(!confirm('Remove this friend?'))return;
-      DB.removeFriend(ME.id,id).then(()=>{ME=DB.currentUser();render();renderChat()}).catch(e=>toast(e.message||'Could not remove friend','bad'));
+      const fu=DB.getUser(id)||{username:'User '+id};
+      modalUnfriendConfirm(id,fu.username,async()=>{await DB.removeFriend(ME.id,id);ME=DB.currentUser();render();renderChat()});
     };
     if(el2('pfBlock'))el2('pfBlock').onclick=()=>{
       modalBlockConfirm(id,name,async()=>{

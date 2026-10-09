@@ -86,6 +86,27 @@ function modalLeaveRoomConfirm(r,onConfirm){
     catch(e){toast(e.message,'bad');b.disabled=false}
   };
 }
+/* In-page "Remove friend?" confirmation. Replaces window.confirm(), which sandboxed embeds (Canva, Google Sites,
+   about:blank launchers...) silently block, making the Remove button do nothing. */
+function modalUnfriendConfirm(id,name,onConfirm){
+  $('#modalRoot').innerHTML=`<div class="modal-bg"><div class="modal" style="max-width:400px;text-align:center">
+    <div style="font-size:40px;margin-bottom:6px">💔</div>
+    <h2 style="margin-bottom:8px">Remove ${esc(name)}?</h2>
+    <div class="hint">They'll be taken off your friends list and you'll be taken off theirs. You can send a new friend request later.</div>
+    <div class="actions" style="justify-content:center;margin-top:18px">
+      <button class="btn sec" id="unfriendCancel">Cancel</button>
+      <button class="btn" style="background:var(--danger)" id="unfriendGo">Remove friend</button>
+    </div>
+  </div></div>`;
+  const close=()=>{$('#modalRoot').innerHTML=''};
+  $('#unfriendCancel').onclick=close;
+  $('#modalRoot .modal-bg').addEventListener('mousedown',e=>{if(e.target===e.currentTarget)close()});
+  $('#unfriendGo').onclick=async()=>{
+    const b=$('#unfriendGo');b.disabled=true;
+    try{await onConfirm();close()}
+    catch(e){toast(e.message||'Could not remove friend','bad');b.disabled=false}
+  };
+}
 function modalBlockConfirm(id,name,onConfirm){
   $('#modalRoot').innerHTML=`<div class="modal-bg"><div class="modal" style="max-width:400px;text-align:center">
     <div style="font-size:40px;margin-bottom:6px">🚫</div>

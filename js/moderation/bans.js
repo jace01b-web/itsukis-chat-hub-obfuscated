@@ -113,6 +113,27 @@ function hideKickOverlay(){
   setTimeout(()=>{try{el.remove()}catch(_){}},260);
 }
 
+/* ---------- Owner live announcement banner ----------
+   database.js calls this for every signed-in client when an owner sends an announcement (v={id,text,kind,by}).
+   Non-blocking: sits at the top for ms milliseconds (<=10s) and can be dismissed early. */
+let ANN_BANNER=null,ANN_TIMER=null;
+function onLiveAnnouncement(v,ms){
+  if(!v||typeof v.text!=='string')return;
+  if(ANN_BANNER){clearTimeout(ANN_TIMER);try{ANN_BANNER.remove()}catch(_){}ANN_BANNER=null}
+  const kind=['info','event','warn'].includes(v.kind)?v.kind:'info';
+  const icon={info:'📢',event:'🎉',warn:'⚠️'}[kind];
+  const el=document.createElement('div');
+  el.className='live-ann live-ann-'+kind;el.setAttribute('role','alert');
+  el.innerHTML='<span class="live-ann-ic">'+icon+'</span><div class="live-ann-body"><b>Announcement</b><div class="live-ann-text"></div></div><button class="live-ann-x" type="button" aria-label="Dismiss">✕</button>'
+    +'<div class="live-ann-bar" style="animation-duration:'+Math.max(1500,ms||10000)+'ms"></div>';
+  el.querySelector('.live-ann-text').textContent=v.text;      // textContent: never render announcement text as HTML
+  document.body.appendChild(el);ANN_BANNER=el;
+  try{if(typeof beep==='function')beep()}catch(_){}
+  const close=()=>{if(ANN_BANNER!==el)return;clearTimeout(ANN_TIMER);ANN_BANNER=null;el.classList.add('closing');setTimeout(()=>{try{el.remove()}catch(_){}},260)};
+  el.querySelector('.live-ann-x').onclick=close;
+  ANN_TIMER=setTimeout(close,Math.max(1500,ms||10000));
+}
+
 /* ---------- Owner "Reconnect everyone" prompt ----------
    Shown to every live client after an owner runs the online check. Everyone was set offline; pressing the
    button puts this account back online. Same look as the duplicate-client pause screen, different message. */
