@@ -77,7 +77,7 @@ function renderChat(){
     // permanent back-to-menu control (shown even on desktop, since the
     // sidebar's own back arrow is gone).
     menuBtnIcon.textContent='←';menuBtn.title='Home';menuBtnWrap.classList.add('force-show');
-    menuBtn.onclick=()=>{view.roomKey=null;view.section=null;DB.watchMessages(null);goHome()};
+    menuBtn.onclick=()=>{view.roomKey=null;view.section=null;DB.watchMessages(null);goHome(true)};
     // No sidebar visible here to show unread DMs/rooms — so the only way to
     // know is a badge riding the back arrow itself.
     const totalUnread=DB.unreadDMs(ME.id)+DB.unreadRooms(ME.id)+(view.roomKey===CFG.ANNOUNCEMENTS_ROOM?0:DB.unreadAnnouncements(ME.id));
@@ -116,11 +116,13 @@ function renderChat(){
   }else{
     const inc=DB.incoming(ME.id);
     list.appendChild(sbItem('👥','Friends & Requests',view.dmView==='friends',()=>{view.dmView='friends';view.roomKey=null;renderChat()},inc.length));
-    addHTML(list,`<div class="sb-section">Direct Messages</div>`);
+    addHTML(list,`<div class="sb-section">Direct Messages<button type="button" class="sb-plus" id="sbPlus" title="Add a friend" aria-label="Add a friend">+</button></div>`);
+    {const pl=document.getElementById('sbPlus');if(pl)pl.onclick=e=>{e.stopPropagation();modalAddFriend()}}
     if(!ME.friends.length)addHTML(list,`<div class="hint" style="padding:6px 10px">Add friends to start chatting.</div>`);
     if(ME.friends.length){
       const sr=document.createElement('div');sr.className='sb-search';
       sr.innerHTML='<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4-4"/></svg><input id="sbFriendQ" type="text" placeholder="Search friends" autocomplete="off" spellcheck="false" aria-label="Search friends"><button type="button" class="sb-search-x" id="sbFriendX" aria-label="Clear search" hidden>✕</button>';
+      if(typeof DiscordLook!=='undefined'&&DiscordLook.on()){const si=sr.querySelector('input');si.placeholder='Find or start a conversation';si.setAttribute('aria-label','Find or start a conversation')}
       list.appendChild(sr);
     }
     ME.friends.forEach(fid=>{
@@ -151,6 +153,7 @@ function renderChat(){
     $('#addFr').onclick=modalAddFriend;
   }
   renderMain();
+  if(typeof DiscordShell!=='undefined')DiscordShell.refresh();
 }
 function addHTML(parent,html){const t=document.createElement('template');t.innerHTML=html.trim();parent.appendChild(t.content)}
 // Plays the shared modal-close animation (.modal-bg.closing — see the

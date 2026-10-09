@@ -160,10 +160,108 @@ html.discord-look .composer .row .icon-btn,html.discord-look .composer .row .sen
 
 /* ---- settings cards that only exist while Discord look is on ---- */
 html:not(.discord-look) .dl-only{display:none!important}
-.dl-themes{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
-.dl-sw{position:relative;width:48px;height:48px;border-radius:8px;border:2px solid transparent;cursor:pointer;padding:0;background-clip:padding-box;outline:1px solid rgba(255,255,255,.18);outline-offset:-1px;transition:transform .12s}
-.dl-sw:hover{transform:scale(1.06)}
-.dl-sw.active{border-color:#5865f2;outline-color:transparent;box-shadow:0 0 0 2px #5865f2}
-.dl-sw.active::after{content:"✓";position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:50%;background:#5865f2;color:#fff;font-size:12px;font-weight:800;line-height:20px;text-align:center}
-.dl-sw-name{font-size:12px;color:var(--muted);margin-top:6px}
+.dl-themes{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px}
+.dl-sw{display:flex;flex-direction:column;align-items:center;gap:6px;width:84px;padding:0;background:none;border:0;cursor:pointer;color:var(--muted);font:inherit}
+.dl-sw-c{position:relative;display:block;width:84px;height:54px;border-radius:8px;border:2px solid transparent;background-clip:padding-box;outline:1px solid rgba(255,255,255,.18);outline-offset:-1px;transition:transform .12s}
+.dl-sw:hover .dl-sw-c{transform:scale(1.05)}
+.dl-sw-l{font-size:12px;font-weight:600;line-height:1.2;text-align:center}
+.dl-sw.active{color:var(--text)}
+.dl-sw.active .dl-sw-c{border-color:#5865f2;outline-color:transparent;box-shadow:0 0 0 2px #5865f2}
+.dl-sw.active .dl-sw-c::after{content:"✓";position:absolute;top:-9px;right:-9px;width:20px;height:20px;border-radius:50%;background:#5865f2;color:#fff;font-size:12px;font-weight:800;line-height:20px;text-align:center}
 .dl-sub{font-weight:700;font-size:14px;margin-top:14px}
+
+/* ==========================================================================
+ * Discord shell (js/ui/discord-shell.js): server rail, DM sidebar, user panel, Friends page.
+ * Everything is hidden / inert unless html.discord-look is on.
+ * ========================================================================== */
+.dl-rail,.dl-user,.sb-plus{display:none}
+html.discord-look #adPromo{display:none!important}                 /* the main-menu ad is not part of the Discord look */
+html.discord-look .dl-user{display:flex}
+
+/* ---- server rail (desktop only; phones keep the slide-out drawer) ---- */
+@media(min-width:821px){
+  html.discord-look #chatPage .dl-rail{display:flex;flex-direction:column;align-items:center;gap:8px;width:72px;flex:none;padding:12px 0;background:var(--dl-bg3);overflow-y:auto;scrollbar-width:none;z-index:3}
+  html.discord-look .dl-rail::-webkit-scrollbar{display:none}
+  html.discord-look .dl-rail-grow{flex:1}
+  html.discord-look .dl-rail-sep{width:32px;height:2px;border-radius:1px;background:var(--dl-line);flex:none}
+  html.discord-look .dl-rail-btn{position:relative;flex:none;width:48px;height:48px;border:0!important;border-radius:50%;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    background:var(--dl-bg)!important;color:var(--dl-text);font-size:22px;box-shadow:none!important;transition:border-radius .15s,background .15s,color .15s}
+  html.discord-look .dl-rail-btn:hover{border-radius:16px;background:#5865f2!important;color:#fff}
+  html.discord-look .dl-rail-btn.active{border-radius:16px;background:#5865f2!important;color:#fff}
+  html.discord-look .dl-rail-ic{display:flex;align-items:center;justify-content:center;line-height:1}
+  html.discord-look .dl-rail-pill{position:absolute;left:-12px;top:50%;width:4px;height:8px;border-radius:0 4px 4px 0;background:var(--dl-head);transform:translateY(-50%) scale(0);transition:height .15s,transform .15s}
+  html.discord-look .dl-rail-btn:hover .dl-rail-pill{transform:translateY(-50%) scale(1);height:20px}
+  html.discord-look .dl-rail-btn.active .dl-rail-pill{transform:translateY(-50%) scale(1);height:40px}
+  html.discord-look .dl-rail-badge{position:absolute;right:-4px;bottom:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#f23f43;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center;box-shadow:0 0 0 4px var(--dl-bg3)}
+  /* the rail replaces the back arrow / menu button / top-bar settings and the sidebar header */
+  html.discord-look .sb-head{display:none}
+  html.discord-look .menu-btn-wrap.force-show{display:none!important}
+  html.discord-look .topbar #settingsBtn{display:none!important}
+}
+
+/* ---- DM sidebar: search on top, Friends, Direct Messages (+), user panel ---- */
+html.discord-look .sidebar{width:240px}
+html.discord-look .sb-list{display:flex;flex-direction:column;padding:8px}
+html.discord-look .sb-list .sb-search{order:-2;margin:0 0 8px;padding:0 8px;height:28px;border-radius:4px;background:var(--dl-bg3)!important;flex:none}
+html.discord-look .sb-list .sb-search input{font-size:13px}
+html.discord-look .sb-list .sb-item:first-child{order:-1}
+html.discord-look .sb-section{display:flex;align-items:center;justify-content:space-between}
+html.discord-look .sb-plus{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;border:0;border-radius:4px;background:transparent;color:var(--dl-muted);font-size:18px;line-height:1;cursor:pointer}
+html.discord-look .sb-plus:hover{color:var(--dl-head)}
+html.discord-look .sb-item{height:42px;padding:0 8px;font-size:15px}
+html.discord-look .sb-item .avatar{width:32px!important;height:32px!important;font-size:13px!important}
+html.discord-look .sb-foot:has(#addFr){display:none!important}
+html.discord-look .topbar #rulesBtn{background:transparent!important;color:var(--dl-muted)}
+html.discord-look .topbar #rulesBtn:hover{color:var(--dl-head)}
+
+html.discord-look .dl-user{align-items:center;gap:4px;height:52px;flex:none;padding:0 8px;background:var(--dl-bg3)}
+html.discord-look .dl-user-me{display:flex;align-items:center;gap:8px;flex:1;min-width:0;height:40px;padding:0 6px;border:0!important;border-radius:4px;background:transparent!important;color:var(--dl-head);text-align:left;cursor:pointer;box-shadow:none!important}
+html.discord-look .dl-user-me:hover{background:var(--dl-hover)!important}
+html.discord-look .dl-user-av{position:relative;flex:none;width:32px;height:32px}
+html.discord-look .dl-user-av .avatar{width:32px!important;height:32px!important}
+html.discord-look .dl-dot{position:absolute;right:-3px;bottom:-3px;width:12px;height:12px;border-radius:50%;background:#23a55a;box-shadow:0 0 0 3px var(--dl-bg3)}
+html.discord-look .dl-dot.off{background:#80848e}
+html.discord-look .dl-user-txt{display:flex;flex-direction:column;min-width:0;line-height:1.15}
+html.discord-look .dl-user-txt b{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html.discord-look .dl-user-txt small{font-size:12px;color:var(--dl-muted)}
+html.discord-look .dl-user-gear{flex:none;width:32px;height:32px;display:flex;align-items:center;justify-content:center;padding:0;border:0!important;border-radius:4px;background:transparent!important;color:var(--dl-muted);cursor:pointer;box-shadow:none!important}
+html.discord-look .dl-user-gear:hover{background:var(--dl-hover)!important;color:var(--dl-head)}
+
+/* ---- Discord-style Friends page ---- */
+html.discord-look .dl-fr{width:100%;max-width:none;padding:0}
+html.discord-look .dl-fr-tabs{display:flex;align-items:center;gap:16px;padding:0 20px;margin:-16px 0 0;height:48px;border-bottom:1px solid var(--dl-line)}
+html.discord-look .dl-fr-title{display:flex;align-items:center;gap:8px;font-weight:600;font-size:16px;color:var(--dl-head)}
+html.discord-look .dl-fr-dot{width:4px;height:4px;border-radius:50%;background:var(--dl-line)}
+html.discord-look .dl-fr-tab{height:28px;padding:0 8px;border:0!important;border-radius:4px;background:transparent!important;color:var(--dl-muted);font-size:16px;font-weight:500;cursor:pointer;box-shadow:none!important}
+html.discord-look .dl-fr-tab:hover{background:var(--dl-hover)!important;color:var(--dl-text)}
+html.discord-look .dl-fr-tab.active{background:var(--dl-active)!important;color:var(--dl-head)}
+html.discord-look .dl-fr-n{display:inline-block;min-width:16px;padding:0 4px;margin-left:4px;border-radius:8px;background:#f23f43;color:#fff;font-size:12px;font-weight:700;line-height:16px;text-align:center}
+html.discord-look .dl-fr-add{height:28px;padding:0 10px;border:0!important;border-radius:4px;background:#248046!important;color:#fff;font-size:14px;font-weight:500;cursor:pointer;box-shadow:none!important}
+html.discord-look .dl-fr-add:hover{background:#1a6334!important}
+html.discord-look .dl-fr-search{position:relative;margin:16px 30px 8px 20px}
+html.discord-look .dl-fr-search input{width:100%;height:32px;padding:0 36px 0 8px;border:0;border-radius:4px;background:var(--dl-bg3);color:var(--dl-text);font-size:16px;outline:none}
+html.discord-look .dl-fr-search svg{position:absolute;right:8px;top:7px;color:var(--dl-muted);pointer-events:none}
+html.discord-look .dl-fr-h{padding:16px 30px 8px 20px;font-size:12px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;color:var(--dl-muted)}
+html.discord-look .dl-fr-empty{padding:40px 20px;text-align:center;color:var(--dl-muted);font-size:15px}
+html.discord-look .dl-fr-row{display:flex;align-items:center;gap:12px;margin:0 20px 0 20px;padding:0 10px;height:62px;border-top:1px solid var(--dl-line);border-radius:8px;cursor:pointer}
+html.discord-look .dl-fr-row:hover{background:var(--dl-hover);border-top-color:transparent}
+html.discord-look .dl-fr-row:hover+.dl-fr-row{border-top-color:transparent}
+html.discord-look .dl-fr-av{position:relative;flex:none;width:32px;height:32px;cursor:pointer}
+html.discord-look .dl-fr-av .dl-dot{box-shadow:0 0 0 3px var(--dl-bg)}
+html.discord-look .dl-fr-row:hover .dl-fr-av .dl-dot{box-shadow:0 0 0 3px var(--dl-hover)}
+html.discord-look .dl-fr-who{display:flex;flex-direction:column;flex:1;min-width:0;line-height:1.25}
+html.discord-look .dl-fr-who b{font-size:16px;font-weight:600;color:var(--dl-head);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html.discord-look .dl-fr-who small{font-size:14px;color:var(--dl-muted)}
+html.discord-look .dl-fr-acts{display:flex;gap:10px}
+html.discord-look .dl-fr-act{width:36px;height:36px;display:flex;align-items:center;justify-content:center;padding:0;border:0!important;border-radius:50%;background:var(--dl-bg2)!important;color:var(--dl-muted);cursor:pointer;box-shadow:none!important}
+html.discord-look .dl-fr-row:hover .dl-fr-act{background:var(--dl-bg3)!important}
+html.discord-look .dl-fr-act:hover{color:var(--dl-head)}
+html.discord-look .dl-fr-act.ok:hover{color:#23a55a}
+html.discord-look .dl-fr-act.danger:hover{color:#f23f43}
+
+/* ---- consecutive messages from one person collapse under a single name (Discord look only) ---- */
+html.discord-look .msg.dl-cont{padding-top:0;padding-bottom:0}
+html.discord-look .msg.dl-cont .meta{display:none}
+html.discord-look .msg.dl-cont .msg-row>[data-open-profile],html.discord-look .msg.dl-cont .msg-row>.avatar{visibility:hidden;height:0;margin:0;overflow:hidden}
+html.discord-look .msg:not(.dl-cont){margin-top:16px;padding-top:2px}
+html.discord-look .date-sep+.msg{margin-top:0}

@@ -1,6 +1,6 @@
 /* ==========================================================================
  * js/settings/settings-page.js
- * Settings page (Interface, Music, Pings, Hubs & Tools, Moderation, ...)
+ * Settings page (Theme, Music, Pings, Hubs & Tools, Moderation, ...)
  * Loaded by js/loader.js (load order lives in js/manifest.js).
  * All js files share one global scope, so functions/consts here are visible to the others.
  * ========================================================================== */
@@ -24,7 +24,7 @@ function openSettings(fromChat){
     <div class="modal-tabs" id="sTabs">
       <button data-t="msg" class="active">💬 Messages</button>
       <button data-t="bg">🖼️ Background</button>
-      <button data-t="ui">🪟 Interface</button>
+      <button data-t="ui">🎨 Theme</button>
       <button data-t="ping">🔔 Pings</button>
       <button data-t="music">🎵 Music</button>
       <button data-t="filter">🚫 Filter</button>
@@ -78,6 +78,24 @@ function openSettings(fromChat){
 
     <div data-p="ui" class="hidden">
       <div class="set-card">
+        <div class="section-h" style="margin-top:0">💬 Discord look</div>
+        <div class="toggle-row" style="margin-bottom:0">
+          <div>
+            <div style="font-weight:600;font-size:14px">Discord look</div>
+            <div class="hint" style="margin-top:2px">Off by default. Makes the whole site feel like Discord: it opens straight into your DMs, with a server-style bar on the left, a Friends page, a user panel, flat panels and plain message rows instead of chat bubbles. The main-menu ad is hidden and your custom background is covered while it's on. Saved to your account, so it follows you to every device.</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="sDiscordLook" ${DiscordLook.on()?'checked':''}><span class="slider"></span></label>
+        </div>
+      </div>
+      <div class="set-card dl-only" id="dlThemeCard">
+        <div class="section-h" style="margin-top:0">🎨 Theme</div>
+        <div class="dl-sub" style="margin-top:0">Default Themes</div>
+        <div class="dl-themes" id="dlDefaultThemes">${DiscordLook.themes().filter(t=>t.group==='default').map(t=>`<button type="button" class="dl-sw${DiscordLook.theme()===t.id?' active':''}" data-dl-theme="${t.id}" title="${esc(t.name)}" aria-label="${esc(t.name)} theme"><span class="dl-sw-c" style="background:${t.sw}"></span><span class="dl-sw-l">${esc(t.name)}</span></button>`).join('')}</div>
+        <div class="dl-sub">Color Themes</div>
+        <div class="dl-themes" id="dlColorThemes">${DiscordLook.themes().filter(t=>t.group==='color').map(t=>`<button type="button" class="dl-sw${DiscordLook.theme()===t.id?' active':''}" data-dl-theme="${t.id}" title="${esc(t.name)}" aria-label="${esc(t.name)} theme"><span class="dl-sw-c" style="background:${t.sw}"></span><span class="dl-sw-l">${esc(t.name)}</span></button>`).join('')}</div>
+        <div class="hint" style="margin-top:6px">Themes show up while Discord look is on. Saved to your account.</div>
+      </div>
+      <div class="set-card">
         <div class="section-h" style="margin-top:0">Interface glass</div>
         <div class="field"><label>UI opacity <span class="val" id="vUiO"></span></label><input type="range" id="sUiO" min="10" max="100" value="${s.uiOpacity??50}"></div>
         <div class="field"><label>UI blur (frosted glass) <span class="val" id="vUiB"></span></label><input type="range" id="sUiB" min="0" max="30" value="${s.uiBlur??18}"></div>
@@ -97,26 +115,6 @@ function openSettings(fromChat){
           </div>
           <label class="switch"><input type="checkbox" id="sAntiLag" ${AntiLag.on()?'checked':''}><span class="slider"></span></label>
         </div>
-      </div>
-      <div class="set-card">
-        <div class="section-h" style="margin-top:0">💬 Layout</div>
-        <div class="toggle-row" style="margin-bottom:0">
-          <div>
-            <div style="font-weight:600;font-size:14px">Discord look</div>
-            <div class="hint" style="margin-top:2px">Off by default. Switches the site to a flat, Discord-style layout: dark grey panels, no glass blur, and messages shown as plain rows with the avatar on the left and the name and time on one line instead of chat bubbles. Your custom background is hidden while it's on. Saved to your account, so it follows you to every device.</div>
-          </div>
-          <label class="switch"><input type="checkbox" id="sDiscordLook" ${DiscordLook.on()?'checked':''}><span class="slider"></span></label>
-        </div>
-      </div>
-      <div class="set-card dl-only" id="dlThemeCard">
-        <div class="section-h" style="margin-top:0">🎨 Theme <span class="hint" style="font-weight:400">(Discord look)</span></div>
-        <div class="dl-sub" style="margin-top:0">Default themes</div>
-        <div class="dl-themes" id="dlDefaultThemes">${DiscordLook.themes().filter(t=>t.group==='default').map(t=>`<button type="button" class="dl-sw${DiscordLook.theme()===t.id?' active':''}" data-dl-theme="${t.id}" title="${esc(t.name)}" aria-label="${esc(t.name)} theme" style="background:${t.sw}"></button>`).join('')}</div>
-        <div class="dl-sub">Color themes</div>
-        <div class="hint" style="margin-top:2px">Gradient backgrounds. Pick one to recolor the whole layout.</div>
-        <div class="dl-themes" id="dlColorThemes">${DiscordLook.themes().filter(t=>t.group==='color').map(t=>`<button type="button" class="dl-sw${DiscordLook.theme()===t.id?' active':''}" data-dl-theme="${t.id}" title="${esc(t.name)}" aria-label="${esc(t.name)} theme" style="background:${t.sw}"></button>`).join('')}</div>
-        <div class="dl-sw-name" id="dlThemeName">${esc((DiscordLook.themes().find(t=>t.id===DiscordLook.theme())||{}).name||'')}</div>
-        <div class="hint" style="margin-top:6px">Only shown while Discord look is on. Saved to your account.</div>
       </div>
     </div>
 

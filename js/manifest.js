@@ -81,6 +81,7 @@ window.APP_MANIFEST={
     "chat/typing-indicator.js",
     "ui/extras-menu.js",
     "ui/liquid-glass.js",
+    "ui/discord-shell.js",
     "ui/context-menu.js",
     "core/boot.js"
   ]

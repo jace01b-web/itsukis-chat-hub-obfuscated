@@ -51,6 +51,12 @@ function appendMsgRow(box,m,lastDay,live){
     el.classList.add('msg-live');
     el.addEventListener('animationend',()=>el.classList.remove('msg-live'),{once:true});
   }
+  // Discord look: consecutive messages from one person within 7 minutes collapse under a single name/avatar
+  el._sid=m.senderId;el._at=m.at;
+  if(typeof DiscordLook!=='undefined'&&DiscordLook.on()){
+    const prev=box.lastElementChild;
+    if(prev&&prev.classList.contains('msg')&&prev._sid===m.senderId&&m.at-prev._at<420000&&!(m.replyTo&&m.replyTo.id))el.classList.add('dl-cont');
+  }
   box.appendChild(el);
   fitAvatarToRow(el);
   renderedNodes.set(m.id,{el,sig:senderSig(m)});
@@ -72,6 +78,7 @@ function patchResolvedSenders(list){
     const sig=senderSig(m);
     if(sig!==rec.sig){
       const fresh=msgEl(m);
+      fresh._sid=rec.el._sid;fresh._at=rec.el._at;if(rec.el.classList.contains('dl-cont'))fresh.classList.add('dl-cont');
       rec.el.replaceWith(fresh);
       fitAvatarToRow(fresh);
       renderedNodes.set(m.id,{el:fresh,sig});

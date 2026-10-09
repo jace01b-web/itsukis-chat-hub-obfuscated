@@ -21,7 +21,7 @@ async function doSignOut(){
   paintBg($('#bgLayer'),$('#bgDimEl'),{bgType:'none'});
   show('authPage');
 }
-$('#backHome').onclick=()=>{view.roomKey=null;view.section=null;DB.watchMessages(null);$('#sidebar').classList.remove('open');goHome()};
+$('#backHome').onclick=()=>{view.roomKey=null;view.section=null;DB.watchMessages(null);$('#sidebar').classList.remove('open');goHome(true)};
 
 /* ---------- Chat page ---------- */
 function openChat(mode,section){

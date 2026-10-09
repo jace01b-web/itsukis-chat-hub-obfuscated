@@ -11,7 +11,7 @@ function show(p){
   ['loadingPage','authPage','homePage','chatPage'].forEach(id=>$('#'+id).classList.toggle('hidden',id!==p));
   view.page=p;
 }
-function goHome(){
+function goHome(forceMenu){
   ME=DB.currentUser();
   if(!ME){
     // signed in but no profile yet (e.g. Google): finish setup instead of crashing
@@ -22,7 +22,10 @@ function goHome(){
   $('#homeName').textContent=ME.username;$('#homeName2').textContent=ME.username;
   $('#homeAv').outerHTML=avatarHtml(ME,ME.username,'width:34px;height:34px;font-size:14px').replace('class="avatar"','class="avatar" id="homeAv"');
   applyStyle(document.documentElement,ME.settings);
-  refreshBadge();show('homePage');
+  refreshBadge();
+  // Discord look: land in DMs instead of the main-menu grid (the rail's "Main menu" button / Home passes forceMenu).
+  if(!forceMenu&&typeof DiscordLook!=='undefined'&&DiscordLook.on()){openChat('dms');return}
+  show('homePage');
 }
 function refreshBadge(){
   if(!ME)return;const n=DB.unreadDMs(ME.id);

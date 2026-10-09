@@ -32,7 +32,7 @@
     ];
     if(ME){
       list.push({sep:true});
-      list.push({ic:'🏠',label:'Home',fn:()=>{view.roomKey=null;view.section=null;DB.watchMessages(null);$('#sidebar')?.classList.remove('open');goHome()}});
+      list.push({ic:'🏠',label:'Home',fn:()=>{view.roomKey=null;view.section=null;DB.watchMessages(null);$('#sidebar')?.classList.remove('open');goHome(true)}});
       list.push({ic:'🚪',label:'Sign Out',danger:true,fn:()=>doSignOut()});
     }
     return list.filter(it=>!it.needsMe||ME);

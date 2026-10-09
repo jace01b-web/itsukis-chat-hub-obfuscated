@@ -62,6 +62,7 @@ function renderAfResults(v){
   });
 }
 function renderFriends(){
+  if(typeof DiscordLook!=='undefined'&&DiscordLook.on()&&typeof DiscordShell!=='undefined')return DiscordShell.renderFriends();
   const box=$('#messages');ME=DB.currentUser();
   const inc=DB.incoming(ME.id),out=DB.outgoing(ME.id),blk=DB.blockedList(ME.id);
   box.innerHTML=`<div style="max-width:640px;width:100%;margin:0 auto" id="frWrap">

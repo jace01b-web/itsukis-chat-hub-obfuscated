@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-10-09.09">
+<meta name="build-version" content="2026-10-09.10">
 <title>Itsukis Chat Hub</title>
 <link rel="icon" type="image/png" href="https://aniitsukicoded.github.io/backups/icon.png">
 <!-- RAW-LINK BOOTSTRAP: everything (css + js) is loaded from raw.githubusercontent.com.
@@ -22,7 +22,7 @@
   var m=document.querySelector('meta[name="build-version"]');
   var Q=m&&m.content?"?v="+encodeURIComponent(m.content):"";
   var CSS=["01-base","02-now-playing","03-form-controls","04-layout-background","05-auth-home-basics","06-chat","07-modals-pickers","08-overlays-friends","09-game-hubs","10-profile-cropper-composer","11-glass-theme","12-vip-spin","13-auth-page","14-extras-menu","15-anti-lag","16-rules-modal","17-halloween","18-music-profile-cosmetics","19-mobile-sidebar","20-voice-channel","21-live-announce","22-discord-look"];
-  var JS=["js/loader.js","js/manifest.js","js/auth/auth.js","js/chat/attachments.js","js/chat/chat-header.js","js/chat/chat-view.js","js/chat/composer.js","js/ui/keyboard-shortcuts.js","js/chat/emoji-data.js","js/chat/emoji-picker.js","js/chat/live-sync.js","js/chat/messages.js","js/chat/pings.js","js/chat/text-and-media.js","js/chat/typing-indicator.js","js/core/auto-update.js","js/core/boot.js","js/core/config.js","js/core/crash-catcher.js","js/core/database.js","js/core/diagnostics.js","js/core/firebase-imports.js","js/core/firebase-init.js","js/core/helpers.js","js/core/name-styles.js","js/core/sound.js","js/core/state.js","js/early/anti-lag-boot.js","js/early/load-styles.js","js/features/gift-promo.js","js/features/halloween.js","js/features/live-announce.js","js/features/vip-and-spin.js","js/games/auth-hubs-preview.js","js/games/game-hubs.js","js/games/hub-info.js","js/moderation/bans.js","js/moderation/content-filter.js","js/moderation/nsfw-filter.js","js/moderation/roles.js","js/settings/account.js","js/settings/anti-lag.js","js/settings/appearance.js","js/settings/rules.js","js/settings/rules-check.js","js/settings/settings-page.js","js/social/friends.js","js/social/rooms.js","js/social/user-profile.js","js/tools/music-player.js","js/tools/now-playing.js","js/ui/ad-copy.js","js/ui/auth-card-motion.js","js/ui/context-menu.js","js/ui/controls.js","js/ui/extras-menu.js","js/ui/extras-download-launcher.js","js/ui/home.js","js/ui/liquid-glass.js","js/ui/modals.js","js/ui/navigation.js","js/ui/sidebar-toggle.js","js/ui/mobile-sidebar.js","js/features/voice-channel.js"];
+  var JS=["js/loader.js","js/manifest.js","js/auth/auth.js","js/chat/attachments.js","js/chat/chat-header.js","js/chat/chat-view.js","js/chat/composer.js","js/ui/keyboard-shortcuts.js","js/chat/emoji-data.js","js/chat/emoji-picker.js","js/chat/live-sync.js","js/chat/messages.js","js/chat/pings.js","js/chat/text-and-media.js","js/chat/typing-indicator.js","js/core/auto-update.js","js/core/boot.js","js/core/config.js","js/core/crash-catcher.js","js/core/database.js","js/core/diagnostics.js","js/core/firebase-imports.js","js/core/firebase-init.js","js/core/helpers.js","js/core/name-styles.js","js/core/sound.js","js/core/state.js","js/early/anti-lag-boot.js","js/early/load-styles.js","js/features/gift-promo.js","js/features/halloween.js","js/features/live-announce.js","js/features/vip-and-spin.js","js/games/auth-hubs-preview.js","js/games/game-hubs.js","js/games/hub-info.js","js/moderation/bans.js","js/moderation/content-filter.js","js/moderation/nsfw-filter.js","js/moderation/roles.js","js/settings/account.js","js/settings/anti-lag.js","js/settings/appearance.js","js/settings/rules.js","js/settings/rules-check.js","js/settings/settings-page.js","js/social/friends.js","js/social/rooms.js","js/social/user-profile.js","js/tools/music-player.js","js/tools/now-playing.js","js/ui/ad-copy.js","js/ui/auth-card-motion.js","js/ui/context-menu.js","js/ui/controls.js","js/ui/extras-menu.js","js/ui/extras-download-launcher.js","js/ui/home.js","js/ui/liquid-glass.js","js/ui/discord-shell.js","js/ui/modals.js","js/ui/navigation.js","js/ui/sidebar-toggle.js","js/ui/mobile-sidebar.js","js/features/voice-channel.js"];
   var STATIC_LATE=["js/ui/auth-card-motion.js","js/games/hub-info.js","js/games/auth-hubs-preview.js","js/ui/ad-copy.js","js/core/crash-catcher.js","js/loader.js","js/ui/extras-download-launcher.js","js/ui/mobile-sidebar.js","js/features/voice-channel.js"];
 
   var hide=document.createElement("style");
@@ -298,6 +298,7 @@
 <!-- ============ CHAT ============ -->
 <div id="chatPage" class="page hidden">
   <div class="chat-layout">
+    <nav class="dl-rail" id="dlRail" aria-label="Servers"></nav>
     <aside class="sidebar" id="sidebar">
       <div class="sb-head">
         <button class="back" id="backHome" title="Home">←</button>
@@ -306,6 +307,7 @@
       </div>
       <div class="sb-list" id="sbList"></div>
       <div class="sb-foot" id="sbFoot"></div>
+      <div class="dl-user" id="dlUser"></div>
     </aside>
     <section class="main">
       <div class="topbar">
