@@ -94,7 +94,7 @@
     var els=(root||document).querySelectorAll('button,a,div[role="button"],span[role="button"]');
     for(var i=0;i<els.length;i++){
       var el=els[i];
-      if(el.classList.contains('ms-markall')||el.children.length>3)continue;
+      if(el.classList.contains('ms-markall')||el.classList.contains('markread-btn')||el.children.length>3)continue;   // .markread-btn (navigation.js) has its own styling + icon; restyling it here produced the doubled-check purple glitch
       var txt=(el.textContent||'').replace(/\s+/g,' ').trim();
       if(/^(?:[^\w]*\s*)?mark all (as )?read\b/i.test(txt)&&txt.length<40){
         el.classList.add('ms-markall');
