@@ -75,13 +75,14 @@ const DiscordLook=(function(){
   let asking=false,askTimer=null;
   function chosen(){
     const st=ME&&ME.settings;if(!st)return true;
-    return st.discordLookChosen===true;   // the saved flag is the only thing that counts, so everyone is asked exactly once
+    return st.lookChoice==='normal'||st.lookChoice==='discord';   // only this saved answer counts, so everyone is asked exactly once (earlier builds' flags are ignored)
   }
-  function ask(){
+  function ask(force){
+    if(force)asking=false;
     if(asking&&!document.querySelector('.lk-modal'))asking=false;   // something else (e.g. the rules dialog) replaced it: ask again later
-    if(asking||typeof ME==='undefined'||!ME||chosen())return;
+    if(asking||typeof ME==='undefined'||!ME||(!force&&chosen()))return;
     const root=document.getElementById('modalRoot');
-    if(!root||root.innerHTML.trim()!==''||(typeof view!=='undefined'&&view.page==='authPage')){          // another dialog (rules, etc.) is up: try again shortly
+    if(!root||(!force&&root.innerHTML.trim()!=='')||(typeof view!=='undefined'&&view.page==='authPage')){          // another dialog (rules, etc.) is up: try again shortly
       clearTimeout(askTimer);askTimer=setTimeout(ask,1500);return;
     }
     asking=true;
@@ -96,7 +97,7 @@ const DiscordLook=(function(){
       const d=b.dataset.lk==='discord';
       root.innerHTML='';asking=false;
       set(d);                                                                         // writes settings.discordLook
-      try{DB.setSettingKey(ME.id,'discordLookChosen',true).catch(()=>{})}catch(_){}   // ...and remembers that they chose
+      try{DB.setSettingKey(ME.id,'lookChoice',d?'discord':'normal').catch(()=>{})}catch(_){}   // ...and remembers what they chose
     });
   }
   function sync(){
@@ -108,5 +109,5 @@ const DiscordLook=(function(){
     if(typeof t==='string'&&validTheme(t)&&resolve(t)!==theme()){try{localStorage.setItem(TKEY,t)}catch(_){}applyTheme(t)}
   }
   window.addEventListener('storage',e=>{if(e.key===KEY)apply(e.newValue==='1');if(e.key===TKEY&&e.newValue)applyTheme(e.newValue)});
-  return{on,set,sync,theme,setTheme,themes};
+  return{on,set,sync,theme,setTheme,themes,ask:()=>ask(true)};
 })();

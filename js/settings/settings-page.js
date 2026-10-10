@@ -91,6 +91,7 @@ function openSettings(fromChat){
           </div>
           <label class="switch"><input type="checkbox" id="sDiscordLook" ${DiscordLook.on()?'checked':''}><span class="slider"></span></label>
         </div>
+        <div style="margin-top:12px"><button type="button" class="btn sec small" id="sLookAsk">Choose Normal or Discord again…</button></div>
       </div>
       <div class="set-card dl-only" id="dlThemeCard">
         <div class="section-h" style="margin-top:0">🎨 Theme</div>
@@ -901,6 +902,7 @@ function openSettings(fromChat){
   // Anti-lag is an account setting (synced across devices); applied instantly and saved straight away.
   $$('#sAntiLag').addEventListener('change',e=>AntiLag.set(e.target.checked));
   $$('#sDiscordLook').addEventListener('change',e=>DiscordLook.set(e.target.checked));
+  $$('#sLookAsk')&&($$('#sLookAsk').onclick=()=>DiscordLook.ask());
   $$('#dlThemeCard')&&$$('#dlThemeCard').addEventListener('click',e=>{
     const b=e.target.closest('[data-dl-theme]');if(!b)return;
     DiscordLook.setTheme(b.dataset.dlTheme);
