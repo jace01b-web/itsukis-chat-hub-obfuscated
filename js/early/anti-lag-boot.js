@@ -15,6 +15,9 @@ try{if(localStorage.getItem('ich.discordLook')==='1')document.documentElement.cl
   // translucent panels over a gradient: tone = 'dark' | 'light'
   function grad(id,name,g,tone,pop){
     var d=tone!=='light';
+    // solid panels (settings, profile card, menus, the user panel) pick up the theme: tint = the gradient's middle colour
+    var cols=g.match(/#[0-9a-fA-F]{6}/g)||[],mid=cols[Math.min(1,cols.length-1)]||'#25262b';
+    if(!pop)pop=d?'color-mix(in srgb,'+mid+' 78%,#000)':'color-mix(in srgb,'+mid+' 22%,#fff)';
     return{id:id,name:name,group:'color',sw:g,body:g,
       vars:d?{bg:'rgba(0,0,0,.22)',bg2:'rgba(0,0,0,.34)',bg3:'rgba(0,0,0,.46)',input:'rgba(0,0,0,.34)',hover:'rgba(255,255,255,.08)',active:'rgba(255,255,255,.15)',
         text:'#f2f3f5',muted:'#c4c8d0',head:'#fff',line:'rgba(255,255,255,.14)',scroll:'rgba(0,0,0,.4)',pop:pop||'#25262b'}
@@ -58,7 +61,7 @@ try{if(localStorage.getItem('ich.discordLook')==='1')document.documentElement.cl
     var v=t.vars,o='';
     // solid twins of bg/bg2/bg3/input for surfaces that must never be see-through (settings, profile cards, menus)
     if(t.group==='color'){var lt=/^rgba\(255/.test(v.bg),m=lt?'#000':'#000';
-      v.sbg=v.pop;v.sbg2='color-mix(in srgb,'+v.pop+' '+(lt?94:80)+'%,'+m+')';v.sbg3='color-mix(in srgb,'+v.pop+' '+(lt?88:58)+'%,'+m+')';v.sinput=v.sbg3;
+      v.sbg=v.pop;v.sbg2='color-mix(in srgb,'+v.pop+' '+(lt?94:84)+'%,'+m+')';v.sbg3='color-mix(in srgb,'+v.pop+' '+(lt?88:66)+'%,'+m+')';v.sinput=v.sbg3;
     }else{v.sbg=v.bg;v.sbg2=v.bg2;v.sbg3=v.bg3;v.sinput=v.input}for(var k in v)o+='--dl-'+k+':'+v[k]+';';
     css+='html.discord-look[data-dl-theme="'+t.id+'"]{'+o+'--dl-body:'+t.body+';}\n';
   });

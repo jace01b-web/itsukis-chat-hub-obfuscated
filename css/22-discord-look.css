@@ -614,3 +614,46 @@ html.discord-look .dl-fr-row{min-height:72px}
 html.discord-look .dl-fr-tab{font-size:16px;padding:6px 12px}
 html.discord-look .dl-fr-who b{font-size:17px}
 html.discord-look .dl-fr-av,html.discord-look .dl-fr-av .avatar{width:40px!important;height:40px!important}
+
+/* ===== v6: rows must never shrink (the DM list overflowed and squashed every row), plus softer, rounder corners ===== */
+html.discord-look .sb-list>*{flex:none}
+html.discord-look .sb-item{flex:none;min-height:56px;box-sizing:border-box}
+html.discord-look .dl-mem{flex:none;min-height:56px}
+html.discord-look .dl-fr-row{flex:none}
+html.discord-look .dl-mem-h,html.discord-look .sb-section{flex:none}
+
+html.discord-look .chat-layout{background:var(--dl-bg3)}
+@media(min-width:821px){
+  html.discord-look .sidebar{border-radius:14px 0 0 0!important;overflow:hidden}
+  html.discord-look #chatPage .dl-user{border-radius:14px}
+  html.discord-look #chatPage .dl-rail{background:transparent}
+  html.discord-look .main{border-radius:0}
+}
+html.discord-look .sb-item{border-radius:10px}
+html.discord-look .dl-mem{border-radius:10px}
+html.discord-look .dl-fr-row{border-radius:10px}
+html.discord-look .sb-search{border-radius:10px}
+html.discord-look .sb-search input{border-radius:10px}
+html.discord-look .composer .row{border-radius:14px}
+html.discord-look .modal,html.discord-look .card{border-radius:16px!important}
+html.discord-look .modal.pf-card{border-radius:16px!important;overflow:hidden}
+html.discord-look .pf-card .pf-banner{border-radius:0}
+html.discord-look .modal.wide:has(#sTabs){border-radius:14px!important}
+html.discord-look .set-card{border-radius:12px!important}
+html.discord-look .btn,html.discord-look .btn.sec,html.discord-look .btn.small{border-radius:8px}
+html.discord-look .field input,html.discord-look .field select,html.discord-look .field textarea,html.discord-look .cp-btn,html.discord-look .csel-btn{border-radius:8px}
+html.discord-look .mention-pop,html.discord-look .emoji-pop,html.discord-look .cp-pop,html.discord-look .csel-menu,html.discord-look .toast,html.discord-look .list-row,html.discord-look .empty{border-radius:12px!important}
+html.discord-look .msg-hover-bar{border-radius:10px!important}
+html.discord-look .reaction-pill{border-radius:10px!important}
+html.discord-look .bubble .imgs img,html.discord-look .bubble img{border-radius:12px}
+html.discord-look .msg{border-radius:8px;margin:0 8px;width:calc(100% - 16px)}
+html.discord-look .msg.ping-row{border-radius:8px}
+html.discord-look .dlp-banner{border-radius:14px 14px 0 0}
+html.discord-look .dlp-card{border-radius:0 0 14px 14px}
+html.discord-look .dlp-full{border-radius:10px}
+html.discord-look .dl-members.show.dm{border-radius:14px 0 0 0}
+html.discord-look .dl-rail-btn{border-radius:18px}
+html.discord-look .dl-rail-btn.dl-rail-home{border-radius:18px}
+html.discord-look .dl-rail-btn:hover,html.discord-look .dl-rail-btn.active{border-radius:14px}
+html.discord-look .dl-fr-tab,html.discord-look .dl-fr-add{border-radius:8px}
+html.discord-look .typing-bar{border-radius:0}
