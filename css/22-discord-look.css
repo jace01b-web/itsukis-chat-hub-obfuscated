@@ -826,3 +826,4 @@ html.discord-look .msg .meta .nm-wrap,html.discord-look .msg .meta .hw-name{marg
 .lk-prev-discord i:nth-child(1){width:16%;background:#1e1f22}
 .lk-prev-discord i:nth-child(2){width:30%;background:#2b2d31}
 .lk-prev-discord i:nth-child(3){flex:1;background:#313338}
+.lk-card.cur{border-color:rgba(88,101,242,.7)}

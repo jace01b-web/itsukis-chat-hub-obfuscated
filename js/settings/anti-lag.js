@@ -75,9 +75,10 @@ const DiscordLook=(function(){
   let asking=false,askTimer=null;
   function chosen(){
     const st=ME&&ME.settings;if(!st)return true;
-    return st.discordLookChosen===true||typeof st.discordLook==='boolean';   // anyone who already toggled it has chosen
+    return st.discordLookChosen===true;   // the saved flag is the only thing that counts, so everyone is asked exactly once
   }
   function ask(){
+    if(asking&&!document.querySelector('.lk-modal'))asking=false;   // something else (e.g. the rules dialog) replaced it: ask again later
     if(asking||typeof ME==='undefined'||!ME||chosen())return;
     const root=document.getElementById('modalRoot');
     if(!root||root.innerHTML.trim()!==''||(typeof view!=='undefined'&&view.page==='authPage')){          // another dialog (rules, etc.) is up: try again shortly
@@ -88,8 +89,8 @@ const DiscordLook=(function(){
       <h2>Choose your look</h2>
       <div class="hint">Pick how Itsukis Chat looks. You can switch any time in Settings &gt; Theme.</div>
       <div class="lk-grid">
-        <button type="button" class="lk-card" data-lk="normal"><span class="lk-prev lk-prev-normal"><i></i><i></i><i></i></span><b>Normal</b><small>The original look with chat bubbles and glass panels.</small></button>
-        <button type="button" class="lk-card" data-lk="discord"><span class="lk-prev lk-prev-discord"><i></i><i></i><i></i></span><b>Discord</b><small>A familiar server layout with themes, a member list and Discord-style profiles.</small></button>
+        <button type="button" class="lk-card${on()?'':' cur'}" data-lk="normal"><span class="lk-prev lk-prev-normal"><i></i><i></i><i></i></span><b>Normal</b><small>The original look with chat bubbles and glass panels.</small></button>
+        <button type="button" class="lk-card${on()?' cur':''}" data-lk="discord"><span class="lk-prev lk-prev-discord"><i></i><i></i><i></i></span><b>Discord</b><small>A familiar server layout with themes, a member list and Discord-style profiles.</small></button>
       </div></div></div>`;
     root.querySelectorAll('[data-lk]').forEach(b=>b.onclick=()=>{
       const d=b.dataset.lk==='discord';
@@ -101,7 +102,6 @@ const DiscordLook=(function(){
   function sync(){
     if(typeof ME==='undefined'||!ME||!ME.settings)return;
     if(!chosen())ask();
-    else if(ME.settings.discordLookChosen!==true&&typeof ME.settings.discordLook==='boolean'&&!sync._m){sync._m=1;try{DB.setSettingKey(ME.id,'discordLookChosen',true).catch(()=>{})}catch(_){}}
     const v=ME.settings.discordLook;
     if(typeof v==='boolean'&&v!==on()){cache(v);apply(v)}
     const t=ME.settings.discordTheme;
