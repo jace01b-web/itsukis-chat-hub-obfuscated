@@ -86,12 +86,21 @@ const DiscordLook=(function(){
       clearTimeout(askTimer);askTimer=setTimeout(ask,1500);return;
     }
     asking=true;
+    const chk='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+    const cur=on()?'discord':'normal';
+    const card=(k,name,desc,tags,prev)=>`<button type="button" class="lk-card${cur===k?' cur':''}" data-lk="${k}">
+        <span class="lk-badge">${chk}<em>Current</em></span>
+        <span class="lk-prev lk-prev-${k}">${prev}</span>
+        <span class="lk-info"><b>${name}</b><small>${desc}</small><span class="lk-tags">${tags.map(t=>'<u>'+t+'</u>').join('')}</span></span>
+        <span class="lk-pick">Use ${name}</span></button>`;
+    const pN='<span class="pv-top"><i></i><i></i></span><span class="pv-b l"><i class="av"></i><i class="ln w1"></i></span><span class="pv-b r"><i class="ln w2"></i></span><span class="pv-b l"><i class="av"></i><i class="ln w3"></i></span><span class="pv-in"></span>';
+    const pD='<span class="pv-rail"><i></i><i></i><i></i><i></i></span><span class="pv-side"><i class="h"></i><i></i><i></i><i></i><i></i></span><span class="pv-main"><span class="pv-m"><i class="av"></i><i class="ln w1"></i></span><span class="pv-m"><i class="av"></i><i class="ln w2"></i></span><span class="pv-m"><i class="av"></i><i class="ln w3"></i></span><span class="pv-in"></span></span><span class="pv-mem"><i></i><i></i><i></i></span>';
     root.innerHTML=`<div class="modal-bg"><div class="modal lk-modal" role="dialog" aria-modal="true" aria-label="Choose your look">
-      <h2>Choose your look</h2>
-      <div class="hint">Pick how Itsukis Chat looks. You can switch any time in Settings &gt; Theme.</div>
+      <div class="lk-head"><span class="lk-spark">\u2728</span><h2>Choose your look</h2>
+      <div class="hint">Pick how Itsukis Chat looks for you. You can change it any time in Settings &gt; Theme.</div></div>
       <div class="lk-grid">
-        <button type="button" class="lk-card${on()?'':' cur'}" data-lk="normal"><span class="lk-prev lk-prev-normal"><i></i><i></i><i></i></span><b>Normal</b><small>The original look with chat bubbles and glass panels.</small></button>
-        <button type="button" class="lk-card${on()?' cur':''}" data-lk="discord"><span class="lk-prev lk-prev-discord"><i></i><i></i><i></i></span><b>Discord</b><small>A familiar server layout with themes, a member list and Discord-style profiles.</small></button>
+        ${card('normal','Normal','The original look with chat bubbles, glass panels and custom colours.',['Bubbles','Glass','Custom colours'],pN)}
+        ${card('discord','Discord','A familiar server layout with a member list, themes and Discord-style profiles.',['Server view','Member list','Themes'],pD)}
       </div></div></div>`;
     root.querySelectorAll('[data-lk]').forEach(b=>b.onclick=()=>{
       const d=b.dataset.lk==='discord';
