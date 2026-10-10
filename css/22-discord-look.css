@@ -1085,3 +1085,14 @@ html.discord-look .pf-card .pf-roles{gap:4px}
 /* v18: the "+N" roles button matches the role pills; the DM panel no longer replays its fade on every refresh */
 html.discord-look .pf-roles .pf-role-more{display:inline-flex;align-items:center;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:600;background:var(--dl-sbg2);border:1px solid var(--dl-line);color:var(--dl-text);cursor:pointer}
 html.discord-look .pf-roles .pf-role-more:hover{background:var(--dl-hover);color:var(--dl-head)}
+
+/* ==========================================================================
+ * v19: hover toolbar closer to Discord's - solid glyphs, 28px buttons, no outline, red only on hover
+ * ========================================================================== */
+html.discord-look .msg-hover-bar,html.discord-look .msg.me .msg-hover-bar{top:-16px;right:16px;padding:2px!important;gap:0!important;border:0!important;border-radius:8px!important;
+  background:var(--dl-sbg2)!important;box-shadow:0 0 0 1px rgba(0,0,0,.18),0 2px 10px rgba(0,0,0,.4)!important}
+html.discord-look .msg-hover-bar button{width:28px;height:28px;border-radius:5px;color:#b5bac1}
+html.discord-look .msg-hover-bar button svg{width:20px;height:20px}
+html.discord-look .msg-hover-bar button:hover{background:rgba(255,255,255,.1)!important;color:#dbdee1}
+html.discord-look .msg-hover-bar .hb-danger{color:#b5bac1}
+html.discord-look .msg-hover-bar .hb-danger:hover{background:rgba(242,63,67,.16)!important;color:#f23f43}

@@ -292,13 +292,16 @@ function msgEl(m){
   // further below, same as before.
   const _dl=typeof DiscordLook!=='undefined'&&DiscordLook.on();
   const _ic=d=>`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  // Discord uses solid (filled) glyphs in its hover toolbar
+  const _fi=(d,eo)=>`<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path${eo?' fill-rule="evenodd" clip-rule="evenodd"':''} d="${d}"/></svg>`;
   const IC={
-    reply:_ic('<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v3"/>'),
-    react:_ic('<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0"/><path d="M9 9.5h.01M15 9.5h.01"/>'),
-    copy:_ic('<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>'),
-    edit:_ic('<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>'),
-    del:_ic('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>')
+    reply:_fi('M10 9V5l-8 7 8 7v-4c5 0 8.5 1.5 11 5-1-6-4.5-11-11-11z'),
+    react:_fi('M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM8.5 8a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm7 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM7 14h10a5 5 0 0 1-10 0z',1),
+    copy:_fi('M16 1H6a3 3 0 0 0-3 3v12h2V4a1 1 0 0 1 1-1h10V1zm3 4H10a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h9a3 3 0 0 0 3-3V8a3 3 0 0 0-3-3z'),
+    edit:_fi('M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z'),
+    del:_fi('M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z')
   };
+
   const replyBtn=`<button data-reply-btn title="Reply">${_dl?IC.reply:'↪'}</button>`;
   const reactBtn=`<button data-react-btn title="Add reaction">${_dl?IC.react:'😊'}</button>`;
   const copyBtn=m.text?`<button data-copy-btn title="Copy message">${_dl?IC.copy:'📋'}</button>`:'';
