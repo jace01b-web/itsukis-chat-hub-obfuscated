@@ -161,6 +161,39 @@ const DiscordShell=(function(){
     list.appendChild(sbItem('🔑','Join a room',false,modalJoinRoom));
     foot.innerHTML='';
   }
+  /* ---------- DM view: the other person's profile in a right-hand panel (like Discord) ---------- */
+  function dmPeerId(){
+    if(!(on()&&desktop()&&ME&&view.mode==='dms'))return null;
+    const k=view.roomKey;if(!k||typeof k!=='string'||k.indexOf('dm_')!==0)return null;
+    const ids=k.split('_').slice(1).map(Number);
+    const o=ids.find(i=>i!==ME.id);
+    return o==null?(ids[0]==null?null:ids[0]):o;
+  }
+  function renderDmProfile(m,id){
+    const u=DB.getUser(id);
+    if(!u){m.innerHTML='<div class="dl-mem-h">Loading…</div>';return}
+    const deleted=!!u.deleted;
+    const name=deleted?'Deleted User':displayUsername(u.username);
+    const online=id===ME.id||DB.onlineIds().indexOf(id)>-1;
+    const accent=safeColor(u.settings&&u.settings.meBubble,'#5865f2');
+    const banner=safeColor(u.settings&&u.settings.bannerColor,accent);
+    const joined=u.createdAt?new Date(u.createdAt).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'';
+    const av=avatarHtml(u,name,'width:80px;height:80px;font-size:30px');
+    const roles=deleted?'':profileRolesHTML(id);
+    m.innerHTML=`<div class="dlp">
+      <div class="dlp-banner" style="background:${bannerGradCss(banner)}"></div>
+      <div class="dlp-av">${av}<i class="dl-dot${online?'':' off'}"></i></div>
+      <div class="dlp-card">
+        <div class="dlp-name">${deleted?esc(name):fullNameHTML(id,esc(name))}</div>
+        <div class="dlp-sub">${esc(deleted?'Account deleted':String(u.username||''))}${(!deleted&&u.pronouns)?' · '+esc(u.pronouns):''}</div>
+        <div class="dlp-status"><i class="dlp-sd${online?' on':''}"></i>${deleted?'':(online?'Online':'Offline')}</div>
+        ${(!deleted&&u.description)?`<div class="dlp-h">About Me</div><div class="dlp-t">${esc(u.description)}</div>`:''}
+        ${joined?`<div class="dlp-h">Member Since</div><div class="dlp-t">${esc(joined)}</div>`:''}
+        ${roles?`<div class="dlp-h">Roles</div>${roles}`:''}
+      </div>
+      <button type="button" class="dlp-full" data-open-profile="${id}">View Full Profile</button>
+    </div>`;
+  }
   let showMembers=true;
   try{showMembers=localStorage.getItem('ich.dlMembers')!=='0'}catch(_){}
   function ensureMembersBtn(){
@@ -206,11 +239,14 @@ const DiscordShell=(function(){
   function renderMembers(){
     const m=document.getElementById('dlMembers'),btn=ensureMembersBtn();
     const srv=serverMode();
-    if(btn){btn.hidden=!srv;btn.classList.toggle('active',showMembers)}
+    const dmPeer=dmPeerId();
+    if(btn){btn.hidden=!(srv||dmPeer!=null);btn.classList.toggle('active',showMembers);btn.title=dmPeer!=null?'Show user profile':'Member list'}
     if(!m)return;
-    const vis=srv&&showMembers;
+    const vis=(srv||dmPeer!=null)&&showMembers;
     m.classList.toggle('show',vis);
+    m.classList.toggle('dm',vis&&dmPeer!=null);
     if(!vis){m.innerHTML='';return}
+    if(dmPeer!=null){renderDmProfile(m,dmPeer);return}
     const key=view.roomKey;
     const isRoom=key&&key!==CFG.GLOBAL_ROOM&&key!==CFG.ANNOUNCEMENTS_ROOM&&key!==CFG.VIP_ROOM;
     let onIds=[],everyone=[];

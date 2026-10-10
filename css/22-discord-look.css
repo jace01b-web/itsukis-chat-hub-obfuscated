@@ -487,3 +487,46 @@ html.discord-look .btn.sec{background:#4e5058!important}
 html.discord-look .toast{background:var(--dl-sbg3)!important}
 html.discord-look .modal.wide:has(#sTabs)>.actions{background:var(--dl-sbg)!important}
 html.discord-look .modal.wide:has(#sTabs) .modal-tabs{background:var(--dl-sbg2)!important}
+
+/* ===== v3: no custom message text colours; roomier sidebar; DM profile panel ===== */
+html.discord-look .bubble[style],html.discord-look .msg.me .bubble[style]{color:var(--dl-text)!important;background:none!important}
+html.discord-look .bubble[style] a{color:#00a8fc}
+
+html.discord-look .sb-item{height:48px;padding:0 10px;font-size:16px;margin-bottom:4px;gap:12px}
+html.discord-look .sb-item .avatar{width:36px!important;height:36px!important;font-size:14px!important}
+html.discord-look .sb-item .nm{font-size:16px}
+html.discord-look .sb-section{padding:20px 10px 8px;font-size:12px}
+html.discord-look .sb-list{padding:8px}
+html.discord-look .dl-server-head{height:52px}
+html.discord-look .dl-server-head b{font-size:16px}
+@media(min-width:821px){
+  html.discord-look #chatPage .dl-rail{width:80px;gap:12px;padding:14px 0}
+  html.discord-look .dl-rail-btn{width:52px;height:52px}
+  html.discord-look .dl-user{height:60px}
+}
+html.discord-look .dl-user-av .avatar{width:36px!important;height:36px!important}
+html.discord-look .dl-mem{height:48px;margin-bottom:2px}
+html.discord-look .dl-mem-nm{font-size:16px}
+html.discord-look .dl-mem-h{padding-top:26px;font-size:12px}
+html.discord-look .dl-fr-row{min-height:64px}
+
+@media(min-width:821px){
+  html.discord-look .dl-members.show.dm{width:340px;padding:0;background:var(--dl-sbg2);border-left:1px solid var(--dl-line);overflow-y:auto}
+}
+html.discord-look .dlp{display:flex;flex-direction:column;min-height:100%;padding:12px;box-sizing:border-box}
+html.discord-look .dlp-banner{height:120px;border-radius:8px 8px 0 0;flex:none}
+html.discord-look .dlp-av{position:relative;width:80px;height:80px;margin:-48px 0 0 16px;flex:none}
+html.discord-look .dlp-av .avatar{width:80px!important;height:80px!important;font-size:30px!important;border:6px solid var(--dl-sbg3)!important;box-sizing:content-box;margin:-6px;box-shadow:none!important}
+html.discord-look .dlp-av .dl-dot{width:22px;height:22px;right:-6px;bottom:0;box-shadow:0 0 0 5px var(--dl-sbg3)}
+html.discord-look .dlp-card{margin-top:8px;padding:16px;border-radius:0 0 8px 8px;background:var(--dl-sbg3);flex:none}
+html.discord-look .dlp-name{font-size:22px;font-weight:700;color:var(--dl-head);line-height:1.2;word-break:break-word}
+html.discord-look .dlp-sub{margin-top:2px;font-size:14px;color:var(--dl-text)}
+html.discord-look .dlp-status{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:13px;color:var(--dl-muted)}
+html.discord-look .dlp-sd{width:10px;height:10px;border-radius:50%;background:#80848e}
+html.discord-look .dlp-sd.on{background:#23a55a}
+html.discord-look .dlp-h{margin-top:16px;font-size:12px;font-weight:700;color:var(--dl-head);text-transform:uppercase;letter-spacing:.02em}
+html.discord-look .dlp-t{margin-top:4px;font-size:14px;line-height:1.35;color:var(--dl-text);white-space:pre-wrap;word-break:break-word}
+html.discord-look .dlp .pf-roles{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}
+html.discord-look .dlp .pf-role{background:var(--dl-sbg2);border:1px solid var(--dl-line);border-radius:6px;padding:3px 8px;font-size:12px;font-weight:500;color:var(--dl-text)}
+html.discord-look .dlp-full{margin-top:12px;padding:10px;border-radius:4px;background:#4e5058!important;color:#fff;font-size:14px;font-weight:500;flex:none;cursor:pointer;border:0}
+html.discord-look .dlp-full:hover{background:#6d6f78!important}
