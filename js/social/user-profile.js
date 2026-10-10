@@ -125,11 +125,13 @@ function openProfilePopout(id){
   const banner=safeColor(u.settings&&u.settings.bannerColor,accent);
   const av=avatarHtml(u,name,'width:80px;height:80px;font-size:30px');
   const canAdd=!isMe&&!deleted&&!DB.isFriend(ME.id,id)&&!DB.hasIncoming(id)&&!DB.hasOutgoing(ME.id,id)&&!DB.isBlocked(ME.id,id)&&!DB.isBlockedBy(ME.id,id);
+  const canRemove=!isMe&&!deleted&&DB.isFriend(ME.id,id);
   const sub=deleted?'Account deleted':[online?'Online':'Offline',u.pronouns?esc(u.pronouns):''].filter(Boolean).join(' <b>\u2022</b> ');
   const roles=deleted?'':profileRolesHTML(id);
   root.innerHTML=`<div class="modal-bg dlpo-bg"><div class="dlpo" role="dialog" aria-label="Profile of ${esc(name)}">
     <div class="dlpo-banner" style="background:${bannerGradCss(banner)}"><div class="dlpo-btns">
       ${canAdd?'<button type="button" class="dlpo-ib" id="poAdd" title="Add Friend" aria-label="Add Friend"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 20c0-3.3 3.6-5 8-5s8 1.7 8 5v1H2zM19 8h-2v2h-2v2h2v2h2v-2h2v-2h-2z"/></svg></button>':''}
+      ${canRemove?'<button type="button" class="dlpo-ib" id="poRemove" title="Remove Friend" aria-label="Remove Friend"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 20c0-3.3 3.6-5 8-5s8 1.7 8 5v1H2zM15 9h7v2h-7z"/></svg></button>':''}
       <button type="button" class="dlpo-ib" id="poMore" title="View full profile" aria-label="View full profile"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
     </div></div>
     <div class="dlpo-av">${av}<span class="dlpo-st"><i class="${online&&!deleted?'on':''}"></i></span></div>
@@ -147,12 +149,6 @@ function openProfilePopout(id){
   const onKey=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close()}};
   document.addEventListener('keydown',onKey,true);
   bg.onclick=e=>{if(e.target===bg)close()};
-  // roles: first 5 + "+N"
-  const rw=root.querySelector('.pf-roles');
-  if(rw){const rs=[...rw.querySelectorAll('.pf-role')];
-    if(rs.length>5){rs.slice(5).forEach(r=>r.classList.add('pf-extra'));
-      const more=document.createElement('button');more.type='button';more.className='pf-role-more';more.textContent='+'+(rs.length-5);
-      more.onclick=()=>{rw.classList.add('expanded');more.remove()};rw.appendChild(more)}}
   // position next to what was clicked, kept on screen
   const W=card.offsetWidth||340,H=card.offsetHeight||420,vw=window.innerWidth,vh=window.innerHeight;
   let left=rc.right+12;if(left+W>vw-12)left=Math.max(12,rc.left-W-12);
@@ -161,6 +157,8 @@ function openProfilePopout(id){
   const full=()=>{close();openUserProfile(id,{full:true})};
   const f=$('#poFull');if(f)f.onclick=full;
   $('#poMore').onclick=full;
+  const rem=$('#poRemove');
+  if(rem)rem.onclick=()=>{close();modalUnfriendConfirm(id,u.username,async()=>{await DB.removeFriend(ME.id,id);ME=DB.currentUser();renderChat()})};
   const add=$('#poAdd');
   if(add)add.onclick=async()=>{add.disabled=true;try{const r=await DB.friendReqById(ME.id,id);toast(r==='accepted'?'You are now friends!':'Friend request sent.');ME=DB.currentUser();add.remove();renderChat()}catch(e){toast(e.message,'bad');add.disabled=false}};
   const mi=$('#poMsg');
@@ -305,16 +303,6 @@ function openUserProfile(id,opts){
     </div></div>`;
 
     root.querySelector('.modal-bg').onclick=e=>{if(e.target===e.currentTarget)root.innerHTML=''};
-    // Roles: show the first 4, then a "+X more" chip that reveals the rest (and a button to fold back).
-    {const rw=root.querySelector('.pf-roles');
-     if(rw){const rs=[...rw.querySelectorAll('.pf-role')];
-       if(rs.length>4){
-         rs.slice(4).forEach(r=>r.classList.add('pf-extra'));
-         const more=document.createElement('button');more.type='button';more.className='pf-role-more';more.textContent='+'+(rs.length-4)+' more';
-         const less=document.createElement('button');less.type='button';less.className='pf-role-more pf-role-less';less.textContent='Show less';
-         more.onclick=()=>rw.classList.add('expanded');less.onclick=()=>rw.classList.remove('expanded');
-         rw.appendChild(more);rw.appendChild(less);
-       }}}
     $('#pfClose').onclick=()=>{root.innerHTML=''};
     wireProfileNote(root,id);
     const copyBtn=$('#pfCopyId');

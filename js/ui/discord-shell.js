@@ -230,7 +230,6 @@ const DiscordShell=(function(){
         <div class="dlp-status"><i class="dlp-sd${online?' on':''}"></i>${deleted?'':(online?'Online':'Offline')}</div>
         ${(!deleted&&u.description)?`<div class="dlp-h">About Me</div><div class="dlp-t">${esc(u.description)}</div>`:''}
         ${joined?`<div class="dlp-h">Member Since</div><div class="dlp-t">${esc(joined)}</div>`:''}
-        ${(!deleted&&typeof profileRolesHTML==='function'&&profileRolesHTML(id))?`<div class="dlp-h">Roles</div>${profileRolesHTML(id)}`:''}
         ${deleted?'':profileNoteHTML(id)}
       </div>
       <button type="button" class="dlp-full" data-open-profile="${id}">View Full Profile</button>
