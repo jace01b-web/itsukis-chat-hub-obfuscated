@@ -21,7 +21,10 @@ html.discord-look{
   --ui-panel:var(--dl-bg2); --ui-panel2:var(--dl-input); --ui-bg2:var(--dl-bg3);
   --glass-edge-soft:transparent;
 }
-html.discord-look body{font-family:"gg sans","Noto Sans","Helvetica Neue",Helvetica,Arial,sans-serif;background:var(--dl-body,var(--dl-bg));background-attachment:fixed}
+html.discord-look{--dl-font:"gg sans","ggsans","Noto Sans","Helvetica Neue",Helvetica,Arial,sans-serif;--m-font:var(--dl-font)}
+html.discord-look body,html.discord-look button,html.discord-look input,html.discord-look textarea,html.discord-look select,
+html.discord-look .bubble,html.discord-look .modal,html.discord-look .card,html.discord-look .sidebar,html.discord-look .topbar,html.discord-look .composer{font-family:var(--dl-font)!important}
+html.discord-look body{background:var(--dl-body,var(--dl-bg));background-attachment:fixed}
 html.discord-look .bgfx{display:none!important}
 
 /* ---- flatten the liquid-glass panels ---- */
