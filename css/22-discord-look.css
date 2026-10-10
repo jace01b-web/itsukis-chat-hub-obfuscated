@@ -657,3 +657,15 @@ html.discord-look .dl-rail-btn.dl-rail-home{border-radius:18px}
 html.discord-look .dl-rail-btn:hover,html.discord-look .dl-rail-btn.active{border-radius:14px}
 html.discord-look .dl-fr-tab,html.discord-look .dl-fr-add{border-radius:8px}
 html.discord-look .typing-bar{border-radius:0}
+
+/* ===== v7: narrower side columns ===== */
+@media(min-width:821px){
+  html.discord-look #chatPage .dl-rail{width:76px;gap:12px}
+  html.discord-look .dl-rail-btn{width:52px;height:52px}
+  html.discord-look .dl-rail-ic{font-size:26px}
+  html.discord-look .dl-rail-sep{width:34px}
+  html.discord-look .sidebar{width:248px!important}
+  html.discord-look #chatPage .dl-user{width:calc(76px + 248px - 16px)!important}
+  html.discord-look .dl-members.show{width:224px}
+  html.discord-look .dl-members.show.dm{width:300px}
+}
