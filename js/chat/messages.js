@@ -273,13 +273,22 @@ function msgEl(m){
   // Discord-style hover bar: a reply arrow starts a reply, edit (own
   // messages only) is a pencil. Deleting stays inline in the meta line
   // further below, same as before.
-  const replyBtn=`<button data-reply-btn title="Reply">↪</button>`;
-  const reactBtn=`<button data-react-btn title="Add reaction">😊</button>`;
-  const copyBtn=m.text?`<button data-copy-btn title="Copy message">📋</button>`:'';
-  const editBtn=canEdit?`<button data-edit-btn title="Edit message">✏️</button>`:'';
+  const _dl=typeof DiscordLook!=='undefined'&&DiscordLook.on();
+  const _ic=d=>`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const IC={
+    reply:_ic('<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v3"/>'),
+    react:_ic('<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0"/><path d="M9 9.5h.01M15 9.5h.01"/>'),
+    copy:_ic('<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>'),
+    edit:_ic('<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>'),
+    del:_ic('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>')
+  };
+  const replyBtn=`<button data-reply-btn title="Reply">${_dl?IC.reply:'↪'}</button>`;
+  const reactBtn=`<button data-react-btn title="Add reaction">${_dl?IC.react:'😊'}</button>`;
+  const copyBtn=m.text?`<button data-copy-btn title="Copy message">${_dl?IC.copy:'📋'}</button>`:'';
+  const editBtn=canEdit?`<button data-edit-btn title="Edit message">${_dl?IC.edit:'✏️'}</button>`:'';
   // Delete button sits in the hover bar: on your own messages, and on everyone's for
   // owners and mods (mods can't delete owners' messages).
-  const delBtn=canDelete?`<button data-more-btn title="Delete message" class="hb-danger">🗑️</button>`:'';
+  const delBtn=canDelete?`<button data-more-btn title="Delete message" class="hb-danger">${_dl?IC.del:'🗑️'}</button>`:'';
   const editedTag=(m.editedAt&&m.text)?`<span class="edited-tag">(edited)</span>`:'';
   let replyRefHTML='';
   if(m.replyTo&&m.replyTo.id){

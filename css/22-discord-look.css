@@ -724,3 +724,65 @@ html.discord-look .pf-card .pf-pron,html.discord-look .pf-card .pf-status{font-s
 html.discord-look .pf-card .pf-actions .btn{padding:6px 14px;font-size:13px}
 html.discord-look .pf-card .pf-desc,html.discord-look .pf-card .pf-meta-val{font-size:13px}
 html.discord-look .pf-card .pf-role{font-size:11px}
+
+/* ===== v9: no stray horizontal scrollbar; Discord-style hover toolbar ===== */
+html.discord-look .messages{overflow-x:hidden}
+html.discord-look .msg,html.discord-look .msg.me{box-sizing:border-box;position:relative;max-width:calc(100% - 16px)}
+html.discord-look .bubble,html.discord-look .msg.me .bubble{position:static}
+html.discord-look .msg-hover-bar,html.discord-look .msg.me .msg-hover-bar{position:absolute;top:-18px;right:16px;left:auto;z-index:5;padding:2px;gap:0;border-radius:10px!important;opacity:0;pointer-events:none;transform:none;transition:opacity .1s}
+html.discord-look .msg:hover .msg-hover-bar,html.discord-look .msg-hover-bar.pinned{opacity:1;pointer-events:auto}
+html.discord-look .msg-hover-bar button{width:32px;height:32px;border-radius:8px;color:var(--dl-muted);background:transparent!important}
+html.discord-look .msg-hover-bar button svg{display:block}
+html.discord-look .msg-hover-bar button:hover{background:var(--dl-hover)!important;color:var(--dl-head)}
+html.discord-look .msg-hover-bar .hb-danger:hover{color:#f23f43}
+
+/* ===== v9: rounder everywhere ===== */
+html.discord-look .composer .row{border-radius:18px}
+html.discord-look .sb-item,html.discord-look .dl-mem,html.discord-look .dl-fr-row{border-radius:12px}
+html.discord-look .sb-search,html.discord-look .sb-search input,html.discord-look .dl-fr-search input{border-radius:12px}
+html.discord-look .modal,html.discord-look .card{border-radius:20px!important}
+html.discord-look .modal.pf-card{border-radius:20px!important}
+html.discord-look .modal.wide:has(#sTabs){border-radius:18px!important}
+html.discord-look .modal.wide:has(#sTabs) .modal-tabs button,html.discord-look .modal-tabs button{border-radius:10px}
+html.discord-look .set-card{border-radius:16px!important}
+html.discord-look .btn,html.discord-look .btn.sec,html.discord-look .btn.small{border-radius:10px}
+html.discord-look .field input,html.discord-look .field select,html.discord-look .field textarea,html.discord-look .cp-btn,html.discord-look .csel-btn{border-radius:10px}
+html.discord-look .mention-pop,html.discord-look .emoji-pop,html.discord-look .cp-pop,html.discord-look .csel-menu,html.discord-look .toast,html.discord-look .list-row,html.discord-look .empty{border-radius:16px!important}
+html.discord-look .reaction-pill{border-radius:12px!important}
+html.discord-look .msg,html.discord-look .msg.ping-row{border-radius:12px}
+html.discord-look .bubble .imgs img,html.discord-look .bubble img{border-radius:14px}
+html.discord-look .sidebar{border-radius:18px 0 0 0!important}
+html.discord-look .dl-members.show.dm{border-radius:18px 0 0 0}
+html.discord-look #chatPage .dl-user{border-radius:16px}
+html.discord-look .dl-rail-btn{border-radius:20px}
+html.discord-look .dl-rail-btn:hover,html.discord-look .dl-rail-btn.active{border-radius:16px}
+html.discord-look .dlp-banner{border-radius:18px 18px 0 0}
+html.discord-look .dlp-card{border-radius:0 0 18px 18px}
+html.discord-look .dlp-full,html.discord-look .dl-fr-tab,html.discord-look .dl-fr-add{border-radius:10px}
+html.discord-look .pf-role,html.discord-look .pf-card .pf-role{border-radius:8px}
+html.discord-look .typing-bar{border-radius:0}
+
+/* ===== v9: Discord-style motion for the UI itself (messages still just appear) ===== */
+@keyframes dlPop{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+@keyframes dlFade{from{opacity:0}to{opacity:1}}
+@keyframes dlSlide{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes dlSettingsIn{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:scale(1)}}
+html.discord-look .modal-bg{animation:dlFade .15s ease-out!important}
+html.discord-look .modal{animation:dlPop .22s cubic-bezier(.2,.9,.3,1.2)!important}
+html.discord-look .modal.wide:has(#sTabs){animation:dlSettingsIn .22s cubic-bezier(.2,.8,.3,1)!important}
+html.discord-look .mention-pop,html.discord-look .emoji-pop,html.discord-look .cp-pop,html.discord-look .csel-menu{animation:dlSlide .16s ease-out!important;transform-origin:bottom left}
+html.discord-look .toast{animation:dlSlide .2s ease-out!important}
+html.discord-look .page{animation:dlFade .2s ease-out!important}
+html.discord-look .dl-members.show{animation:dlFade .18s ease-out}
+html.discord-look .dlp{animation:dlFade .18s ease-out}
+html.discord-look .sb-item,html.discord-look .dl-mem,html.discord-look .dl-fr-row,html.discord-look .dl-user-me,html.discord-look .dl-user-gear,
+html.discord-look .btn,html.discord-look .modal-tabs button,html.discord-look .reaction-pill,html.discord-look .msg-hover-bar button{transition:background-color .12s ease,color .12s ease,border-radius .15s ease,transform .15s ease,opacity .12s ease!important}
+html.discord-look .dl-rail-btn{transition:background-color .15s ease,color .15s ease,border-radius .2s cubic-bezier(.3,1.4,.5,1),transform .15s ease!important}
+html.discord-look .dl-rail-btn:active,html.discord-look .btn:active{transform:translateY(1px)}
+/* the gear turns, like Discord's user-settings cog */
+html.discord-look .dl-user-gear svg,html.discord-look .dl-rail-btn[data-rail=settings] svg{transition:transform .35s cubic-bezier(.3,1.3,.5,1)}
+html.discord-look .dl-user-gear:hover svg,html.discord-look .dl-rail-btn[data-rail=settings]:hover svg{transform:rotate(90deg)}
+html.discord-look .dl-user-gear:active svg{transform:rotate(180deg)}
+html.discord-look .typing-dots i{animation:dlTyping 1s infinite ease-in-out!important}
+@keyframes dlTyping{0%,60%,100%{opacity:.4;transform:none}30%{opacity:1;transform:translateY(-2px)}}
+@media (prefers-reduced-motion:reduce){html.discord-look *{animation-duration:.01s!important;transition-duration:.01s!important}}
