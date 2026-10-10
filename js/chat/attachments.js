@@ -9,7 +9,7 @@
 $('#ccClose').onclick=cancelCompose;
 
 /* Images */
-/* "+" button: with Discord look it opens a small menu (Upload a File / Upload your message as a file);
+/* "+" button: with Discord look it opens a small menu (Upload a File);
    with it off it still opens the image picker directly, like before. */
 const plusMenu=$('#plusMenu');
 const dlOn=()=>typeof DiscordLook!=='undefined'&&DiscordLook.on();
@@ -31,53 +31,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&plusMenu&&!plusMenu.classList.contains('hidden')){e.preventDefault();e.stopPropagation();closePlusMenu()}
 },true);
 $('#plusUpload').onclick=()=>{closePlusMenu();$('#fileIn').click()};
-$('#plusAsFile').onclick=()=>{closePlusMenu();messageAsFile()};
 
-// "Upload your message as a file": the chat only stores text + JPEG images, so the typed message is drawn onto a
-// text-file-looking card and attached as an image (the text box is cleared, then press Enter to send it).
-function textToFileCard(text){
-  const W=860,PAD=28,FS=17,LH=25,HEAD=46,MAXW=W-PAD*2,MAXLINES=300;
-  const mono=FS+'px Consolas,"Courier New",monospace';
-  const m=document.createElement('canvas').getContext('2d');m.font=mono;
-  let lines=[];
-  text.replace(/\r/g,'').split('\n').forEach(par=>{
-    if(!par){lines.push('');return}
-    let cur='';
-    par.split(' ').forEach(w=>{
-      const t=cur?cur+' '+w:w;
-      if(m.measureText(t).width<=MAXW){cur=t;return}
-      if(cur)lines.push(cur);
-      cur='';
-      while(m.measureText(w).width>MAXW){let n=w.length;while(n>1&&m.measureText(w.slice(0,n)).width>MAXW)n--;lines.push(w.slice(0,n));w=w.slice(n)}
-      cur=w;
-    });
-    lines.push(cur);
-  });
-  if(lines.length>MAXLINES)lines=lines.slice(0,MAXLINES);
-  const c=document.createElement('canvas');c.width=W;c.height=HEAD+PAD*2+lines.length*LH;
-  const g=c.getContext('2d');
-  g.fillStyle='#2b2d31';g.fillRect(0,0,W,c.height);
-  g.fillStyle='#1e1f22';g.fillRect(0,0,W,HEAD);
-  g.font='600 15px "Helvetica Neue",Arial,sans-serif';g.fillStyle='#dbdee1';g.textBaseline='middle';
-  g.fillText('message.txt',PAD,HEAD/2);
-  g.font='13px "Helvetica Neue",Arial,sans-serif';g.fillStyle='#949ba4';g.textAlign='right';
-  g.fillText(text.length+' characters',W-PAD,HEAD/2);g.textAlign='left';
-  g.font=mono;g.fillStyle='#dbdee1';g.textBaseline='top';
-  lines.forEach((l,i)=>g.fillText(l,PAD,HEAD+PAD+i*LH));
-  return shrinkCanvasToLimit(c,.92);
-}
-function messageAsFile(){
-  const text=msgIn.value.trim();
-  if(!text){toast('Type your message first, then upload it as a file.','bad');msgIn.focus();return}
-  if(view.pending.length>=CFG.MAX_IMAGES){toast(`Max ${CFG.MAX_IMAGES} images per message.`,'bad');return}
-  const out=textToFileCard(text);
-  if(!out){toast('That message is too big to turn into a file.','bad');return}
-  view.pending.push(out);
-  msgIn.value='';msgIn.style.height='auto';$('#cc').textContent='0';
-  const mp=$('#mentionPop');if(mp)mp.classList.add('hidden');
-  renderPreviews();msgIn.focus();
-  toast('Message attached as a file — press Enter to send.');
-}
 $('#emojiBtn').onclick=()=>{
   openEmojiPicker($('#emojiBtn'),emoji=>{
     const pos=msgIn.selectionStart??msgIn.value.length;

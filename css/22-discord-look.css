@@ -354,7 +354,7 @@ html.discord-look .dl-user-gear:hover{background:var(--dl-hover)!important;color
 html.discord-look .dl-user-gear:focus-visible,html.discord-look .dl-user-me:focus-visible{outline:2px solid #00a8fc;outline-offset:-2px}
 
 /* ==========================================================================
- * Composer "+" button and its menu (Upload a File / Upload your message as a file)
+ * Composer "+" button and its menu (Upload a File)
  * ========================================================================== */
 #attachBtn .ab-plus{display:none}
 .dl-plus-menu{display:none}
@@ -866,3 +866,72 @@ html.discord-look .msg .meta .nm-wrap,html.discord-look .msg .meta .hw-name{marg
 .lk-prev-discord .pv-in{position:absolute;left:8px;right:8px;bottom:8px;height:16px;border-radius:9px;background:#383a40}
 .lk-prev-discord .pv-mem{width:34px;background:#2b2d31;display:flex;flex-direction:column;gap:7px;padding:10px 7px}
 .lk-prev-discord .pv-mem i{height:7px;border-radius:4px;background:#404249}
+
+/* ==========================================================================
+ * v13: closer to the real Discord - settings window, message hover toolbar, "+" upload menu, "User Settings" tooltip
+ * (all scoped to html.discord-look, so the normal look is untouched)
+ * ========================================================================== */
+
+/* ---------- message hover toolbar: compact dark bar of icon buttons, red trash ---------- */
+html.discord-look .msg-hover-bar,html.discord-look .msg.me .msg-hover-bar{top:-18px;right:16px;left:auto;padding:4px!important;gap:2px!important;border-radius:8px!important;
+  background:var(--dl-bg2)!important;border:1px solid var(--dl-line)!important;box-shadow:0 0 0 1px rgba(0,0,0,.04),0 4px 10px rgba(0,0,0,.3)!important}
+html.discord-look .msg-hover-bar button{width:32px;height:32px;border-radius:5px;color:#b5bac1;background:transparent!important}
+html.discord-look .msg-hover-bar button svg{width:20px;height:20px;display:block}
+html.discord-look .msg-hover-bar button:hover{background:var(--dl-hover)!important;color:var(--dl-head)}
+html.discord-look .msg-hover-bar .hb-danger{color:#f23f43}
+html.discord-look .msg-hover-bar .hb-danger:hover{background:#f23f43!important;color:#fff}
+
+/* ---------- "+" upload menu: one dark popout item, blurple on hover ---------- */
+html.discord-look .dl-plus-menu:not(.hidden){min-width:220px;padding:6px;background:var(--dl-bg3)!important;border:1px solid var(--dl-line);border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,.45);bottom:80px}
+html.discord-look .dl-plus-item{gap:10px;padding:8px 10px;border-radius:4px;font-size:14px;font-weight:600;color:var(--dl-text)}
+html.discord-look .dl-plus-item svg{width:20px;height:20px;color:var(--dl-text)}
+html.discord-look .dl-plus-item:hover,html.discord-look .dl-plus-item:focus-visible{background:#5865f2!important;color:#fff}
+html.discord-look .dl-plus-item:hover svg,html.discord-look .dl-plus-item:focus-visible svg{color:#fff}
+
+/* ---------- Discord tooltip (used by the user-panel gear: "User Settings") ---------- */
+html.discord-look [data-tip]{position:relative}
+html.discord-look [data-tip]::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 10px);transform:translate(-50%,4px);z-index:80;white-space:nowrap;pointer-events:none;
+  padding:8px 12px;border-radius:6px;background:var(--dl-bg3);color:var(--dl-head);font-size:14px;font-weight:600;line-height:1.2;box-shadow:0 8px 16px rgba(0,0,0,.4);opacity:0;transition:opacity .1s ease,transform .1s ease}
+html.discord-look [data-tip]::before{content:"";position:absolute;left:50%;bottom:calc(100% + 4px);transform:translate(-50%,4px);z-index:80;pointer-events:none;
+  border:6px solid transparent;border-top-color:var(--dl-bg3);border-bottom:0;opacity:0;transition:opacity .1s ease,transform .1s ease}
+html.discord-look [data-tip]:hover::after,html.discord-look [data-tip]:hover::before,html.discord-look [data-tip]:focus-visible::after,html.discord-look [data-tip]:focus-visible::before{opacity:1;transform:translate(-50%,0);transition-delay:.25s}
+
+/* ---------- settings: nav icons only exist in the desktop Discord-style window ---------- */
+.dl-si{display:none}
+@media(min-width:821px){
+  html.discord-look .modal-bg:has(#sTabs){padding:28px!important}
+  html.discord-look .modal.wide:has(#sTabs){position:relative;grid-template-columns:260px minmax(0,1fr);border-radius:14px!important;border:1px solid rgba(255,255,255,.05)!important;box-shadow:0 12px 48px rgba(0,0,0,.55)!important}
+  /* every direct child sits in the content column, centred at 696px like Discord (the scroller itself spans the column so its bar sits at the window edge) */
+  html.discord-look .modal.wide:has(#sTabs)>*{margin-left:max(24px,calc((100% - 696px)/2));margin-right:max(24px,calc((100% - 696px)/2))}
+  html.discord-look .modal.wide:has(#sTabs)>h2{margin:20px 70px 0 17px;font-size:16px;font-weight:600;line-height:24px;color:var(--dl-head)}
+  html.discord-look .modal.wide:has(#sTabs)>.hint{margin-top:10px;margin-bottom:0}
+  html.discord-look .modal.wide:has(#sTabs)>[data-p]{margin-left:0;margin-right:0;margin-top:12px;padding:24px max(24px,calc((100% - 696px)/2)) 24px}
+  html.discord-look .modal.wide:has(#sTabs)>.actions{margin:0;padding:14px max(24px,calc((100% - 696px)/2))}
+  /* sidebar: same surface as the content, like Discord's new settings */
+  html.discord-look .modal.wide:has(#sTabs)>#sTabs{background:transparent!important;gap:2px;padding:24px 12px 20px 17px}
+  html.discord-look .dl-set-user{gap:12px;padding:0 8px;margin:0 0 14px;min-height:56px}
+  html.discord-look .dl-set-av .avatar{width:48px!important;height:48px!important;font-size:18px!important}
+  html.discord-look .dl-set-nm b{font-size:16px}
+  html.discord-look .dl-set-nm small{font-size:13px}
+  html.discord-look .dl-set-search{position:relative;margin:0 0 14px}
+  html.discord-look .dl-set-search input{height:40px;padding:0 12px 0 38px;border-radius:8px;border:1px solid var(--dl-line);background:rgba(0,0,0,.16)!important;font-size:15px}
+  html.discord-look .dl-set-search input:focus{border-color:#5865f2}
+  html.discord-look .dl-set-search::before{content:"";position:absolute;left:12px;top:50%;width:18px;height:18px;transform:translateY(-50%);pointer-events:none;background:no-repeat center/contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b5bac1' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5'/%3E%3Cpath d='m20 20-4.8-4.8'/%3E%3C/svg%3E")}
+  html.discord-look .dl-set-h{padding:8px 10px 6px;font-size:13px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--dl-muted)}
+  html.discord-look .dl-set-sep{margin:8px 4px}
+  html.discord-look #sTabs button{gap:12px;padding:9px 10px;border-radius:8px;font-size:15px}
+  html.discord-look #sTabs button .dl-si{display:block;flex:none;width:20px;height:20px}
+  html.discord-look #sTabs button.active{background:var(--dl-active)!important}
+  /* plain X, no circle / ESC label */
+  html.discord-look .dl-set-x{top:18px;right:22px;width:32px;height:32px;border:0!important;border-radius:6px;font-size:20px;line-height:1}
+  html.discord-look .dl-set-x::after{display:none}
+  html.discord-look .dl-set-x:hover{background:var(--dl-hover)!important;color:var(--dl-head)}
+  /* content: borderless sections with big headings, thin dividers (Account Info / Password & Security style) */
+  html.discord-look .modal.wide:has(#sTabs) .set-card{background:transparent!important;border:0!important;border-bottom:1px solid var(--dl-line)!important;border-radius:0!important;box-shadow:none!important;padding:0 0 28px;margin:0 0 28px}
+  html.discord-look .modal.wide:has(#sTabs) .set-card:last-child{border-bottom:0!important;margin-bottom:0}
+  html.discord-look .modal.wide:has(#sTabs) .set-card:hover{border-color:var(--dl-line)}
+  html.discord-look .modal.wide:has(#sTabs) .section-h{display:block;margin:0 0 20px!important;font-size:24px;font-weight:400;line-height:1.25;letter-spacing:0;text-transform:none;color:var(--dl-head)}
+  html.discord-look .modal.wide:has(#sTabs) .field label{font-size:14px;font-weight:600;color:var(--dl-head)}
+  html.discord-look .modal.wide:has(#sTabs) .toggle-row{padding:6px 0}
+  html.discord-look .modal.wide:has(#sTabs) .btn.sec,html.discord-look .modal.wide:has(#sTabs) .btn.small{border-radius:8px!important;min-height:36px;padding:0 18px;font-weight:500}
+}

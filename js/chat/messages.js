@@ -311,7 +311,7 @@ function msgEl(m){
   const nameAfter=mine?'<span class="nm-sep">·</span>'+nameSpan:'';
   const reactionsHTML=reactionRowHTML(m.id);
   el.innerHTML=`${replyRefHTML}<div class="msg-row">${mine?myAv:avClickable}<div class="msg-body"><div class="meta">${nameHTML}${time}${editedTag}${isShownOwner(m.senderId)?' <span class="tag owner">#'+m.senderId+'</span>':''}${DB.isMuted(m.senderId)?' <span class="tag" style="background:#555;color:#fff">muted</span>':''}${nameAfter}</div>
-    <div class="bubble${pinged?' pinged':''}${(!m.text&&m.images&&m.images.length)?' img-only':''}${isEmojiOnly(m.text)?' jumbo-emoji':''}"${bStyle}><div class="msg-hover-bar">${copyBtn}${editBtn}${delBtn}${reactBtn}${replyBtn}</div>${fmtText(displayMsgText(m.text))}${imagesHTML(m.images)}</div>${reactionsHTML}</div></div>`;
+    <div class="bubble${pinged?' pinged':''}${(!m.text&&m.images&&m.images.length)?' img-only':''}${isEmojiOnly(m.text)?' jumbo-emoji':''}"${bStyle}><div class="msg-hover-bar">${_dl?`${copyBtn}${replyBtn}${reactBtn}${editBtn}${delBtn}`:`${copyBtn}${editBtn}${delBtn}${reactBtn}${replyBtn}`}</div>${fmtText(displayMsgText(m.text))}${imagesHTML(m.images)}</div>${reactionsHTML}</div></div>`;
   el.querySelectorAll('.imgs img').forEach((img,i)=>img.onclick=()=>openLightbox(m.images,i));
   wireReactions(el,m);
   const reactBtnEl=el.querySelector('[data-react-btn]');

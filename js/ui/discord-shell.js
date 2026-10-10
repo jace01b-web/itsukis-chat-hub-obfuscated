@@ -40,7 +40,7 @@ const DiscordShell=(function(){
       {id:'extras',t:'Extras',ic:EXTRAS_IC},
       {id:'gift',t:'Gift Nitro perks',ic:'🎁'}
     ];
-    r.innerHTML=items.map(railItem).join('')+`<div class="dl-rail-grow"></div>`+railItem({id:'settings',t:'Settings',ic:GEAR});
+    r.innerHTML=items.map(railItem).join('')+`<div class="dl-rail-grow"></div>`+railItem({id:'settings',t:'User Settings',ic:GEAR});
   }
   /* ---------- Extras pop-out (the home page's Extras menu, as a Discord-style popover next to the rail) ---------- */
   let exPop=null;
@@ -100,7 +100,7 @@ const DiscordShell=(function(){
   function renderUser(){
     placeUser();
     const p=document.getElementById('dlUser');if(!p||!ME)return;
-    p.innerHTML=`<button type="button" class="dl-user-me" id="dlUserMe" title="Profile settings"><span class="dl-user-av">${avatarHtml(ME,ME.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot"></i></span><span class="dl-user-txt"><b>${esc(displayUsername(ME.username))}</b><small>Online</small></span></button><button type="button" class="dl-user-gear" id="dlUserGear" title="Settings" aria-label="Settings">${GEAR}</button>`;
+    p.innerHTML=`<button type="button" class="dl-user-me" id="dlUserMe" title="Profile settings"><span class="dl-user-av">${avatarHtml(ME,ME.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot"></i></span><span class="dl-user-txt"><b>${esc(displayUsername(ME.username))}</b><small>Online</small></span></button><button type="button" class="dl-user-gear" id="dlUserGear" data-tip="User Settings" aria-label="User Settings">${GEAR}</button>`;
     document.getElementById('dlUserMe').onclick=()=>openAccount();
     document.getElementById('dlUserGear').onclick=()=>openSettings(false);
   }
