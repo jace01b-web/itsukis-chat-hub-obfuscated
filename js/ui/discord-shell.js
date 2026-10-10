@@ -56,7 +56,17 @@ const DiscordShell=(function(){
   }
 
   /* ---------- user panel (bottom of the sidebar) ---------- */
+  /* The user panel floats across the bottom-left corner (under the rail AND the sidebar) on desktop, so it lives
+     directly in .chat-layout there; on phones it goes back to the bottom of the slide-out sidebar. */
+  function placeUser(){
+    const p=document.getElementById('dlUser'),lay=document.querySelector('#chatPage .chat-layout'),sb=document.getElementById('sidebar');
+    if(!p||!lay||!sb)return;
+    const want=desktop()?lay:sb;
+    if(p.parentElement!==want)want.appendChild(p);
+  }
+  window.addEventListener('resize',()=>{try{placeUser()}catch(_){}});
   function renderUser(){
+    placeUser();
     const p=document.getElementById('dlUser');if(!p||!ME)return;
     p.innerHTML=`<button type="button" class="dl-user-me" id="dlUserMe" title="Profile settings"><span class="dl-user-av">${avatarHtml(ME,ME.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot"></i></span><span class="dl-user-txt"><b>${esc(displayUsername(ME.username))}</b><small>Online</small></span></button><button type="button" class="dl-user-gear" id="dlUserGear" title="Settings" aria-label="Settings">${GEAR}</button>`;
     document.getElementById('dlUserMe').onclick=()=>openAccount();
