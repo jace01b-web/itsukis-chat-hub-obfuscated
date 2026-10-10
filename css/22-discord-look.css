@@ -786,3 +786,24 @@ html.discord-look .dl-user-gear:active svg{transform:rotate(180deg)}
 html.discord-look .typing-dots i{animation:dlTyping 1s infinite ease-in-out!important}
 @keyframes dlTyping{0%,60%,100%{opacity:.4;transform:none}30%{opacity:1;transform:translateY(-2px)}}
 @media (prefers-reduced-motion:reduce){html.discord-look *{animation-duration:.01s!important;transition-duration:.01s!important}}
+
+/* ===== v10: names = just the username with its effect (+ emoji badges); no title pills or tier labels ===== */
+html.discord-look .nm-title,html.discord-look .hw-title,html.discord-look .msg .meta .tag,html.discord-look .dl-mem .tag{display:none!important}
+html.discord-look .nm-wrap{display:inline;background:none!important;border:0!important;box-shadow:none!important;padding:0!important;gap:0;animation:none!important;border-radius:0}
+html.discord-look .nm-wrap::before,html.discord-look .nm-wrap::after{display:none!important}
+html.discord-look .nm-wrap .nm-user{background-clip:text}
+html.discord-look .hw-bdg,html.discord-look .flair-badge,html.discord-look .vip-badge{margin-left:4px;font-size:.9em}
+
+/* ===== v10: Extras pop-out from the rail ===== */
+html.discord-look .dl-ex-pop{position:fixed;z-index:60;width:min(332px,calc(100vw - 32px));animation:dlSlide .18s ease-out}
+html.discord-look .dl-ex-pop .ex-shell{width:100%!important;border-radius:20px!important;background:var(--dl-sbg)!important;border:1px solid var(--dl-line)!important;box-shadow:0 12px 32px rgba(0,0,0,.5)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html.discord-look .dl-ex-pop .ex-shell::before,html.discord-look .dl-ex-pop .ex-shell::after{display:none}
+html.discord-look .dl-ex-pop .extras-menu{height:auto!important;visibility:visible!important}
+html.discord-look .dl-ex-pop .ex-inner{width:100%;box-sizing:border-box;opacity:1;transform:none;padding:12px}
+html.discord-look .dl-rail-btn[data-rail=extras].open{border-radius:16px;background:#5865f2!important;color:#fff}
+html.discord-look .nm-wrap .nm-user,html.discord-look .hw-name .nm-user{font-size:inherit!important;font-weight:inherit;letter-spacing:normal;line-height:inherit;padding:0;background-color:transparent}
+html.discord-look .msg .meta>span[data-open-profile],html.discord-look .msg .meta .nm-wrap,html.discord-look .msg .meta .hw-name{font-size:16px}
+html.discord-look .dl-ex-pop{max-height:calc(100vh - 24px);overflow-y:auto;border-radius:20px;scrollbar-width:none}
+html.discord-look .nm-wrap,html.discord-look .nm-wrap .nm-user,html.discord-look .hw-name,html.discord-look .hw-name .nm-user,html.discord-look .flair-name{overflow:visible!important;max-width:none!important;width:auto!important;text-overflow:clip!important;white-space:nowrap}
+html.discord-look .msg .meta .nm-wrap,html.discord-look .msg .meta .hw-name{display:inline-block;overflow:visible}
+html.discord-look .msg .meta .nm-wrap,html.discord-look .msg .meta .hw-name{margin-right:6px}

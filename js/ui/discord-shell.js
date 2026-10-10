@@ -12,6 +12,7 @@
 const DiscordShell=(function(){
   const LOGO='<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" fill="currentColor"><path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>';
   const GEAR='<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor"><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.6a.5.5 0 0 0 .1-.6l-1.9-3.3a.5.5 0 0 0-.6-.2l-2.4 1a7.4 7.4 0 0 0-1.7-1l-.4-2.5a.5.5 0 0 0-.5-.4h-3.8a.5.5 0 0 0-.5.4l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1a.5.5 0 0 0-.6.2L2.6 8.8a.5.5 0 0 0 .1.6l2 1.6a7.6 7.6 0 0 0 0 2l-2 1.6a.5.5 0 0 0-.1.6l1.9 3.3a.5.5 0 0 0 .6.2l2.4-1a7.4 7.4 0 0 0 1.7 1l.4 2.5a.5.5 0 0 0 .5.4h3.8a.5.5 0 0 0 .5-.4l.4-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1a.5.5 0 0 0 .6-.2l1.9-3.3a.5.5 0 0 0-.1-.6zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>';
+  const EXTRAS_IC='<svg viewBox="0 0 20 20" width="24" height="24" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1.8" fill="#8b7cff"/><rect x="11.5" y="2.5" width="6" height="6" rx="1.8" fill="currentColor"/><rect x="2.5" y="11.5" width="6" height="6" rx="1.8" fill="currentColor"/><rect x="11.5" y="11.5" width="6" height="6" rx="1.8" fill="#ff7cc0"/></svg>';
   let lastOn=null,tab='online',q='';
 
   function on(){return typeof DiscordLook!=='undefined'&&DiscordLook.on()}
@@ -36,20 +37,51 @@ const DiscordShell=(function(){
       {id:'vip',t:'VIP Lounge',ic:'💎',active:g&&sec==='vip'},
       {sep:1},
       {id:'hubs',t:'Hubs & Tools',ic:'🎮'},
-      {id:'home',t:'Main menu',ic:'🏠'}
+      {id:'extras',t:'Extras',ic:EXTRAS_IC},
+      {id:'gift',t:'Gift Nitro perks',ic:'🎁'}
     ];
     r.innerHTML=items.map(railItem).join('')+`<div class="dl-rail-grow"></div>`+railItem({id:'settings',t:'Settings',ic:GEAR});
   }
+  /* ---------- Extras pop-out (the home page's Extras menu, as a Discord-style popover next to the rail) ---------- */
+  let exPop=null;
+  function closeExtras(){if(exPop){exPop.remove();exPop=null}const b=document.querySelector('#dlRail [data-rail=extras]');if(b)b.classList.remove('open')}
+  function toggleExtras(btn){
+    if(exPop){closeExtras();return}
+    const src=document.querySelector('#extrasMenu .ex-inner');if(!src)return;
+    const inner=src.cloneNode(true);
+    inner.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));
+    const orig=[...src.querySelectorAll('.ex-item')],copy=[...inner.querySelectorAll('.ex-item')];
+    exPop=document.createElement('div');
+    exPop.className='dl-ex-pop extras open';
+    exPop.innerHTML='<div class="ex-shell"><div class="extras-menu"><div class="ex-inner"></div></div></div>';
+    exPop.querySelector('.ex-inner').replaceWith(inner);
+    document.body.appendChild(exPop);
+    const r=btn.getBoundingClientRect();
+    exPop.style.left=(r.right+14)+'px';
+    exPop.style.bottom=Math.max(12,window.innerHeight-r.bottom-8)+'px';
+    btn.classList.add('open');
+    exPop.addEventListener('click',e=>{
+      e.stopPropagation();
+      const it=e.target.closest('.ex-item');if(!it)return;
+      const i=copy.indexOf(it);if(i<0||!orig[i])return;
+      e.preventDefault();
+      closeExtras();
+      orig[i].click();     // same action as on the home page (Zoom link, launcher download, voice channel)
+    });
+  }
+  document.addEventListener('click',e=>{if(exPop&&!e.target.closest('.dl-ex-pop')&&!e.target.closest('[data-rail=extras]'))closeExtras()});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeExtras()});
   function railClick(e){
     const b=e.target.closest('[data-rail]');if(!b||!ME)return;
     const go={
-      dms:()=>openChat('dms'),
+      dms:()=>{closeExtras();openChat('dms')},
       global:()=>openChat('global'),
       rooms:()=>openChat('global','rooms'),
       ann:()=>openChat('global','announcements'),
       vip:()=>openChat('global','vip'),
       hubs:()=>modalGameHubs(),
-      home:()=>{view.roomKey=null;view.section=null;DB.watchMessages(null);goHome(true)},
+      extras:()=>toggleExtras(b),
+      gift:()=>{closeExtras();if(typeof showGiftPromo==='function')showGiftPromo()},
       settings:()=>openSettings(false)
     }[b.dataset.rail];
     if(go)go();
