@@ -974,3 +974,73 @@ html.discord-look .reply-ref.gone:hover .rr-text{color:var(--dl-muted)}
 /* normal look: deleted original just reads as a faded italic note */
 .reply-ref.gone{cursor:default}
 .reply-ref.gone .rr-text{font-style:italic;opacity:.7}
+
+/* ==========================================================================
+ * v15: settings window at Discord's size, Discord-style profiles (popout, full card, DM panel), private notes
+ * ========================================================================== */
+
+/* ---------- settings: a centred window with margins (not edge-to-edge), like Discord ---------- */
+@media(min-width:821px){
+  html.discord-look .modal-bg:has(#sTabs){padding:72px 13.5vw!important}
+  html.discord-look .modal.wide:has(#sTabs){border-radius:12px!important}
+  html.discord-look .modal.wide:has(#sTabs)>.dl-set-x{margin:0}
+}
+@media(min-width:821px) and (max-width:1100px){
+  html.discord-look .modal-bg:has(#sTabs){padding:40px 5vw!important}
+}
+
+/* ---------- private notes (profile card, popout and DM panel) ---------- */
+html.discord-look .pf-note{margin-top:20px}
+html.discord-look .pf-note-h{font-size:12px;font-weight:600;color:var(--dl-head);margin-bottom:4px}
+html.discord-look .pf-note-in{display:block;width:100%;box-sizing:border-box;min-height:28px;max-height:120px;padding:4px 6px;margin:0 0 0 -6px;border:0;border-radius:4px;resize:none;overflow-y:auto;
+  background:transparent!important;color:var(--dl-text);font:inherit;font-size:14px;line-height:1.35;outline:none;scrollbar-width:thin;scrollbar-color:var(--dl-scroll) transparent}
+html.discord-look .pf-note-in::placeholder{font-style:italic;color:var(--dl-muted);opacity:1}
+html.discord-look .pf-note-in:hover{background:rgba(255,255,255,.04)!important}
+html.discord-look .pf-note-in:focus{background:rgba(0,0,0,.2)!important}
+
+/* ---------- full profile card (click "View Full Profile"): Discord's layout ---------- */
+html.discord-look .pf-card .pf-sub{order:2;display:flex;align-items:center;flex-wrap:wrap;gap:2px 8px;margin-top:4px}
+html.discord-look .pf-card .pf-sub .pf-status{order:1;margin:0!important;padding:0!important;font-size:14px!important;color:var(--dl-text)!important}
+html.discord-look .pf-card .pf-sub .pf-pron{order:2;margin:0!important;padding:0!important;font-size:14px!important;color:var(--dl-text)!important}
+html.discord-look .pf-card .pf-sub .pf-pron::before{content:"\2022";margin-right:8px;color:var(--dl-muted)}
+html.discord-look .pf-card .pf-note{order:11}
+html.discord-look .pf-card .pf-actions .btn{height:36px;border-radius:8px!important;padding:0 16px;font-weight:600}
+html.discord-look .pf-card .pf-actions .pf-icon-btn{width:36px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+html.discord-look .pf-card .pf-meta-label{font-size:12px;font-weight:600;color:var(--dl-head)}
+html.discord-look .pf-card .pf-meta-val{display:flex;align-items:center;gap:8px;white-space:normal;font-size:14px}
+html.discord-look .pf-card .pf-ms-ic{flex:none;color:var(--dl-muted)}
+html.discord-look .pf-card .pf-role{border-radius:8px;padding:4px 8px;font-size:12px;font-weight:500;background:var(--dl-sbg2);border:1px solid var(--dl-line)}
+html.discord-look .pf-card .pf-roles::before{font-weight:600}
+html.discord-look .pf-card .pf-x{background:rgba(0,0,0,.45)!important}
+
+/* ---------- DM side panel ---------- */
+html.discord-look .dlp .pf-role{border-radius:8px}
+html.discord-look .dlp .pf-note-in{margin-left:-6px}
+
+/* ---------- popout: click a name / avatar in the chat or the member list ---------- */
+html.discord-look .modal-bg.dlpo-bg{display:block;padding:0;background:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;animation:none!important}
+html.discord-look .dlpo{position:fixed;z-index:600;width:340px;max-width:calc(100vw - 24px);max-height:calc(100vh - 24px);overflow-y:auto;overflow-x:hidden;scrollbar-width:none;
+  background:var(--dl-sbg3);border:1px solid var(--dl-line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.5);color:var(--dl-text);text-align:left;transform-origin:left top;animation:dlPop .16s ease-out}
+html.discord-look .dlpo::-webkit-scrollbar{display:none}
+html.discord-look .dlpo-banner{position:relative;height:100px}
+html.discord-look .dlpo-btns{position:absolute;top:10px;right:10px;display:flex;gap:8px}
+html.discord-look .dlpo-ib{display:flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0;border:0!important;border-radius:50%;background:rgba(0,0,0,.5)!important;color:#fff;cursor:pointer;box-shadow:none!important}
+html.discord-look .dlpo-ib:hover{background:rgba(0,0,0,.7)!important}
+html.discord-look .dlpo-av{position:relative;width:80px;height:80px;margin:-44px 0 0 16px}
+html.discord-look .dlpo-av .avatar{width:80px!important;height:80px!important;font-size:30px!important;border:6px solid var(--dl-sbg3)!important;box-sizing:content-box;margin:-6px;box-shadow:none!important}
+html.discord-look .dlpo-st{position:absolute;right:-10px;bottom:-4px;width:28px;height:28px;border-radius:50%;background:var(--dl-sbg3);display:grid;place-items:center}
+html.discord-look .dlpo-st i{display:block;width:14px;height:14px;border-radius:50%;background:#80848e}
+html.discord-look .dlpo-st i.on{background:#23a55a}
+html.discord-look .dlpo-body{padding:8px 16px 14px}
+html.discord-look .dlpo-name{font-size:20px;font-weight:700;line-height:1.25;color:var(--dl-head);word-break:break-word}
+html.discord-look .dlpo-sub{margin-top:2px;font-size:14px;color:var(--dl-text)}
+html.discord-look .dlpo-sub b{margin:0 4px;color:var(--dl-muted);font-weight:400}
+html.discord-look .dlpo-bio{margin-top:14px;font-size:14px;line-height:1.4;white-space:pre-wrap;word-break:break-word;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:5;overflow:hidden}
+html.discord-look .dlpo-full{display:block;margin:12px 0 0;padding:0;border:0!important;background:none!important;box-shadow:none!important;color:var(--dl-head);font-size:12px;font-weight:700;cursor:pointer}
+html.discord-look .dlpo-full:hover{text-decoration:underline}
+html.discord-look .dlpo .pf-roles{display:flex;flex-wrap:wrap;gap:4px;margin-top:14px}
+html.discord-look .dlpo .pf-role{border-radius:8px;padding:4px 8px;font-size:12px;font-weight:500;background:var(--dl-sbg2);border:1px solid var(--dl-line)}
+html.discord-look .dlpo .pf-role-more{border-radius:8px;padding:4px 8px;font-size:12px}
+html.discord-look .dlpo-msg{padding:0 16px 16px}
+html.discord-look .dlpo-msg input{display:block;width:100%;box-sizing:border-box;height:44px;padding:0 14px;border:0;border-radius:8px;background:var(--dl-sbg2)!important;color:var(--dl-text);font-size:14px;outline:none}
+html.discord-look .dlpo-msg input::placeholder{color:var(--dl-muted)}

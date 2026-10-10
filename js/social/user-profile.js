@@ -86,9 +86,101 @@ async function openDmWith(id,modalRoot){
   const sb=$('#sidebar');if(sb)sb.classList.remove('open');
 }
 
+// ---- Discord look: private notes + click popout --------------------------------------------------------------
+// Notes are stored only in this browser (never sent anywhere), one per person.
+const dlProfileOn=()=>typeof DiscordLook!=='undefined'&&DiscordLook.on();
+function noteKey(id){return 'ich.note.'+(ME?ME.id:0)+'.'+id}
+function noteGet(id){try{return localStorage.getItem(noteKey(id))||''}catch(_){return ''}}
+function noteSet(id,t){try{t?localStorage.setItem(noteKey(id),t):localStorage.removeItem(noteKey(id))}catch(_){}}
+function profileNoteHTML(id){
+  if(!ME||id===ME.id||!dlProfileOn())return '';
+  return `<div class="pf-note"><div class="pf-note-h">Note (only visible to you)</div><textarea class="pf-note-in" rows="1" maxlength="256" placeholder="Click to add a note" spellcheck="false" aria-label="Note">${esc(noteGet(id))}</textarea></div>`;
+}
+function wireProfileNote(root,id){
+  const ta=root.querySelector('.pf-note-in');if(!ta)return;
+  const fit=()=>{ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,120)+'px'};
+  fit();
+  ta.oninput=()=>{fit();noteSet(id,ta.value.trim())};
+  ta.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();ta.blur()}};
+}
+// remember what was clicked, so a name/avatar click in the chat or member list can open the small popout next to it
+let lastProfileClick=null;
+document.addEventListener('click',e=>{lastProfileClick={el:e.target,t:Date.now()}},true);
+function wantsProfilePopout(){
+  if(!dlProfileOn()||!window.matchMedia('(min-width:821px)').matches)return false;
+  const c=lastProfileClick;if(!c||Date.now()-c.t>700||!c.el||!c.el.closest)return false;
+  if(c.el.closest('.dl-fr,.dlp-full'))return false;                 // Friends page rows + "View Full Profile" go to the full card
+  return !!c.el.closest('#messages,#dlMembers');
+}
+function openProfilePopout(id){
+  const u=DB.getUser(id);if(!u||!ME)return false;
+  const root=$('#modalRoot');
+  const src=lastProfileClick.el;
+  const anchor=(src.closest('[data-open-profile]')||src);
+  const rc=anchor.getBoundingClientRect();
+  const isMe=id===ME.id,deleted=!!u.deleted;
+  const name=deleted?'Deleted User':displayUsername(u.username);
+  const online=isMe||DB.onlineIds().includes(id);
+  const accent=safeColor(u.settings&&u.settings.meBubble,'#5865f2');
+  const banner=safeColor(u.settings&&u.settings.bannerColor,accent);
+  const av=avatarHtml(u,name,'width:80px;height:80px;font-size:30px');
+  const canAdd=!isMe&&!deleted&&!DB.isFriend(ME.id,id)&&!DB.hasIncoming(id)&&!DB.hasOutgoing(ME.id,id)&&!DB.isBlocked(ME.id,id)&&!DB.isBlockedBy(ME.id,id);
+  const sub=deleted?'Account deleted':[online?'Online':'Offline',u.pronouns?esc(u.pronouns):''].filter(Boolean).join(' <b>\u2022</b> ');
+  const roles=deleted?'':profileRolesHTML(id);
+  root.innerHTML=`<div class="modal-bg dlpo-bg"><div class="dlpo" role="dialog" aria-label="Profile of ${esc(name)}">
+    <div class="dlpo-banner" style="background:${bannerGradCss(banner)}"><div class="dlpo-btns">
+      ${canAdd?'<button type="button" class="dlpo-ib" id="poAdd" title="Add Friend" aria-label="Add Friend"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 20c0-3.3 3.6-5 8-5s8 1.7 8 5v1H2zM19 8h-2v2h-2v2h2v2h2v-2h2v-2h-2z"/></svg></button>':''}
+      <button type="button" class="dlpo-ib" id="poMore" title="View full profile" aria-label="View full profile"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+    </div></div>
+    <div class="dlpo-av">${av}<span class="dlpo-st"><i class="${online&&!deleted?'on':''}"></i></span></div>
+    <div class="dlpo-body">
+      <div class="dlpo-name">${deleted?esc(name):fullNameHTML(id,esc(name))}</div>
+      <div class="dlpo-sub">${sub}</div>
+      ${(!deleted&&u.description)?`<div class="dlpo-bio">${esc(u.description)}</div>`:''}
+      ${deleted?'':'<button type="button" class="dlpo-full" id="poFull">View Full Profile</button>'}
+      ${roles}
+    </div>
+    ${(!isMe&&!deleted)?`<div class="dlpo-msg"><input id="poMsg" type="text" maxlength="2000" placeholder="Message @${esc(name)}" autocomplete="off" spellcheck="false" aria-label="Message ${esc(name)}"></div>`:''}
+  </div></div>`;
+  const bg=root.querySelector('.dlpo-bg'),card=root.querySelector('.dlpo');
+  const close=()=>{root.innerHTML='';document.removeEventListener('keydown',onKey,true)};
+  const onKey=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close()}};
+  document.addEventListener('keydown',onKey,true);
+  bg.onclick=e=>{if(e.target===bg)close()};
+  // roles: first 5 + "+N"
+  const rw=root.querySelector('.pf-roles');
+  if(rw){const rs=[...rw.querySelectorAll('.pf-role')];
+    if(rs.length>5){rs.slice(5).forEach(r=>r.classList.add('pf-extra'));
+      const more=document.createElement('button');more.type='button';more.className='pf-role-more';more.textContent='+'+(rs.length-5);
+      more.onclick=()=>{rw.classList.add('expanded');more.remove()};rw.appendChild(more)}}
+  // position next to what was clicked, kept on screen
+  const W=card.offsetWidth||340,H=card.offsetHeight||420,vw=window.innerWidth,vh=window.innerHeight;
+  let left=rc.right+12;if(left+W>vw-12)left=Math.max(12,rc.left-W-12);
+  let top=Math.min(Math.max(12,rc.top-24),Math.max(12,vh-H-12));
+  card.style.left=left+'px';card.style.top=top+'px';
+  const full=()=>{close();openUserProfile(id,{full:true})};
+  const f=$('#poFull');if(f)f.onclick=full;
+  $('#poMore').onclick=full;
+  const add=$('#poAdd');
+  if(add)add.onclick=async()=>{add.disabled=true;try{const r=await DB.friendReqById(ME.id,id);toast(r==='accepted'?'You are now friends!':'Friend request sent.');ME=DB.currentUser();add.remove();renderChat()}catch(e){toast(e.message,'bad');add.disabled=false}};
+  const mi=$('#poMsg');
+  if(mi){
+    mi.onkeydown=async e=>{
+      e.stopPropagation();
+      if(e.key!=='Enter')return;e.preventDefault();
+      const txt=mi.value;
+      if(!DB.isFriend(ME.id,id)){toast('You can only message friends. Send a friend request first.','bad');return}
+      await openDmWith(id,root);
+      if(txt&&typeof msgIn!=='undefined'&&msgIn){msgIn.value=txt;msgIn.focus();$('#cc').textContent=txt.length}
+    };
+  }
+  return true;
+}
+
 // Opened from message avatars, the online list, and the friends list.
-function openUserProfile(id){
+function openUserProfile(id,opts){
   id=Number(id);
+  if(!(opts&&opts.full)&&wantsProfilePopout()){try{if(openProfilePopout(id))return}catch(_){}}
   const root=$('#modalRoot');
   root.innerHTML=`<div class="modal-bg"><div class="modal" style="max-width:380px;text-align:center">
     <div class="hint" style="padding:30px 0">Loading profile…</div>
@@ -122,7 +214,7 @@ function openUserProfile(id){
     const av=avatarHtml(u,name,'width:88px;height:88px;font-size:34px;border:4px solid var(--panel)');
     const accent=safeColor(u.settings&&u.settings.meBubble,'#7c6cff');
     const bannerBase=safeColor(u.settings&&u.settings.bannerColor,accent);
-    const joined=u.createdAt?new Date(u.createdAt).toLocaleDateString(undefined,{month:'short',year:'numeric'}):null;
+    const joined=u.createdAt?new Date(u.createdAt).toLocaleDateString(undefined,dlProfileOn()?{month:'short',day:'numeric',year:'numeric'}:{month:'short',year:'numeric'}):null;
 
     const iBlocked=!isMe&&DB.isBlocked(ME.id,id);
     const blockedMe=!isMe&&DB.isBlockedBy(ME.id,id);
@@ -177,16 +269,16 @@ function openUserProfile(id){
         <button class="pf-x" id="pfClose" title="Close">✕</button>
       </div>
       <div class="pf-body" style="padding:0 24px 24px;margin-top:-46px">
-        <div class="pf-avwrap" style="position:relative;width:fit-content">${av}${online&&!deleted?'<span style="position:absolute;bottom:4px;right:4px;width:18px;height:18px;border-radius:50%;background:#3ddc73;box-shadow:0 0 8px #3ddc73;border:3px solid var(--panel)"></span>':''}</div>
+        <div class="pf-avwrap" style="position:relative;width:fit-content">${av}${online&&!deleted?'<span class="pf-stat" style="position:absolute;bottom:4px;right:4px;width:18px;height:18px;border-radius:50%;background:#3ddc73;box-shadow:0 0 8px #3ddc73;border:3px solid var(--panel)"></span>':''}</div>
         <div class="pf-namerow" style="display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap">
           <h2 style="margin:0;font-size:20px">${deleted?esc(name):fullNameHTML(id,esc(name))}</h2>
           ${admin&&!owner?'<span class="tag" style="background:#e8503a">Admin</span>':(mod&&!owner?'<span class="tag" style="background:var(--accent)">Mod</span>':'')}
           ${banned?'<span class="tag" style="background:var(--danger)">Banned</span>':''}
         </div>
-        ${(!deleted&&u.pronouns)?`<div class="pf-pron">${esc(u.pronouns)}</div>`:''}
+        <div class="pf-sub">${(!deleted&&u.pronouns)?`<div class="pf-pron">${esc(u.pronouns)}</div>`:''}
         <div class="pf-status" style="display:flex;align-items:center;gap:6px;margin-top:6px;color:var(--muted);font-size:13px">
           ${statusDot}<span>${statusText}</span>
-        </div>
+        </div></div>
         ${deleted?'':profileRolesHTML(id)}
         ${vipTimerHTML}
         ${(!deleted&&u.description)?`<div class="pf-desc">${esc(u.description)}</div>`:''}
@@ -198,11 +290,12 @@ function openUserProfile(id){
             <span class="pf-meta-val">#${id}</span>
           </div>
           ${joined?`<div class="pf-meta-chip">
-            <span class="pf-meta-label">Joined</span>
-            <span class="pf-meta-val">${joined}</span>
+            <span class="pf-meta-label">${dlProfileOn()?'Member Since':'Joined'}</span>
+            <span class="pf-meta-val">${dlProfileOn()?'<svg class="pf-ms-ic" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>':''}${joined}</span>
           </div>`:''}
         </div>
 
+        ${deleted?'':profileNoteHTML(id)}
         ${blockedMe?'<div class="hint" style="color:var(--danger);margin-top:10px">This user has blocked you.</div>':''}
         ${iBlocked?'<div class="hint" style="color:var(--danger);margin-top:10px">You have blocked this user.</div>':''}
         ${socialHtml?`<div class="pf-actions" style="display:flex;gap:8px;margin-top:18px">${socialHtml}</div>`:''}
@@ -223,6 +316,7 @@ function openUserProfile(id){
          rw.appendChild(more);rw.appendChild(less);
        }}}
     $('#pfClose').onclick=()=>{root.innerHTML=''};
+    wireProfileNote(root,id);
     const copyBtn=$('#pfCopyId');
     if(copyBtn)copyBtn.onclick=()=>{
       navigator.clipboard?.writeText(String(id)).then(()=>toast('User ID copied')).catch(()=>{});

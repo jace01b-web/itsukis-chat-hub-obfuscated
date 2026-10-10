@@ -230,9 +230,12 @@ const DiscordShell=(function(){
         <div class="dlp-status"><i class="dlp-sd${online?' on':''}"></i>${deleted?'':(online?'Online':'Offline')}</div>
         ${(!deleted&&u.description)?`<div class="dlp-h">About Me</div><div class="dlp-t">${esc(u.description)}</div>`:''}
         ${joined?`<div class="dlp-h">Member Since</div><div class="dlp-t">${esc(joined)}</div>`:''}
+        ${(!deleted&&typeof profileRolesHTML==='function'&&profileRolesHTML(id))?`<div class="dlp-h">Roles</div>${profileRolesHTML(id)}`:''}
+        ${deleted?'':profileNoteHTML(id)}
       </div>
       <button type="button" class="dlp-full" data-open-profile="${id}">View Full Profile</button>
     </div>`;
+    wireProfileNote(m,id);
   }
   let showMembers=true;
   try{showMembers=localStorage.getItem('ich.dlMembers')!=='0'}catch(_){}
@@ -317,7 +320,7 @@ const DiscordShell=(function(){
     m.innerHTML=html||'<div class="dl-mem-h">No members</div>';
     const more=document.getElementById('dlMemMore');if(more)more.onclick=()=>{offAll=true;renderMembers()};
   }
-  document.addEventListener('click',e=>{const r=e.target.closest&&e.target.closest('#dlMembers [data-open-profile]');if(r)openUserProfile(Number(r.dataset.openProfile))});
+  document.addEventListener('click',e=>{const r=e.target.closest&&e.target.closest('#dlMembers [data-open-profile]');if(r)openUserProfile(Number(r.dataset.openProfile),e.target.closest('.dlp-full')?{full:true}:undefined)});
 
   /* ---------- refresh (called from renderChat, and when Discord look is switched) ---------- */
   function refresh(switched){
