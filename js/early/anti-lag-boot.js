@@ -55,7 +55,11 @@ try{if(localStorage.getItem('ich.discordLook')==='1')document.documentElement.cl
   window.DL_THEME_ALIAS=ALIAS;
   var css='';
   T.forEach(function(t){
-    var v=t.vars,o='';for(var k in v)o+='--dl-'+k+':'+v[k]+';';
+    var v=t.vars,o='';
+    // solid twins of bg/bg2/bg3/input for surfaces that must never be see-through (settings, profile cards, menus)
+    if(t.group==='color'){var lt=/^rgba\(255/.test(v.bg),m=lt?'#000':'#000';
+      v.sbg=v.pop;v.sbg2='color-mix(in srgb,'+v.pop+' '+(lt?94:80)+'%,'+m+')';v.sbg3='color-mix(in srgb,'+v.pop+' '+(lt?88:58)+'%,'+m+')';v.sinput=v.sbg3;
+    }else{v.sbg=v.bg;v.sbg2=v.bg2;v.sbg3=v.bg3;v.sinput=v.input}for(var k in v)o+='--dl-'+k+':'+v[k]+';';
     css+='html.discord-look[data-dl-theme="'+t.id+'"]{'+o+'--dl-body:'+t.body+';}\n';
   });
   window.DL_THEMES=T;

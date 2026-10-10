@@ -15,7 +15,7 @@ function openSettings(fromChat){
     <h2 id="sTitle">⚙️ Settings</h2>
     <div class="hint">Everything is private except your bubble &amp; text color — that's how <b>everyone</b> sees your messages.</div>
 
-    <div class="preview-box" id="pvBox">
+    <div class="preview-box dl-hide" id="pvBox">
       <div class="pv-bg" id="pvBg"></div><div class="pv-dim" id="pvDim"></div>
       <div class="msg"><div class="msg-row"><div class="avatar" style="width:28px;height:28px;font-size:11px">A</div><div class="msg-body"><div class="meta">Alex</div><div class="bubble" style="background:#3b3f7a;color:#fff">Hey! How does this look?</div></div></div></div>
       <div class="msg me"><div class="msg-row"><div class="avatar" style="width:28px;height:28px;font-size:11px">Y</div><div class="msg-body"><div class="meta">You</div><div class="bubble">Looking great 🔥</div></div></div></div>
@@ -27,7 +27,7 @@ function openSettings(fromChat){
       <div class="dl-set-search"><input id="sSearch" type="text" placeholder="Search" autocomplete="off" spellcheck="false" aria-label="Search settings"></div>
       <div class="dl-set-h">User Settings</div>
       <button data-t="msg" class="active"><i class="dl-e">💬 </i>Messages</button>
-      <button data-t="bg"><i class="dl-e">🖼️ </i>Background</button>
+      <button data-t="bg" class="dl-hide"><i class="dl-e">🖼️ </i>Background</button>
       <button data-t="ui"><i class="dl-e">🎨 </i>Theme</button>
       <button data-t="ping"><i class="dl-e">🔔 </i>Pings</button>
       <button data-t="music"><i class="dl-e">🎵 </i>Music</button>
@@ -38,7 +38,7 @@ function openSettings(fromChat){
     </div>
 
     <div data-p="msg">
-      <div class="set-card">
+      <div class="set-card dl-hide">
         <div class="section-h" style="margin-top:0">Your message color (public)</div>
         <div class="set-grid">
           <div class="field"><label>Bubble color</label><input type="color" id="sMe" value="${s.meBubble}"></div>
@@ -48,7 +48,7 @@ function openSettings(fromChat){
       <div class="set-card">
         <div class="section-h" style="margin-top:0">Text display</div>
         <div class="set-grid">
-          <div class="field"><label>Bubble roundness <span class="val" id="vRad"></span></label><input type="range" id="sRad" min="0" max="28" value="${s.radius}"></div>
+          <div class="field dl-hide"><label>Bubble roundness <span class="val" id="vRad"></span></label><input type="range" id="sRad" min="0" max="28" value="${s.radius}"></div>
           <div class="field" style="grid-column:1/-1"><label>Font</label><div id="sFontChips" style="display:flex;flex-wrap:wrap;gap:6px"></div><select id="sFont" style="display:none">${fontKeys().map(f=>`<option value="${f}" ${s.font===f?'selected':''}>${f==='custom'?'custom (link)':f}</option>`).join('')}</select></div>
           <div class="field" id="sCustomFontWrap" style="grid-column:1/-1;${s.font==='custom'?'':'display:none'}"><label>Custom font link</label><input id="sCustomFont" type="url" maxlength="300" spellcheck="false" autocapitalize="off" placeholder="https://…/MyFont.woff2" value="${esc(s.customFont||'')}"><span class="hint" id="sCustomFontHint">Paste a font link, or upload a font file (.zip, .ttf, .otf, .woff, .woff2) from your device.</span><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn sec small" id="sFontUp" style="width:auto">Upload font file…</button><span class="hint" id="sFontUpName"></span></div><input type="file" id="sFontFile" accept=".zip,.ttf,.otf,.woff,.woff2" hidden></div>
           <div class="field"><label>Text size <span class="val" id="vSize"></span></label><input type="range" id="sSize" min="11" max="24" value="${s.size}"></div>
@@ -98,9 +98,9 @@ function openSettings(fromChat){
         <div class="dl-themes" id="dlDefaultThemes">${DiscordLook.themes().filter(t=>t.group==='default').map(t=>`<button type="button" class="dl-sw${DiscordLook.theme()===t.id?' active':''}" data-dl-theme="${t.id}" title="${esc(t.name)}" aria-label="${esc(t.name)} theme"><span class="dl-sw-c" style="background:${t.sw}"></span><span class="dl-sw-l">${esc(t.name)}</span></button>`).join('')}</div>
         <div class="dl-sub">Color Themes</div>
         <div class="dl-themes" id="dlColorThemes">${DiscordLook.themes().filter(t=>t.group==='color').map(t=>`<button type="button" class="dl-sw${DiscordLook.theme()===t.id?' active':''}" data-dl-theme="${t.id}" title="${esc(t.name)}" aria-label="${esc(t.name)} theme"><span class="dl-sw-c" style="background:${t.sw}"></span><span class="dl-sw-l">${esc(t.name)}</span></button>`).join('')}</div>
-        <div class="hint" style="margin-top:6px">Themes show up while Discord look is on. Saved to your account.</div>
+        <div class="hint" style="margin-top:6px">Themes apply to the whole site while Discord look is on. Bubble colors, roundness, backgrounds and glass/opacity settings are hidden in Discord look. Saved to your account.</div>
       </div>
-      <div class="set-card">
+      <div class="set-card dl-hide">
         <div class="section-h" style="margin-top:0">Interface glass</div>
         <div class="field"><label>UI opacity <span class="val" id="vUiO"></span></label><input type="range" id="sUiO" min="10" max="100" value="${s.uiOpacity??50}"></div>
         <div class="field"><label>UI blur (frosted glass) <span class="val" id="vUiB"></span></label><input type="range" id="sUiB" min="0" max="30" value="${s.uiBlur??18}"></div>

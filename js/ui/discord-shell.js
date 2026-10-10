@@ -136,8 +136,7 @@ const DiscordShell=(function(){
   function desktop(){return !!(window.matchMedia&&window.matchMedia('(min-width:821px)').matches)}
   function serverMode(){return on()&&desktop()&&!!ME&&view.mode==='global'}
   function renderChannels(list,foot){
-    let online=0;try{online=DB.onlineIds().length}catch(_){}
-    addHTML(list,`<div class="dl-server-head"><b>Itsukis Chat</b><span>${online} online</span></div>`);
+    addHTML(list,`<div class="dl-server-head"><b>Itsukis Chat</b><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>`);
     const cur=view.roomKey;
     const open=sec=>()=>openChat('global',sec);
     let annN=0;try{annN=DB.unreadAnnouncements(ME.id)}catch(_){}
@@ -175,6 +174,35 @@ const DiscordShell=(function(){
     }
     return b;
   }
+  /* Role groups, top to bottom: staff, then every Daily Spin role from the rarest prize to the most common one.
+     A person is listed once, under the highest group they qualify for. No role = just "Online". */
+  const SPIN_RANK=['vipperm','vip1','fire','ice','lucky','neon','crown','rainbow','gold','confetti'];
+  const MEM_SHOW_OFF=60;let offAll=false;
+  function memGroupOf(id){
+    if(isShownOwner(id))return'owner';
+    if(isAdmin(id))return'admin';
+    if(isMod(id))return'mod';
+    let v=null;try{v=DB.vipInfo(id,true,true)}catch(_){}
+    if(v&&v.kind==='owner')return'owner';
+    if(v&&v.kind==='perm')return'vipperm';
+    if(v&&v.kind==='day')return'vip1';
+    let live=null,roles={};try{live=DB.flairOf(id);roles=DB.rolesOf(id)||{}}catch(_){}
+    for(const k of SPIN_RANK){if(k==='vipperm'||k==='vip1')continue;if(live===k||roles[k]===true)return k}
+    return'online';
+  }
+  function memGroupDefs(){
+    const d=[['owner','Owner','#faa81a'],['admin','Admins','#ed4245'],['mod','Moderators','#3ba55d']];
+    SPIN_RANK.forEach(k=>{const pz=SPIN_PRIZES.find(x=>x.id===k);d.push([k,pz?pz.name.replace(/\s*—\s*/,' · '):k,pz?pz.color:'#99aab5'])});
+    d.push(['online','Online','#23a559']);
+    return d;
+  }
+  function memRow(id,off){
+    const u=DB.getUser(id)||{id,username:'User '+id};
+    const nm=esc(displayUsername(u.username));
+    const p=off?null:nameStylePreset(id);
+    const nameH=p?'<span class="nm-user flair-name flair-'+p+'">'+nm+'</span>':'<span class="nm-user">'+nm+'</span>';
+    return `<div class="dl-mem${off?' off':''}" data-open-profile="${id}"><span class="dl-fr-av">${avatarHtml(u,u.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot${off?' off':''}"></i></span><span class="dl-mem-nm">${nameH}</span></div>`;
+  }
   function renderMembers(){
     const m=document.getElementById('dlMembers'),btn=ensureMembersBtn();
     const srv=serverMode();
@@ -185,21 +213,33 @@ const DiscordShell=(function(){
     if(!vis){m.innerHTML='';return}
     const key=view.roomKey;
     const isRoom=key&&key!==CFG.GLOBAL_ROOM&&key!==CFG.ANNOUNCEMENTS_ROOM&&key!==CFG.VIP_ROOM;
-    let ids=[];try{ids=(isRoom?DB.presenceIds():DB.onlineIds()).slice()}catch(_){}
-    if(ME&&ids.indexOf(ME.id)<0)ids.push(ME.id);
-    const groups=[['Owner',[]],['Admins',[]],['Moderators',[]],['VIP',[]],['Online',[]]];
-    ids.forEach(id=>{
-      const g=isOwner(id)?0:isAdmin(id)?1:isMod(id)?2:(DB.vipInfo(id)?3:4);
-      groups[g][1].push(id);
-    });
+    let onIds=[],everyone=[];
+    try{
+      onIds=(isRoom?DB.presenceIds():DB.onlineIds()).slice();
+      if(isRoom){const r=DB.getRoom(key);everyone=r&&r.members?r.members.slice():[]}
+      else everyone=DB.allUsers().map(u=>u.id);
+    }catch(_){}
+    if(ME&&onIds.indexOf(ME.id)<0)onIds.push(ME.id);
+    const onSet=new Set(onIds);
+    if(key===CFG.VIP_ROOM)everyone=everyone.filter(id=>{try{return !!DB.vipInfo(id,true)}catch(_){return false}});
+    const offIds=everyone.filter(id=>!onSet.has(id)&&DB.getUser(id));
     const nameOf=id=>{const u=DB.getUser(id);return u?displayUsername(u.username):'Loading…'};
-    m.innerHTML=groups.filter(g=>g[1].length).map(([label,arr])=>{
-      arr.sort((a,b)=>nameOf(a).toLowerCase().localeCompare(nameOf(b).toLowerCase()));
-      return `<div class="dl-mem-h">${label} — ${arr.length}</div>`+arr.map(id=>{
-        const u=DB.getUser(id)||{id,username:'User '+id};
-        return `<div class="dl-mem" data-open-profile="${id}"><span class="dl-fr-av">${avatarHtml(u,u.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot"></i></span><span class="dl-mem-nm">${fullNameHTML(id,esc(nameOf(id)))}</span></div>`;
-      }).join('');
-    }).join('')||'<div class="dl-mem-h">Nobody online</div>';
+    const cmp=(a,b)=>nameOf(a).toLowerCase().localeCompare(nameOf(b).toLowerCase());
+    const defs=memGroupDefs(),buckets={};defs.forEach(d=>buckets[d[0]]=[]);
+    onIds.forEach(id=>buckets[memGroupOf(id)].push(id));
+    let html='';
+    defs.forEach(([k,label,col])=>{
+      const arr=buckets[k];if(!arr.length)return;arr.sort(cmp);
+      html+=`<div class="dl-mem-h" style="--rc:${col}">${esc(label)} — ${arr.length}</div>`+arr.map(id=>memRow(id,false)).join('');
+    });
+    if(offIds.length){
+      offIds.sort(cmp);
+      const shown=offAll?offIds:offIds.slice(0,MEM_SHOW_OFF);
+      html+=`<div class="dl-mem-h">Offline — ${offIds.length}</div>`+shown.map(id=>memRow(id,true)).join('');
+      if(shown.length<offIds.length)html+=`<button type="button" class="dl-mem-more" id="dlMemMore">Show ${offIds.length-shown.length} more</button>`;
+    }
+    m.innerHTML=html||'<div class="dl-mem-h">No members</div>';
+    const more=document.getElementById('dlMemMore');if(more)more.onclick=()=>{offAll=true;renderMembers()};
   }
   document.addEventListener('click',e=>{const r=e.target.closest&&e.target.closest('#dlMembers [data-open-profile]');if(r)openUserProfile(Number(r.dataset.openProfile))});
 

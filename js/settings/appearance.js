@@ -43,9 +43,10 @@ function applyStyle(target=document.documentElement,s=ME.settings){
   target.style.setProperty('--m-style',s.italic?'italic':'normal');
   if(target===document.documentElement){
     // UI transparency + glass blur (customisable)
-    const op=(s.uiOpacity??50)/100;
+    const dl=typeof DiscordLook!=='undefined'&&DiscordLook.on();   // Discord look is always solid: ignore the glass sliders
+    const op=dl?1:(s.uiOpacity??50)/100;
     target.style.setProperty('--ui-alpha',op);
-    target.style.setProperty('--ui-blur',(s.uiBlur??18)+'px');
+    target.style.setProperty('--ui-blur',dl?'0px':(s.uiBlur??18)+'px');
     // background covers the ENTIRE app (all pages), not just the chat area
     paintBg($('#bgLayer'),$('#bgDimEl'),s);
   }

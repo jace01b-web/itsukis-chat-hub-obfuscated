@@ -50,7 +50,9 @@ const AntiLag=(function(){
 const DiscordLook=(function(){
   const KEY='ich.discordLook',de=document.documentElement;
   function on(){return de.classList.contains('discord-look')}
-  function apply(v){const was=on();de.classList.toggle('discord-look',!!v);if(was!==!!v&&typeof DiscordShell!=='undefined')DiscordShell.refresh(true)}
+  function apply(v){const was=on();de.classList.toggle('discord-look',!!v);
+    if(was!==!!v){try{if(v){de.style.setProperty('--ui-alpha','1');de.style.setProperty('--ui-blur','0px')}else if(typeof ME!=='undefined'&&ME&&ME.settings&&typeof applyStyle==='function')applyStyle(de,ME.settings);else{de.style.removeProperty('--ui-alpha');de.style.removeProperty('--ui-blur')}}catch(_){}}
+    if(was!==!!v&&typeof DiscordShell!=='undefined')DiscordShell.refresh(true)}
   function cache(v){try{localStorage.setItem(KEY,v?'1':'0')}catch(_){}}
   function set(v){
     v=!!v;cache(v);apply(v);

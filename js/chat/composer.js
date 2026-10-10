@@ -35,7 +35,7 @@ function mentionCandidates(){
   if(key===CFG.GLOBAL_ROOM||key===CFG.ANNOUNCEMENTS_ROOM)ids=DB.allUsers().map(u=>u.id);
   else if(key?.startsWith('dm_'))ids=key.split('_').slice(1).map(Number);
   else ids=DB.getRoom(key)?.members||[];
-  return ids.filter(i=>i!==ME.id).map(i=>DB.getUser(i)).filter(Boolean);
+  return ids.map(i=>DB.getUser(i)).filter(Boolean);
 }
 // :emoji_name autocomplete (type ":" + 2 letters -> first 10 matches) and instant ":name:" -> emoji.
 function updateEmojiPop(pop,pos,before){
@@ -98,13 +98,13 @@ $('#sendBtn').onclick=send;
 
 function extractPings(text){
   const out=new Set();
-  if(/@everyone\b|@here\b/.test(text)&&view.roomKey!==CFG.GLOBAL_ROOM)out.add('everyone');
+  if(/@everyone\b|@here\b/.test(text)&&view.roomKey!==null)out.add('everyone');
   const re=/@([0-9a-zA-Z._-]{1,20})/g;let m;
   while((m=re.exec(text))){
     const id=DB.get().usernameIndex[m[1].toLowerCase()];
-    if(id!==undefined&&id!==ME.id)out.add(id);
+    if(id!==undefined)out.add(id);
   }
-  return[...out];
+  return[...out].slice(0,99);
 }
 let _lastSendAt=0;
 let _sendScanning=false;

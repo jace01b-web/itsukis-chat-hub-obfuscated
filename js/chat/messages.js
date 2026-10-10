@@ -47,7 +47,7 @@ function appendMsgRow(box,m,lastDay,live){
   // in real time) rather than one being painted as part of loading history —
   // only those get the extra "just landed" glow, cleaned up once it's done
   // so it never risks replaying later (e.g. if this node is ever reused).
-  if(live){
+  if(live&&!(typeof DiscordLook!=='undefined'&&DiscordLook.on())){
     el.classList.add('msg-live');
     el.addEventListener('animationend',()=>el.classList.remove('msg-live'),{once:true});
   }
@@ -187,7 +187,7 @@ function renderMessages(key){
         // the previously-visible bubbles glide up out of the way together
         // rather than jumping, which is what makes the arrival read as one
         // continuous motion instead of two separate, jarring changes.
-        smoothScrollToBottom(box);
+        if(typeof DiscordLook!=='undefined'&&DiscordLook.on())box.scrollTop=box.scrollHeight;else smoothScrollToBottom(box);
         box.querySelectorAll('.msg:nth-last-child(-n+3) img').forEach(img=>{
           if(!img.complete)img.addEventListener('load',()=>{box.scrollTop=box.scrollHeight},{once:true});
         });
@@ -253,8 +253,8 @@ function msgEl(m){
   const mine=m.senderId===ME.id;
   const sender=DB.getUser(m.senderId);           // username resolved via ID at render time
   const name=(sender&&!sender.deleted)?displayUsername(sender.username):'Deleted User';
-  const pinged=!mine&&(m.pings.includes(ME.id)||m.pings.includes('everyone'));
-  const el=document.createElement('div');el.className='msg'+(mine?' me':'');el.dataset.msgId=m.id;
+  const pinged=m.pings.includes(ME.id)||m.pings.includes('everyone');
+  const el=document.createElement('div');el.className='msg'+(mine?' me':'')+(pinged?' ping-row':'')+(m.pings.includes('everyone')?' ping-all':'');el.dataset.msgId=m.id;
   const time=new Date(m.at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   const av=avatarHtml(sender,name,'width:46px;height:46px;font-size:17px');
   const avClickable=(sender&&!sender.deleted)?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${av}</span>`:av;

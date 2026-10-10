@@ -176,15 +176,15 @@ function openUserProfile(id){
       <div class="pf-banner banner-anim" style="background:${bannerGradCss(bannerBase)}">
         <button class="pf-x" id="pfClose" title="Close">✕</button>
       </div>
-      <div style="padding:0 24px 24px;margin-top:-46px">
-        <div style="position:relative;width:fit-content">${av}${online&&!deleted?'<span style="position:absolute;bottom:4px;right:4px;width:18px;height:18px;border-radius:50%;background:#3ddc73;box-shadow:0 0 8px #3ddc73;border:3px solid var(--panel)"></span>':''}</div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <div class="pf-body" style="padding:0 24px 24px;margin-top:-46px">
+        <div class="pf-avwrap" style="position:relative;width:fit-content">${av}${online&&!deleted?'<span style="position:absolute;bottom:4px;right:4px;width:18px;height:18px;border-radius:50%;background:#3ddc73;box-shadow:0 0 8px #3ddc73;border:3px solid var(--panel)"></span>':''}</div>
+        <div class="pf-namerow" style="display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap">
           <h2 style="margin:0;font-size:20px">${deleted?esc(name):fullNameHTML(id,esc(name))}</h2>
           ${admin&&!owner?'<span class="tag" style="background:#e8503a">Admin</span>':(mod&&!owner?'<span class="tag" style="background:var(--accent)">Mod</span>':'')}
           ${banned?'<span class="tag" style="background:var(--danger)">Banned</span>':''}
         </div>
         ${(!deleted&&u.pronouns)?`<div class="pf-pron">${esc(u.pronouns)}</div>`:''}
-        <div style="display:flex;align-items:center;gap:6px;margin-top:6px;color:var(--muted);font-size:13px">
+        <div class="pf-status" style="display:flex;align-items:center;gap:6px;margin-top:6px;color:var(--muted);font-size:13px">
           ${statusDot}<span>${statusText}</span>
         </div>
         ${deleted?'':profileRolesHTML(id)}
@@ -205,7 +205,7 @@ function openUserProfile(id){
 
         ${blockedMe?'<div class="hint" style="color:var(--danger);margin-top:10px">This user has blocked you.</div>':''}
         ${iBlocked?'<div class="hint" style="color:var(--danger);margin-top:10px">You have blocked this user.</div>':''}
-        ${socialHtml?`<div style="display:flex;gap:8px;margin-top:18px">${socialHtml}</div>`:''}
+        ${socialHtml?`<div class="pf-actions" style="display:flex;gap:8px;margin-top:18px">${socialHtml}</div>`:''}
         ${blockBtnHtml?`<div style="margin-top:8px">${blockBtnHtml}</div>`:''}
         ${modHtml?`<div style="display:flex;gap:8px;margin-top:8px;justify-content:center">${modHtml}</div>`:''}
       </div>
