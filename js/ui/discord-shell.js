@@ -213,7 +213,7 @@ const DiscordShell=(function(){
   }
   function renderDmProfile(m,id){
     const u=DB.getUser(id);
-    if(!u){m.innerHTML='<div class="dl-mem-h">Loading…</div>';return}
+    if(!u){m._dlpSig=null;m.innerHTML='<div class="dl-mem-h">Loading…</div>';return}
     const deleted=!!u.deleted;
     const name=deleted?'Deleted User':displayUsername(u.username);
     const online=id===ME.id||DB.onlineIds().indexOf(id)>-1;
@@ -221,7 +221,7 @@ const DiscordShell=(function(){
     const banner=safeColor(u.settings&&u.settings.bannerColor,accent);
     const joined=u.createdAt?new Date(u.createdAt).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'';
     const av=avatarHtml(u,name,'width:80px;height:80px;font-size:30px');
-    m.innerHTML=`<div class="dlp">
+    const html0=`<div class="dlp">
       <div class="dlp-banner" style="background:${bannerGradCss(banner)}"></div>
       <div class="dlp-av">${av}<i class="dl-dot${online?'':' off'}"></i></div>
       <div class="dlp-card">
@@ -230,10 +230,14 @@ const DiscordShell=(function(){
         <div class="dlp-status"><i class="dlp-sd${online?' on':''}"></i>${deleted?'':(online?'Online':'Offline')}</div>
         ${(!deleted&&u.description)?`<div class="dlp-h">About Me</div><div class="dlp-t">${esc(u.description)}</div>`:''}
         ${joined?`<div class="dlp-h">Member Since</div><div class="dlp-t">${esc(joined)}</div>`:''}
-        ${deleted?'':profileNoteHTML(id)}
+        ${deleted?'':'\u0000NOTE'}
       </div>
       <button type="button" class="dlp-full" data-open-profile="${id}">View Full Profile</button>
     </div>`;
+    if(m._dlpSig===html0&&m.firstChild)return;                                   // nothing changed: leave it alone
+    const ae=document.activeElement;if(ae&&ae.classList&&ae.classList.contains('pf-note-in')&&m.contains(ae)&&m.firstChild)return;   // don't yank the note box while typing
+    m._dlpSig=html0;
+    m.innerHTML=html0.replace('\u0000NOTE',deleted?'':profileNoteHTML(id));
     wireProfileNote(m,id);
   }
   let showMembers=true;
@@ -287,8 +291,9 @@ const DiscordShell=(function(){
     const vis=(srv||dmPeer!=null)&&showMembers;
     m.classList.toggle('show',vis);
     m.classList.toggle('dm',vis&&dmPeer!=null);
-    if(!vis){m.innerHTML='';return}
+    if(!vis){m._dlpSig=null;m.innerHTML='';return}
     if(dmPeer!=null){renderDmProfile(m,dmPeer);return}
+    m._dlpSig=null;
     const key=view.roomKey;
     const isRoom=key&&key!==CFG.GLOBAL_ROOM&&key!==CFG.ANNOUNCEMENTS_ROOM&&key!==CFG.VIP_ROOM;
     let onIds=[],everyone=[];

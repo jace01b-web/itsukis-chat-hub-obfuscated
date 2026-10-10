@@ -103,6 +103,15 @@ function wireProfileNote(root,id){
   ta.oninput=()=>{fit();noteSet(id,ta.value.trim())};
   ta.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();ta.blur()}};
 }
+// Roles: show the first 5, then a "+N" button that reveals the rest.
+function foldRoles(root,limit){
+  const rw=root.querySelector('.pf-roles');if(!rw)return;
+  const rs=[...rw.querySelectorAll('.pf-role')];if(rs.length<=limit)return;
+  rs.slice(limit).forEach(r=>r.classList.add('pf-extra'));
+  const more=document.createElement('button');more.type='button';more.className='pf-role-more';more.title='Show all roles';more.setAttribute('aria-label','Show '+(rs.length-limit)+' more roles');more.textContent='+'+(rs.length-limit);
+  more.onclick=()=>{rw.classList.add('expanded');more.remove()};
+  rw.appendChild(more);
+}
 // remember what was clicked, so a name/avatar click in the chat or member list can open the small popout next to it
 let lastProfileClick=null;
 document.addEventListener('click',e=>{lastProfileClick={el:e.target,t:Date.now()}},true);
@@ -149,6 +158,7 @@ function openProfilePopout(id){
   const onKey=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close()}};
   document.addEventListener('keydown',onKey,true);
   bg.onclick=e=>{if(e.target===bg)close()};
+  foldRoles(root,5);
   // position next to what was clicked, kept on screen
   const W=card.offsetWidth||340,H=card.offsetHeight||420,vw=window.innerWidth,vh=window.innerHeight;
   let left=rc.right+12;if(left+W>vw-12)left=Math.max(12,rc.left-W-12);
@@ -303,6 +313,7 @@ function openUserProfile(id,opts){
     </div></div>`;
 
     root.querySelector('.modal-bg').onclick=e=>{if(e.target===e.currentTarget)root.innerHTML=''};
+    foldRoles(root,5);
     $('#pfClose').onclick=()=>{root.innerHTML=''};
     wireProfileNote(root,id);
     const copyBtn=$('#pfCopyId');
