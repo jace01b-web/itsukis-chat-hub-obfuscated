@@ -244,7 +244,7 @@ const DiscordShell=(function(){
     if(!b){
       const tbr=document.querySelector('.topbar .tb-right');if(!tbr)return null;
       b=document.createElement('button');b.id='dlMembersBtn';b.type='button';b.title='Member list';b.setAttribute('aria-label','Show or hide the member list');
-      b.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M14 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM2 20c0-3.3 3.6-5 8-5s8 1.7 8 5v1H2zM19 8.5a3 3 0 0 0-1.3-2.5 4 4 0 0 1 0 5 3 3 0 0 0 1.3-2.5zM20 15.3c1.6.7 2.8 1.8 3 3.7h-3z"/></svg>';
+      b.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><circle cx="9" cy="8" r="3.6"/><path d="M2 19.5c0-3.4 3.1-5.6 7-5.6s7 2.2 7 5.6v.5H2z"/><circle cx="17.2" cy="9" r="2.8"/><path d="M17.4 14c2.8.1 4.6 1.8 4.6 4.5v1.5h-4v-1.2c0-1.7-.6-3.2-1.7-4.3.3-.4.7-.5 1.1-.5z"/></svg>';
       b.onclick=()=>{showMembers=!showMembers;try{localStorage.setItem('ich.dlMembers',showMembers?'1':'0')}catch(_){}renderMembers()};
       tbr.insertBefore(b,tbr.firstChild);
     }
