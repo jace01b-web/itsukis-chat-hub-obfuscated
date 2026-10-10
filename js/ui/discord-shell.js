@@ -179,7 +179,6 @@ const DiscordShell=(function(){
     const banner=safeColor(u.settings&&u.settings.bannerColor,accent);
     const joined=u.createdAt?new Date(u.createdAt).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'';
     const av=avatarHtml(u,name,'width:80px;height:80px;font-size:30px');
-    const roles=deleted?'':profileRolesHTML(id);
     m.innerHTML=`<div class="dlp">
       <div class="dlp-banner" style="background:${bannerGradCss(banner)}"></div>
       <div class="dlp-av">${av}<i class="dl-dot${online?'':' off'}"></i></div>
@@ -189,7 +188,6 @@ const DiscordShell=(function(){
         <div class="dlp-status"><i class="dlp-sd${online?' on':''}"></i>${deleted?'':(online?'Online':'Offline')}</div>
         ${(!deleted&&u.description)?`<div class="dlp-h">About Me</div><div class="dlp-t">${esc(u.description)}</div>`:''}
         ${joined?`<div class="dlp-h">Member Since</div><div class="dlp-t">${esc(joined)}</div>`:''}
-        ${roles?`<div class="dlp-h">Roles</div>${roles}`:''}
       </div>
       <button type="button" class="dlp-full" data-open-profile="${id}">View Full Profile</button>
     </div>`;

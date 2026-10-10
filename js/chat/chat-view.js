@@ -118,7 +118,7 @@ function renderChat(){
     // just exits straight to the main menu.
   }else{
     const inc=DB.incoming(ME.id);
-    list.appendChild(sbItem('👥','Friends & Requests',view.dmView==='friends',()=>{view.dmView='friends';view.roomKey=null;renderChat()},inc.length));
+    list.appendChild(sbItem('👥',(typeof DiscordLook!=='undefined'&&DiscordLook.on())?'Friends':'Friends & Requests',view.dmView==='friends',()=>{view.dmView='friends';view.roomKey=null;renderChat()},inc.length));
     addHTML(list,`<div class="sb-section">Direct Messages<button type="button" class="sb-plus" id="sbPlus" title="Add a friend" aria-label="Add a friend">+</button></div>`);
     {const pl=document.getElementById('sbPlus');if(pl)pl.onclick=e=>{e.stopPropagation();modalAddFriend()}}
     if(!ME.friends.length)addHTML(list,`<div class="hint" style="padding:6px 10px">Add friends to start chatting.</div>`);
@@ -172,7 +172,9 @@ function closeModalAnimated(root,after){
 function sbItem(ic,name,active,fn,badge,profileUser,leaveFn){
   const d=document.createElement('div');
   d.className='sb-item'+(active?' active':'');
-  const icHtml=profileUser?`<span data-open-profile="${profileUser.id}" style="cursor:pointer">${avatarHtml(profileUser,profileUser.username,'width:22px;height:22px;font-size:10px')}</span>`:`<span>${ic}</span>`;
+  const dlOn=typeof DiscordLook!=='undefined'&&DiscordLook.on();
+  let dot='';if(dlOn&&profileUser){let o=false;try{o=DB.onlineIds().indexOf(profileUser.id)>-1}catch(_){}dot=`<i class="dl-dot${o?'':' off'}"></i>`}
+  const icHtml=profileUser?`<span data-open-profile="${profileUser.id}" style="cursor:pointer;position:relative">${avatarHtml(profileUser,profileUser.username,'width:22px;height:22px;font-size:10px')}${dot}</span>`:`<span>${ic}</span>`;
   d.innerHTML=`${icHtml}<span class="nm">${esc(name)}</span>${badge?`<span class="badge">${badge}</span>`:''}${leaveFn?`<span class="sb-leave" data-leave title="Leave room">🗑️</span>`:''}`;
   d._fn=fn;d.onclick=()=>{fn();$('#sidebar').classList.remove('open')};
   if(profileUser){
