@@ -71,8 +71,37 @@ const DiscordLook=(function(){
     applyTheme(id);
     if(typeof ME!=='undefined'&&ME&&ME.id!=null)DB.setSettingKey(ME.id,'discordTheme',id).catch(()=>{});
   }
+  /* ---- first-run choice: Normal look or Discord look (saved as settings.discordLookChosen so it's only asked once) ---- */
+  let asking=false,askTimer=null;
+  function chosen(){
+    const st=ME&&ME.settings;if(!st)return true;
+    return st.discordLookChosen===true||typeof st.discordLook==='boolean';   // anyone who already toggled it has chosen
+  }
+  function ask(){
+    if(asking||typeof ME==='undefined'||!ME||chosen())return;
+    const root=document.getElementById('modalRoot');
+    if(!root||root.innerHTML.trim()!==''||(typeof view!=='undefined'&&view.page==='authPage')){          // another dialog (rules, etc.) is up: try again shortly
+      clearTimeout(askTimer);askTimer=setTimeout(ask,1500);return;
+    }
+    asking=true;
+    root.innerHTML=`<div class="modal-bg"><div class="modal lk-modal" role="dialog" aria-modal="true" aria-label="Choose your look">
+      <h2>Choose your look</h2>
+      <div class="hint">Pick how Itsukis Chat looks. You can switch any time in Settings &gt; Theme.</div>
+      <div class="lk-grid">
+        <button type="button" class="lk-card" data-lk="normal"><span class="lk-prev lk-prev-normal"><i></i><i></i><i></i></span><b>Normal</b><small>The original look with chat bubbles and glass panels.</small></button>
+        <button type="button" class="lk-card" data-lk="discord"><span class="lk-prev lk-prev-discord"><i></i><i></i><i></i></span><b>Discord</b><small>A familiar server layout with themes, a member list and Discord-style profiles.</small></button>
+      </div></div></div>`;
+    root.querySelectorAll('[data-lk]').forEach(b=>b.onclick=()=>{
+      const d=b.dataset.lk==='discord';
+      root.innerHTML='';asking=false;
+      set(d);                                                                         // writes settings.discordLook
+      try{DB.setSettingKey(ME.id,'discordLookChosen',true).catch(()=>{})}catch(_){}   // ...and remembers that they chose
+    });
+  }
   function sync(){
     if(typeof ME==='undefined'||!ME||!ME.settings)return;
+    if(!chosen())ask();
+    else if(ME.settings.discordLookChosen!==true&&typeof ME.settings.discordLook==='boolean'&&!sync._m){sync._m=1;try{DB.setSettingKey(ME.id,'discordLookChosen',true).catch(()=>{})}catch(_){}}
     const v=ME.settings.discordLook;
     if(typeof v==='boolean'&&v!==on()){cache(v);apply(v)}
     const t=ME.settings.discordTheme;
