@@ -669,3 +669,58 @@ html.discord-look .typing-bar{border-radius:0}
   html.discord-look .dl-members.show{width:224px}
   html.discord-look .dl-members.show.dm{width:300px}
 }
+
+/* ===== v8: smaller names / avatars / profile text (Discord sizes); row spacing stays roomy ===== */
+html.discord-look .sb-item{height:52px;min-height:52px;font-size:16px;gap:12px}
+html.discord-look .sb-item .nm{font-size:16px}
+html.discord-look .sb-item .avatar{width:34px!important;height:34px!important;font-size:14px!important}
+html.discord-look .sb-item .dl-dot{width:14px;height:14px}
+html.discord-look .sb-item>span:first-child:not([data-open-profile]){width:28px;font-size:22px}
+html.discord-look .sb-section{font-size:13px}
+html.discord-look .dl-mem{height:48px;min-height:48px;gap:12px}
+html.discord-look .dl-mem .dl-fr-av,html.discord-look .dl-mem .dl-fr-av .avatar{width:34px!important;height:34px!important;font-size:14px!important}
+html.discord-look .dl-mem-nm{font-size:16px}
+html.discord-look .dl-mem-h{font-size:12px}
+html.discord-look .dl-fr-row{min-height:64px}
+html.discord-look .dl-fr-av,html.discord-look .dl-fr-av .avatar{width:34px!important;height:34px!important}
+html.discord-look .dl-fr-who b{font-size:16px}
+html.discord-look .dl-fr-who small{font-size:13px}
+html.discord-look .dl-fr-tab{font-size:15px}
+@media(min-width:821px){
+  html.discord-look .dl-user-av,html.discord-look .dl-user-av .avatar{width:36px!important;height:36px!important}
+  html.discord-look .dl-user-txt b{font-size:14px}
+  html.discord-look .dl-user-txt small{font-size:12px}
+  html.discord-look #chatPage .dl-user{height:56px}
+  html.discord-look .dl-user-me{height:44px}
+  html.discord-look .dl-user-gear{width:34px;height:34px}
+  html.discord-look .dl-user-gear svg{width:20px;height:20px}
+  html.discord-look #chatPage .sb-list,html.discord-look #chatPage .dl-rail{padding-bottom:84px}
+}
+html.discord-look .dl-server-head b{font-size:16px}
+html.discord-look .dl-rail-btn{font-size:24px}
+
+/* DM profile panel */
+html.discord-look .dlp-banner{height:96px}
+html.discord-look .dlp-av,html.discord-look .dlp-av .avatar{width:72px;height:72px}
+html.discord-look .dlp-av{margin:-42px 0 0 14px}
+html.discord-look .dlp-av .avatar{width:72px!important;height:72px!important;font-size:26px!important;border-width:5px!important;margin:-5px}
+html.discord-look .dlp-av .dl-dot{width:20px;height:20px;box-shadow:0 0 0 4px var(--dl-sbg3)}
+html.discord-look .dlp-card{padding:14px}
+html.discord-look .dlp-name{font-size:19px}
+html.discord-look .dlp-sub{font-size:13px}
+html.discord-look .dlp-status{font-size:12px}
+html.discord-look .dlp-h{font-size:11px;margin-top:14px}
+html.discord-look .dlp-t{font-size:13px}
+html.discord-look .dlp-full{font-size:13px;padding:8px}
+
+/* full profile card */
+html.discord-look .modal.pf-card{width:360px;max-width:360px!important}
+html.discord-look .pf-card .pf-banner{height:100px}
+html.discord-look .pf-card .pf-body{margin-top:-46px!important}
+html.discord-look .pf-card .pf-avwrap .avatar{width:80px!important;height:80px!important;font-size:30px!important;border-width:6px!important;margin:-6px}
+html.discord-look .pf-card .pf-avwrap>span[style*="position:absolute"]{width:20px!important;height:20px!important;border-width:4px!important}
+html.discord-look .pf-card .pf-namerow h2{font-size:20px}
+html.discord-look .pf-card .pf-pron,html.discord-look .pf-card .pf-status{font-size:13px!important}
+html.discord-look .pf-card .pf-actions .btn{padding:6px 14px;font-size:13px}
+html.discord-look .pf-card .pf-desc,html.discord-look .pf-card .pf-meta-val{font-size:13px}
+html.discord-look .pf-card .pf-role{font-size:11px}
