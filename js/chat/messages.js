@@ -21,6 +21,22 @@ let renderedKey=null,renderedIds=[];
 // re-check every rendered bubble whenever anything changes and swap in a fresh
 // element only for the ones whose sender info actually changed.
 let renderedNodes=new Map();
+// What a reply quote should show: the replied-to message's CURRENT text (so edits show up), "gone" when that
+// message was deleted, or the preview saved with the reply when the original is older than the loaded window.
+function replyTargetInfo(m){
+  const rt=m&&m.replyTo;if(!rt||!rt.id)return null;
+  let list=[];try{list=DB.messages(view.roomKey)||[]}catch(_){}
+  const src=list.find(x=>x.id===rt.id);
+  if(src){
+    const t=src.text?displayMsgText(src.text):(typeof replyPreviewText==='function'?replyPreviewText(src):'');
+    return{gone:false,text:String(t||'').replace(/\s+/g,' ').trim().slice(0,200)};
+  }
+  if(!list.length)return{gone:false,text:rt.preview||''};          // nothing loaded yet: can't tell
+  let more=true;try{more=DB.canLoadOlder(view.roomKey)}catch(_){}
+  // everything is loaded, or the target would sit inside the loaded window -> it really was deleted
+  if(!more||rt.id>=list[0].id)return{gone:true,text:''};
+  return{gone:false,text:String(rt.preview||'').replace(/\s+/g,' ').trim().slice(0,200)};   // older than what's loaded
+}
 function senderSig(m){
   const sender=DB.getUser(m.senderId);
   const name=(sender&&!sender.deleted)?displayUsername(sender.username):'Deleted User';
@@ -37,7 +53,8 @@ function senderSig(m){
   // fold their current shape in here — otherwise a reaction toggle wouldn't trigger
   // a rebuild of this row under the append-only fast path.
   const rx=DB.reactionsFor(view.roomKey,m.id).map(r=>r.emoji+':'+r.ids.join(',')).sort().join('|');
-  return resolved+'|'+name+'|'+avatar+'|'+(m.text||'')+'|'+(m.editedAt||0)+'|'+rx;
+  const ri=replyTargetInfo(m);
+  return resolved+'|'+name+'|'+avatar+'|'+(m.text||'')+'|'+(m.editedAt||0)+'|'+rx+'|'+(ri?(ri.gone?'\u0001gone':ri.text):'');
 }
 function appendMsgRow(box,m,lastDay,live){
   const day=new Date(m.at).toDateString();
@@ -292,14 +309,22 @@ function msgEl(m){
   const editedTag=(m.editedAt&&m.text)?`<span class="edited-tag">(edited)</span>`:'';
   let replyRefHTML='';
   if(m.replyTo&&m.replyTo.id){
-    const rs=DB.getUser(m.replyTo.senderId);
-    const rname=(rs&&!rs.deleted)?displayUsername(rs.username):'Deleted User';
-    const rtext=m.replyTo.preview?esc(m.replyTo.preview):'';
-    const rav=avatarHtml(rs,rname,'width:15px;height:15px;font-size:8px');
-    replyRefHTML=`<div class="reply-ref" data-reply-jump="${m.replyTo.id}">
+    const ri=replyTargetInfo(m);
+    if(ri&&ri.gone){
+      replyRefHTML=`<div class="reply-ref gone">
+      <svg class="rr-elbow" viewBox="0 0 20 12"><path d="M2 0 v4 a6 6 0 0 0 6 6 h10"/></svg>
+      <span class="rr-text">Deleted Message</span>
+    </div>`;
+    }else{
+      const rs=DB.getUser(m.replyTo.senderId);
+      const rname=(rs&&!rs.deleted)?displayUsername(rs.username):'Deleted User';
+      const rtext=ri&&ri.text?esc(ri.text):'';
+      const rav=avatarHtml(rs,rname,'width:15px;height:15px;font-size:8px');
+      replyRefHTML=`<div class="reply-ref" data-reply-jump="${m.replyTo.id}">
       <svg class="rr-elbow" viewBox="0 0 20 12"><path d="M2 0 v4 a6 6 0 0 0 6 6 h10"/></svg>
       <span class="rr-avatar">${rav}</span><span class="rr-name">${esc(rname)}</span><span class="rr-text">${rtext}</span>
     </div>`;
+    }
   }
   const myAv=mine?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${av}</span>`:'';
   // Everyone's name is shown, including your own. Others: "Name · time" (left side). Yours: "time · Name"
