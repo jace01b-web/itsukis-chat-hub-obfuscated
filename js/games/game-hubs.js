@@ -30,6 +30,7 @@ const CUSTOM_HUBS=[
   {sec:'apps',name:'MZK',url:'https://raw.githubusercontent.com/Cra-Z-Gaming/VUS/refs/heads/main/MZK',desc:'MZK app.',icon:'MZK',color:'violet'},
   {sec:'apps',name:'The Long Hall [Multiplayer]',url:'https://raw.githubusercontent.com/AniItsukiCoded/The-Long-Hall/refs/heads/main/index.html',desc:'Beta version of my game The Long Hall.',icon:'TLH',color:'red'},
   {sec:'apps',name:'The Long Hall [Beta Version]',url:'https://raw.githubusercontent.com/AniItsukiCoded/tlh/refs/heads/main/index.html',desc:'Beta version of my game The Long Hall.',icon:'TLH',color:'red'},
+  {sec:'apps',name:'Tuff Client',url:'https://raw.githubusercontent.com/AniItsukiCoded/Tuffclient-by-Dicestacks88/refs/heads/main/index.html',desc:'Eaglercraft Tuff client by Dicestack88.',icon:'TLH',color:'red'},
   {sec:'apps',name:'VUS Hub Modded',url:'https://raw.githubusercontent.com/AniItsukiCoded/VUS-Hub-Modded/refs/heads/main/VUSHubModded.html',desc:'Modded version of VUS Hub.',icon:'VM',color:'orange'},
   {sec:'apps',name:'VUS Chat Modded',url:'https://raw.githubusercontent.com/jace01b-web/VUS-Modded/refs/heads/main/index.html',desc:'Modded version of VUS Chat, featuring a mod menu and new UI.',icon:'VC',color:'orange'},
   {sec:'apps',name:'PremiumTube',url:'https://raw.githubusercontent.com/AniItsukiCoded/ytfreemium/refs/heads/main/index.html',desc:'Unblocked, adfree, version of Youtube.',icon:'YT',color:'red'},
