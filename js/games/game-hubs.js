@@ -21,20 +21,58 @@ let _hubData=null,_hubQuery='';
 // Curated allowlist — only these hubs (by name) show up, regardless of whatever else
 // gets added to the "hubs" array in apps.json down the line.
 const HUB_INFO=window.HUB_INFO||{},HUB_INFO_X=window.HUB_INFO_X||{};
-const HUB_SECTIONS=[['apps','Apps'],['hubs','Hubs']];  // Tools/Links tabs hidden: they only held VUS-made items
+const HUB_SECTIONS=[['apps','Apps'],['hubs','Hubs'],['tools','Tools'],['links','Links']];
 // Custom entries added by hand (the only things shown in the list).
 const CUSTOM_HUBS=[
+  /* ---- apps ---- */
   {sec:'apps',name:'MZK',url:'https://raw.githubusercontent.com/Cra-Z-Gaming/VUS/refs/heads/main/MZK',desc:'MZK app.',icon:'MZK',color:'violet'},
-  {sec:'apps',name:'The Long Hall [Multiplayer]',url:'https://raw.githubusercontent.com/AniItsukiCoded/The-Long-Hall-AutoUpd/refs/heads/main/index.html',desc:'The full release version of The Long Hall: the boiled one. Play solo or with friends and try to escape the boiled one.',icon:'TLH',color:'red'},
-  {sec:'apps',name:'The Long Hall [Beta Version]',url:'https://raw.githubusercontent.com/AniItsukiCoded/tlh/refs/heads/main/index.html',desc:'Beta version of my game The Long Hall.',icon:'TLH',color:'red'},
-  {sec:'apps',name:'Tuff Client',url:'https://raw.githubusercontent.com/AniItsukiCoded/Tuffclient-by-Dicestacks88/refs/heads/main/index.html',desc:'Eaglercraft Tuff client by Dicestack88.',icon:'TLH',color:'red'},
-  {sec:'apps',name:'VUS Hub Modded',url:'https://raw.githubusercontent.com/AniItsukiCoded/VUS-Hub-Modded/refs/heads/main/VUSHubModded.html',desc:'Modded version of VUS Hub.',icon:'VM',color:'orange'},
+  {sec:"apps",name:"Statik",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUS/refs/heads/main/Statik/index.html",desc:"Basically Instagram, but only images and/or text.",icon:"SK",color:"blue"},
   {sec:'apps',name:'VUS Chat Modded',url:'https://raw.githubusercontent.com/jace01b-web/VUS-Modded/refs/heads/main/index.html',desc:'Modded version of VUS Chat, featuring a mod menu and new UI.',icon:'VC',color:'orange'},
+  {sec:'apps',name:'VUS Hub Modded',url:'https://raw.githubusercontent.com/AniItsukiCoded/VUS-Hub-Modded/refs/heads/main/VUSHubModded.html',desc:'Modded version of VUS Hub.',icon:'VM',color:'orange'},
+  {sec:"apps",name:"Itsuki's Chat Hub",url:"https://raw.githubusercontent.com/AniItsukiCoded/backups/refs/heads/main/(USE)%20-%20Launcher%20Loader.html",desc:"A global chatting hub made by (Jace), inspired by VUS chat rooms. Name Inspo: TQQ",icon:"💬",color:"blue"},
   {sec:'apps',name:'PremiumTube',url:'https://raw.githubusercontent.com/AniItsukiCoded/ytfreemium/refs/heads/main/index.html',desc:'Unblocked, adfree, version of Youtube.',icon:'YT',color:'red'},
-  {sec:'hubs',name:"Nike Hub",url:"https://originfastly.jsdelivr.net/gh/avaisadev/github.com@latest/index.svg",desc:"Both a web proxy and a games hub.",icon:"NH",color:"orange"},
+  {sec:'apps',name:'The Long Hall [Beta Version]',url:'https://raw.githubusercontent.com/AniItsukiCoded/tlh/refs/heads/main/index.html',desc:'Beta version of my game The Long Hall.',icon:'TLH',color:'red'},
+  {sec:'apps',name:'The Long Hall [Multiplayer]',url:'https://raw.githubusercontent.com/AniItsukiCoded/The-Long-Hall-AutoUpd/refs/heads/main/index.html',desc:'The full release version of The Long Hall: the boiled one. Play solo or with friends and try to escape the boiled one.',icon:'TLH',color:'red'},
+  {sec:'apps',name:'Tuff Client',url:'https://raw.githubusercontent.com/AniItsukiCoded/Tuffclient-by-Dicestacks88/refs/heads/main/index.html',desc:'Eaglercraft Tuff client by Dicestack88.',icon:'TLH',color:'red'},
+  /* ---- hubs ---- */
+  {sec:"hubs",name:"BestSpark",url:"https://theres-a.mcdonalds-in-the-pentagon.com/",desc:"A collection of game hubs plus original games made by the community.",icon:"BS",color:"lime"},
+  {sec:"hubs",name:"CalcSolver",url:"https://calcsolver.net/",desc:"Looks like a calculator site. Turn on Code mode, then tap (0) four times to open the game hub.",icon:"CS",color:"grey"},
   {sec:'hubs',name:"Dogeub",url:"https://storage.googleapis.com/dogeub/index.html",desc:"Proxy with a search bar plus games. Same family as Otonic.",icon:"DG",color:"yellow"},
+  {sec:'hubs',name:"Duckmath",url:"https://storage.googleapis.com/mathlessons/duckmath.html",desc:"Duckmath game hub.",icon:"DM",color:"lime"},
+  {sec:"hubs",name:"Fern",url:"https://s3.amazonaws.com/ilovemaths/index.html",desc:"Another web proxy for opening blocked sites.",icon:"Fern",color:"lime"},
+  {sec:"hubs",name:"Game 'N Go Games 1",url:"https://gane-n-go.lovable.app/",desc:"A game hub that looks and feels like a computer desktop.",icon:"GNG1",color:"cyan"},
+  {sec:"hubs",name:"Game 'N Go Games 2",url:"https://game-n-go-gaming.lovable.app/",desc:"Backup mirror of Game 'N Go, handy if the first one is down.",icon:"GNG2",color:"cyan"},
+  {sec:"hubs",name:"Ghost Hub Cinema",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUS/refs/heads/main/other/Ghost-Cinema",desc:"A collection of movies to browse and watch.",icon:"GHC",color:"white"},
+  {sec:"hubs",name:"GN-Math",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUSL/refs/heads/main/Other/gn-math",desc:"A well-known game site and a great first stop.",icon:"GN",color:"red"},
+  {sec:"hubs",name:"Greeni",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUSL/refs/heads/main/Other/Greeni",desc:"Movies and games together in one place.",icon:"",color:"green"},
+  {sec:"hubs",name:"Gust",url:"https://cdn.jsdelivr.net/gh/nautilus-os/GUST@latest/svg/site.svg",desc:"Another game hub to try when your usual ones are blocked.",icon:"💨",color:"white"},
+  {sec:"hubs",name:"idk 10.0",url:"https://ugs-desktop-production.up.railway.app/",desc:"A desktop-style game hub with a big selection of games.",icon:"idk",color:"purple"},
+  {sec:"hubs",name:"KBH Games",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUSL/refs/heads/main/Other/KBH-Games.html",desc:"More browser games to dig through. A few titles may be hit or miss.",icon:"KBH",color:"blue"},
+  {sec:"hubs",name:"Lucide",url:"https://cdn.jsdelivr.net/gh/lucideproxy/svg@latest/logo.svg",desc:"Web proxy for reaching sites that are otherwise blocked. Works well.",icon:"LuC",color:"orange"},
+  {sec:"hubs",name:"Mantle",url:"https://sites.google.com/view/mantlemenu/",desc:"Quality over quantity: modded Minecraft, an AI assistant and a proxy in one app.",icon:"M",color:"red"},
+  {sec:"hubs",name:"NautilusOS",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUSL/refs/heads/main/Other/NautilusOS",desc:"A polished, desktop-style interface with games inside.",icon:"NOS",color:"cyan"},
+  {sec:"hubs",name:"Nexus",url:"https://car-meow.github.io/toothbrush",desc:"",icon:"",color:""},
+  {sec:'hubs',name:"Nike Hub",url:"https://originfastly.jsdelivr.net/gh/avaisadev/github.com@latest/index.svg",desc:"Both a web proxy and a games hub.",icon:"NH",color:"orange"},
+  {sec:"hubs",name:"Noah's Tutoring",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUSL/refs/heads/main/Other/Noah's-Tutoring",desc:"A big game library. It can be a little laggy while it loads.",icon:"NT",color:"orange"},
+  {sec:"hubs",name:"Noah's Tutoring Launcher",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUSL/refs/heads/main/Other/Noah's-Tutoring-Launcher",desc:"Same library as Noah's Tutoring, but opens behind a launch button.",icon:"NTL",color:"orange"},
+  {sec:"hubs",name:"Nova",url:"https://6hvyy6vz52-cyber.github.io/nova-hub-links/",desc:"",icon:"Nova",color:""},
   {sec:'hubs',name:"Otonic",url:"https://gscsoccer.com",desc:"Proxy with a search bar plus games. Same family as Dogeub.",icon:"OT",color:"cyan"},
-  {sec:'hubs',name:"Duckmath",url:"https://storage.googleapis.com/mathlessons/duckmath.html",desc:"Duckmath game hub.",icon:"DM",color:"lime"}
+  {sec:"hubs",name:"Polaris Hub",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUSL/refs/heads/main/Other/PolarisHub",desc:"One of the biggest libraries here. Loads of games to scroll through.",icon:"Polaris",color:"black"},
+  {sec:"hubs",name:"Project Bugs",url:"https://sites.google.com/view/cool-science-facts/",desc:"A Google Sites page packed with games, with thumbnails so they're easy to browse.",icon:"PB",color:"purple"},
+  {sec:"hubs",name:"Reids Games",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUSL/refs/heads/main/Other/REIDS-GAMES",desc:"A solid game collection with some movies mixed in.",icon:"REID",color:"red"},
+  {sec:"hubs",name:"Sigma OS",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUSL/refs/heads/main/Other/Sigma-OS",desc:"A Windows 11–style desktop with games and apps.",icon:"SOS",color:"red"},
+  {sec:"hubs",name:"Ultimate Game Stash",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUSL/refs/heads/main/Other/UltimateGameStash",desc:"One of the biggest stashes. Use search to find a specific game, like Pokémon Emerald.",icon:"UGS",color:"blue"},
+  {sec:"hubs",name:"UnblockedZone!",url:"https://testingcf.jsdelivr.net/combine/gh/googleaccountuser/myfirstrepo@master/windows10background.svg",desc:"A very popular game site that keeps several mirrors as backups.",icon:"UZ!",color:"red"},
+  {sec:"hubs",name:"Wither Games",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUSL/refs/heads/main/Other/wither",desc:"144 hand-picked popular and interesting games.",icon:"Wither",color:"red"},
+  {sec:"hubs",name:"Zaka",url:"https://my.browser-education.space/index.svg",desc:"Zaka's web proxy for opening blocked sites.",icon:"Zaka",color:"blue"},
+  /* ---- tools ---- */
+  {sec:"tools",name:"VUS Analytics",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUS/refs/heads/main/analytics.html",desc:"Helps track when people use the site.",icon:"📈",color:"purple"},
+  /* ---- links ---- */
+  {sec:"links",name:"Cineby",url:"https://cineby.tech/",desc:"Movie and sports streaming. Not proxied, so some networks may block it.",icon:"cine",color:"yellow"},
+  {sec:"links",name:"Code Editor (Web)",url:"https://hcodx.com/editor",desc:"A feature-packed online code editor.",icon:"CE",color:"green"},
+  {sec:"links",name:"CPS Test",url:"https://redragonshop.com/pages/cps-test",desc:"Test how many clicks per second you can hit.",icon:"CPS",color:"orange"},
+  {sec:"links",name:"Google Doodles",url:"https://share.google/wN47yxVARg0bCBcDl",desc:"Minesweeper, Solitaire, Snake and lots more Google games.",icon:"GD",color:"blue"},
+  {sec:"links",name:"Scratch",url:"https://scratch.mit.edu/",desc:"Games, music and animations made by the Scratch community.",icon:"S",color:"orange"}
 ];
 let _hubSec='hubs',_pxGroup='',_hubDir=0;
 const GAME_HUB_ALLOWLIST=new Set(Object.keys(HUB_INFO));
@@ -50,7 +88,7 @@ function modalGameHubs(){
   $('#modalRoot').innerHTML=`<div class="modal-bg" id="ghBg"><div class="modal wide">
     <button class="modal-x gh-gear" id="ghGear" title="Hubs &amp; Tools settings" aria-label="Hubs and Tools settings">⚙</button><button class="modal-x" id="ghX">✕</button>
     <h2 id="ghTitle">🎮 Hubs &amp; Tools</h2>
-    <div class="hint">Apps and game hubs — pick one to open it (change how in ⚙ settings).</div>
+    <div class="hint">Game sites, movie hubs, apps, tools and links — pick one to open it (change how in ⚙ settings).</div>
     <div class="gh-views" id="ghViews"><div class="gh-set hidden" id="ghSet">
       <div class="gh-set-row"><div><b>Open links in an iframe</b><small>On (default): links open in a viewer inside this site. Off: they open in a new tab. Saved to your account, so it follows you to every device.</small></div>
       <label class="switch"><input type="checkbox" id="ghIframe"><span class="slider"></span></label></div>
