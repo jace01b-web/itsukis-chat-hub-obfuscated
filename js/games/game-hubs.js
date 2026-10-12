@@ -8,7 +8,6 @@
 
 /* ---------- Game Hubs ---------- */
 let _proxyCredit='';
-const GAME_HUBS_URL='https://raw.githubusercontent.com/Cra-Z-Gaming/VUS/refs/heads/main/apps.json';
 const HUB_COLORS={
   white:{bg:'rgba(255,255,255,.14)',fg:'#f8fafc'},green:{bg:'rgba(34,197,94,.16)',fg:'#4ade80'},
   blue:{bg:'rgba(59,130,246,.16)',fg:'#60a5fa'},rose:{bg:'rgba(244,63,94,.16)',fg:'#fb7185'},
@@ -22,10 +21,9 @@ let _hubData=null,_hubQuery='';
 // Curated allowlist — only these hubs (by name) show up, regardless of whatever else
 // gets added to the "hubs" array in apps.json down the line.
 const HUB_INFO=window.HUB_INFO||{},HUB_INFO_X=window.HUB_INFO_X||{};
-const HUB_SECTIONS=[['apps','Apps'],['hubs','Hubs'],['tools','Tools'],['links','Links']];
-// Custom entries added by hand (shown without needing the external apps.json / HUB_INFO).
+const HUB_SECTIONS=[['apps','Apps'],['hubs','Hubs']];  // Tools/Links tabs hidden: they only held VUS-made items
+// Custom entries added by hand (the only things shown in the list).
 const CUSTOM_HUBS=[
-  {sec:'apps',name:'MZK',url:'https://raw.githubusercontent.com/Cra-Z-Gaming/VUS/refs/heads/main/MZK',desc:'MZK app.',icon:'MZK',color:'violet'},
   {sec:'apps',name:'The Long Hall [Multiplayer]',url:'https://raw.githubusercontent.com/AniItsukiCoded/The-Long-Hall-AutoUpd/refs/heads/main/index.html',desc:'The full release version of The Long Hall: the boiled one. Play solo or with friends and try to escape the boiled one.',icon:'TLH',color:'red'},
   {sec:'apps',name:'The Long Hall [Beta Version]',url:'https://raw.githubusercontent.com/AniItsukiCoded/tlh/refs/heads/main/index.html',desc:'Beta version of my game The Long Hall.',icon:'TLH',color:'red'},
   {sec:'apps',name:'Tuff Client',url:'https://raw.githubusercontent.com/AniItsukiCoded/Tuffclient-by-Dicestacks88/refs/heads/main/index.html',desc:'Eaglercraft Tuff client by Dicestack88.',icon:'TLH',color:'red'},
@@ -51,7 +49,7 @@ function modalGameHubs(){
   $('#modalRoot').innerHTML=`<div class="modal-bg" id="ghBg"><div class="modal wide">
     <button class="modal-x gh-gear" id="ghGear" title="Hubs &amp; Tools settings" aria-label="Hubs and Tools settings">⚙</button><button class="modal-x" id="ghX">✕</button>
     <h2 id="ghTitle">🎮 Hubs &amp; Tools</h2>
-    <div class="hint">Game sites, movie hubs, apps, tools and links — pick one to open it (change how in ⚙ settings).</div>
+    <div class="hint">Apps and game hubs — pick one to open it (change how in ⚙ settings).</div>
     <div class="gh-views" id="ghViews"><div class="gh-set hidden" id="ghSet">
       <div class="gh-set-row"><div><b>Open links in an iframe</b><small>On (default): links open in a viewer inside this site. Off: they open in a new tab. Saved to your account, so it follows you to every device.</small></div>
       <label class="switch"><input type="checkbox" id="ghIframe"><span class="slider"></span></label></div>
@@ -108,31 +106,8 @@ function closeGameHubs(){
 async function loadHubs(){
   if(_hubData){renderHubList();return}
   try{
-    // The external apps.json is OPTIONAL: if it fails (repo moved/private, rate limit, offline, bad JSON)
-    // we fall back to the last good copy, then to nothing - custom entries + proxies still load.
-    let data={};
-    try{
-      const ac=window.AbortController?new AbortController():null;
-      const to=ac?setTimeout(()=>ac.abort(),8000):0;
-      const res=await fetch(GAME_HUBS_URL+'?v='+Date.now(),{cache:'no-store',signal:ac?ac.signal:undefined});
-      clearTimeout(to);
-      if(!res.ok)throw new Error('HTTP '+res.status);
-      data=await res.json();
-      try{localStorage.setItem('ich.hubsCache',JSON.stringify(data))}catch(_){}
-    }catch(err){
-      console.warn('[hubs] apps.json failed, using cache/fallback:',err);
-      try{data=JSON.parse(localStorage.getItem('ich.hubsCache')||'{}')}catch(_){data={}}
-    }
-    if(!data||typeof data!=='object')data={};
+    // Only your own entries (CUSTOM_HUBS) are listed - nothing is pulled from VUS's apps.json anymore.
     const out=[];
-    HUB_SECTIONS.forEach(([sec])=>{
-      (data[sec]||[]).forEach(h=>{
-        if(!h||!h.name||!h.name.trim()||!h.url||!h.url.trim())return;
-        const i=hubInfoFor(sec,h.name);
-        if(!i)return; // curated: only listed items show
-        out.push({...h,sec,name:i.n||h.name.trim(),desc:i.d||h.desc||'',icon:i.i||h.icon||'',color:(h.color&&h.color.trim())||i.c||''});
-      });
-    });
     CUSTOM_HUBS.forEach(h=>out.push({...h}));
     _hubData=out;
     renderHubList();
