@@ -31,9 +31,11 @@ function updateMuteLock(){
   const announceLocked=inAnnouncements&&!isOwner(ME.id);
   if(mutedBanner)mutedBanner.classList.toggle('hidden',!muted);
   if(announceBanner)announceBanner.classList.toggle('hidden',!announceLocked);
-  const locked=muted||announceLocked||(view.roomKey===CFG.VIP_ROOM&&!DB.vipInfo(ME.id));
+  const tosReason=(typeof chatBlockReason==='function')?chatBlockReason():null;
+  if(typeof tosBannerSync==='function')tosBannerSync(tosReason);
+  const locked=muted||announceLocked||!!tosReason||(view.roomKey===CFG.VIP_ROOM&&!DB.vipInfo(ME.id));
   [input,sendBtn,attachBtn,emojiBtn].forEach(el=>{if(el)el.disabled=locked});
-  if(input)input.placeholder=muted?'You are muted — you can\'t send messages right now':(announceLocked?'Only the owner can post announcements':'Message... use @ to ping');
+  if(input)input.placeholder=muted?'You are muted — you can\'t send messages right now':(announceLocked?'Only the owner can post announcements':(tosReason&&tosReason!=='Checking your account…'?'Chat is locked. See the notice above.':'Message... use @ to ping'));
   // Announcements have no message length limit (owner-only, so no spam risk) —
   // every other channel keeps the normal 2000-char cap.
   if(input){if(inAnnouncements)input.removeAttribute('maxlength');else input.maxLength=CFG.MAX_MSG}

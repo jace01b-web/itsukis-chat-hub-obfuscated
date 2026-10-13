@@ -113,6 +113,7 @@ async function send(){
   const text=expandShortcodes(msgIn.value.trim()).slice(0,msgLimit);
   if(!view.roomKey)return;
   if(DB.isBanned(ME.id)){toast('Your account has been banned.','bad');return}
+  {const br=(typeof chatBlockReason==='function')?chatBlockReason():null;if(br){toast(br,'bad');if(TOS_GATE.accepted===false&&typeof modalTos==='function'&&!$('#modalRoot').innerHTML.trim())modalTos({});return}}
   if(view.roomKey===CFG.ANNOUNCEMENTS_ROOM&&!isOwner(ME.id)){toast('Only the owner can post announcements.','bad');return}
 
   if(view.editingId){
