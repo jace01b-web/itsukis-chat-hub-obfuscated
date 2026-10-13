@@ -1,0 +1,30 @@
+{
+ "rules": {
+  "tosAccepted": {
+   "$id": {
+    ".read": "root.child('idToUid/'+$id).val()===auth.uid || (root.child('owners/'+root.child('uidToId/'+auth.uid).val()).val()===1 || root.child('secretowner/'+root.child('uidToId/'+auth.uid).val()).val()===1) || root.child('admin/'+root.child('uidToId/'+auth.uid).val()).val()===1",
+    ".write": "root.child('idToUid/'+$id).val()===auth.uid",
+    ".validate": "newData.hasChildren(['v','at','h'])",
+    "v": {
+     ".validate": "newData.isNumber()"
+    },
+    "at": {
+     ".validate": "newData.isNumber()"
+    },
+    "h": {
+     ".validate": "newData.isString() && newData.val().length<=64"
+    },
+    "$other": {
+     ".validate": "false"
+    }
+   }
+  },
+  "ipBans": {
+   "$h": {
+    ".read": "auth!=null",
+    ".write": "newData.exists() ? ((root.child('owners/'+root.child('uidToId/'+auth.uid).val()).val()===1 || root.child('secretowner/'+root.child('uidToId/'+auth.uid).val()).val()===1) || root.child('admin/'+root.child('uidToId/'+auth.uid).val()).val()===1) : (root.child('owners/'+root.child('uidToId/'+auth.uid).val()).val()===1 || root.child('secretowner/'+root.child('uidToId/'+auth.uid).val()).val()===1)",
+    ".validate": "!newData.exists() || newData.hasChildren(['at','by'])"
+   }
+  }
+ }
+}
