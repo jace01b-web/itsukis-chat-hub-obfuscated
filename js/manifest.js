@@ -74,6 +74,7 @@ window.APP_MANIFEST={
     "settings/account.js",
     "features/halloween.js",
     "settings/rules-check.js",
+    "moderation/tos-gate.js",
     "settings/anti-lag.js",
     "social/rooms.js",
     "social/friends.js",
