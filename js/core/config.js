@@ -31,6 +31,11 @@ const CFG={
   NUKE_WINDOW_MS:1000,  // ...within this window triggers anti-nuke
   OWNER_IDS:[], // no longer used for permission checks — kept empty; owner status now comes live from owners/$id===1 in the database (see C.owners / isOwner()). Populate owners/$id there from your own backend, not here.
   SEND_COOLDOWN_MS:1500,
+  // --- Terms of Service / IP ban / VPN gate (js/moderation/tos-gate.js + the /api functions) ---
+  TOS_VERSION:1,                  // bump to make everybody re-accept after you change the TOS text
+  TOS_API:'https://itsukis-chat-hub.vercel.app',   // where the /api functions are deployed (no trailing slash). Change this if you host the API elsewhere.
+  API_FAIL_CLOSED:false,          // true = if the VPN/IP check can't be reached, block chat. false = let people chat (recommended on school networks)
+  IP_BAN_FULL_LOCK:false,         // false = an IP-banned network can't CHAT. true = it is locked out of the whole menu like a banned account
   // --- NSFW image detection (Nyckel) ---
   NSFW_ENABLED:true,
   NYCKEL_FUNCTION_ID:'wyv22067tq24vkn5',

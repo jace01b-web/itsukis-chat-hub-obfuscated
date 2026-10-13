@@ -1137,6 +1137,7 @@ const DB=(()=>{
       if(isOwner(id))throw new Error('Owners cannot be banned.');
       if(!isOwner(myId)&&isAdmin(id))throw new Error('Admins cannot ban other admins.');
       await set(R('banned/'+id),true);
+      try{if(typeof tosIpBanUser==='function')tosIpBanUser(id).catch(e=>console.warn('ip ban failed',e&&e.code||e))}catch(_){}   // banned accounts are IP-banned too (if they accepted the TOS)
       C.banned[id]=true;checkBanLock(myId,C.banned); // update local state immediately; don't wait on the listener round-trip
       await update(R('users/'+id),{deleted:true,username:'Deleted User'});
       // Deliberately NOT freeing usernames/$oldKey or usernameLogin/$oldKey here:
@@ -1172,6 +1173,7 @@ const DB=(()=>{
       // A missing flag is what a client sees before banned/ has loaded, so "missing" must never be
       // read as "unbanned" — that misreading is what silently un-froze banned accounts.
       await set(R('banned/'+id),false);
+      try{if(typeof tosIpUnbanUser==='function')tosIpUnbanUser(id).catch(()=>{})}catch(_){}
       C.banned[id]=false;checkBanLock(myId,C.banned); // update local state immediately; don't wait on the listener round-trip
       // Restore the profile right now (new username, un-delete). If the rules/email prevent it,
       // the account still repairs itself on its own next sign-in (restoreBannedAccount).
@@ -1439,6 +1441,7 @@ const DB=(()=>{
       await update(ref(rtdb),upd);
     },
     async sendMessage(key,{senderId,text,images,pings,replyTo}){
+      if(typeof tosGateGuard==='function')await tosGateGuard();   // TOS not accepted / VPN / IP-banned network -> throws, nothing is sent
       if(key===CFG.VIP_ROOM&&!DB.vipInfo(senderId))throw new Error('VIP Chat is for VIP members. Win VIP from the Daily Spin.');
       if(DB.isBanned(senderId))throw new Error('Your account has been banned.');
       // The local ban list can lag (or not be loaded yet) right after a ban. Ask the server directly so a
@@ -1625,6 +1628,7 @@ const DB=(()=>{
     // are all fixed by the database rules, so this can't be abused to alter
     // who sent something or when, or to swap in different attachments.
     async editMessage(key,msgId,newText){
+      if(typeof tosGateGuard==='function')await tosGateGuard();
       if(!key||!msgId)return;
       const limit=key===CFG.ANNOUNCEMENTS_ROOM?Infinity:CFG.MAX_MSG;
       const text=checkMessageText_((newText||'').trim()).slice(0,limit);
