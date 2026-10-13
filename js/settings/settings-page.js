@@ -206,6 +206,13 @@ function openSettings(fromChat){
           <button class="btn small" id="aboutRulesBtn" type="button">📜 View rules</button>
         </div>
       </div>
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">📄 Terms of Service</div>
+        <div class="about-rules-row">
+          <div class="hint" id="aboutTosStatus" style="margin:0">${TOS_GATE.accepted===true?'✅ You accepted the Terms of Service'+(TOS_STATE&&TOS_STATE.at?' on '+esc(fmtRulesDate(TOS_STATE.at)):'')+'. Chat is unlocked.':'You haven\'t accepted the Terms of Service, so chat is locked. Everything else works.'}</div>
+          <button class="btn small" id="aboutTosBtn" type="button">📄 ${TOS_GATE.accepted===true?'View TOS':'Read &amp; accept'}</button>
+        </div>
+      </div>
     </div>
 
     ${isStaff(ME.id)?`<div data-p="mod" class="hidden">
@@ -218,6 +225,17 @@ function openSettings(fromChat){
           </div>
           <label class="switch"><input type="checkbox" id="modFilterNames" ${filterNamesOn()?'checked':''}><span class="slider"></span></label>
         </div>
+      </div>
+      <div class="set-card">
+        <div class="section-h" style="margin-top:0">🌐 IP ban</div>
+        <div class="field"><label>IP address (copy it from the Discord TOS log)</label><input id="modIpVal" type="text" maxlength="45" placeholder="e.g. 203.0.113.42" autocomplete="off" style="width:100%"></div>
+        <div class="field" style="margin-top:8px"><label>Reason (optional)</label><input id="modIpWhy" type="text" maxlength="120" placeholder="e.g. raid on 10/13" autocomplete="off" style="width:100%"></div>
+        <div class="actions" style="justify-content:flex-start;margin-top:10px">
+          <button class="btn danger" id="modIpBan" type="button">Ban IP</button>
+          <button class="btn sec" id="modIpUnban" type="button">Unban IP</button>
+          <span class="hint" id="modIpMsg" style="align-self:center"></span>
+        </div>
+        <div class="hint" style="margin-top:8px">Banned IPs can't chat (even on new accounts). Banning an account bans its logged IP automatically. IPv6 is banned by /64 network. On a shared network (like a school) this affects everyone on it, so unban when it's over.</div>
       </div>
       <div class="set-card">
         <div class="section-h" style="margin-top:0">📢 Announcement</div>
@@ -528,6 +546,8 @@ function openSettings(fromChat){
   function renderAboutTab(){
     const rb=$$('#aboutRulesBtn');
     if(rb)rb.onclick=()=>modalRules({back:()=>openSettings(true)});
+    const tb=$$('#aboutTosBtn');
+    if(tb)tb.onclick=()=>modalTos({back:()=>openSettings(true)});
     const pinnedEl=$$('#aboutPinned'),hintEl=$$('#aboutHint');
     if(!pinnedEl)return;
     const cur=APP_VERSION_CACHE&&APP_VERSION_CACHE.current;
@@ -595,6 +615,17 @@ function openSettings(fromChat){
     $$('#modFilterNames')&&$$('#modFilterNames').addEventListener('change',e=>{
       DB.setFilterSettings({filterNames:e.target.checked}).catch(err=>toast(err.message,'bad'));
     });
+    if($$('#modIpBan')){
+      const go=async(action)=>{
+        const ip=$$('#modIpVal').value.trim(),msg=$$('#modIpMsg');
+        if(!ip){msg.textContent='Enter an IP first.';return}
+        msg.textContent='Working…';
+        try{await tosManualIpBan(action,ip,$$('#modIpWhy').value.trim());msg.textContent=action==='ban'?'✅ IP banned.':'✅ IP unbanned.';toast(action==='ban'?'IP banned.':'IP unbanned.')}
+        catch(e){msg.textContent='❌ '+e.message}
+      };
+      $$('#modIpBan').onclick=()=>go('ban');
+      $$('#modIpUnban').onclick=()=>go('unban');
+    }
     if($$('#modAnnGo')){
       const ta=$$('#modAnnText'),cnt=$$('#modAnnCount');
       ta.addEventListener('input',()=>{cnt.textContent=ta.value.length+' / 300'});
