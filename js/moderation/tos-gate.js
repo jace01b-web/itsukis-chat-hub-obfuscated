@@ -3,8 +3,8 @@
  * Terms of Service gate: nobody can SEND messages until they accept the TOS. Everything else still works.
  *  - Accepting logs username + account ID + IP to the owner's private Discord (via /api/tos, the webhook never touches the browser)
  *    and saves a scrambled IP fingerprint on the account (tosAccepted/$id/h) so bans can also be applied by IP.
- *  - Declining logs nothing and sends nothing anywhere - the browser never contacts the API for people who haven't accepted.
- *  - IP bans (ipBans/$hash), VPN / proxy / Tor detection (checked via /api/ipcheck, accepted users only).
+ *  - Declining logs nothing and sends nothing anywhere - the gate never runs any IP lookup for people who haven't accepted.
+ *  - IP bans (ipBans/$hash), VPN / proxy / Tor detection (checked in the browser, accepted users only).
  * Loaded by js/loader.js (load order lives in js/manifest.js).
  * ========================================================================== */
 'use strict';
@@ -75,40 +75,97 @@ function tosBannerSync(reason){
   };
 }
 
-/* ---------- network calls (only ever made for people who accepted) ---------- */
-async function tosCheckIp(){
-  if(!tosApiBase()){TOS_GATE.apiOk=false;return}
+/* ---------- IP lookup, hashing, VPN check (all in the browser, so it works from about:blank / Canva / p5js / any launcher) ---------- */
+function _sha256(str){   // small pure-JS SHA-256 (crypto.subtle is missing in some launcher contexts)
+  const K=[];{let n=2,c=0;while(c<64){let p=true;for(let i=2;i*i<=n;i++)if(n%i===0){p=false;break}if(p){K[c++]=(Math.cbrt(n)%1*4294967296)|0}n++}}
+  const H=[];{let n=2,c=0;while(c<8){let p=true;for(let i=2;i*i<=n;i++)if(n%i===0){p=false;break}if(p){H[c++]=(Math.sqrt(n)%1*4294967296)|0}n++}}
+  const b=unescape(encodeURIComponent(str)),l=b.length,w=new Array((((l+8)>>6)+1)*16).fill(0);
+  for(let i=0;i<l;i++)w[i>>2]|=b.charCodeAt(i)<<(24-(i%4)*8);
+  w[l>>2]|=0x80<<(24-(l%4)*8);w[(((l+8)>>6)<<4)+15]=l*8;
+  const rr=(x,n)=>(x>>>n)|(x<<(32-n));
+  for(let o=0;o<w.length;o+=16){
+    const x=w.slice(o,o+16),a=H.slice();
+    for(let i=0;i<64;i++){
+      if(i>=16){const s0=rr(x[i-15],7)^rr(x[i-15],18)^(x[i-15]>>>3),s1=rr(x[i-2],17)^rr(x[i-2],19)^(x[i-2]>>>10);x[i]=(x[i-16]+s0+x[i-7]+s1)|0}
+      const t1=(a[7]+(rr(a[4],6)^rr(a[4],11)^rr(a[4],25))+((a[4]&a[5])^(~a[4]&a[6]))+K[i]+x[i])|0;
+      const t2=((rr(a[0],2)^rr(a[0],13)^rr(a[0],22))+((a[0]&a[1])^(a[0]&a[2])^(a[1]&a[2])))|0;
+      a.pop();a.unshift((t1+t2)|0);a[4]=(a[4]+t1)|0;
+    }
+    for(let i=0;i<8;i++)H[i]=(H[i]+a[i])|0;
+  }
+  return H.map(v=>(v>>>0).toString(16).padStart(8,'0')).join('');
+}
+// IPv6 users get a new address suffix constantly, so hash the /64 network; IPv4 is hashed as-is.
+function tosNormalizeIp(ip){
+  ip=String(ip||'').trim().toLowerCase();
+  if(ip.indexOf(':')<0)return ip;
+  const parts=ip.split('::'),a=parts[0]?parts[0].split(':'):[],c=parts.length>1&&parts[1]?parts[1].split(':'):[];
+  const full=parts.length>1?a.concat(Array(Math.max(0,8-a.length-c.length)).fill('0'),c):a;
+  return full.slice(0,4).map(x=>x.padStart(4,'0')).join(':')+'::/64';
+}
+function tosIpHash(ip){return _sha256('ich-ip-v1:'+tosNormalizeIp(ip)).slice(0,32)}
+function tosValidIp(ip){return /^(\d{1,3}\.){3}\d{1,3}$/.test(ip)||/^[0-9a-f:]{2,45}$/i.test(ip)&&ip.indexOf(':')>=0}
+async function _timedFetch(url,ms){
+  const c=typeof AbortController!=='undefined'?new AbortController():null,t=setTimeout(()=>{try{c&&c.abort()}catch(_){}},ms||5000);
+  try{return await fetch(url,{cache:'no-store',signal:c?c.signal:undefined})}finally{clearTimeout(t)}
+}
+async function tosGetIp(){
+  const tries=[
+    async()=>(await(await _timedFetch('https://api64.ipify.org?format=json')).json()).ip,
+    async()=>(await(await _timedFetch('https://api.ipify.org?format=json')).json()).ip,
+    async()=>{const t=await(await _timedFetch('https://www.cloudflare.com/cdn-cgi/trace')).text();const m=t.match(/^ip=(.+)$/m);return m&&m[1].trim()}
+  ];
+  for(const f of tries){try{const ip=await f();if(ip&&tosValidIp(ip))return ip}catch(_){}}
+  throw new Error('Could not detect your IP. An ad blocker or school filter may be blocking it. Turn it off and try again.');
+}
+async function tosVpnCheck(ip){
   try{
-    const r=await fetch(tosApiBase()+'/api/ipcheck',{cache:'no-store'});
-    if(!r.ok)throw new Error('ipcheck '+r.status);
+    const key=CFG.PROXYCHECK_KEY?'&key='+encodeURIComponent(CFG.PROXYCHECK_KEY):'';
+    const r=await _timedFetch('https://proxycheck.io/v2/'+encodeURIComponent(ip)+'?vpn=1'+key,5000);
     const j=await r.json();
-    if(!j||typeof j.h!=='string')throw new Error('bad ipcheck');
-    TOS_GATE.apiOk=true;TOS_GATE.h=j.h;TOS_GATE.vpn=!!j.vpn;TOS_GATE.vpnKind=j.kind||'';TOS_GATE.checkedAt=Date.now();
-    try{TOS_GATE.ipBanned=(await get(R('ipBans/'+j.h))).exists()}catch(_){TOS_GATE.ipBanned=false}
-    // keep the account's stored fingerprint current so an IP ban still reaches them if their network changes
-    if(ME&&TOS_STATE&&TOS_STATE.h!==j.h){
-      update(R('tosAccepted/'+ME.id),{h:j.h}).then(()=>{TOS_STATE.h=j.h}).catch(()=>{});
+    const d=j&&j[ip];
+    if(!j||j.status==='error'||!d)return{checked:false,vpn:false,kind:''};
+    const yes=String(d.proxy).toLowerCase()==='yes';
+    return{checked:true,vpn:yes,kind:yes?String(d.type||'proxy'):''};
+  }catch(_){return{checked:false,vpn:false,kind:''}}
+}
+
+/* ---------- gate checks  ---------- */
+async function tosCheckIp(){
+  try{
+    const ip=await tosGetIp(),h=tosIpHash(ip),v=await tosVpnCheck(ip);
+    TOS_GATE.apiOk=true;TOS_GATE.h=h;TOS_GATE.vpn=v.vpn;TOS_GATE.vpnKind=v.kind;TOS_GATE.checkedAt=Date.now();
+    try{TOS_GATE.ipBanned=(await get(R('ipBans/'+h))).exists()}catch(_){TOS_GATE.ipBanned=false}
+    // keep the account's saved fingerprint current so an IP ban still reaches them if their network changes
+    if(ME&&TOS_STATE&&TOS_STATE.h!==h){
+      update(R('tosAccepted/'+ME.id),{h,ip}).then(()=>{TOS_STATE.h=h;TOS_STATE.ip=ip}).catch(()=>{});
     }
   }catch(e){
     TOS_GATE.apiOk=false;TOS_GATE.checkedAt=Date.now();
     console.warn('ip check unavailable',e&&e.message||e);
   }
 }
+function tosDiscordLog(embed){
+  if(!CFG.TOS_WEBHOOK)return;
+  try{fetch(CFG.TOS_WEBHOOK,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:'ICH TOS Log',allowed_mentions:{parse:[]},embeds:[embed]})}).catch(()=>{})}catch(_){}
+}
+const _clean=(s,n)=>String(s==null?'':s).replace(/[`\r\n]/g,' ').slice(0,n||100);
 async function tosAccept(){
-  if(!tosApiBase())throw new Error('The TOS logging service is not set up yet (CFG.TOS_API).');
-  const u=auth.currentUser;if(!u||!ME)throw new Error('You need to be signed in.');
-  const idToken=await u.getIdToken();
-  let r,j={};
-  try{
-    r=await fetch(tosApiBase()+'/api/tos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken,id:ME.id,version:CFG.TOS_VERSION})});
-    try{j=await r.json()}catch(_){}
-  }catch(_){throw new Error('Could not reach the TOS service. Check your connection and try again.')}
-  if(!r.ok||!j.h)throw new Error(j.error||'The TOS service had a problem. Try again in a moment.');
-  const rec={v:CFG.TOS_VERSION,at:Date.now()+SKEW,h:j.h};
-  await set(R('tosAccepted/'+ME.id),rec);
-  TOS_STATE=rec;TOS_GATE.accepted=true;TOS_GATE.apiOk=true;TOS_GATE.h=j.h;TOS_GATE.vpn=!!j.vpn;TOS_GATE.vpnKind=j.kind||'';TOS_GATE.checkedAt=Date.now();
+  if(!ME)throw new Error('You need to be signed in.');
+  const ip=await tosGetIp(),h=tosIpHash(ip),v=await tosVpnCheck(ip);
+  const rec={v:CFG.TOS_VERSION,at:Date.now()+SKEW,h,ip};
+  await set(R('tosAccepted/'+ME.id),rec);   // your private record: only you and staff can read it (database rules)
+  tosDiscordLog({title:'TOS accepted',color:0x57f287,timestamp:new Date().toISOString(),fields:[
+    {name:'Username',value:_clean(ME.username,40)||'-',inline:true},
+    {name:'Account ID',value:String(ME.id),inline:true},
+    {name:'IP',value:'`'+_clean(ip,60)+'`'},
+    {name:'VPN/proxy',value:v.checked?(v.vpn?'YES ('+_clean(v.kind,20)+')':'no'):'not checked',inline:true},
+    {name:'TOS version',value:String(CFG.TOS_VERSION),inline:true},
+    {name:'Browser',value:_clean(navigator.userAgent,200)}
+  ]});
+  TOS_STATE=rec;TOS_GATE.accepted=true;TOS_GATE.apiOk=true;TOS_GATE.h=h;TOS_GATE.vpn=v.vpn;TOS_GATE.vpnKind=v.kind;TOS_GATE.checkedAt=Date.now();
   try{sessionStorage.removeItem(TOS_DECLINE_KEY)}catch(_){}
-  try{TOS_GATE.ipBanned=(await get(R('ipBans/'+j.h))).exists()}catch(_){TOS_GATE.ipBanned=false}
+  try{TOS_GATE.ipBanned=(await get(R('ipBans/'+h))).exists()}catch(_){TOS_GATE.ipBanned=false}
 }
 async function tosLoadState(id){
   try{
@@ -136,13 +193,17 @@ async function tosIpUnbanUser(id){
   if(b&&Number(b.uid)===Number(id)){await remove(R('ipBans/'+h));return true}   // only lift bans that this account caused
   return false;
 }
-// Owner tool: ban / unban a raw IP copied from the Discord log (hashing happens on the server)
+// Owner tool: ban / unban a raw IP copied from the Discord log (or the tosAccepted record)
 async function tosManualIpBan(action,ip,reason){
-  if(!tosApiBase())throw new Error('CFG.TOS_API is not set.');
-  const idToken=await auth.currentUser.getIdToken();
-  const r=await fetch(tosApiBase()+'/api/ipban',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken,action,ip,reason})});
-  let j={};try{j=await r.json()}catch(_){}
-  if(!r.ok)throw new Error(j.error||'Request failed ('+r.status+')');
+  ip=String(ip||'').trim();
+  if(!tosValidIp(ip))throw new Error('That is not a valid IP address.');
+  if(!ME||!(isOwner(ME.id)||(action==='ban'&&isAdmin(ME.id))))throw new Error(action==='ban'?'Owners and admins only.':'Owners only.');
+  const h=tosIpHash(ip);
+  try{
+    if(action==='ban')await set(R('ipBans/'+h),{at:Date.now()+SKEW,by:ME.id,uid:null,reason:_clean(reason,120)});
+    else await remove(R('ipBans/'+h));
+  }catch(e){throw new Error('The database refused it (check the ipBans rules).')}
+  tosDiscordLog({title:action==='ban'?'IP banned':'IP unbanned',color:action==='ban'?0xed4245:0xfee75c,timestamp:new Date().toISOString(),description:'IP: `'+_clean(ip,60)+'`\nBy: account #'+ME.id+(reason?'\nReason: '+_clean(reason,120):'')});
   return true;
 }
 
