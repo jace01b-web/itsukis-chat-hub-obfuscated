@@ -33,7 +33,8 @@ const CFG={
   SEND_COOLDOWN_MS:1500,
   // --- Terms of Service / IP ban / VPN gate (js/moderation/tos-gate.js + the /api functions) ---
   TOS_VERSION:1,                  // bump to make everybody re-accept after you change the TOS text
-  TOS_API:'https://itsukis-chat-hub.vercel.app',   // where the /api functions are deployed (no trailing slash). Change this if you host the API elsewhere.
+  TOS_WEBHOOK:'https://discord.com/api/webhooks/1559338906921599046/i3Pw9lI277vY4cc32C1Bgbk67NbeJNCYH4o6VkTJ0_sJM9Ahwcd0fqzYQZmQBYThknVj',   // private Discord log of TOS accepts / IP bans. NOTE: visible to anyone who views the page source - if someone abuses it, delete the webhook in Discord and paste a new one here. Leave '' to log only to the database.
+  PROXYCHECK_KEY:'',              // optional free key from proxycheck.io (raises the VPN-check limit from 100 to 1,000 lookups/day)
   API_FAIL_CLOSED:false,          // true = if the VPN/IP check can't be reached, block chat. false = let people chat (recommended on school networks)
   IP_BAN_FULL_LOCK:false,         // false = an IP-banned network can't CHAT. true = it is locked out of the whole menu like a banned account
   // --- NSFW image detection (Nyckel) ---
