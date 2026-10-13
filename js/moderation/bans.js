@@ -31,13 +31,13 @@ const OWNER_MUTE_OPTS=[[5,'5 minutes'],[60,'1 hour'],[1440,'24 hours'],[10080,'7
    real write anyway. */
 let MENU_LOCKED=false;
 let BAN_OVERLAY=null;
-function lockMenuBanned(){
+function lockMenuBanned(msg,title){
   if(MENU_LOCKED)return;MENU_LOCKED=true;
   try{$('#modalRoot').innerHTML='';}catch(_){}
   document.querySelectorAll('.sidebar,.app-shell,#settingsBtn,.composer,.tabs').forEach(el=>el&&(el.style.pointerEvents='none',el.style.opacity='.35'));
   const bg=document.createElement('div');
   bg.style.cssText='position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(6,7,16,.92);color:#eef0ff;font-family:inherit;text-align:center;padding:24px';
-  bg.innerHTML='<div style="max-width:360px"><div style="font-size:40px;margin-bottom:10px">🚫</div><div style="font-weight:700;font-size:16px;margin-bottom:8px">Account banned</div><div style="opacity:.75;font-size:13.5px;line-height:1.5">This account has been banned. The menu and chat are locked.</div></div>';
+  bg.innerHTML='<div style="max-width:360px"><div style="font-size:40px;margin-bottom:10px">🚫</div><div style="font-weight:700;font-size:16px;margin-bottom:8px">'+esc(title||'Account banned')+'</div><div style="opacity:.75;font-size:13.5px;line-height:1.5">'+esc(msg||'This account has been banned. The menu and chat are locked.')+'</div></div>';
   document.body.appendChild(bg);
   BAN_OVERLAY=bg;
 }
@@ -74,7 +74,7 @@ function checkBanLock(currentId,bannedMap){
     return;
   }
   if(flagged){lockMenuBanned()}
-  else{unlockMenuBanned()}
+  else if(!(typeof ipBanActive==='function'&&ipBanActive()&&CFG.IP_BAN_FULL_LOCK)){unlockMenuBanned()}   // keep an IP-ban lock in place when the account itself isn't banned
 }
 
 /* ---------- Single-active-session pause overlay ----------
