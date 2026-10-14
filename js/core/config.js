@@ -27,6 +27,12 @@ const CFG={
   GLOBAL_ROOM:'global',
   ANNOUNCEMENTS_ROOM:'announcements',
   VIP_ROOM:'vip',
+  MVP_ROOM:'mvp',              // MVP-only chat (MVP role = permanent, no moderation powers, ranks above staff in lists)
+  MVP_SPINS_PER_DAY:3,         // MVPs get this many Daily Spins per 24h window (everyone else gets 1)
+  DESC_MAX:150,                // profile description length
+  MVP_DESC_MAX:300,            // ...for MVPs
+  MVP_MSG_MULT:2,              // MVPs can send messages this many times longer than MAX_MSG
+  MVP_BANNER_MAX_CHARS:150000, // size cap of an MVP image banner (base64 data URL)
   NUKE_MSGS:3,          // this many messages...
   NUKE_WINDOW_MS:1000,  // ...within this window triggers anti-nuke
   OWNER_IDS:[], // no longer used for permission checks — kept empty; owner status now comes live from owners/$id===1 in the database (see C.owners / isOwner()). Populate owners/$id there from your own backend, not here.

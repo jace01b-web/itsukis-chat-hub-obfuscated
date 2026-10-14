@@ -8,7 +8,7 @@
 
 const DB=(()=>{
   // live cache
-  const C={users:{},usernames:{},rooms:{},roomMembers:{},dmMembers:{},friends:{},friendReqIn:{},friendReqOut:{},lastRead:{},pingSeen:{},messages:{},myRoomIds:[],online:0,onlineIds:[],presenceIds:[],banned:{},muted:{},blocked:{},blockedBy:{},reactions:{},vip:{},flair:{},roles:{},lastSpin:0};
+  const C={users:{},usernames:{},rooms:{},roomMembers:{},dmMembers:{},friends:{},friendReqIn:{},friendReqOut:{},lastRead:{},pingSeen:{},messages:{},myRoomIds:[],online:0,onlineIds:[],presenceIds:[],banned:{},muted:{},blocked:{},blockedBy:{},reactions:{},vip:{},mvp:{},spinWin:null,flair:{},roles:{},lastSpin:0};
   let myId=null,myUid=null,ready=false;
   const listeners=new Set();
   const unsubs=[];         // base listeners
@@ -34,6 +34,9 @@ const DB=(()=>{
   }
   const emit=()=>listeners.forEach(f=>{try{f()}catch(e){console.error(e)}});
   const dmKey=(a,b)=>'dm_'+[a,b].sort((x,y)=>x-y).join('_');
+  // MVP: mvp/$id holds the time (ms) the role was granted; true/1 also count. Never expires — only an owner removes it.
+  const mvpOn=id=>{const v=C.mvp[Number(id)];return v===true||v===1||(typeof v==='number'&&v>0)};
+  const mvpAccess=id=>isOwner(id)||mvpOn(id);
   const FAKE='@itsuki.local';
 
   function listen(path,cb){
@@ -176,10 +179,12 @@ const DB=(()=>{
     listen('appVersion',v=>{APP_VERSION_CACHE=v||null;APP_VERSION_LOADED=true;checkForcedVersion();});
     listen('dmMembers',v=>C.dmMembers=v||{});
     listen('vip',v=>{C.vip=v||{};if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
+    listen('mvp',v=>{C.mvp=(v&&typeof v==='object')?v:{};if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
     listen('flair',v=>{C.flair=v||{}});
     listen('roles',v=>{C.roles=v||{};if(typeof refreshSpinUI==='function'){try{refreshSpinUI()}catch(_){}}});
     /* HALLOWEEN:START */ listen('halloween/claimed',v=>{window.HW_CLAIMED=v||{};if(typeof hwRefresh==='function'){try{hwRefresh()}catch(_){}}});listen('halloween/progress/'+myId,v=>{window.HW_PROG=v||{};window.HW_LOADED=true;if(typeof hwRefresh==='function'){try{hwRefresh()}catch(_){}}});listen('halloween/equipped',v=>{window.HW_EQ=v||{};if(typeof hwRefresh==='function'){try{hwRefresh()}catch(_){}}});listen('halloween/intro/'+myId,v=>{window.HW_INTRO=Number(v)||0;window.HW_INTRO_LOADED=true;if(typeof hwMaybeIntro==='function'){try{hwMaybeIntro()}catch(_){}}}); /* HALLOWEEN:END */
     listen('lastSpin/'+myId,v=>{C.lastSpin=Number(v)||0;if(typeof refreshSpinUI==='function'){try{refreshSpinUI()}catch(_){}}});
+    listen('spinWin/'+myId,v=>{C.spinWin=(v&&typeof v==='object')?v:null;if(typeof refreshSpinUI==='function'){try{refreshSpinUI()}catch(_){}}});
     listen('friendRequests/'+myId,v=>C.friendReqIn=v||{});
     listen('lastRead/'+myId,v=>{C.lastRead=v||{};C.lastReadLoaded=true});
     listen('pingSeen/'+myId,v=>{C.pingSeen=v||{}});
@@ -304,6 +309,7 @@ const DB=(()=>{
   function watchMessages(key){
     // VIP Lounge: don't even attach the listener unless I qualify (the rules would just deny it).
     if(key===CFG.VIP_ROOM&&!DB.vipInfo(myId))key=null;
+    if(key===CFG.MVP_ROOM&&!mvpAccess(myId))key=null;
     if(key===msgKey)return;
     if(msgUnsub){msgUnsub();msgUnsub=null}
     if(reactUnsub){try{reactUnsub()}catch(_){}reactUnsub=null}
@@ -379,7 +385,7 @@ const DB=(()=>{
     settings.meText=st.text||own.meText||base.meText;
     settings.avatar=st.avatar||(mine?own.avatar:'')||'';
     if(st.radius!=null&&!mine)settings.radius=st.radius;
-    return{...u,pronouns:String(st.pronouns||''),description:String(st.description||''),hiddenTags:String(st.hiddenTags||''),id:Number(id),friends:mine?(C.friends[myId]||[]):[],
+    return{...u,pronouns:String(st.pronouns||''),description:String(st.description||'').slice(0,descMaxFor(id)),banner:String(st.banner||''),hiddenTags:String(st.hiddenTags||''),id:Number(id),friends:mine?(C.friends[myId]||[]):[],
       lastRead:mine?C.lastRead:{},settings};
   };
 
@@ -482,6 +488,8 @@ const DB=(()=>{
          "hide this tag" choice only affects their NAME, so the profile still shows what they really have. */
       const shownOwner=OWNERS_CACHE[id]===1&&(ignoreHidden||!tagHidden(id,'owner'));
       if(isOwner(id)&&!(pub&&!shownOwner))return{kind:'owner'};
+      // MVP includes free permanent VIP. Hiding the MVP tag only affects display (pub), never access.
+      if(mvpOn(id)&&!(pub&&!ignoreHidden&&tagHidden(id,'mvp')))return{kind:'mvp',since:DB.mvpSince(id)};
       if(pub&&!ignoreHidden&&tagHidden(id,'vip'))return null;
       const v=C.vip[id];if(!v)return null;
       if(v.perm===true)return{kind:'perm'};
@@ -489,11 +497,19 @@ const DB=(()=>{
       return null},
     flairOf:(id)=>{const f=C.flair[Number(id)];return(f&&typeof f.until==='number'&&f.until>Date.now()+SKEW)?f.preset:null},
     rolesOf:(id)=>C.roles[Number(id)]||{},
+    isMvp:mvpOn,
+    mvpAccess,
+    mvpSince:(id)=>{const v=C.mvp[Number(id)];return(typeof v==='number'&&v>1)?v:0},
+    mvpIds:()=>Object.keys(C.mvp).map(Number).filter(mvpOn),
+    // a real (unexpired) VIP record, ignoring MVP's built-in VIP — used so owners can still remove a separate VIP
+    hasVipRole:(id)=>{const v=C.vip[Number(id)];return !!(v&&(v.perm===true||(typeof v.until==='number'&&v.until>Date.now()+SKEW)))},
+    spinWindow:()=>C.spinWin,
     /* TAG-VISIBILITY:START */
     hiddenTagsOf:(id)=>{const u=C.users[Number(id)];const h=u&&u.style&&u.style.hiddenTags;return(typeof h==='string'&&h)?h.split(',').filter(t=>HIDEABLE_TAGS.indexOf(t)!==-1):[]},
     // Which hideable tags this person really has (ignores their own hide choices) — drives the Account section.
     tagsOwned:(id)=>{id=Number(id);const out=[];
       if(OWNERS_CACHE[id]===1)out.push('owner');
+      if(mvpOn(id))out.push('mvp');
       if(isMod(id))out.push('mod');
       const v=C.vip[id];if(v&&(v.perm===true||(typeof v.until==='number'&&v.until>Date.now()+SKEW)))out.push('vip');
       const r=C.roles[id]||{};const f=C.flair[id];
@@ -840,14 +856,18 @@ const DB=(()=>{
       const pronouns=('pronouns' in patch)?String(patch.pronouns||'').replace(/[\u0000-\u001f\u007f<>]/g,'').replace(/\s+/g,' ').trim().slice(0,30):String((cur.style&&cur.style.pronouns)||'');
       delete merged.pronouns;
       // Profile description is public too, so it lives in `style` like pronouns. Carried forward unless this patch changes it.
-      const description=('description' in patch)?String(patch.description||'').replace(/[\u0000-\u0009\u000b-\u001f\u007f<>]/g,'').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim().slice(0,150):String((cur.style&&cur.style.description)||'');
+      const description=('description' in patch)?String(patch.description||'').replace(/[\u0000-\u0009\u000b-\u001f\u007f<>]/g,'').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim().slice(0,descMaxFor(id)):String((cur.style&&cur.style.description)||'');
       delete merged.description;
+      // MVP image banner: public like the avatar, so it lives in `style`. Only MVPs can set one; clearing is always allowed.
+      const banner=('banner' in patch)?((patch.banner&&hasMvpPerks(id)&&isSafeBannerImg(patch.banner))?patch.banner:''):String((cur.style&&cur.style.banner)||'');
+      delete merged.banner;
       // TAG-VISIBILITY: hidden tags are public too (everyone's client needs them), so they live in `style` like pronouns.
       const hiddenTags=('hiddenTags' in patch)?String(patch.hiddenTags||'').split(',').filter((t,i,a)=>HIDEABLE_TAGS.indexOf(t)!==-1&&a.indexOf(t)===i).join(','):String((cur.style&&cur.style.hiddenTags)||'');
       delete merged.hiddenTags;
       const style={bubble:merged.meBubble||'#7c6cff',text:merged.meText||'#ffffff',radius:Number(merged.radius)||16,avatar};
       if(pronouns)style.pronouns=pronouns;
       if(description)style.description=description;
+      if(banner)style.banner=banner;
       if(hiddenTags)style.hiddenTags=hiddenTags;       // empty = field omitted, so nothing changes for people who don't use it
       C.users[id]={...cur,settings:merged,style};emit();
       // avatar lives in the public `style` node (above), not `settings` (which is
@@ -1156,6 +1176,7 @@ const DB=(()=>{
       userId=Number(userId);
       const keys=[CFG.GLOBAL_ROOM,'announcements'];
       if(isOwner(myId)||DB.vipInfo(myId))keys.push(CFG.VIP_ROOM);
+      if(mvpAccess(myId))keys.push(CFG.MVP_ROOM);
       (C.myRoomIds||[]).filter(r=>C.rooms[r]).forEach(r=>keys.push(r));
       (C.friends[myId]||[]).forEach(f=>keys.push(dmKey(myId,f)));
       const items=[];
@@ -1255,6 +1276,7 @@ const DB=(()=>{
           const per=opts.aggressive?40:25,perKey=opts.aggressive?(opts.maxBatches||60):1;
           const keys=[CFG.GLOBAL_ROOM];
           if(isOwner(myId)||DB.vipInfo(myId))keys.push(CFG.VIP_ROOM);
+          if(mvpAccess(myId))keys.push(CFG.MVP_ROOM);
           (C.myRoomIds||[]).forEach(r=>keys.push(r));
           (C.friends[myId]||[]).forEach(f=>keys.push(dmKey(myId,f)));
           for(const key of keys){
@@ -1414,6 +1436,21 @@ const DB=(()=>{
       id=Number(id);if(!id)throw new Error('Enter a valid user ID.');
       await remove(R('vip/'+id)).catch(()=>{});
     },
+    /* --- Owner: grant/revoke MVP (permanent until removed) --- */
+    async giveMvp(id){
+      if(!isOwner(myId))throw new Error('Only owners can grant MVP.');
+      id=Number(id);if(!id)throw new Error('Enter a valid user ID.');
+      if(isOwner(id))throw new Error('Owners already have every MVP perk.');
+      if(mvpOn(id))throw new Error('That user is already an MVP.');
+      try{await update(ref(rtdb),{['mvp/'+id]:Math.round(Date.now()+SKEW)})}
+      catch(e){throw new Error(e.code==='PERMISSION_DENIED'?'Database refused it. Publish the MVP database rules (see SETUP-MVP.md).':'Could not grant MVP: '+(e.code||e.message))}
+    },
+    async removeMvp(id){
+      if(!isOwner(myId))throw new Error('Only owners can remove MVP.');
+      id=Number(id);if(!id)throw new Error('Enter a valid user ID.');
+      try{await update(ref(rtdb),{['mvp/'+id]:null,['spinWin/'+id]:null})}
+      catch(e){throw new Error(e.code==='PERMISSION_DENIED'?'Database refused it. Publish the MVP database rules (see SETUP-MVP.md).':'Could not remove MVP: '+(e.code||e.message))}
+    },
     /* --- Version history / forced updates --- */
     // The build this tab is actually running, from the <meta name="build-version"> tag
     // baked into the deployed index.html — never taken from the database.
@@ -1443,6 +1480,8 @@ const DB=(()=>{
     async sendMessage(key,{senderId,text,images,pings,replyTo}){
       if(typeof tosGateGuard==='function')await tosGateGuard();   // TOS not accepted / VPN / IP-banned network -> throws, nothing is sent
       if(key===CFG.VIP_ROOM&&!DB.vipInfo(senderId))throw new Error('VIP Chat is for VIP members. Win VIP from the Daily Spin.');
+      if(key===CFG.MVP_ROOM&&!mvpAccess(senderId))throw new Error('MVP Chat is for MVPs. MVP is a 0.1% prize on the Daily Spin.');
+      if(key!==CFG.ANNOUNCEMENTS_ROOM&&text&&text.length>maxMsgFor(senderId))throw new Error('Message is too long (max '+maxMsgFor(senderId)+' characters'+(isMvp(senderId)||isOwner(senderId)?'':'; MVPs get '+CFG.MAX_MSG*CFG.MVP_MSG_MULT)+').');
       if(DB.isBanned(senderId))throw new Error('Your account has been banned.');
       // The local ban list can lag (or not be loaded yet) right after a ban. Ask the server directly so a
       // banned account is stopped HERE, before the optimistic echo, instead of the message appearing and
@@ -1630,7 +1669,7 @@ const DB=(()=>{
     async editMessage(key,msgId,newText){
       if(typeof tosGateGuard==='function')await tosGateGuard();
       if(!key||!msgId)return;
-      const limit=key===CFG.ANNOUNCEMENTS_ROOM?Infinity:CFG.MAX_MSG;
+      const limit=key===CFG.ANNOUNCEMENTS_ROOM?Infinity:maxMsgFor(ME.id);
       const text=checkMessageText_((newText||'').trim()).slice(0,limit);
       if(!text)throw new Error('Message can\'t be empty.');
       const arr=C.messages[key];
