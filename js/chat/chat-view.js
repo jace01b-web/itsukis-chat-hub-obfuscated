@@ -33,13 +33,13 @@ function updateMuteLock(){
   if(announceBanner)announceBanner.classList.toggle('hidden',!announceLocked);
   const tosReason=(typeof chatBlockReason==='function')?chatBlockReason():null;
   if(typeof tosBannerSync==='function')tosBannerSync(tosReason);
-  const locked=muted||announceLocked||!!tosReason||(view.roomKey===CFG.VIP_ROOM&&!DB.vipInfo(ME.id));
+  const locked=muted||announceLocked||!!tosReason||(view.roomKey===CFG.VIP_ROOM&&!DB.vipInfo(ME.id))||(view.roomKey===CFG.MVP_ROOM&&!hasMvpPerks(ME.id));
   [input,sendBtn,attachBtn,emojiBtn].forEach(el=>{if(el)el.disabled=locked});
   if(input)input.placeholder=muted?'You are muted — you can\'t send messages right now':(announceLocked?'Only the owner can post announcements':(tosReason&&tosReason!=='Checking your account…'?'Chat is locked. See the notice above.':'Message... use @ to ping'));
   // Announcements have no message length limit (owner-only, so no spam risk) —
-  // every other channel keeps the normal 2000-char cap.
-  if(input){if(inAnnouncements)input.removeAttribute('maxlength');else input.maxLength=CFG.MAX_MSG}
-  if(ccMax)ccMax.textContent=inAnnouncements?'':'/'+CFG.MAX_MSG;
+  // every other channel keeps the normal 2000-char cap (MVPs get double: see maxMsgFor()).
+  if(input){if(inAnnouncements)input.removeAttribute('maxlength');else input.maxLength=maxMsgFor(ME.id)}
+  if(ccMax)ccMax.textContent=inAnnouncements?'':'/'+maxMsgFor(ME.id);
   if(!muted)return;
   const remaining=DB.muteRemainingMs(ME.id);
   if(mutedBanner)mutedBanner.textContent='🔇 You are muted for '+fmtMuteRemaining(remaining)+'. You can still view chat, but you can\'t send messages until the timeout ends.';
@@ -201,6 +201,7 @@ function renderOnlinePill(isGlobalSection){
   if(key===CFG.GLOBAL_ROOM){ids=DB.presenceIds();label='Online in Global Chat'}
   else if(key===CFG.ANNOUNCEMENTS_ROOM){ids=DB.presenceIds();label='Online in Announcements'}
   else if(key===CFG.VIP_ROOM){ids=DB.presenceIds();label='Online in VIP Lounge'}
+  else if(key===CFG.MVP_ROOM){ids=DB.presenceIds();label='Online in MVP Lounge'}
   else if(key&&String(key).startsWith('dm_')){ids=DB.presenceIds();label='Online in this DM'}
   else if(key){ids=DB.presenceIds();label='Online in this room'}
   else if(isGlobalSection){ids=DB.onlineIds();label='Online now'}

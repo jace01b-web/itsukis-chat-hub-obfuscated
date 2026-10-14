@@ -22,6 +22,7 @@ function renderMain(){
   if(key===CFG.GLOBAL_ROOM)title='🌍 Global Chat';
   else if(key===CFG.ANNOUNCEMENTS_ROOM)title='📢 Announcements';
   else if(key===CFG.VIP_ROOM)title='💎 VIP Lounge';
+  else if(key===CFG.MVP_ROOM)title='🏆 MVP Lounge';
   else if(key.startsWith('dm_')){
     const [,a,b]=key.split('_').map(Number);const other=a===ME.id?b:a;
     const ou=DB.getUser(other);

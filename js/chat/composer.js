@@ -109,7 +109,7 @@ function extractPings(text){
 let _lastSendAt=0;
 let _sendScanning=false;
 async function send(){
-  const msgLimit=view.roomKey===CFG.ANNOUNCEMENTS_ROOM?Infinity:CFG.MAX_MSG;
+  const msgLimit=view.roomKey===CFG.ANNOUNCEMENTS_ROOM?Infinity:maxMsgFor(ME.id);
   const text=expandShortcodes(msgIn.value.trim()).slice(0,msgLimit);
   if(!view.roomKey)return;
   if(DB.isBanned(ME.id)){toast('Your account has been banned.','bad');return}
