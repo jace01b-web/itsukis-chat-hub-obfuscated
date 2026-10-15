@@ -107,7 +107,7 @@ function renderVipBar(){
   if(!kind||!info)return;
   let html;
   if(kind==='mvp'){
-    html='<span class="vb-gem">🏆</span><div class="vb-txt"><b>MVP Lounge</b><span>MVPs only</span></div><span class="vb-pill">'+(info.kind==='owner'?'Owner access':'MVP forever')+'</span>';
+    html='<span class="mvp-bar-sp" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="vb-gem">🏆</span><div class="vb-txt"><b>MVP Lounge</b><span>The most exclusive room · MVPs only</span></div><span class="vb-pill">'+(info.kind==='owner'?'Owner access':'MVP forever')+'</span>';
   }else{
     const status=info.kind==='perm'?'VIP forever':(info.kind==='mvp'?'Free VIP · MVP':(info.kind==='owner'?'Owner access':'VIP ends in '+fmtDur(info.until-(Date.now()+SKEW))));
     html='<span class="vb-gem">💎</span><div class="vb-txt"><b>VIP Lounge</b><span>Members-only chat</span></div><span class="vb-pill">'+status+'</span>';
@@ -122,6 +122,7 @@ function applyVipLock(){
   const pg=$('#chatPage');if(pg){pg.classList.toggle('vip-mode',kind==='vip');pg.classList.toggle('mvp-mode',kind==='mvp')}
   const vl=$('#vipLock'),mb=$('#messages'),comp=document.querySelector('.composer');
   if(vl){
+    vl.classList.toggle('mvp-lock',kind==='mvp');
     vl.classList.toggle('hidden',!locked);
     const g=vl.querySelector('.vl-gem'),h=vl.querySelector('h2'),p=vl.querySelector('p');
     if(kind==='mvp'){
