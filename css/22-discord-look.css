@@ -1096,3 +1096,24 @@ html.discord-look .msg-hover-bar button svg{width:20px;height:20px}
 html.discord-look .msg-hover-bar button:hover{background:rgba(255,255,255,.1)!important;color:#dbdee1}
 html.discord-look .msg-hover-bar .hb-danger{color:#b5bac1}
 html.discord-look .msg-hover-bar .hb-danger:hover{background:rgba(242,63,67,.16)!important;color:#f23f43}
+
+/* ===== MVP in the Discord look: rail icon, channel, banner, member group ===== */
+html.discord-look .dl-rail-btn.dl-rail-mvp{overflow:visible;color:#fff;background:linear-gradient(135deg,#3a0a2e,#1c1038 60%,#082a3a)!important;box-shadow:0 0 0 1px rgba(255,110,200,.4),0 0 14px rgba(255,47,160,.45)}
+html.discord-look .dl-rail-btn.dl-rail-mvp::before{content:'';position:absolute;inset:-3px;border-radius:inherit;padding:2px;pointer-events:none;
+  background:conic-gradient(from var(--mvpA),#ff2fa0,#ffb02e,#3ee6ff,#c28bff,#ff2fa0);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:mvpSpin 4s linear infinite}
+html.discord-look .dl-rail-btn.dl-rail-mvp .dl-rail-ic{animation:mvpBob 3s ease-in-out infinite;filter:drop-shadow(0 0 6px rgba(255,47,160,.8))}
+html.discord-look .dl-rail-btn.dl-rail-mvp:hover,html.discord-look .dl-rail-btn.dl-rail-mvp.active{background:linear-gradient(135deg,#ff2fa0,#b8338f 55%,#ff9a2e)!important;color:#fff;box-shadow:0 0 0 1px rgba(255,200,235,.7),0 0 22px rgba(255,47,160,.7)}
+html.discord-look .dl-rail-btn.dl-rail-mvp .dl-rail-pill{background:#ff7ed2;box-shadow:0 0 8px rgba(255,47,160,.9)}
+html.discord-look .sb-item.dl-sb-mvp>span:first-child:not([data-open-profile]){color:#ff7ed2;text-shadow:0 0 8px rgba(255,47,160,.7)}
+html.discord-look .sb-item.dl-sb-mvp .nm{font-weight:800;background:var(--mvp-holo);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:mvpHolo 6s linear infinite}
+html.discord-look .sb-item.dl-sb-mvp::after{content:'🏆';margin-left:auto;font-size:13px;filter:drop-shadow(0 0 5px rgba(255,47,160,.9))}
+html.discord-look .sb-item.dl-sb-mvp:hover{background:rgba(255,47,160,.13)}
+html.discord-look .sb-item.dl-sb-mvp.active,html.discord-look .sb-item.dl-sb-mvp.active:hover{background:linear-gradient(90deg,rgba(255,47,160,.3),rgba(255,176,46,.12) 70%,transparent)!important;box-shadow:inset 3px 0 0 #ff2fa0!important}
+html.discord-look #chatPage.mvp-mode .topbar{background-image:linear-gradient(90deg,rgba(255,47,160,.18),rgba(255,176,46,.07) 45%,rgba(62,230,255,.12))!important;box-shadow:0 1px 0 rgba(255,92,200,.55),0 10px 30px -16px rgba(255,47,160,.8)!important}
+html.discord-look #chatPage.mvp-mode .messages{background-image:radial-gradient(60% 42% at 88% 0,rgba(255,47,160,.10),transparent 70%),radial-gradient(52% 40% at 8% 100%,rgba(62,230,255,.08),transparent 70%)}
+html.discord-look #chatPage.mvp-mode .composer{box-shadow:0 -14px 34px -26px rgba(255,47,160,.8)}
+html.discord-look #chatPage.mvp-mode .vip-bar{margin:0;border-radius:0;border-width:0 0 1.5px;padding:9px 16px}
+html.discord-look #chatPage.mvp-mode .vb-gem{font-size:24px}
+html.discord-look .dl-mem-h.dl-mem-h-mvp{font-weight:800;letter-spacing:.06em;background:var(--mvp-holo);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:mvpHolo 6s linear infinite}
+html.discord-look .dl-mem-h.dl-mem-h-mvp[style*="--rc"]::before{content:'🏆';width:auto;height:auto;background:none;border-radius:0;font-size:12px;-webkit-text-fill-color:initial;filter:drop-shadow(0 0 5px rgba(255,47,160,.9))}
+html.discord-look .dl-mem:has(.mvp-nm){background:linear-gradient(90deg,rgba(255,47,160,.12),rgba(62,230,255,.05) 60%,transparent);box-shadow:inset 2px 0 0 rgba(255,47,160,.7)}

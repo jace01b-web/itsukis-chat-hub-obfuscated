@@ -299,19 +299,83 @@
 /* ---- profile role pill ---- */
 .pf-role.mvp-role{color:#3a0a2a;background:linear-gradient(135deg,#ffd0ee,#ff63c0 45%,#ffc24d);border-color:rgba(255,120,205,.8);padding:4px 11px;gap:6px;line-height:1;box-shadow:0 0 12px rgba(255,47,160,.35)}
 .pf-role.mvp-role small{font-weight:600;opacity:.75;font-size:.9em}
-/* ---- MVP lounge look ---- */
-#chatPage.mvp-mode .topbar{box-shadow:inset 0 -1px 0 rgba(255,92,200,.45),0 14px 40px -26px rgba(255,47,160,.65)}
-#chatPage.mvp-mode .composer{box-shadow:inset 0 1px 0 rgba(255,92,200,.35)}
-#chatPage.mvp-mode .send{background:linear-gradient(135deg,#ff63c0,#ff2fa0 55%,#ffb02e);color:#2a0018}
-#chatPage.mvp-mode .vip-bar{background:linear-gradient(100deg,rgba(255,47,160,.18),rgba(255,176,46,.14));border-color:rgba(255,92,200,.4)}
-/* ---- home "MVP Chat" card + rail icon ---- */
-.gc-modal .gc-card.gc-mvp{width:100%;flex-direction:row;justify-content:flex-start;gap:16px;min-height:0;padding:16px 24px;text-align:left;
-  background:linear-gradient(110deg,rgba(255,47,160,.22),rgba(255,176,46,.16) 55%,rgba(62,230,255,.14));border:1px solid rgba(255,110,200,.5);box-shadow:0 10px 34px rgba(255,47,160,.18)}
-.gc-modal .gc-card.gc-mvp:hover{border-color:rgba(255,160,220,.85);box-shadow:0 16px 44px rgba(255,47,160,.32)}
-.gc-modal .gc-card.gc-mvp .gc-ic{font-size:30px}
-.gc-modal .gc-card.gc-mvp h3{margin:0}
-.gc-mvp .mvp-card-sub{margin-left:auto;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:rgba(255,47,160,.25);color:#ffc2e6}
-.gc-mvp .mvp-ring{display:none}
+/* ---- MVP lounge look (the room) ---- */
+:root{--mvp-holo:linear-gradient(90deg,#ff2fa0,#ffd27a,#fff,#3ee6ff,#c28bff,#ff2fa0,#ffd27a,#fff,#3ee6ff,#c28bff,#ff2fa0)}
+@property --mvpA{syntax:'<angle>';initial-value:0deg;inherits:false}
+@keyframes mvpSpin{to{--mvpA:360deg}}
+@keyframes mvpHolo{to{background-position:100% 0}}
+@keyframes mvpFloat{0%,100%{transform:translateY(2px) rotate(-3deg)}50%{transform:translateY(-7px) rotate(3deg)}}
+@keyframes mvpHalo{0%,100%{opacity:.55;transform:scale(.9)}50%{opacity:1;transform:scale(1.12)}}
+@keyframes mvpOrbit{to{transform:rotate(360deg)}}
+@keyframes mvpRise{0%{opacity:0;transform:translateY(0) scale(.5)}18%{opacity:1}100%{opacity:0;transform:translateY(-120px) scale(1.05)}}
+@keyframes mvpPulse{0%,100%{box-shadow:0 18px 50px rgba(0,0,0,.4),0 0 40px rgba(255,47,160,.22),0 0 80px rgba(62,230,255,.08),inset 0 1px 0 rgba(255,225,245,.35)}
+  50%{box-shadow:0 18px 50px rgba(0,0,0,.4),0 0 64px rgba(255,47,160,.42),0 0 110px rgba(62,230,255,.16),inset 0 1px 0 rgba(255,225,245,.5)}}
+@keyframes mvpBorder{to{background-position:0 0,100% 0}}
+@keyframes mvpTw{0%,100%{opacity:.1;transform:scale(.5) rotate(0)}50%{opacity:1;transform:scale(1.15) rotate(40deg)}}
+@keyframes mvpBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+#chatPage.mvp-mode .topbar{box-shadow:inset 0 -1px 0 rgba(255,92,200,.5),0 14px 40px -24px rgba(255,47,160,.75)}
+#chatPage.mvp-mode .composer{box-shadow:inset 0 1px 0 rgba(255,92,200,.4),0 -14px 34px -24px rgba(255,47,160,.7)}
+#chatPage.mvp-mode .send{background:linear-gradient(135deg,#ff63c0,#ff2fa0 55%,#ffb02e);color:#2a0018;box-shadow:0 6px 20px rgba(255,47,160,.4)}
+#chatPage.mvp-mode .messages{background-image:radial-gradient(60% 42% at 88% 0,rgba(255,47,160,.11),transparent 70%),radial-gradient(52% 40% at 8% 100%,rgba(62,230,255,.09),transparent 70%),radial-gradient(40% 30% at 50% 55%,rgba(194,139,255,.05),transparent 75%)}
+#chatPage.mvp-mode .vip-bar{position:relative;overflow:hidden;isolation:isolate;gap:14px;padding:11px 16px;border:1.5px solid transparent;
+  background:linear-gradient(100deg,rgba(58,10,48,.9),rgba(20,14,44,.86) 55%,rgba(8,34,48,.8)) padding-box,var(--mvp-holo) border-box;background-size:auto,200% 100%;
+  box-shadow:0 0 30px rgba(255,47,160,.3),0 0 60px rgba(62,230,255,.1),inset 0 1px 0 rgba(255,225,245,.2);animation:mvpBorder 6s linear infinite}
+#chatPage.mvp-mode .vip-bar::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.14) 50%,transparent 60%);transform:translateX(-130%);animation:vipSheen 5s ease-in-out 1s infinite}
+#chatPage.mvp-mode .vb-gem{font-size:30px;filter:drop-shadow(0 3px 10px rgba(255,47,160,.65)) drop-shadow(0 0 10px rgba(255,190,70,.4));animation:mvpFloat 4s ease-in-out infinite}
+#chatPage.mvp-mode .vb-txt b{font-size:15px;font-weight:900;letter-spacing:.02em;background:var(--mvp-holo);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:mvpHolo 6s linear infinite}
+#chatPage.mvp-mode .vb-txt span{color:rgba(255,220,240,.72)}
+#chatPage.mvp-mode .vb-pill{font-weight:800;color:#2a0018;border:0;background:var(--mvp-holo);background-size:200% 100%;animation:mvpHolo 6s linear infinite;box-shadow:0 4px 16px rgba(255,47,160,.4)}
+.mvp-bar-sp{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.mvp-bar-sp i{position:absolute;font-style:normal;font-size:11px;line-height:1;color:#fff;text-shadow:0 0 8px #ff2fa0;opacity:0;animation:mvpTw 2.8s ease-in-out infinite}
+.mvp-bar-sp i::before{content:'✦'}
+.mvp-bar-sp i:nth-child(1){left:20%;top:18%}.mvp-bar-sp i:nth-child(2){left:38%;top:68%;animation-delay:.7s;text-shadow:0 0 8px #ffb02e}
+.mvp-bar-sp i:nth-child(3){left:57%;top:22%;animation-delay:1.3s;text-shadow:0 0 8px #3ee6ff}.mvp-bar-sp i:nth-child(4){left:72%;top:64%;animation-delay:.3s}
+.mvp-bar-sp i:nth-child(5){left:86%;top:20%;animation-delay:1.9s;text-shadow:0 0 8px #ffb02e}.mvp-bar-sp i:nth-child(6){left:8%;top:62%;animation-delay:2.2s;text-shadow:0 0 8px #3ee6ff}
+.vip-lock.mvp-lock .vl-card{border-color:rgba(255,110,200,.55);box-shadow:0 20px 60px rgba(0,0,0,.4),0 0 70px rgba(255,47,160,.22),0 0 110px rgba(62,230,255,.08)}
+.vip-lock.mvp-lock .vl-gem{filter:drop-shadow(0 6px 18px rgba(255,47,160,.6)) drop-shadow(0 0 18px rgba(255,190,70,.4));animation:mvpFloat 4s ease-in-out infinite}
+.vip-lock.mvp-lock .vl-card h2{background:var(--mvp-holo);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:mvpHolo 6s linear infinite}
+.vip-lock.mvp-lock .vl-btn{background:linear-gradient(135deg,#ff63c0,#ff2fa0 55%,#ffb02e)!important;color:#2a0018!important;box-shadow:0 8px 24px rgba(255,47,160,.38)!important}
+/* ---- home "MVP Chat" hero (same slot as the VIP hero, but louder) ---- */
+.mvp-hero{grid-column:1/-1;position:relative}
+.gc-modal .gc-card.gc-mvp,.gc-modal .gc-card.gc-mvp:hover{background:
+  radial-gradient(70% 170% at 7% 50%,rgba(255,47,160,.36),transparent 60%),radial-gradient(60% 150% at 97% 15%,rgba(62,230,255,.24),transparent 62%),
+  linear-gradient(105deg,rgba(60,10,50,.82),rgba(18,12,42,.74) 60%,rgba(8,32,46,.66)),var(--ui-panel2)}
+.gc-modal .gc-card.gc-mvp{width:100%;flex-direction:row;flex-wrap:wrap;justify-content:flex-start;align-items:center;text-align:left;gap:22px;min-height:0;padding:28px 28px;
+  border:1px solid rgba(255,120,210,.4);animation:mvpPulse 4.5s ease-in-out infinite}
+.gc-modal .gc-card.gc-mvp:hover,.gc-modal .gc-card.gc-mvp:focus-visible,html.hw-on .gc-modal .gc-card.gc-mvp:hover{border-color:rgba(255,170,225,.9);animation-duration:1.8s}
+.gc-mvp:focus-visible{outline:2px solid #ff9bd8;outline-offset:3px}
+.mvp-aurora{position:absolute;left:50%;top:50%;width:150%;aspect-ratio:1;margin:-75% 0 0 -75%;pointer-events:none;opacity:.55;filter:blur(26px);
+  background:conic-gradient(from 0deg,rgba(255,47,160,0),rgba(255,47,160,.55),rgba(255,176,46,0) 30%,rgba(62,230,255,.5) 52%,rgba(155,92,255,0) 72%,rgba(255,47,160,.55));animation:mvpOrbit 16s linear infinite}
+.mvp-ring{position:absolute;inset:0;border-radius:inherit;padding:2px;pointer-events:none;
+  background:conic-gradient(from var(--mvpA),#ff2fa0,#ffb02e,#3ee6ff,#c28bff,#ff2fa0);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:mvpSpin 4s linear infinite}
+.mvp-sheen{position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg,transparent 40%,rgba(255,235,250,.2) 50%,transparent 60%);transform:translateX(-130%);animation:vipSheen 5s ease-in-out .8s infinite}
+.mvp-sparks{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:inherit}
+.mvp-sparks i{position:absolute;left:var(--x);bottom:-8px;width:var(--s);height:var(--s);border-radius:50%;background:#fff;--c:rgba(255,47,160,.95);box-shadow:0 0 8px 2px var(--c);opacity:0;animation:mvpRise var(--d) ease-in var(--t) infinite}
+.mvp-sparks i:nth-child(3n+2){--c:rgba(255,190,70,.95)}.mvp-sparks i:nth-child(3n){--c:rgba(62,230,255,.95)}
+.mvp-trophy{position:relative;isolation:isolate;flex:none;font-size:64px;line-height:1;animation:mvpFloat 4.2s ease-in-out infinite;
+  filter:drop-shadow(0 6px 18px rgba(255,47,160,.6)) drop-shadow(0 0 20px rgba(255,190,70,.45))}
+.mvp-trophy::before{content:'';position:absolute;inset:-26px;z-index:-1;border-radius:50%;background:radial-gradient(circle,rgba(255,80,190,.4),rgba(255,190,70,.14) 50%,transparent 70%);animation:mvpHalo 3.2s ease-in-out infinite}
+.mvp-trophy::after{content:'';position:absolute;inset:-12px;border-radius:50%;border:1.5px dashed rgba(255,190,230,.55);animation:mvpOrbit 10s linear infinite}
+.mvp-crown{position:absolute;left:50%;top:-20px;font-size:26px;transform:translateX(-50%) rotate(-10deg);filter:drop-shadow(0 0 8px rgba(255,200,80,.8))}
+.mvp-copy{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0;flex:1 1 220px}
+.mvp-kicker{font-size:10.5px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:#ffd27a;text-shadow:0 0 10px rgba(255,190,70,.6)}
+.mvp-title{font-size:28px;font-weight:900;line-height:1.05;letter-spacing:.01em;background:var(--mvp-holo);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
+  animation:mvpHolo 6s linear infinite;filter:drop-shadow(0 0 14px rgba(255,47,160,.45))}
+.mvp-sub{font-size:13px;line-height:1.4;color:rgba(255,222,242,.78)}
+.mvp-perks{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.mvp-perks i{font-style:normal;font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:999px;color:#ffe0f3;background:rgba(255,255,255,.08);border:1px solid rgba(255,160,220,.3);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.mvp-state{position:relative;margin-left:auto;font-size:12px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;padding:7px 14px;border-radius:999px;color:#2a0018;
+  background:var(--mvp-holo);background-size:200% 100%;animation:mvpHolo 6s linear infinite;box-shadow:0 6px 20px rgba(255,47,160,.45),inset 0 1px 0 rgba(255,255,255,.6)}
+@media (max-width:620px){
+  .gc-modal .gc-card.gc-mvp{padding:22px 18px;gap:14px}
+  .mvp-trophy{font-size:50px}.mvp-title{font-size:23px}.mvp-crown{font-size:21px;top:-16px}
+  .mvp-state{flex-basis:100%;margin:0;text-align:center}
+}
+html.anti-lag .mvp-aurora{display:none}
+html.anti-lag .mvp-hero *,html.anti-lag .mvp-hero *::before,html.anti-lag .mvp-hero *::after,html.anti-lag .gc-card.gc-mvp,html.anti-lag #chatPage.mvp-mode .vip-bar,html.anti-lag #chatPage.mvp-mode .vip-bar *,
+html.anti-lag #chatPage.mvp-mode .vip-bar::before,html.anti-lag .vip-lock.mvp-lock *,html.anti-lag .dl-rail-mvp,html.anti-lag .dl-rail-mvp *,html.anti-lag .dl-rail-mvp::before,html.anti-lag .dl-sb-mvp .nm{animation:none!important}
+@media (prefers-reduced-motion:reduce){.mvp-hero *,.mvp-hero *::before,.mvp-hero *::after,.gc-card.gc-mvp,#chatPage.mvp-mode .vip-bar,#chatPage.mvp-mode .vip-bar *,#chatPage.mvp-mode .vip-bar::before,.vip-lock.mvp-lock *,.dl-rail-mvp,.dl-rail-mvp *,.dl-rail-mvp::before,.dl-sb-mvp .nm{animation:none!important}.mvp-aurora{display:none}}
 /* ---- daily spin: MVP prize, perks, hall of MVPs ---- */
 .odd.mvp{border-color:rgba(255,92,200,.6);background:linear-gradient(100deg,rgba(255,47,160,.16),rgba(255,176,46,.1))}
 .odd.mvp b{color:#ff9bd8}
