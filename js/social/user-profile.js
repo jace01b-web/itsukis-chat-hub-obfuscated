@@ -138,7 +138,7 @@ function openProfilePopout(id){
   const sub=deleted?'Account deleted':[online?'Online':'Offline',u.pronouns?esc(u.pronouns):''].filter(Boolean).join(' <b>\u2022</b> ');
   const roles=deleted?'':profileRolesHTML(id);
   root.innerHTML=`<div class="modal-bg dlpo-bg"><div class="dlpo" role="dialog" aria-label="Profile of ${esc(name)}">
-    <div class="dlpo-banner" style="background:${bannerGradCss(banner)}"><div class="dlpo-btns">
+    <div class="dlpo-banner${bannerImgOf(u)?' banner-img':''}" style="background:${bannerBg(u,banner)}"><div class="dlpo-btns">
       ${canAdd?'<button type="button" class="dlpo-ib" id="poAdd" title="Add Friend" aria-label="Add Friend"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 20c0-3.3 3.6-5 8-5s8 1.7 8 5v1H2zM19 8h-2v2h-2v2h2v2h2v-2h2v-2h-2z"/></svg></button>':''}
       ${canRemove?'<button type="button" class="dlpo-ib" id="poRemove" title="Remove Friend" aria-label="Remove Friend"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 20c0-3.3 3.6-5 8-5s8 1.7 8 5v1H2zM15 9h7v2h-7z"/></svg></button>':''}
       <button type="button" class="dlpo-ib" id="poMore" title="View full profile" aria-label="View full profile"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
@@ -151,7 +151,7 @@ function openProfilePopout(id){
       ${deleted?'':'<button type="button" class="dlpo-full" id="poFull">View Full Profile</button>'}
       ${roles}
     </div>
-    ${(!isMe&&!deleted)?`<div class="dlpo-msg"><input id="poMsg" type="text" maxlength="2000" placeholder="Message @${esc(name)}" autocomplete="off" spellcheck="false" aria-label="Message ${esc(name)}"></div>`:''}
+    ${(!isMe&&!deleted)?`<div class="dlpo-msg"><input id="poMsg" type="text" maxlength="${maxMsgFor(ME.id)}" placeholder="Message @${esc(name)}" autocomplete="off" spellcheck="false" aria-label="Message ${esc(name)}"></div>`:''}
   </div></div>`;
   const bg=root.querySelector('.dlpo-bg'),card=root.querySelector('.dlpo');
   const close=()=>{root.innerHTML='';document.removeEventListener('keydown',onKey,true)};
@@ -264,16 +264,19 @@ function openUserProfile(id,opts){
     const vInfo=deleted?null:DB.vipInfo(id,true);
     const vipTimerHTML=(vInfo&&vInfo.kind==='day')?`<div><span class="pf-vip-timer">VIP \u00B7 ${fmtDur(vInfo.until-(Date.now()+SKEW))} left</span></div>`:'';
     if(!isMe&&!deleted&&iAmOwner&&!owner){
-      const hasVip=!!(vInfo&&vInfo.kind!=='owner');
+      const hasVip=DB.hasVipRole(id);       // a real VIP record (MVP's built-in VIP isn't removable here; remove MVP instead)
       modHtml+=hasVip
         ?`<button class="btn sec small" id="pfVipRemove">Remove VIP</button>`
         :`<button class="btn sec small" id="pfVipGive">\u{1F48E} Give VIP</button>`;
+      modHtml+=DB.isMvp(id)
+        ?`<button class="btn sec small" id="pfMvpRemove">Remove MVP</button>`
+        :`<button class="btn sec small" id="pfMvpGive">\u{1F3C6} Give MVP</button>`;
     }
     const statusDot=deleted?'':`<span style="width:9px;height:9px;border-radius:50%;flex:none;${online?'background:#3ddc73;box-shadow:0 0 6px #3ddc73':'background:var(--muted)'}"></span>`;
     const statusText=deleted?'Account deleted':(online?'Online now':'Offline');
 
     root.innerHTML=`<div class="modal-bg"><div class="modal pf-card" style="max-width:340px;padding:0;overflow:hidden">
-      <div class="pf-banner banner-anim" style="background:${bannerGradCss(bannerBase)}">
+      <div class="pf-banner${bannerImgOf(u)?' banner-img':' banner-anim'}" style="background:${bannerBg(u,bannerBase)}">
         <button class="pf-x" id="pfClose" title="Close">✕</button>
       </div>
       <div class="pf-body" style="padding:0 24px 24px;margin-top:-46px">
@@ -353,6 +356,17 @@ function openUserProfile(id,opts){
     if(el2('pfVipRemove'))el2('pfVipRemove').onclick=async()=>{
       try{await DB.removeVip(id);toast('VIP removed from '+name+'.');render()}
       catch(e){toast(e.message,'bad')}
+    };
+    if(el2('pfMvpGive'))el2('pfMvpGive').onclick=async e=>{
+      e.currentTarget.disabled=true;
+      try{await DB.giveMvp(id);toast(name+' is now an MVP (permanent until removed).');render()}
+      catch(err){toast(err.message,'bad');e.currentTarget.disabled=false}
+    };
+    if(el2('pfMvpRemove'))el2('pfMvpRemove').onclick=async e=>{
+      if(!confirm('Remove MVP from '+name+'? They lose the perks and the role.'))return;
+      e.currentTarget.disabled=true;
+      try{await DB.removeMvp(id);toast('MVP removed from '+name+'.');render()}
+      catch(err){toast(err.message,'bad');e.currentTarget.disabled=false}
     };
     if(el2('pfBan'))el2('pfBan').onclick=()=>{root.innerHTML='';modalBanConfirm(id,name)};
     if(el2('pfMute'))el2('pfMute').onclick=()=>{root.innerHTML='';modalMuteConfirm(id,name)};
