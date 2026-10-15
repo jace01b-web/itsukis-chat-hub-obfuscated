@@ -794,6 +794,7 @@ function openSettings(fromChat){
     if(key===CFG.GLOBAL_ROOM)return '🌍 Global Chat';
     if(key===CFG.ANNOUNCEMENTS_ROOM)return '📢 Announcements';
     if(key===CFG.VIP_ROOM)return '💎 VIP Lounge';
+    if(key===CFG.MVP_ROOM)return '🏆 MVP Lounge';
     if(key.startsWith('dm_')){
       const [,a,b]=key.split('_').map(Number);const other=a===ME.id?b:a;
       const u=DB.getUser(other);
