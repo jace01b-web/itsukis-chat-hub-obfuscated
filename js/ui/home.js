@@ -34,6 +34,8 @@ function openChat(mode,section){
       view.roomKey=CFG.ANNOUNCEMENTS_ROOM;
     }else if(section==='vip'){
       view.roomKey=CFG.VIP_ROOM;
+    }else if(section==='mvp'){
+      view.roomKey=hasMvpPerks(ME.id)?CFG.MVP_ROOM:CFG.GLOBAL_ROOM;
     }else{
       view.roomKey=CFG.GLOBAL_ROOM;
     }
@@ -53,7 +55,7 @@ function modalGlobalChoice(){
     <div class="gc-grid">
     ${(()=>{
       const vi=DB.vipInfo(ME.id);
-      const state=!vi?'🔒 Locked':(vi.kind==='perm'?'VIP forever':(vi.kind==='owner'?'Owner access':'Ends in '+fmtDur(vi.until-(Date.now()+SKEW))));
+      const state=!vi?'🔒 Locked':(vi.kind==='perm'?'VIP forever':(vi.kind==='mvp'?'Free with MVP':(vi.kind==='owner'?'Owner access':'Ends in '+fmtDur(vi.until-(Date.now()+SKEW)))));
       const sub=vi?'Your members-only lounge is open.':'Members only. Win VIP from the Daily Spin to get in.';
       const sparks=Array.from({length:14},(_,i)=>`<i style="--x:${(i*37+11)%96}%;--y:${(i*53+7)%88}%;--s:${3+(i%3)*2}px;--d:${(2.4+(i%5)*.6).toFixed(1)}s;--t:${((i*0.37)%3).toFixed(2)}s"></i>`).join('');
       return `<div class="vip-hero${vi?' open':' locked'}">
@@ -64,6 +66,7 @@ function modalGlobalChoice(){
       </button>
       <button class="vip-spin" id="gcSpin" type="button">🎡 Daily Spin</button>
     </div>`})()}
+      ${hasMvpPerks(ME.id)?`<button class="gc-card gc-mvp" id="gcMvp" type="button"><span class="mvp-ring"></span><div class="gc-ic">🏆</div><h3>MVP Chat</h3><span class="mvp-card-sub">${isOwner(ME.id)?'Owner access':'MVPs only'}</span></button>`:''}
       <button class="gc-card gc-global" id="gcGlobal">
         <div class="gc-ic">🌐</div>
         <h3>Global Chat</h3>
@@ -86,5 +89,6 @@ function modalGlobalChoice(){
   $('#gcRooms').onclick=()=>close(()=>openChat('global','rooms'));
   $('#gcAnnouncements').onclick=()=>close(()=>openChat('global','announcements'));
   $('#gcVip').onclick=()=>close(()=>openChat('global','vip'));
+  if($('#gcMvp'))$('#gcMvp').onclick=()=>close(()=>openChat('global','mvp'));
   $('#gcSpin').onclick=()=>close(()=>openSpin());
 }

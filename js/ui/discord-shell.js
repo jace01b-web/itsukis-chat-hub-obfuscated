@@ -35,6 +35,7 @@ const DiscordShell=(function(){
       {id:'rooms',t:'Rooms',ic:'🚪',active:g&&sec==='rooms',badge:unreadRooms},
       {id:'ann',t:'Announcements',ic:'📢',active:g&&sec==='announcements',badge:unreadAnn},
       {id:'vip',t:'VIP Lounge',ic:'💎',active:g&&sec==='vip'},
+      ...(hasMvpPerks(ME.id)?[{id:'mvp',t:'MVP Lounge',ic:'🏆',active:g&&sec==='mvp',cls:'dl-rail-mvp'}]:[]),
       {sep:1},
       {id:'hubs',t:'Hubs & Tools',ic:'🎮'},
       {id:'extras',t:'Extras',ic:EXTRAS_IC},
@@ -79,6 +80,7 @@ const DiscordShell=(function(){
       rooms:()=>openChat('global','rooms'),
       ann:()=>openChat('global','announcements'),
       vip:()=>openChat('global','vip'),
+      mvp:()=>openChat('global','mvp'),
       hubs:()=>modalGameHubs(),
       extras:()=>toggleExtras(b),
       gift:()=>{closeExtras();if(typeof showGiftPromo==='function')showGiftPromo()},
@@ -187,6 +189,7 @@ const DiscordShell=(function(){
     list.appendChild(sbItem('#','global-chat',cur===CFG.GLOBAL_ROOM,open(null)));
     list.appendChild(sbItem('#','announcements',cur===CFG.ANNOUNCEMENTS_ROOM,open('announcements'),annN));
     list.appendChild(sbItem(vip?'#':'🔒','vip-lounge',cur===CFG.VIP_ROOM,open('vip')));
+    if(hasMvpPerks(ME.id))list.appendChild(sbItem('#','mvp-lounge',cur===CFG.MVP_ROOM,open('mvp')));    // MVP Chat only shows up for MVPs (and owners)
     addHTML(list,`<div class="sb-section">Rooms<button type="button" class="sb-plus" id="sbNewRoom" title="Create a room" aria-label="Create a room">+</button></div>`);
     const np=document.getElementById('sbNewRoom');if(np)np.onclick=e=>{e.stopPropagation();modalCreateRoom()};
     const rooms=DB.myRooms(ME.id);
@@ -222,7 +225,7 @@ const DiscordShell=(function(){
     const joined=u.createdAt?new Date(u.createdAt).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'';
     const av=avatarHtml(u,name,'width:80px;height:80px;font-size:30px');
     const html0=`<div class="dlp">
-      <div class="dlp-banner" style="background:${bannerGradCss(banner)}"></div>
+      <div class="dlp-banner${bannerImgOf(u)?' banner-img':''}" style="background:${bannerBg(u,banner)}"></div>
       <div class="dlp-av">${av}<i class="dl-dot${online?'':' off'}"></i></div>
       <div class="dlp-card">
         <div class="dlp-name">${deleted?esc(name):fullNameHTML(id,esc(name))}</div>
@@ -259,10 +262,11 @@ const DiscordShell=(function(){
   const MEM_SHOW_OFF=60;let offAll=false;
   function memGroupOf(id){
     if(isShownOwner(id))return'owner';
-    if(isAdmin(id))return'admin';
-    if(isMod(id))return'mod';
     let v=null;try{v=DB.vipInfo(id,true,true)}catch(_){}
     if(v&&v.kind==='owner')return'owner';
+    if(v&&v.kind==='mvp')return'mvp';        // MVPs are listed ABOVE admins and mods (they have no staff powers, just status)
+    if(isAdmin(id))return'admin';
+    if(isMod(id))return'mod';
     if(v&&v.kind==='perm')return'vipperm';
     if(v&&v.kind==='day')return'vip1';
     let live=null,roles={};try{live=DB.flairOf(id);roles=DB.rolesOf(id)||{}}catch(_){}
@@ -270,7 +274,7 @@ const DiscordShell=(function(){
     return'online';
   }
   function memGroupDefs(){
-    const d=[['owner','Owner','#faa81a'],['admin','Admins','#ed4245'],['mod','Moderators','#3ba55d']];
+    const d=[['owner','Owner','#faa81a'],['mvp','MVPs','#ff2fa0'],['admin','Admins','#ed4245'],['mod','Moderators','#3ba55d']];
     SPIN_RANK.forEach(k=>{const pz=SPIN_PRIZES.find(x=>x.id===k);d.push([k,pz?pz.name.replace(/\s*—\s*/,' · '):k,pz?pz.color:'#99aab5'])});
     d.push(['online','Online','#23a559']);
     return d;
@@ -279,7 +283,8 @@ const DiscordShell=(function(){
     const u=DB.getUser(id)||{id,username:'User '+id};
     const nm=esc(displayUsername(u.username));
     const p=off?null:nameStylePreset(id);
-    const nameH=p?'<span class="nm-user flair-name flair-'+p+'">'+nm+'</span>':'<span class="nm-user">'+nm+'</span>';
+    const mv=!off&&isMvp(id)&&!tagHidden(id,'mvp');
+    const nameH=p?'<span class="nm-user flair-name flair-'+p+'">'+nm+'</span>':'<span class="nm-user'+(mv?' mvp-nm':'')+'">'+nm+(mv?' <span class="mvp-mark" title="MVP">🏆</span>':'')+'</span>';
     return `<div class="dl-mem${off?' off':''}" data-open-profile="${id}"><span class="dl-fr-av">${avatarHtml(u,u.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot${off?' off':''}"></i></span><span class="dl-mem-nm">${nameH}</span></div>`;
   }
   function renderMembers(){
@@ -295,7 +300,7 @@ const DiscordShell=(function(){
     if(dmPeer!=null){renderDmProfile(m,dmPeer);return}
     m._dlpSig=null;
     const key=view.roomKey;
-    const isRoom=key&&key!==CFG.GLOBAL_ROOM&&key!==CFG.ANNOUNCEMENTS_ROOM&&key!==CFG.VIP_ROOM;
+    const isRoom=key&&key!==CFG.GLOBAL_ROOM&&key!==CFG.ANNOUNCEMENTS_ROOM&&key!==CFG.VIP_ROOM&&key!==CFG.MVP_ROOM;
     let onIds=[],everyone=[];
     try{
       onIds=(isRoom?DB.presenceIds():DB.onlineIds()).slice();
@@ -305,6 +310,7 @@ const DiscordShell=(function(){
     if(ME&&onIds.indexOf(ME.id)<0)onIds.push(ME.id);
     const onSet=new Set(onIds);
     if(key===CFG.VIP_ROOM)everyone=everyone.filter(id=>{try{return !!DB.vipInfo(id,true)}catch(_){return false}});
+    if(key===CFG.MVP_ROOM)everyone=everyone.filter(id=>{try{return hasMvpPerks(id)}catch(_){return false}});
     const offIds=everyone.filter(id=>!onSet.has(id)&&DB.getUser(id));
     const nameOf=id=>{const u=DB.getUser(id);return u?displayUsername(u.username):'Loading…'};
     const cmp=(a,b)=>nameOf(a).toLowerCase().localeCompare(nameOf(b).toLowerCase());

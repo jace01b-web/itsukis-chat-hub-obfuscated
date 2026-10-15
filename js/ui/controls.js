@@ -126,6 +126,12 @@ function bannerGradientColors(hex){
   return[base,cpRgbToHex(...cpHsvToRgb(h2,s2,v2))];
 }
 function bannerGradCss(hex){const[c1,c2]=bannerGradientColors(hex);return`linear-gradient(135deg,${c1},${c2})`}
+// MVP image banners live in the public users/$id/style/banner as a small JPEG data URL. Only ever trust a strictly
+// shaped data URL (no quotes/parens can sneak into the style attribute), and only show it while the person is still an MVP.
+function isSafeBannerImg(s){return typeof s==='string'&&s.length>30&&s.length<=CFG.MVP_BANNER_MAX_CHARS&&/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(s)}
+function bannerImgOf(u){return(u&&u.banner&&isSafeBannerImg(u.banner)&&hasMvpPerks(u.id))?u.banner:''}
+// CSS background for a profile banner: the MVP image if there is one, else the usual color gradient.
+function bannerBg(u,hex){const img=bannerImgOf(u);return img?`url('${img}') center/cover no-repeat`:bannerGradCss(hex)}
 
 function enhanceColors(scope){
   scope.querySelectorAll('input[type=color]').forEach(inp=>{
