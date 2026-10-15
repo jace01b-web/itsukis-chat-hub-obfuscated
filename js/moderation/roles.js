@@ -22,7 +22,7 @@ let OWNERS_LOADED=false; // true only after the first live snapshot of owners/ h
 let SECRET_OWNER_ID=null;
 let SECRET_LOADED=false;
 /* TAG-VISIBILITY:START — people can hide their own Owner / Mod / VIP / Flair / Confetti tags (stored publicly in users/$id/style/hiddenTags) */
-const HIDEABLE_TAGS=['owner','mod','vip','flair','confetti'];
+const HIDEABLE_TAGS=['owner','mod','vip','mvp','flair','confetti'];
 function hiddenTagsOf(id){try{return DB.hiddenTagsOf(id)}catch(_){return[]}}
 function tagHidden(id,t){return hiddenTagsOf(id).indexOf(t)!==-1}
 /* TAG-VISIBILITY:END */
@@ -41,3 +41,10 @@ let ADMINS_LOADED=false;
 function isAdmin(id){return ADMINS_CACHE[Number(id)]===1}
 // Anyone with moderation powers (owner, admin or mod) — used for showing the Moderation tools.
 function isStaff(id){return isOwner(id)||isAdmin(id)||isMod(id)}
+/* MVP: permanent role (mvp/$id), won from the Daily Spin (0.1%) or given by an owner. It has NO moderation powers —
+   only perks (longer messages/descriptions, image banner, 3 daily spins, MVP chat, free permanent VIP) and it ranks
+   above Admin/Mod in member lists. Hiding the tag only changes how the NAME looks; the perks stay. */
+function isMvp(id){try{return DB.isMvp(id)}catch(_){return false}}
+function hasMvpPerks(id){return isMvp(id)||isOwner(id)}      // owners get every MVP perk too
+function maxMsgFor(id){return CFG.MAX_MSG*(hasMvpPerks(id)?CFG.MVP_MSG_MULT:1)}
+function descMaxFor(id){return hasMvpPerks(id)?CFG.MVP_DESC_MAX:CFG.DESC_MAX}
