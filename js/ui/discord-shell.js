@@ -189,7 +189,7 @@ const DiscordShell=(function(){
     list.appendChild(sbItem('#','global-chat',cur===CFG.GLOBAL_ROOM,open(null)));
     list.appendChild(sbItem('#','announcements',cur===CFG.ANNOUNCEMENTS_ROOM,open('announcements'),annN));
     list.appendChild(sbItem(vip?'#':'🔒','vip-lounge',cur===CFG.VIP_ROOM,open('vip')));
-    if(hasMvpPerks(ME.id))list.appendChild(sbItem('#','mvp-lounge',cur===CFG.MVP_ROOM,open('mvp')));    // MVP Chat only shows up for MVPs (and owners)
+    if(hasMvpPerks(ME.id)){const mi=sbItem('#','mvp-lounge',cur===CFG.MVP_ROOM,open('mvp'));mi.classList.add('dl-sb-mvp');list.appendChild(mi)}    // MVP Chat only shows up for MVPs (and owners)
     addHTML(list,`<div class="sb-section">Rooms<button type="button" class="sb-plus" id="sbNewRoom" title="Create a room" aria-label="Create a room">+</button></div>`);
     const np=document.getElementById('sbNewRoom');if(np)np.onclick=e=>{e.stopPropagation();modalCreateRoom()};
     const rooms=DB.myRooms(ME.id);
@@ -319,7 +319,7 @@ const DiscordShell=(function(){
     let html='';
     defs.forEach(([k,label,col])=>{
       const arr=buckets[k];if(!arr.length)return;arr.sort(cmp);
-      html+=`<div class="dl-mem-h" style="--rc:${col}">${esc(label)} — ${arr.length}</div>`+arr.map(id=>memRow(id,false)).join('');
+      html+=`<div class="dl-mem-h${k==='mvp'?' dl-mem-h-mvp':''}" style="--rc:${col}">${esc(label)} — ${arr.length}</div>`+arr.map(id=>memRow(id,false)).join('');
     });
     if(offIds.length){
       offIds.sort(cmp);

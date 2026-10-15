@@ -66,7 +66,15 @@ function modalGlobalChoice(){
       </button>
       <button class="vip-spin" id="gcSpin" type="button">🎡 Daily Spin</button>
     </div>`})()}
-      ${hasMvpPerks(ME.id)?`<button class="gc-card gc-mvp" id="gcMvp" type="button"><span class="mvp-ring"></span><div class="gc-ic">🏆</div><h3>MVP Chat</h3><span class="mvp-card-sub">${isOwner(ME.id)?'Owner access':'MVPs only'}</span></button>`:''}
+      ${hasMvpPerks(ME.id)?(()=>{
+        const sp=Array.from({length:18},(_,i)=>`<i style="--x:${(i*29+9)%94}%;--s:${2+(i%3)*2}px;--d:${(2.6+(i%5)*.55).toFixed(1)}s;--t:${((i*0.41)%3.2).toFixed(2)}s"></i>`).join('');
+        return `<div class="mvp-hero"><button class="gc-card gc-mvp" id="gcMvp" type="button">
+        <span class="mvp-aurora"></span><span class="mvp-ring"></span><span class="mvp-sheen"></span><span class="mvp-sparks" aria-hidden="true">${sp}</span>
+        <span class="mvp-trophy"><span class="mvp-crown">👑</span>🏆</span>
+        <span class="mvp-copy"><span class="mvp-kicker">★ Exclusive ★</span><span class="mvp-title">MVP Chat</span><span class="mvp-sub">The top room. Permanent, above everyone.</span>
+          <span class="mvp-perks"><i>🖼 Banners</i><i>✍ ${CFG.MAX_MSG*CFG.MVP_MSG_MULT} chars</i><i>🎡 ${CFG.MVP_SPINS_PER_DAY} spins/day</i><i>💎 Free VIP</i></span></span>
+        <span class="mvp-state">${isOwner(ME.id)?'Owner access':'MVP · Forever'}</span>
+      </button></div>`})():''}
       <button class="gc-card gc-global" id="gcGlobal">
         <div class="gc-ic">🌐</div>
         <h3>Global Chat</h3>
