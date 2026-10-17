@@ -29,8 +29,7 @@ window.APP_MANIFEST={
     "16-rules-modal.css",
     "17-halloween.css",
     "18-music-profile-cosmetics.css",
-    "22-discord-look.css",
-    "23-lockdown.css"
+    "22-discord-look.css"
   ],
   js:[
     "core/firebase-imports.js",
@@ -85,7 +84,6 @@ window.APP_MANIFEST={
     "ui/liquid-glass.js",
     "ui/discord-shell.js",
     "ui/context-menu.js",
-    "features/lockdown.js",
     "core/boot.js"
   ]
 };
