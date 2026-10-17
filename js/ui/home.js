@@ -25,6 +25,7 @@ $('#backHome').onclick=()=>{view.roomKey=null;view.section=null;DB.watchMessages
 
 /* ---------- Chat page ---------- */
 function openChat(mode,section){
+  if(typeof lockActive==='function'&&lockActive()){show('lockPage');return}      // LOCKDOWN: chats are closed
   view.mode=mode;view.section=section||null;view.pending=[];renderPreviews();
   if(mode==='global'){
     if(section==='rooms'){

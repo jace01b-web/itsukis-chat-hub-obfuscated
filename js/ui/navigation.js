@@ -8,8 +8,13 @@
 
 /* ---------- Navigation ---------- */
 function show(p){
-  ['loadingPage','authPage','homePage','chatPage'].forEach(id=>$('#'+id).classList.toggle('hidden',id!==p));
+  // LOCKDOWN (js/features/lockdown.js): while active, the normal home / chat pages can't be shown at all.
+  if((p==='homePage'||p==='chatPage')&&typeof lockActive==='function'&&lockActive())p='lockPage';
+  const prev=view.page;
+  ['loadingPage','authPage','homePage','chatPage','lockPage'].forEach(id=>{const el=$('#'+id);if(el)el.classList.toggle('hidden',id!==p)});
   view.page=p;
+  if(prev==='lockPage'&&p!=='lockPage'&&typeof lockLeave==='function')lockLeave();
+  if(p==='lockPage'&&typeof lockEnter==='function')lockEnter();
 }
 function goHome(forceMenu){
   ME=DB.currentUser();
@@ -23,6 +28,7 @@ function goHome(forceMenu){
   $('#homeAv').outerHTML=avatarHtml(ME,ME.username,'width:34px;height:34px;font-size:14px').replace('class="avatar"','class="avatar" id="homeAv"');
   applyStyle(document.documentElement,ME.settings);
   refreshBadge();
+  if(typeof lockActive==='function'&&lockActive()){show('lockPage');return}   // LOCKDOWN: everyone lands on the locked page
   // Discord look: land in DMs instead of the main-menu grid (the rail's "Main menu" button / Home passes forceMenu).
   if(!forceMenu&&typeof DiscordLook!=='undefined'&&DiscordLook.on()){openChat('dms');return}
   show('homePage');
