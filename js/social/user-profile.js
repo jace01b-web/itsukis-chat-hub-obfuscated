@@ -72,7 +72,11 @@ function modalGiveVip(id,name){
 // Open the DM with someone from anywhere (profile card opened from the home screen, Global Chat, a room...).
 // The old button only swapped the open chat, so it did nothing visible unless you were already inside Itsuki DMs.
 async function openDmWith(id,modalRoot){
-  if(typeof lockActive==='function'&&lockActive()){toast('Direct messages are paused while the site is in limited mode.','bad');return}
+  if(typeof lockActive==='function'&&lockActive()){
+    // LOCKDOWN: only MVP <-> MVP DMs, opened inside the locked page's MVP DMs panel
+    if(typeof lockOpenDm==='function'&&ME&&hasMvpPerks(ME.id)&&hasMvpPerks(Number(id))){(modalRoot||$('#modalRoot')).innerHTML='';await lockOpenDm(id);return}
+    toast('Direct messages are paused while the site is in limited mode (MVPs can still DM each other).','bad');return
+  }
   id=Number(id);
   if(!ME||id===ME.id)return;
   if(!DB.isFriend(ME.id,id)){toast('You can only message friends. Send a friend request first.','bad');return}

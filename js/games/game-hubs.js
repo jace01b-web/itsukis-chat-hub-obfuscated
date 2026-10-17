@@ -30,11 +30,11 @@ const CUSTOM_HUBS=[
   {sec:'apps',group:'Apps By Suki',name:'Sukis Multi Tools',url:'https://raw.githubusercontent.com/v-x-i/other/refs/heads/main/Sukis%20Multi%20Tools%20App.html',desc:'My multi tools app, including over 20 apps! Includes things like calculators, reaction test, and more!',icon:'SMT',color:'lime'},
   {sec:'apps',group:'Apps By Suki',name:'The Long Hall [Beta Version]',url:'https://raw.githubusercontent.com/AniItsukiCoded/tlh/refs/heads/main/index.html',desc:'Beta version of my game The Long Hall.',icon:'TLH',color:'red'},
   {sec:'apps',group:'Apps By Suki',name:'The Long Hall [Multiplayer]',url:'https://raw.githubusercontent.com/AniItsukiCoded/The-Long-Hall-AutoUpd/refs/heads/main/index.html',desc:'The full release version of The Long Hall: the boiled one. Play solo or with friends and try to escape the boiled one.',icon:'TLH',color:'red'},
+  {sec:'apps',group:'Apps By Suki',name:'YouTube Premium',url:'https://raw.githubusercontent.com/AniItsukiCoded/ytfreemium/refs/heads/main/index.html',desc:'Unblocked, ad-free version of YouTube (PremiumTube).',icon:'YT',color:'red'},
   {sec:'apps',group:'Other',name:'MZK',url:'https://raw.githubusercontent.com/Cra-Z-Gaming/VUS/refs/heads/main/MZK',desc:'MZK app.',icon:'MZK',color:'violet'},
   {sec:'apps',group:'Other',name:"Statik",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUS/refs/heads/main/Statik/index.html",desc:"Basically Instagram, but only images and/or text.",icon:"SK",color:"blue"},
   {sec:'apps',group:'Other',name:'VUS Chat Modded',url:'https://raw.githubusercontent.com/jace01b-web/VUS-Modded/refs/heads/main/index.html',desc:'Modded version of VUS Chat, featuring a mod menu and new UI.',icon:'VC',color:'orange'},
   {sec:'apps',group:'Other',name:'VUS Hub Modded',url:'https://raw.githubusercontent.com/AniItsukiCoded/VUS-Hub-Modded/refs/heads/main/VUSHubModded.html',desc:'Modded version of VUS Hub.',icon:'VM',color:'orange'},
-  {sec:'apps',group:'Other',name:'PremiumTube',url:'https://raw.githubusercontent.com/AniItsukiCoded/ytfreemium/refs/heads/main/index.html',desc:'Unblocked, adfree, version of Youtube.',icon:'YT',color:'red'},
   {sec:'apps',group:'Other',name:'Tuff Client',url:'https://raw.githubusercontent.com/AniItsukiCoded/Tuffclient-by-Dicestacks88/refs/heads/main/index.html',desc:'Eaglercraft Tuff client by Dicestack88.',icon:'TLH',color:'red'},
   /* ---- hubs ---- */
   {sec:"hubs",name:"BestSpark",url:"https://theres-a.mcdonalds-in-the-pentagon.com/",desc:"A collection of game hubs plus original games made by the community.",icon:"BS",color:"lime"},
@@ -73,7 +73,7 @@ const CUSTOM_HUBS=[
   {sec:"links",name:"Google Doodles",url:"https://share.google/wN47yxVARg0bCBcDl",desc:"Minesweeper, Solitaire, Snake and lots more Google games.",icon:"GD",color:"blue"},
   {sec:"links",name:"Scratch",url:"https://scratch.mit.edu/",desc:"Games, music and animations made by the Scratch community.",icon:"S",color:"orange"}
 ];
-let _hubSec='hubs',_pxGroup='',_hubDir=0;
+let _hubSec='apps',_pxGroup='',_hubDir=0;
 const GAME_HUB_ALLOWLIST=new Set(Object.keys(HUB_INFO));
 function hubInfoFor(sec,name){
   const k=(name||'').trim().toLowerCase();
@@ -83,7 +83,7 @@ function isGameHub(h){
   return GAME_HUB_ALLOWLIST.has((h.name||'').trim().toLowerCase());
 }
 function modalGameHubs(){
-  _hubQuery='';_hubSec='hubs';_pxGroup='';
+  _hubQuery='';_hubSec='apps';_pxGroup='';
   $('#modalRoot').innerHTML=`<div class="modal-bg" id="ghBg"><div class="modal wide">
     <button class="modal-x gh-gear" id="ghGear" title="Hubs &amp; Tools settings" aria-label="Hubs and Tools settings">⚙</button><button class="modal-x" id="ghX">✕</button>
     <h2 id="ghTitle">🎮 Hubs &amp; Tools</h2>

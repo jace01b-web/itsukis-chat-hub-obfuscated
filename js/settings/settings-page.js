@@ -282,6 +282,19 @@ function openSettings(fromChat){
         </div>
         <div class="hint" style="margin-top:8px">Grants access to the VIP Lounge directly, without needing the daily spin. "Forever" never expires; "24 hours" counts down from now the same as a spin win.</div>
       </div>
+      ${isOwner(ME.id)?`<div class="set-card">
+        <div class="section-h" style="margin-top:0">👑 Give MVP</div>
+        <div class="set-grid">
+          <div class="field"><label>User ID</label><input type="number" id="modMvpId" placeholder="e.g. 42"></div>
+        </div>
+        <div class="actions" style="justify-content:flex-start;margin-top:10px">
+          <button class="btn" id="modMvpGo" type="button">Give MVP</button>
+          <button class="btn sec" id="modMvpRemoveGo" type="button">Remove MVP</button>
+        </div>
+        <div class="hint" style="margin-top:8px">MVP is permanent until removed. It unlocks MVP Chat, longer messages, an image banner, 3 daily spins and free permanent VIP. It has no moderation powers. Owners already have every MVP perk.</div>
+        <div class="section-h" style="margin-top:14px;font-size:13px">Current MVPs <span id="modMvpCount" class="hint"></span></div>
+        <div id="modMvpList" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto"></div>
+      </div>`:''}
       <div class="set-card">
         <div class="section-h" style="margin-top:0">🧹 Message cleanup</div>
         <div class="field"><label>Delete messages older than</label>
@@ -656,6 +669,34 @@ function openSettings(fromChat){
       try{await DB.removeVip(id);toast('VIP removed from user #'+id+'.')}
       catch(err){toast(err.message,'bad')}
     });
+    if($$('#modMvpGo')){
+      const renderMvpList=()=>{
+        const box=$$('#modMvpList'),cnt=$$('#modMvpCount');if(!box)return;
+        const ids=DB.mvpIds().sort((a,b)=>a-b);
+        if(cnt)cnt.textContent=ids.length?'('+ids.length+')':'';
+        box.innerHTML=ids.length?ids.map(id=>{const u=DB.getUser(id);const nm=(u&&!u.deleted)?displayUsername(u.username):'User';
+          return`<div class="list-row" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px"><span>👑 <b>${esc(nm)}</b> <span class="hint">#${id}</span></span><button class="btn sec small" type="button" data-mvp-rm="${id}">Remove</button></div>`}).join(''):'<div class="hint">Nobody is an MVP yet.</div>';
+        box.querySelectorAll('[data-mvp-rm]').forEach(b=>b.onclick=async()=>{
+          const id=+b.dataset.mvpRm;if(!confirm('Remove MVP from user #'+id+'?'))return;
+          b.disabled=true;
+          try{await DB.removeMvp(id);toast('MVP removed from user #'+id+'.');setTimeout(renderMvpList,250)}
+          catch(err){toast(err.message,'bad');b.disabled=false}
+        });
+      };
+      renderMvpList();
+      $$('#modMvpGo').onclick=async()=>{
+        const id=+$$('#modMvpId').value;
+        if(!id){toast('Enter a user ID','bad');return}
+        try{await DB.giveMvp(id);toast('User #'+id+' is now an MVP.');setTimeout(renderMvpList,250)}
+        catch(err){toast(err.message,'bad')}
+      };
+      $$('#modMvpRemoveGo').onclick=async()=>{
+        const id=+$$('#modMvpId').value;
+        if(!id){toast('Enter a user ID','bad');return}
+        try{await DB.removeMvp(id);toast('MVP removed from user #'+id+'.');setTimeout(renderMvpList,250)}
+        catch(err){toast(err.message,'bad')}
+      };
+    }
     $$('#modBanGo')&&($$('#modBanGo').onclick=async()=>{
       const id=+$$('#modBanId').value;
       if(!id){toast('Enter a user ID','bad');return}
