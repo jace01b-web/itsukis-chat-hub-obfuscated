@@ -210,7 +210,7 @@ function lockBuildComposer(c){
       <div class="cc-body"><div class="cc-label" id="lkCtxL_${c}"></div><div class="cc-text" id="lkCtxT_${c}"></div></div>
       <button class="cc-close" id="lkCtxX_${c}" type="button" title="Cancel">✕</button>
     </div>
-    <div class="previews lk-prev" id="lkPrev_${c}"></div>
+    <div class="previews lk-imgprev" id="lkPrev_${c}"></div>
     <div class="lk-row" id="lkRow_${c}">
       <button class="icon-btn lk-attach" id="lkAtt_${c}" type="button" title="Attach images (max 5)" aria-label="Upload">🖼️</button>
       <input type="file" id="lkFile_${c}" accept="image/*" multiple hidden>
