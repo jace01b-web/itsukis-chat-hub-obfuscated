@@ -170,9 +170,12 @@ async function minBuild() {
 async function checkBuild(build, token) {
   build = String(build || '').slice(0, 40); token = String(token || '');
   const base = baseOf(build);
-  let want; try { want = buildToken(base || build); } catch (e) { return { ok: false, why: 'server' }; }
-  const a = Buffer.from(token.padEnd(32).slice(0, 32)), b = Buffer.from(want);
-  if (!base || !crypto.timingSafeEqual(a, b) || token.length !== 32) return { ok: false, why: 'forged', build };
+  if (!base) return { ok: false, why: 'forged', build };
+  if (process.env.BUILD_SECRET) {   // token check only when BUILD_SECRET is set on the server
+    const want = buildToken(base);
+    const a = Buffer.from(token.padEnd(32).slice(0, 32)), b = Buffer.from(want);
+    if (token.length !== 32 || !crypto.timingSafeEqual(a, b)) return { ok: false, why: 'forged', build };
+  }
   const min = await minBuild();
   if (min && compareBuilds(build, min) === -1) return { ok: false, why: 'old', build, min };
   return { ok: true, build };

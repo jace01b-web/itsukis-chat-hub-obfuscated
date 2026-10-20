@@ -35,13 +35,12 @@ function chatBlockReason(){
   if(TOS_GATE.ipBanned)return 'This network has been banned from chatting.';
   if(TOS_GATE.vpn)return 'VPN / proxy detected. Turn it off and reload to chat.';
   if(TOS_GATE.banned)return 'Your account has been banned.';
-  if(TOS_GATE.apiOk===false&&(!TOS_GATE.exp||TOS_GATE.exp<Date.now()))return 'Could not verify your connection. Reload to try again.';
   return null;
 }
 // Called right before a message is sent/edited: refreshes the VPN / IP-ban check if it is stale, then throws if chat is blocked.
 async function tosGateGuard(){
   let r=chatBlockReason();
-  if(!r&&TOS_GATE.accepted===true&&(!TOS_GATE.exp||TOS_GATE.exp-(Date.now()+(typeof SKEW==='number'?SKEW:0))<90000)){
+  if(!r&&TOS_GATE.accepted===true&&!(TOS_GATE.apiOk===false&&Date.now()-TOS_GATE.checkedAt<60000)&&(!TOS_GATE.exp||TOS_GATE.exp-(Date.now()+(typeof SKEW==='number'?SKEW:0))<90000)){
     try{await Promise.race([tosCheckIp(),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),9000))])}catch(_){}
     r=chatBlockReason();
   }
@@ -111,15 +110,23 @@ function tosBuildLock(min){
 }
 async function tosAccept(){
   if(!ME)throw new Error('You need to be signed in.');
-  const {status,j}=await tosApi('tos',{id:ME.id,version:CFG.TOS_VERSION});
-  if(status!==200||!j.ok){
-    if(j.block==='build')tosBuildLock();
-    throw new Error(j.error||'Could not save. Try again in a minute.');
+  let res=null;
+  try{res=await tosApi('tos',{id:ME.id,version:CFG.TOS_VERSION})}catch(_){res=null}
+  const apiAnswered=!!(res&&res.status&&res.j&&(res.j.ok||res.j.error));
+  if(apiAnswered){
+    if(res.status!==200||!res.j.ok){
+      if(res.j.block==='build')tosBuildLock();
+      throw new Error(res.j.error||'Could not save. Try again in a minute.');
+    }
+  }else{
+    // API not reachable (not deployed yet / blocked). Save it the old way. The database rules only allow this while security/enforce is NOT true.
+    try{await set(R('tosAccepted/'+ME.id),{v:CFG.TOS_VERSION,at:Date.now()+SKEW,h:'unverified',ip:'unknown'})}
+    catch(e){throw new Error('Could not reach the server to save this. Check your connection and try again.')}
   }
   await tosLoadState(ME.id);
   TOS_GATE.accepted=true;
   try{sessionStorage.removeItem(TOS_DECLINE_KEY)}catch(_){}
-  await tosCheckIp();
+  tosCheckIp().then(tosUiSync).catch(()=>{});
 }
 async function tosLoadState(id){
   try{
