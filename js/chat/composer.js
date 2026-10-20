@@ -125,7 +125,22 @@ async function send(){
     return;
   }
 
-  if(!text&&!view.pending.length)return;
+  const _pf=view.pendingFiles||[];
+  if(!text&&!view.pending.length&&!_pf.length)return;
+  {const pr=FILES.sendProblem(_pf);if(pr){toast(pr,'bad');return}}
+  if(_pf.length&&NSFW.on()){
+    if(_sendScanning)return;
+    _sendScanning=true;
+    toast('Checking file'+(_pf.length===1?'':'s')+'…');
+    let bad=false;
+    try{bad=await FILES.anyFlagged(_pf)}finally{_sendScanning=false}
+    if(bad){
+      clearPendingFiles();view.pending=[];renderPreviews();
+      DB.selfMuteNsfw().catch(()=>{});
+      toast('File blocked: NSFW content isn\'t allowed. You are muted for 1 hour.','bad');
+      return;
+    }
+  }
   if(view.pending.length&&NSFW.on()){
     if(_sendScanning)return;
     _sendScanning=true;
@@ -142,16 +157,18 @@ async function send(){
   _lastSendAt=Date.now();
   const replyTo=view.replyingTo?{id:view.replyingTo.id,senderId:view.replyingTo.senderId,preview:replyPreviewText(view.replyingTo)}:null;
   const _draftImgs=view.pending.slice();
-  DB.sendMessage(view.roomKey,{senderId:ME.id,text,images:_draftImgs,pings:extractPings(text),replyTo})
+  const _draftFiles=FILES.payload(_pf);
+  DB.sendMessage(view.roomKey,{senderId:ME.id,text,images:_draftImgs,files:_draftFiles,pings:extractPings(text),replyTo})
     .catch(e=>{
       toast(e.message,'bad');
+      FILES.deleteUrls(_draftFiles);   // the message never went out - don't leave the uploads orphaned
       // Refused for ANY reason (cooldown, mute, ban, rules): don't make the message vanish — restore the
       // draft so it isn't silently lost, as long as they haven't already started typing something else.
       if(text&&msgIn&&!msgIn.value){msgIn.value=text;$('#cc').textContent=text.length}
     });
   cancelCompose();
   msgIn.value='';msgIn.style.height='auto';$('#cc').textContent=0;
-  view.pending=[];renderPreviews();$('#mentionPop').classList.add('hidden');
+  view.pending=[];view.pendingFiles=[];renderPreviews();$('#mentionPop').classList.add('hidden');
   renderMessages(view.roomKey);
   $('#messages').scrollTop=$('#messages').scrollHeight;
 }
@@ -160,6 +177,7 @@ async function send(){
 function replyPreviewText(m){
   if(m.text)return m.text;
   if(m.images&&m.images.length)return '📷 '+m.images.length+' image'+(m.images.length===1?'':'s');
+  if(m.files&&m.files.length)return filesLabel(m.files);
   return '';
 }
 function startReply(m){

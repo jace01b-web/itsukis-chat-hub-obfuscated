@@ -26,6 +26,11 @@
   });
 
   var base='https://www.gstatic.com/firebasejs/'+M.firebase.version+'/';
+  // Firebase Storage (file uploads) is loaded on the side: if it fails, chat still works, only uploads are off.
+  // It is NOT merged into window.FB because it exports its own `ref`, which would clash with the database one.
+  // (never waited for: a slow or blocked storage script must not be able to delay or break startup)
+  var storageP=M.firebase.storage?import(base+M.firebase.storage+'.js').catch(function(e){console.warn('[loader] firebase-storage unavailable',e);return null}):Promise.resolve(null);
+  storageP.then(function(st){window.FBS=st});
   Promise.all(M.firebase.modules.map(function(n){return import(base+n+'.js')}))
     .then(function(mods){
       window.FB=Object.assign.apply(null,[{}].concat(mods));

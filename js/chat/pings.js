@@ -47,7 +47,7 @@ function pingToast(m,key,sender){
   const name=sender&&!sender.deleted?displayUsername(sender.username):'Someone';
   const where=key===CFG.GLOBAL_ROOM?'in Global chat':(String(key).startsWith('dm_')?'in a DM':'in a room');
   const raw=(m.text||'').replace(/\s+/g,' ').trim();
-  const prev=raw?(raw.length>90?raw.slice(0,90)+'…':raw):((m.images&&m.images.length)?'[sent an image]':'');
+  const prev=raw?(raw.length>90?raw.slice(0,90)+'…':raw):((m.images&&m.images.length)?'[sent an image]':((m.files&&m.files.length)?'[sent '+filesLabel(m.files)+']':''));
   const t=document.createElement('div');t.className='toast ping ping-rich';t.dataset.mid=m.id;
   const mk=(c,tx)=>{const d=document.createElement('div');d.className=c;d.textContent=tx;t.appendChild(d)};
   mk('pt-title','@ '+name+' pinged you');mk('pt-where',where);if(prev)mk('pt-text',prev);

@@ -1,0 +1,34 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Chat attachments: chat/<uid>/<id>_<filename>   (written by js/chat/file-upload.js)
+    match /chat/{uid}/{file} {
+      allow read: if request.auth != null;
+
+      // only the signed-in owner of the folder may upload, within per-type size caps
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.size > 0
+        && sizeOk(request.resource.contentType, request.resource.size);
+
+      allow update: if false;                                  // files are immutable once uploaded
+      allow delete: if request.auth != null && request.auth.uid == uid;   // uploader can remove (deleting a message does this)
+    }
+
+    // everything else in the bucket stays closed
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // allowed contentTypes + their max sizes. text is forced to text/plain and never text/html by the client.
+    function sizeOk(ct, size) {
+      return size <= 50 * 1024 * 1024
+          && (ct == 'image/gif'
+              || ct.matches('video/(mp4|webm|quicktime)')
+              || ct.matches('audio/(mpeg|wav|ogg|mp4|aac|webm|flac)')
+              || ct.matches('text/plain.*')
+              || ct in ['application/pdf', 'application/octet-stream']);
+    }
+  }
+}

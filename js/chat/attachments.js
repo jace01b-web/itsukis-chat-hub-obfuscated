@@ -41,16 +41,26 @@ $('#emojiBtn').onclick=()=>{
     $('#cc').textContent=msgIn.value.length;
   });
 };
-$('#fileIn').onchange=async e=>{
-  const files=[...e.target.files];e.target.value='';
+// Everything picked / pasted / dropped lands here. Normal pictures are compressed into the message itself
+// (old path); GIFs, videos, audio, text files and everything else go to Firebase Storage (file-upload.js).
+async function addPickedFiles(files){
   for(const f of files){
-    if(view.pending.length>=CFG.MAX_IMAGES){toast(`Max ${CFG.MAX_IMAGES} images per message.`,'bad');break}
-    if(!f.type.startsWith('image/')){toast('Only images are allowed.','bad');continue}
-    if(f.size>CFG.MAX_IMG_BYTES){toast(`${f.name} is too large (max 8MB).`,'bad');continue}
-    try{view.pending.push(await compressImage(f))}
-    catch(err){toast(err.message||`${f.name} could not be processed.`,'bad')}
+    const kind=FILES.kindOf(f);
+    if(kind==='image'){
+      if(view.pending.length>=CFG.MAX_IMAGES){toast(`Max ${CFG.MAX_IMAGES} images per message.`,'bad');continue}
+      if(f.size>CFG.MAX_IMG_BYTES){toast(`${f.name} is too large (max 8MB).`,'bad');continue}
+      try{view.pending.push(await compressImage(f))}
+      catch(err){toast(err.message||`${f.name} could not be processed.`,'bad')}
+    }else{
+      view.pendingFiles=view.pendingFiles||[];
+      FILES.add(f,view.pendingFiles,renderPreviews);
+    }
   }
   renderPreviews();
+}
+$('#fileIn').onchange=async e=>{
+  const files=[...e.target.files];e.target.value='';
+  await addPickedFiles(files);
 };
 // Iteratively shrinks dimensions/quality until the encoded data URL is safely
 // under the database's per-field size limit. RTDB rejects oversized writes
@@ -184,14 +194,10 @@ function renderPreviews(){
     d.querySelector('button').onclick=()=>{view.pending.splice(i,1);renderPreviews()};
     p.appendChild(d);
   });
+  FILES.renderChips(p,view.pendingFiles||[],renderPreviews);   // uploaded / uploading files (gif, video, text, ...)
 }
 msgIn.addEventListener('paste',async e=>{
-  const files=[...(e.clipboardData?.files||[])].filter(f=>f.type.startsWith('image/'));
+  const files=[...(e.clipboardData?.files||[])];
   if(!files.length)return;e.preventDefault();
-  for(const f of files){
-    if(view.pending.length>=CFG.MAX_IMAGES){toast(`Max ${CFG.MAX_IMAGES} images.`,'bad');break}
-    try{view.pending.push(await compressImage(f))}
-    catch(err){toast(err.message||'Pasted image could not be processed.','bad')}
-  }
-  renderPreviews();
+  await addPickedFiles(files);
 });

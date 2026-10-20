@@ -23,6 +23,11 @@ const CFG={
   // the server's clock AT THE MOMENT THE WRITE LANDS — a slow upload of a huge
   // image can miss that window even though the write itself would've been valid.
   MAX_IMG_DATAURL_CHARS:700000,
+  // --- File uploads (GIF / video / audio / text / other) ---
+  // Default: Firebase Storage (needs the Blaze plan). FREE alternative with no card: Cloudinary.
+  // Fill BOTH of these in (see SETUP-FILES.md, "No Blaze plan?") and uploads go to Cloudinary instead.
+  CLOUDINARY_CLOUD:'itsukischathub',     // your Cloudinary "cloud name", e.g. 'dab12xyz'
+  CLOUDINARY_PRESET:'itsukischathub',    // name of an UNSIGNED upload preset, e.g. 'ich_chat'
   MIN_PW:6,
   GLOBAL_ROOM:'global',
   ANNOUNCEMENTS_ROOM:'announcements',

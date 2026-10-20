@@ -24,7 +24,7 @@ const LOCKDOWN={
 };
 
 const _lk={bypass:false,unsub:{},msgs:{},sig:{},marked:{},noticeShownThisLoad:false,denied:{},tab:'apps',q:'',col:'ann',built:false,
-  react:{},reactUnsub:{},reply:{},edit:{},max:null,pending:{},dmKey:null,dmPeer:null,dmOpen:false};
+  react:{},reactUnsub:{},reply:{},edit:{},max:null,pending:{},files:{},dmKey:null,dmPeer:null,dmOpen:false};
 
 /* Is the lockdown currently applying to THIS tab? (only for signed-in users; owners may bypass) */
 function lockActive(){
@@ -66,7 +66,7 @@ function lockWatch(key){
   const q=query(R('messages/'+key),orderByChild('at'),limitToLast(60));
   _lk.unsub[key]=onValue(q,s=>{
     const arr=[];s.forEach(c=>{arr.push({...c.val(),id:c.key})});
-    _lk.msgs[key]=arr.map(m=>({...m,images:m.images||[],pings:m.pings||[],text:m.text||''}));
+    _lk.msgs[key]=arr.map(m=>({...m,images:m.images||[],files:m.files||[],pings:m.pings||[],text:m.text||''}));
     lockRenderMsgs(key);
     lockMarkRead(key);
   },err=>{console.warn('lockdown: messages denied',key,err&&err.code);_lk.msgs[key]=[];_lk.denied[key]=true;try{delete _lk.unsub[key]}catch(_){}if(key===CFG.MVP_ROOM)lockRenderMvpState();else lockRenderMsgs(key)});
@@ -212,8 +212,8 @@ function lockBuildComposer(c){
     </div>
     <div class="previews lk-imgprev" id="lkPrev_${c}"></div>
     <div class="lk-row" id="lkRow_${c}">
-      <button class="icon-btn lk-attach" id="lkAtt_${c}" type="button" title="Attach images (max 5)" aria-label="Upload">🖼️</button>
-      <input type="file" id="lkFile_${c}" accept="image/*" multiple hidden>
+      <button class="icon-btn lk-attach" id="lkAtt_${c}" type="button" title="Attach images, GIFs, videos or files" aria-label="Upload">🖼️</button>
+      <input type="file" id="lkFile_${c}" accept="image/*,video/*,audio/*,text/*,.txt,.md,.log,.csv,.json,.js,.ts,.py,.java,.c,.cpp,.cs,.html,.css,.xml,.yml,.yaml,.pdf,.zip,.7z,.rar,.doc,.docx,.xls,.xlsx,.ppt,.pptx" multiple hidden>
       <button class="icon-btn lk-emoji" id="lkEmo_${c}" type="button" title="Insert emoji">😊</button>
       <textarea id="lkIn_${c}" rows="1" placeholder="Message…" autocomplete="off"></textarea>
       <button class="send" id="lkSend_${c}" type="button" aria-label="Send">➤</button>
@@ -230,7 +230,7 @@ function lockBuildComposer(c){
   document.getElementById('lkAtt_'+c).onclick=()=>{if(!ta.disabled)fi.click()};
   fi.onchange=async e=>{const files=[...e.target.files];e.target.value='';await lockAddImages(c,files)};
   ta.addEventListener('paste',async e=>{
-    const files=[...(e.clipboardData&&e.clipboardData.files||[])].filter(f=>f.type.startsWith('image/'));
+    const files=[...(e.clipboardData&&e.clipboardData.files||[])];
     if(!files.length)return;e.preventDefault();await lockAddImages(c,files);
   });
   document.getElementById('lkEmo_'+c).onclick=e=>{
@@ -246,9 +246,11 @@ function lockBuildComposer(c){
 }
 async function lockAddImages(c,files){
   const list=_lk.pending[c]=_lk.pending[c]||[];
+  const bag=_lk.files[c]=_lk.files[c]||[];
   for(const f of files){
+    const kind=FILES.kindOf(f);
+    if(kind!=='image'){FILES.add(f,bag,()=>lockRenderPrev(c));continue}   // gif / video / audio / text / other -> Firebase Storage
     if(list.length>=CFG.MAX_IMAGES){toast(`Max ${CFG.MAX_IMAGES} images per message.`,'bad');break}
-    if(!f.type.startsWith('image/')){toast('Only images are allowed.','bad');continue}
     if(f.size>CFG.MAX_IMG_BYTES){toast(`${f.name} is too large (max 8MB).`,'bad');continue}
     try{list.push(await compressImage(f))}catch(err){toast(err.message||`${f.name} could not be processed.`,'bad')}
   }
@@ -263,6 +265,7 @@ function lockRenderPrev(c){
     d.querySelector('button').onclick=()=>{_lk.pending[c].splice(i,1);lockRenderPrev(c)};
     p.appendChild(d);
   });
+  FILES.renderChips(p,_lk.files[c]||[],()=>lockRenderPrev(c));
 }
 function lockCancelCompose(c){
   const wasEdit=!!_lk.edit[c];
@@ -290,6 +293,7 @@ function lockRenderCtx(c){
 function lockPreview(m){
   if(m.text)return m.text;
   if(m.images&&m.images.length)return '📷 '+m.images.length+' image'+(m.images.length===1?'':'s');
+  if(m.files&&m.files.length)return filesLabel(m.files);
   return '';
 }
 function lockSyncComposer(c){
@@ -322,9 +326,17 @@ async function lockSend(c){
   const limit=c==='ann'?Infinity:maxMsgFor(ME.id);
   const text=((typeof expandShortcodes==='function')?expandShortcodes(ta.value.trim()):ta.value.trim()).slice(0,limit);
   const imgs=(_lk.pending[c]||[]).slice();
-  if(!text&&!imgs.length)return;
+  const fbag=_lk.files[c]||[];
+  if(!text&&!imgs.length&&!fbag.length)return;
+  if(!_lk.edit[c]){const pr=FILES.sendProblem(fbag);if(pr){toast(pr,'bad');return}}
   btn.disabled=true;
   try{
+    if(fbag.length&&!_lk.edit[c]&&await FILES.anyFlagged(fbag)){
+      FILES.discard(fbag);lockRenderPrev(c);
+      try{DB.selfMuteNsfw().catch(()=>{})}catch(_){}
+      toast('File blocked: NSFW content isn\'t allowed. You are muted for 1 hour.','bad');
+      return;
+    }
     if(imgs.length&&!_lk.edit[c]&&typeof NSFW!=='undefined'&&NSFW.on()){
       toast('Checking image'+(imgs.length===1?'':'s')+'…');
       let bad=false;try{bad=await NSFW.anyFlagged(imgs)}catch(_){}
@@ -342,8 +354,10 @@ async function lockSend(c){
     }else{
       const rp=_lk.reply[c];
       const replyTo=rp?{id:rp.id,senderId:rp.senderId,preview:lockPreview((_lk.msgs[key]||[]).find(x=>x.id===rp.id)||{})}:null;
-      await DB.sendMessage(key,{senderId:ME.id,text,images:imgs,pings:[],replyTo});
-      _lk.reply[c]=null;_lk.pending[c]=[];lockRenderPrev(c);
+      const sent=FILES.payload(fbag);
+      try{await DB.sendMessage(key,{senderId:ME.id,text,images:imgs,files:sent,pings:[],replyTo})}
+      catch(err){FILES.deleteUrls(sent);fbag.length=0;lockRenderPrev(c);throw err}
+      _lk.reply[c]=null;_lk.pending[c]=[];_lk.files[c]=[];lockRenderPrev(c);
     }
     ta.value='';ta.style.height='auto';
     _lk.sig[c]=null;lockRenderMsgs(key);
@@ -445,7 +459,7 @@ function lockMsgEl(c,key,m,prev){
     try{bStyle=` style="background:${hexToRgba(safeColor(ss&&ss.meBubble,'#7c6cff'),.5)};color:${safeColor(ss&&ss.meText,'#ffffff')}"`}catch(_){}
   }
   el.innerHTML=`${lockReplyRef(key,m)}<div class="msg-row">${avEl}<div class="msg-body"><div class="meta">${nameHTML}${time}${edited}${isShownOwner(m.senderId)?' <span class="tag owner">#'+m.senderId+'</span>':''}${nameAfter}</div>
-    <div class="bubble${(!m.text&&m.images&&m.images.length)?' img-only':''}${(typeof isEmojiOnly==='function'&&isEmojiOnly(m.text))?' jumbo-emoji':''}"${bStyle}><div class="msg-hover-bar">${btns.join('')}</div>${fmtText(displayMsgText(m.text))}${imagesHTML(m.images)}</div>${lockReactionRow(key,m.id)}</div></div>`;
+    <div class="bubble${(!m.text&&((m.images&&m.images.length)||(m.files&&m.files.length)))?' img-only':''}${(typeof isEmojiOnly==='function'&&isEmojiOnly(m.text))?' jumbo-emoji':''}"${bStyle}><div class="msg-hover-bar">${btns.join('')}</div>${fmtText(displayMsgText(m.text))}${imagesHTML(m.images)}${filesHTML(m.files)}</div>${lockReactionRow(key,m.id)}</div></div>`;
   // Discord-look grouping: same person within 7 minutes collapses under one name/avatar
   el._sid=m.senderId;el._at=m.at;
   if(typeof DiscordLook!=='undefined'&&DiscordLook.on()&&prev&&prev.classList&&prev.classList.contains('msg')&&prev._sid===m.senderId&&m.at-prev._at<420000&&!(m.replyTo&&m.replyTo.id))el.classList.add('dl-cont');

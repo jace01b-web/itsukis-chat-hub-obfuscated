@@ -80,7 +80,7 @@ async function openDmWith(id,modalRoot){
   // make sure my side of the DM exists so the messages are readable/sendable
   try{await DB.ensureDmMemberships()}catch(_){}
   view.mode='dms';view.section=null;view.dmView='chat';
-  view.pending=[];view.replyingTo=null;view.editingId=null;renderPreviews();
+  view.pending=[];clearPendingFiles();view.replyingTo=null;view.editingId=null;renderPreviews();
   if(view.page!=='chatPage')show('chatPage');          // coming from the home screen
   selectRoom(DB.dmKey(ME.id,id));                       // also re-renders the sidebar (switches Global -> DMs)
   const sb=$('#sidebar');if(sb)sb.classList.remove('open');

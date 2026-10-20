@@ -276,7 +276,7 @@ const DB=(()=>{
     const q=query(R('messages/'+key),orderByChild('at'),limitToLast(30));
     previewUnsubs[key]=onValue(q,s=>{
       if(key===msgKey)return;               // the full listener owns the open chat
-      const arr=[];s.forEach(c=>{arr.push({...c.val(),id:c.key,images:c.val().images||[],pings:c.val().pings||[],text:c.val().text||''})});
+      const arr=[];s.forEach(c=>{arr.push({...c.val(),id:c.key,images:c.val().images||[],files:c.val().files||[],pings:c.val().pings||[],text:c.val().text||''})});
       C.messages[key]=arr;if(ready)emit();
       NSFW.sweep(key,arr);
     },()=>{});
@@ -301,7 +301,7 @@ const DB=(()=>{
     const q=query(R('messages/'+key),orderByChild('at'),limitToLast(msgLimit[key]||MSG_LIMIT));
     msgUnsub=onValue(q,s=>{
       const arr=[];s.forEach(c=>{arr.push({...c.val(),id:c.key})});
-      C.messages[key]=arr.map(m=>({...m,images:m.images||[],pings:m.pings||[],text:m.text||''}));
+      C.messages[key]=arr.map(m=>({...m,images:m.images||[],files:m.files||[],pings:m.pings||[],text:m.text||''}));
       if(ready)emit();
       NSFW.sweep(key,C.messages[key]);
     },err=>console.warn('messages denied',key,err.code));
@@ -1116,7 +1116,7 @@ const DB=(()=>{
           const val=snap.val();if(!val)return;
           Object.entries(val).forEach(([mid,msg])=>{
             if(Number(msg.senderId)===userId){
-              results.push({id:mid,key,at:msg.at,text:msg.text||'',images:msg.images||[]});
+              results.push({id:mid,key,at:msg.at,text:msg.text||'',images:msg.images||[],files:msg.files||[]});
             }
           });
         }catch(_){/* not readable by this account — skip */}
@@ -1477,7 +1477,8 @@ const DB=(()=>{
       upd['appVersion/history/'+at]={version,at,by:myId};
       await update(ref(rtdb),upd);
     },
-    async sendMessage(key,{senderId,text,images,pings,replyTo}){
+    async sendMessage(key,{senderId,text,images,files,pings,replyTo}){
+      files=(typeof FILES!=='undefined')?FILES.clean(files).map(f=>{const o={url:f.url,name:f.name,size:f.size,kind:f.kind};if(f.preview)o.preview=f.preview;return o}):[];
       if(typeof tosGateGuard==='function')await tosGateGuard();   // TOS not accepted / VPN / IP-banned network -> throws, nothing is sent
       if(key===CFG.VIP_ROOM&&!DB.vipInfo(senderId))throw new Error('VIP Chat is for VIP members. Win VIP from the Daily Spin.');
       if(key===CFG.MVP_ROOM&&!mvpAccess(senderId))throw new Error('MVP Chat is for MVPs. MVP is a 0.1% prize on the Daily Spin.');
@@ -1542,6 +1543,7 @@ const DB=(()=>{
         const m={senderId,at};
         if(outText)m.text=outText;
         if(images&&images.length)m.images=images;
+        if(files.length)m.files=files;
         if(pings&&pings.length)m.pings=pings;
         if(replyTo&&replyTo.id)m.replyTo={id:replyTo.id,senderId:replyTo.senderId,...(replyTo.preview?{preview:replyTo.preview}:{})};
         return{at,m};
@@ -1549,7 +1551,7 @@ const DB=(()=>{
       let{at,m}=build();
       // optimistic local echo (replaced automatically when the server copy arrives with the same id)
       const arr=C.messages[key]||(C.messages[key]=[]);
-      const tmp={...m,images:images||[],pings:pings||[],text:outText||'',id:newRef.key,replyTo:m.replyTo||null};
+      const tmp={...m,images:images||[],files:files,pings:pings||[],text:outText||'',id:newRef.key,replyTo:m.replyTo||null};
       if(key===msgKey){arr.push(tmp);emit()}
       const attemptWrite=async()=>{
         // The database rules require rate/$senderId/$at to equal the message's own `at`
@@ -1573,7 +1575,7 @@ const DB=(()=>{
             for(const back of [1500,4000]){
               _backoff=back;
               ({at,m}=build());
-              Object.assign(tmp,m,{images:images||[],pings:pings||[],text:outText||'',replyTo:m.replyTo||null});
+              Object.assign(tmp,m,{images:images||[],files:files,pings:pings||[],text:outText||'',replyTo:m.replyTo||null});
               try{await attemptWrite();ok=true;break}catch(e2){lastErr=e2;if(e2.code!=='PERMISSION_DENIED')break}
             }
             if(!ok)throw lastErr;
@@ -1621,6 +1623,7 @@ const DB=(()=>{
       }
       try{
         await remove(R('messages/'+key+'/'+msgId));
+        if(before&&before.files&&before.files.length&&typeof FILES!=='undefined')FILES.deleteUrls(before.files);   // free the Storage space (only works on your own uploads)
       }catch(e){
         // roll back on failure
         if(before&&arr&&!arr.find(x=>x.id===msgId)){arr.push(before);arr.sort((a,b)=>a.at-b.at);if(key===msgKey)emit()}

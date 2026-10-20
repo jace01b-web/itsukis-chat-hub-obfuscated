@@ -8,7 +8,7 @@
 
 /* ---------- 3. Auth helpers ---------- */
 let ME=null;
-let view={page:'loadingPage',mode:null,section:null,roomKey:null,pending:[],mentionSel:0,replyingTo:null,editingId:null};
+let view={page:'loadingPage',mode:null,section:null,roomKey:null,pending:[],pendingFiles:[],mentionSel:0,replyingTo:null,editingId:null};
 
 /* ---------- Toasts ---------- */
 // Copies text to the clipboard. Falls back to a hidden textarea when the async Clipboard API is

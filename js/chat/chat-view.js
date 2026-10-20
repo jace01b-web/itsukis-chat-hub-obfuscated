@@ -189,7 +189,7 @@ function sbItem(ic,name,active,fn,badge,profileUser,leaveFn){
   }
   return d;
 }
-function selectRoom(k){view.roomKey=k;view.pending=[];view.replyingTo=null;view.editingId=null;renderPreviews();DB.watchMessages(k);renderChat();bumpRoomSwitch()}
+function selectRoom(k){view.roomKey=k;view.pending=[];clearPendingFiles();view.replyingTo=null;view.editingId=null;renderPreviews();DB.watchMessages(k);renderChat();bumpRoomSwitch()}
 
 function renderOnlinePill(isGlobalSection){
   // A specific context is open (Global Chat, a room, or a DM) -> show who is

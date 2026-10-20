@@ -25,7 +25,7 @@ $('#backHome').onclick=()=>{view.roomKey=null;view.section=null;DB.watchMessages
 
 /* ---------- Chat page ---------- */
 function openChat(mode,section){
-  view.mode=mode;view.section=section||null;view.pending=[];renderPreviews();
+  view.mode=mode;view.section=section||null;view.pending=[];clearPendingFiles();renderPreviews();
   if(mode==='global'){
     if(section==='rooms'){
       const myRooms=DB.myRooms(ME.id);

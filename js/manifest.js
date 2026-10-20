@@ -9,7 +9,7 @@
  * To add a feature: create the file, then add its path here.
  * ========================================================================== */
 window.APP_MANIFEST={
-  firebase:{version:"10.12.2",modules:["firebase-app","firebase-auth","firebase-app-check","firebase-database"]},
+  firebase:{version:"10.12.2",modules:["firebase-app","firebase-auth","firebase-app-check","firebase-database"],storage:"firebase-storage"},
   css:[
     "01-base.css",
     "02-now-playing.css",
@@ -29,7 +29,8 @@ window.APP_MANIFEST={
     "16-rules-modal.css",
     "17-halloween.css",
     "18-music-profile-cosmetics.css",
-    "22-discord-look.css"
+    "22-discord-look.css",
+    "24-file-attachments.css"
   ],
   js:[
     "core/firebase-imports.js",
@@ -40,6 +41,7 @@ window.APP_MANIFEST={
     "core/name-styles.js",
     "core/helpers.js",
     "core/firebase-init.js",
+    "chat/file-upload.js",
     "moderation/roles.js",
     "moderation/nsfw-filter.js",
     "moderation/bans.js",

@@ -856,7 +856,7 @@ function openSettings(fromChat){
       const row=document.createElement('div');
       row.className='list-row';row.style.alignItems='flex-start';
       const when=new Date(r.at).toLocaleString();
-      const preview=r.text?esc(r.text).slice(0,140):(r.images.length?'📷 '+r.images.length+' image'+(r.images.length===1?'':'s'):'(empty)');
+      const preview=r.text?esc(r.text).slice(0,140):(r.images.length?'📷 '+r.images.length+' image'+(r.images.length===1?'':'s'):((r.files&&r.files.length)?esc(filesLabel(r.files)):'(empty)'));
       row.innerHTML=`<div style="flex:1;min-width:0">
           <div class="hint" style="margin-bottom:3px">${keyLabel(r.key)} · ${when}</div>
           <div style="font-size:13px;word-break:break-word">${preview}</div>

@@ -17,7 +17,8 @@ const js=M.js.map(f=>rd('js/'+f)).join('\n');
 const base='https://www.gstatic.com/firebasejs/'+M.firebase.version+'/';
 const moduleCode=
   M.firebase.modules.map((n,i)=>`import * as fb${i} from "${base}${n}.js";`).join('\n')+'\n'+
-  `window.FB=Object.assign({},${M.firebase.modules.map((n,i)=>'fb'+i).join(',')});\n`+js;
+  `window.FB=Object.assign({},${M.firebase.modules.map((n,i)=>'fb'+i).join(',')});\n`+
+  (M.firebase.storage?`window.FBS=null;import("${base}${M.firebase.storage}.js").then(m=>{window.FBS=m}).catch(e=>console.warn('firebase-storage unavailable',e));\n`:'window.FBS=null;\n')+js;
 let html=rd('index.html');
 const swap=(tag,replacement)=>{ if(!html.includes(tag))throw new Error('tag not found in index.html: '+tag); html=html.replace(tag,()=>replacement); };
 swap('<script src="js/manifest.js"></script>','<style>\n'+css+'\n</style>');
