@@ -143,8 +143,9 @@ async function adb(method, path, body) {
  *   - an old file carries an old label -> older than the minimum -> refused
  *   - someone edits the label in an old file -> the token no longer matches -> refused
  *   - they can't make a token for a newer label, because BUILD_SECRET only lives on the server. */
+const baseOf = x => { const m = /^(\d{4}-\d{2}-\d{2}\.\d+)(?:-[A-Za-z0-9_.-]{1,40})?$/.exec(String(x || '')); return m ? m[1] : null; };
 function compareBuilds(a, b) {
-  const re = /^(\d{4}-\d{2}-\d{2})\.(\d+)$/, ma = re.exec(a || ''), mb = re.exec(b || '');
+  const re = /^(\d{4}-\d{2}-\d{2})\.(\d+)$/, ma = re.exec(baseOf(a) || ''), mb = re.exec(baseOf(b) || '');
   if (!ma || !mb) return null;
   if (ma[1] !== mb[1]) return ma[1] < mb[1] ? -1 : 1;
   const x = +ma[2], y = +mb[2];
@@ -168,9 +169,10 @@ async function minBuild() {
 }
 async function checkBuild(build, token) {
   build = String(build || '').slice(0, 40); token = String(token || '');
-  let want; try { want = buildToken(build); } catch (e) { return { ok: false, why: 'server' }; }
+  const base = baseOf(build);
+  let want; try { want = buildToken(base || build); } catch (e) { return { ok: false, why: 'server' }; }
   const a = Buffer.from(token.padEnd(32).slice(0, 32)), b = Buffer.from(want);
-  if (!/^\d{4}-\d{2}-\d{2}\.\d+$/.test(build) || !crypto.timingSafeEqual(a, b) || token.length !== 32) return { ok: false, why: 'forged', build };
+  if (!base || !crypto.timingSafeEqual(a, b) || token.length !== 32) return { ok: false, why: 'forged', build };
   const min = await minBuild();
   if (min && compareBuilds(build, min) === -1) return { ok: false, why: 'old', build, min };
   return { ok: true, build };
