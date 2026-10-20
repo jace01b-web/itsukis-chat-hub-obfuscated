@@ -43,10 +43,9 @@ const CFG={
   OWNER_IDS:[], // no longer used for permission checks — kept empty; owner status now comes live from owners/$id===1 in the database (see C.owners / isOwner()). Populate owners/$id there from your own backend, not here.
   SEND_COOLDOWN_MS:1500,
   // --- Terms of Service / IP ban / VPN gate (js/moderation/tos-gate.js + the /api functions) ---
-  TOS_VERSION:1,                  // bump to make everybody re-accept after you change the TOS text
-  TOS_WEBHOOK:'https://discord.com/api/webhooks/1559338906921599046/i3Pw9lI277vY4cc32C1Bgbk67NbeJNCYH4o6VkTJ0_sJM9Ahwcd0fqzYQZmQBYThknVj',   // private Discord log of TOS accepts / IP bans. NOTE: visible to anyone who views the page source - if someone abuses it, delete the webhook in Discord and paste a new one here. Leave '' to log only to the database.
-  PROXYCHECK_KEY:'',              // optional free key from proxycheck.io (raises the VPN-check limit from 100 to 1,000 lookups/day)
-  API_FAIL_CLOSED:false,          // true = if the VPN/IP check can't be reached, block chat. false = let people chat (recommended on school networks)
+  TOS_VERSION:2,                  // bumped 1->2: every old (and any forged) TOS record is void, everybody re-accepts through the server
+  TOS_API:'https://itsukis-chat-hub.vercel.app',   // where the /api functions are deployed. The Discord webhook now lives ONLY in the server env.
+  ATTEST_EVERY_MS:4*60*1000,      // how often the browser asks the server to re-clear this login (server grants 8 min at a time)
   IP_BAN_FULL_LOCK:false,         // false = an IP-banned network can't CHAT. true = it is locked out of the whole menu like a banned account
   // --- NSFW image detection (Nyckel) ---
   NSFW_ENABLED:true,

@@ -1559,6 +1559,7 @@ const DB=(()=>{
         // both paths are written atomically in one multi-path update using the same value.
         await update(ref(rtdb),{
           ['rate/'+senderId+'/'+at]:at,
+          ['lastSend/'+senderId]:serverTimestamp(),   // server-clock cooldown the database rules enforce (1.2s)
           ['messages/'+key+'/'+newRef.key]:m
         });
       };

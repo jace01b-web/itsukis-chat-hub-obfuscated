@@ -9,7 +9,7 @@
  * ========================================================================== */
 'use strict';
 
-const TOS_GATE={accepted:null,vpn:false,vpnKind:'',ipBanned:false,h:null,checkedAt:0,apiOk:null};
+const TOS_GATE={accepted:null,vpn:false,vpnKind:'',ipBanned:false,banned:false,exp:0,h:null,checkedAt:0,apiOk:null};
 let TOS_STATE=null;                       // {v,at,h} once accepted
 const TOS_DECLINE_KEY='ich_tos_declined'; // sessionStorage only - a decline is never sent anywhere
 function tosDeclinedThisSession(){try{return sessionStorage.getItem(TOS_DECLINE_KEY)==='1'}catch(_){return false}}
@@ -34,14 +34,15 @@ function chatBlockReason(){
   if(TOS_GATE.accepted!==true)return TOS_GATE.accepted===null?'Checking your account…':'You need to accept the Terms of Service to chat. You can still use everything else.';
   if(TOS_GATE.ipBanned)return 'This network has been banned from chatting.';
   if(TOS_GATE.vpn)return 'VPN / proxy detected. Turn it off and reload to chat.';
-  if(TOS_GATE.apiOk===false&&CFG.API_FAIL_CLOSED)return 'Could not verify your connection. Reload to try again.';
+  if(TOS_GATE.banned)return 'Your account has been banned.';
+  if(TOS_GATE.apiOk===false&&(!TOS_GATE.exp||TOS_GATE.exp<Date.now()))return 'Could not verify your connection. Reload to try again.';
   return null;
 }
 // Called right before a message is sent/edited: refreshes the VPN / IP-ban check if it is stale, then throws if chat is blocked.
 async function tosGateGuard(){
   let r=chatBlockReason();
-  if(!r&&TOS_GATE.accepted===true&&Date.now()-TOS_GATE.checkedAt>5*60*1000){
-    try{await Promise.race([tosCheckIp(),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),4000))])}catch(_){}
+  if(!r&&TOS_GATE.accepted===true&&(!TOS_GATE.exp||TOS_GATE.exp-(Date.now()+(typeof SKEW==='number'?SKEW:0))<90000)){
+    try{await Promise.race([tosCheckIp(),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),9000))])}catch(_){}
     r=chatBlockReason();
   }
   if(r)throw new Error(r);
@@ -75,97 +76,50 @@ function tosBannerSync(reason){
   };
 }
 
-/* ---------- IP lookup, hashing, VPN check (all in the browser, so it works from about:blank / Canva / p5js / any launcher) ---------- */
-function _sha256(str){   // small pure-JS SHA-256 (crypto.subtle is missing in some launcher contexts)
-  const K=[];{let n=2,c=0;while(c<64){let p=true;for(let i=2;i*i<=n;i++)if(n%i===0){p=false;break}if(p){K[c++]=(Math.cbrt(n)%1*4294967296)|0}n++}}
-  const H=[];{let n=2,c=0;while(c<8){let p=true;for(let i=2;i*i<=n;i++)if(n%i===0){p=false;break}if(p){H[c++]=(Math.sqrt(n)%1*4294967296)|0}n++}}
-  const b=unescape(encodeURIComponent(str)),l=b.length,w=new Array((((l+8)>>6)+1)*16).fill(0);
-  for(let i=0;i<l;i++)w[i>>2]|=b.charCodeAt(i)<<(24-(i%4)*8);
-  w[l>>2]|=0x80<<(24-(l%4)*8);w[(((l+8)>>6)<<4)+15]=l*8;
-  const rr=(x,n)=>(x>>>n)|(x<<(32-n));
-  for(let o=0;o<w.length;o+=16){
-    const x=w.slice(o,o+16),a=H.slice();
-    for(let i=0;i<64;i++){
-      if(i>=16){const s0=rr(x[i-15],7)^rr(x[i-15],18)^(x[i-15]>>>3),s1=rr(x[i-2],17)^rr(x[i-2],19)^(x[i-2]>>>10);x[i]=(x[i-16]+s0+x[i-7]+s1)|0}
-      const t1=(a[7]+(rr(a[4],6)^rr(a[4],11)^rr(a[4],25))+((a[4]&a[5])^(~a[4]&a[6]))+K[i]+x[i])|0;
-      const t2=((rr(a[0],2)^rr(a[0],13)^rr(a[0],22))+((a[0]&a[1])^(a[0]&a[2])^(a[1]&a[2])))|0;
-      a.pop();a.unshift((t1+t2)|0);a[4]=(a[4]+t1)|0;
-    }
-    for(let i=0;i<8;i++)H[i]=(H[i]+a[i])|0;
-  }
-  return H.map(v=>(v>>>0).toString(16).padStart(8,'0')).join('');
-}
-// IPv6 users get a new address suffix constantly, so hash the /64 network; IPv4 is hashed as-is.
-function tosNormalizeIp(ip){
-  ip=String(ip||'').trim().toLowerCase();
-  if(ip.indexOf(':')<0)return ip;
-  const parts=ip.split('::'),a=parts[0]?parts[0].split(':'):[],c=parts.length>1&&parts[1]?parts[1].split(':'):[];
-  const full=parts.length>1?a.concat(Array(Math.max(0,8-a.length-c.length)).fill('0'),c):a;
-  return full.slice(0,4).map(x=>x.padStart(4,'0')).join(':')+'::/64';
-}
-function tosIpHash(ip){return _sha256('ich-ip-v1:'+tosNormalizeIp(ip)).slice(0,32)}
-function tosValidIp(ip){return /^(\d{1,3}\.){3}\d{1,3}$/.test(ip)||/^[0-9a-f:]{2,45}$/i.test(ip)&&ip.indexOf(':')>=0}
-async function _timedFetch(url,ms){
-  const c=typeof AbortController!=='undefined'?new AbortController():null,t=setTimeout(()=>{try{c&&c.abort()}catch(_){}},ms||5000);
-  try{return await fetch(url,{cache:'no-store',signal:c?c.signal:undefined})}finally{clearTimeout(t)}
-}
-async function tosGetIp(){
-  const tries=[
-    async()=>(await(await _timedFetch('https://api64.ipify.org?format=json')).json()).ip,
-    async()=>(await(await _timedFetch('https://api.ipify.org?format=json')).json()).ip,
-    async()=>{const t=await(await _timedFetch('https://www.cloudflare.com/cdn-cgi/trace')).text();const m=t.match(/^ip=(.+)$/m);return m&&m[1].trim()}
-  ];
-  for(const f of tries){try{const ip=await f();if(ip&&tosValidIp(ip))return ip}catch(_){}}
-  throw new Error('Could not detect your IP. An ad blocker or school filter may be blocking it. Turn it off and try again.');
-}
-async function tosVpnCheck(ip){
+/* ---------- server calls: the SERVER reads the IP, checks VPN / bans / build, and hands out the attestation the database rules require ---------- */
+const BUILD_TOKEN=document.querySelector('meta[name="build-token"]')?.content||'';
+async function tosApi(path,body){
+  const t=await auth.currentUser.getIdToken();
+  const c=typeof AbortController!=='undefined'?new AbortController():null,tm=setTimeout(()=>{try{c&&c.abort()}catch(_){}},9000);
   try{
-    const key=CFG.PROXYCHECK_KEY?'&key='+encodeURIComponent(CFG.PROXYCHECK_KEY):'';
-    const r=await _timedFetch('https://proxycheck.io/v2/'+encodeURIComponent(ip)+'?vpn=1'+key,5000);
-    const j=await r.json();
-    const d=j&&j[ip];
-    if(!j||j.status==='error'||!d)return{checked:false,vpn:false,kind:''};
-    const yes=String(d.proxy).toLowerCase()==='yes';
-    return{checked:true,vpn:yes,kind:yes?String(d.type||'proxy'):''};
-  }catch(_){return{checked:false,vpn:false,kind:''}}
+    const r=await fetch(tosApiBase()+'/api/'+path,{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',signal:c?c.signal:undefined,
+      body:JSON.stringify(Object.assign({idToken:t,build:MY_BUILD,bt:BUILD_TOKEN},body||{}))});
+    let j=null;try{j=await r.json()}catch(_){}
+    return{status:r.status,j:j||{}};
+  }finally{clearTimeout(tm)}
 }
-
-/* ---------- gate checks  ---------- */
+let _attestBusy=null;
+// Asks the server to clear this login. Sets TOS_GATE from the server's answer; the database rules only accept chat writes while the grant is live.
 async function tosCheckIp(){
-  try{
-    const ip=await tosGetIp(),h=tosIpHash(ip),v=await tosVpnCheck(ip);
-    TOS_GATE.apiOk=true;TOS_GATE.h=h;TOS_GATE.vpn=v.vpn;TOS_GATE.vpnKind=v.kind;TOS_GATE.checkedAt=Date.now();
-    try{TOS_GATE.ipBanned=(await get(R('ipBans/'+h))).exists()}catch(_){TOS_GATE.ipBanned=false}
-    // keep the account's saved fingerprint current so an IP ban still reaches them if their network changes
-    if(ME&&TOS_STATE&&TOS_STATE.h!==h){
-      update(R('tosAccepted/'+ME.id),{h,ip}).then(()=>{TOS_STATE.h=h;TOS_STATE.ip=ip}).catch(()=>{});
-    }
-  }catch(e){
-    TOS_GATE.apiOk=false;TOS_GATE.checkedAt=Date.now();
-    console.warn('ip check unavailable',e&&e.message||e);
-  }
+  if(_attestBusy)return _attestBusy;
+  _attestBusy=(async()=>{
+    try{
+      const {status,j}=await tosApi('attest');
+      TOS_GATE.checkedAt=Date.now();TOS_GATE.apiOk=!(status>=500||status===0);
+      TOS_GATE.ipBanned=j.block==='ipban';TOS_GATE.vpn=j.block==='vpn';TOS_GATE.vpnKind=j.kind||'';
+      TOS_GATE.banned=j.block==='banned';TOS_GATE.exp=j.ok?j.exp:0;
+      if(j.block==='tos'){TOS_GATE.accepted=false}
+      if(j.block==='build'){tosBuildLock(j.min)}
+    }catch(e){TOS_GATE.apiOk=false;TOS_GATE.checkedAt=Date.now();TOS_GATE.exp=0;console.warn('attest unavailable',e&&e.message||e)}
+  })().finally(()=>{_attestBusy=null});
+  return _attestBusy;
 }
-function tosDiscordLog(embed){
-  if(!CFG.TOS_WEBHOOK)return;
-  try{fetch(CFG.TOS_WEBHOOK,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:'ICH TOS Log',allowed_mentions:{parse:[]},embeds:[embed]})}).catch(()=>{})}catch(_){}
+// Server says this build is too old (or its token doesn't match). Same full-screen wall the owner version pin uses.
+function tosBuildLock(min){
+  try{lockForVersionMismatch(min||'the newest version')}catch(_){}
+  try{if(/^https?:$/.test(location.protocol)&&!window.opener){const k='tosBuildReload';if(!sessionStorage.getItem(k)){sessionStorage.setItem(k,'1');setTimeout(()=>location.reload(),1800)}}}catch(_){}
 }
-const _clean=(s,n)=>String(s==null?'':s).replace(/[`\r\n]/g,' ').slice(0,n||100);
 async function tosAccept(){
   if(!ME)throw new Error('You need to be signed in.');
-  const ip=await tosGetIp(),h=tosIpHash(ip),v=await tosVpnCheck(ip);
-  const rec={v:CFG.TOS_VERSION,at:Date.now()+SKEW,h,ip};
-  await set(R('tosAccepted/'+ME.id),rec);   // your private record: only you and staff can read it (database rules)
-  tosDiscordLog({title:'TOS accepted',color:0x57f287,timestamp:new Date().toISOString(),fields:[
-    {name:'Username',value:_clean(ME.username,40)||'-',inline:true},
-    {name:'Account ID',value:String(ME.id),inline:true},
-    {name:'IP',value:'`'+_clean(ip,60)+'`'},
-    {name:'VPN/proxy',value:v.checked?(v.vpn?'YES ('+_clean(v.kind,20)+')':'no'):'not checked',inline:true},
-    {name:'TOS version',value:String(CFG.TOS_VERSION),inline:true},
-    {name:'Browser',value:_clean(navigator.userAgent,200)}
-  ]});
-  TOS_STATE=rec;TOS_GATE.accepted=true;TOS_GATE.apiOk=true;TOS_GATE.h=h;TOS_GATE.vpn=v.vpn;TOS_GATE.vpnKind=v.kind;TOS_GATE.checkedAt=Date.now();
+  const {status,j}=await tosApi('tos',{id:ME.id,version:CFG.TOS_VERSION});
+  if(status!==200||!j.ok){
+    if(j.block==='build')tosBuildLock();
+    throw new Error(j.error||'Could not save. Try again in a minute.');
+  }
+  await tosLoadState(ME.id);
+  TOS_GATE.accepted=true;
   try{sessionStorage.removeItem(TOS_DECLINE_KEY)}catch(_){}
-  try{TOS_GATE.ipBanned=(await get(R('ipBans/'+h))).exists()}catch(_){TOS_GATE.ipBanned=false}
+  await tosCheckIp();
 }
 async function tosLoadState(id){
   try{
@@ -178,34 +132,17 @@ async function tosLoadState(id){
   }
 }
 
-/* ---------- ban hooks (called from DB.banUser / DB.unbanUser) ---------- */
-// Account banned -> also ban the network fingerprint saved when they accepted the TOS (nothing to ban if they never accepted).
-async function tosIpBanUser(id){
-  const sn=await get(R('tosAccepted/'+id+'/h'));const h=sn.val();
-  if(typeof h!=='string'||!h)return false;
-  await set(R('ipBans/'+h),{at:Date.now()+SKEW,by:ME.id,uid:Number(id),reason:'account banned'});
-  return true;
-}
-async function tosIpUnbanUser(id){
-  const sn=await get(R('tosAccepted/'+id+'/h'));const h=sn.val();
-  if(typeof h!=='string'||!h)return false;
-  const b=(await get(R('ipBans/'+h))).val();
-  if(b&&Number(b.uid)===Number(id)){await remove(R('ipBans/'+h));return true}   // only lift bans that this account caused
-  return false;
-}
-// Owner tool: ban / unban a raw IP copied from the Discord log (or the tosAccepted record)
+/* ---------- ban hooks (called from DB.banUser / DB.unbanUser, and the owner IP-ban tool). The server does the work. ---------- */
+async function tosIpBanUser(id){const {j}=await tosApi('ipban',{action:'ban',userId:Number(id),reason:'account banned'});return !!j.ok}
+async function tosIpUnbanUser(id){const {j}=await tosApi('ipban',{action:'unban',userId:Number(id)});return !!j.ok}
 async function tosManualIpBan(action,ip,reason){
   ip=String(ip||'').trim();
   if(!tosValidIp(ip))throw new Error('That is not a valid IP address.');
-  if(!ME||!(isOwner(ME.id)||(action==='ban'&&isAdmin(ME.id))))throw new Error(action==='ban'?'Owners and admins only.':'Owners only.');
-  const h=tosIpHash(ip);
-  try{
-    if(action==='ban')await set(R('ipBans/'+h),{at:Date.now()+SKEW,by:ME.id,uid:null,reason:_clean(reason,120)});
-    else await remove(R('ipBans/'+h));
-  }catch(e){throw new Error('The database refused it (check the ipBans rules).')}
-  tosDiscordLog({title:action==='ban'?'IP banned':'IP unbanned',color:action==='ban'?0xed4245:0xfee75c,timestamp:new Date().toISOString(),description:'IP: `'+_clean(ip,60)+'`\nBy: account #'+ME.id+(reason?'\nReason: '+_clean(reason,120):'')});
+  const {j}=await tosApi('ipban',{action:action==='ban'?'ban':'unban',ip,reason:String(reason||'').slice(0,120)});
+  if(!j.ok)throw new Error(j.error||'The server refused it.');
   return true;
 }
+function tosValidIp(ip){return /^(\d{1,3}\.){3}\d{1,3}$/.test(ip)||/^[0-9a-f:]{2,45}$/i.test(ip)&&ip.indexOf(':')>=0}
 
 /* ---------- the TOS modal ---------- */
 function modalTos(opts){
@@ -262,7 +199,7 @@ function modalTos(opts){
 /* ---------- runner: loads state for whoever is signed in, prompts once per session ---------- */
 (function(){
   let forId=null,promptTimer=null;
-  function reset(){TOS_GATE.accepted=null;TOS_GATE.vpn=false;TOS_GATE.vpnKind='';TOS_GATE.ipBanned=false;TOS_GATE.h=null;TOS_GATE.checkedAt=0;TOS_GATE.apiOk=null;TOS_STATE=null;if(promptTimer){clearInterval(promptTimer);promptTimer=null}}
+  function reset(){TOS_GATE.accepted=null;TOS_GATE.vpn=false;TOS_GATE.vpnKind='';TOS_GATE.ipBanned=false;TOS_GATE.h=null;TOS_GATE.checkedAt=0;TOS_GATE.apiOk=null;TOS_GATE.exp=0;TOS_GATE.banned=false;TOS_STATE=null;if(window._attestTimer){clearInterval(window._attestTimer);window._attestTimer=null}if(promptTimer){clearInterval(promptTimer);promptTimer=null}}
   function promptWhenIdle(){
     let tries=0;
     promptTimer=setInterval(()=>{
@@ -281,6 +218,7 @@ function modalTos(opts){
     if(ME&&ME.id!==id)return;
     if(TOS_GATE.accepted)await tosCheckIp();
     tosUiSync();
+    if(TOS_GATE.accepted&&!window._attestTimer)window._attestTimer=setInterval(()=>{if(TOS_GATE.accepted&&ME)tosCheckIp().then(tosUiSync)},CFG.ATTEST_EVERY_MS);
     if(TOS_GATE.accepted===false&&!tosDeclinedThisSession()&&!(DB.isBanned&&DB.isBanned(id)))promptWhenIdle();
     // owners/ loads a moment after sign-in; re-sync until it has, so owners are never left locked out of their own chat
     let n=0;const t=setInterval(()=>{tosUiSync();if(ownersKnown()||++n>30)clearInterval(t)},1000);
