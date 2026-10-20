@@ -22,7 +22,7 @@
 
 /* ---- drop target hint ---- */
 #chatPage.fa-dragover::after{content:'Drop files to upload';position:absolute;inset:10px;z-index:60;display:grid;place-items:center;border:2px dashed var(--accent);border-radius:18px;background:rgba(10,10,30,.72);color:#fff;font-size:20px;font-weight:700;pointer-events:none;backdrop-filter:blur(3px)}
-#chatPage{position:relative}
+/* (#chatPage is already position:absolute via .page - do not override it) */
 
 /* ---- inside messages ---- */
 .fa-wrap{display:flex;flex-direction:column;gap:6px;margin-top:6px;max-width:360px;white-space:normal}
