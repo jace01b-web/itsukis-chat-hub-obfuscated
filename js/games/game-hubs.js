@@ -26,6 +26,8 @@ const HUB_SECTIONS=[['apps','Apps'],['hubs','Hubs'],['tools','Tools'],['links','
 const CUSTOM_HUBS=[
   /* ---- apps ---- */
   {sec:'apps',group:'Apps By Suki',name:'1v1.ARENA',url:'https://raw.githubusercontent.com/jace01b-web/other/refs/heads/main/1v1lol%20remake.html',desc:'Sukis remade version of (1v1 lol)',icon:'1v1',color:'lime'},
+  {sec:'apps',group:'Apps By Suki',name:'Cherri Proxy',url:'https://raw.githubusercontent.com/dadasuki/cherri/refs/heads/main/index.html',desc:'Cherri Proxy, relaunch if blocked to UNBLOCK it.',icon:'🌸',color:'red'},
+  {sec:'apps',group:'Apps By Suki',name:'Cherri Proxy v2',url:'https://raw.githubusercontent.com/dadasuki/Cherri-V2/refs/heads/main/index.html',desc:'Cherri Proxy v2, relaunch if blocked to UNBLOCK it.',icon:'🌸',color:'red'},
   {sec:'apps',group:'Apps By Suki',name:'Sukis Multi Tools',url:'https://raw.githubusercontent.com/jace01b-web/other/refs/heads/main/Sukis%20Multi%20Tools%20App.html',desc:'My multi tools app, including over 20 apps! Includes things like calculators, reaction test, and more!',icon:'SMT',color:'lime'},
   {sec:'apps',group:'Apps By Suki',name:'The Long Hall [Beta Version]',url:'https://raw.githubusercontent.com/AniItsukiCoded/tlh/refs/heads/main/index.html',desc:'Beta version of my game The Long Hall.',icon:'TLH',color:'red'},
   {sec:'apps',group:'Apps By Suki',name:'The Long Hall [Multiplayer]',url:'https://raw.githubusercontent.com/AniItsukiCoded/The-Long-Hall-AutoUpd/refs/heads/main/index.html',desc:'The full release version of The Long Hall: the boiled one. Play solo or with friends and try to escape the boiled one.',icon:'TLH',color:'red'},
