@@ -82,7 +82,7 @@ function _viewingRoom(key){
 function checkPingNotifications(){
   if(!ME||!ME.settings.pings||!ME.settings.pings.desktop)return;
   if(typeof Notification==='undefined'||Notification.permission!=='granted')return;
-  const keys=[CFG.GLOBAL_ROOM,CFG.ANNOUNCEMENTS_ROOM,
+  const keys=[CFG.GLOBAL_ROOM,CFG.ANNOUNCEMENTS_ROOM,CFG.SHITPOST_ROOM,
     ...DB.myRooms(ME.id).map(r=>r.id),
     ...DB.friends(ME.id).map(f=>DB.dmKey(ME.id,f))];
   keys.forEach(key=>{

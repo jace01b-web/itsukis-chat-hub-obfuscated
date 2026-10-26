@@ -89,3 +89,10 @@
 @media (max-width:620px){.gc-modal .gc-grid{grid-template-columns:1fr 1fr}}
 @media (max-width:420px){.gc-modal .gc-grid{grid-template-columns:1fr}}
 .gc-modal{padding:22px}
+
+/* ---------- Shitpost tile: slim full-width row under the Global / Rooms / Announcements cards ---------- */
+.gc-modal .gc-card.gc-shitpost{grid-column:1/-1;flex-direction:row;justify-content:flex-start;text-align:left;gap:16px;min-height:0;padding:16px 22px}
+.gc-modal .gc-card.gc-shitpost .gc-ic{width:auto;font-size:44px}
+.gc-shitpost .gc-sp-copy{position:relative;display:flex;flex-direction:column;gap:3px;min-width:0}
+.gc-shitpost .gc-sp-sub{font-size:12.5px;color:var(--muted);font-weight:600}
+.gc-modal .gc-card.gc-shitpost:hover{border-color:rgba(190,130,60,.6)}

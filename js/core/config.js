@@ -31,6 +31,7 @@ const CFG={
   MIN_PW:6,
   GLOBAL_ROOM:'global',
   ANNOUNCEMENTS_ROOM:'announcements',
+  SHITPOST_ROOM:'shitpost',    // staff-only posting (mods/admins/owners), everyone can read; own unread badge like announcements
   VIP_ROOM:'vip',
   MVP_ROOM:'mvp',              // MVP-only chat (MVP role = permanent, no moderation powers, ranks above staff in lists)
   MVP_SPINS_PER_DAY:3,         // MVPs get this many Daily Spins per 24h window (everyone else gets 1)

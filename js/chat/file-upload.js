@@ -136,6 +136,7 @@ FILES.add=function(file,bag,rerender){
   const why=FILES.blockReason();
   if(why){toast(why,'bad');return}
   if(typeof view!=='undefined'&&view.roomKey===CFG.ANNOUNCEMENTS_ROOM&&!isOwner(ME.id)){toast('Only the owner can post announcements.','bad');return}
+  if(typeof view!=='undefined'&&view.roomKey===CFG.SHITPOST_ROOM&&!isStaff(ME.id)){toast('Only mods, admins and owners can post in #shitpost.','bad');return}
 
   const ent={id:++FILES._seq,file,name:cleanFileName(file.name),size:file.size,kind,type:FILES.mimeFor(file,kind),
     state:'uploading',progress:0,url:'',path:'',task:null,preview:'',frames:[],thumb:'',el:null,bag};

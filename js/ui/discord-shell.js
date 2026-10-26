@@ -26,14 +26,15 @@ const DiscordShell=(function(){
   function renderRail(){
     const r=document.getElementById('dlRail');if(!r||!ME)return;
     const dm=view.mode==='dms',g=view.mode==='global',sec=view.section;
-    let unreadDM=0,unreadRooms=0,unreadAnn=0;
-    try{unreadDM=DB.unreadDMs(ME.id);unreadRooms=DB.unreadRooms(ME.id);unreadAnn=DB.unreadAnnouncements(ME.id)}catch(_){}
+    let unreadDM=0,unreadRooms=0,unreadAnn=0,unreadShit=0;
+    try{unreadDM=DB.unreadDMs(ME.id);unreadRooms=DB.unreadRooms(ME.id);unreadAnn=DB.unreadAnnouncements(ME.id);unreadShit=DB.unreadShitposts(ME.id)}catch(_){}
     const items=[
       {id:'dms',t:'Direct Messages',ic:LOGO,active:dm,badge:unreadDM,cls:'dl-rail-home'},
       {sep:1},
       {id:'global',t:'Global Chat',ic:'🌍',active:g&&!sec},
       {id:'rooms',t:'Rooms',ic:'🚪',active:g&&sec==='rooms',badge:unreadRooms},
       {id:'ann',t:'Announcements',ic:'📢',active:g&&sec==='announcements',badge:unreadAnn},
+      {id:'shit',t:'Shitpost',ic:'💩',active:g&&sec==='shitpost',badge:unreadShit},
       {id:'vip',t:'VIP Lounge',ic:'💎',active:g&&sec==='vip'},
       ...(hasMvpPerks(ME.id)?[{id:'mvp',t:'MVP Lounge',ic:'🏆',active:g&&sec==='mvp',cls:'dl-rail-mvp'}]:[]),
       {sep:1},
@@ -79,6 +80,7 @@ const DiscordShell=(function(){
       global:()=>openChat('global'),
       rooms:()=>openChat('global','rooms'),
       ann:()=>openChat('global','announcements'),
+      shit:()=>openChat('global','shitpost'),
       vip:()=>openChat('global','vip'),
       mvp:()=>openChat('global','mvp'),
       hubs:()=>modalGameHubs(),
@@ -183,11 +185,12 @@ const DiscordShell=(function(){
     addHTML(list,`<div class="dl-server-head"><b>Itsukis Chat</b><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>`);
     const cur=view.roomKey;
     const open=sec=>()=>openChat('global',sec);
-    let annN=0;try{annN=DB.unreadAnnouncements(ME.id)}catch(_){}
+    let annN=0,shitN=0;try{annN=DB.unreadAnnouncements(ME.id);shitN=DB.unreadShitposts(ME.id)}catch(_){}
     const vip=!!DB.vipInfo(ME.id);
     addHTML(list,`<div class="sb-section">Text Channels</div>`);
     list.appendChild(sbItem('#','global-chat',cur===CFG.GLOBAL_ROOM,open(null)));
     list.appendChild(sbItem('#','announcements',cur===CFG.ANNOUNCEMENTS_ROOM,open('announcements'),annN));
+    list.appendChild(sbItem('#','shitpost',cur===CFG.SHITPOST_ROOM,open('shitpost'),shitN));
     list.appendChild(sbItem(vip?'#':'🔒','vip-lounge',cur===CFG.VIP_ROOM,open('vip')));
     if(hasMvpPerks(ME.id)){const mi=sbItem('#','mvp-lounge',cur===CFG.MVP_ROOM,open('mvp'));mi.classList.add('dl-sb-mvp');list.appendChild(mi)}    // MVP Chat only shows up for MVPs (and owners)
     addHTML(list,`<div class="sb-section">Rooms<button type="button" class="sb-plus" id="sbNewRoom" title="Create a room" aria-label="Create a room">+</button></div>`);
@@ -300,7 +303,7 @@ const DiscordShell=(function(){
     if(dmPeer!=null){renderDmProfile(m,dmPeer);return}
     m._dlpSig=null;
     const key=view.roomKey;
-    const isRoom=key&&key!==CFG.GLOBAL_ROOM&&key!==CFG.ANNOUNCEMENTS_ROOM&&key!==CFG.VIP_ROOM&&key!==CFG.MVP_ROOM;
+    const isRoom=key&&key!==CFG.GLOBAL_ROOM&&key!==CFG.ANNOUNCEMENTS_ROOM&&key!==CFG.SHITPOST_ROOM&&key!==CFG.VIP_ROOM&&key!==CFG.MVP_ROOM;
     let onIds=[],everyone=[];
     try{
       onIds=(isRoom?DB.presenceIds():DB.onlineIds()).slice();

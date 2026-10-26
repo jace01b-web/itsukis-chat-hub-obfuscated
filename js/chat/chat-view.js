@@ -22,20 +22,23 @@ function updateMuteLock(){
   if(_muteLockTimer){clearTimeout(_muteLockTimer);_muteLockTimer=null}
   if(!ME)return;
   const mutedBanner=$('#mutedBanner');
-  const announceBanner=$('#announceBanner');
+  const announceBanner=$('#announceBanner'),shitBanner=$('#shitBanner');
   const input=$('#msgIn'),sendBtn=$('#sendBtn'),attachBtn=$('#attachBtn'),emojiBtn=$('#emojiBtn'),ccMax=$('#ccMax');
   const muted=DB.isMuted(ME.id);
   // Announcements: only the owner can post — everyone else can view but the
   // composer stays locked, same idea as a mute but scoped to this one channel.
   const inAnnouncements=view.roomKey===CFG.ANNOUNCEMENTS_ROOM;
   const announceLocked=inAnnouncements&&!isOwner(ME.id);
+  // #shitpost: mods / admins / owners post, everyone else just reads
+  const shitLocked=view.roomKey===CFG.SHITPOST_ROOM&&!isStaff(ME.id);
   if(mutedBanner)mutedBanner.classList.toggle('hidden',!muted);
   if(announceBanner)announceBanner.classList.toggle('hidden',!announceLocked);
+  if(shitBanner)shitBanner.classList.toggle('hidden',!shitLocked);
   const tosReason=(typeof chatBlockReason==='function')?chatBlockReason():null;
   if(typeof tosBannerSync==='function')tosBannerSync(tosReason);
-  const locked=muted||announceLocked||!!tosReason||(view.roomKey===CFG.VIP_ROOM&&!DB.vipInfo(ME.id))||(view.roomKey===CFG.MVP_ROOM&&!hasMvpPerks(ME.id));
+  const locked=muted||announceLocked||shitLocked||!!tosReason||(view.roomKey===CFG.VIP_ROOM&&!DB.vipInfo(ME.id))||(view.roomKey===CFG.MVP_ROOM&&!hasMvpPerks(ME.id));
   [input,sendBtn,attachBtn,emojiBtn].forEach(el=>{if(el)el.disabled=locked});
-  if(input)input.placeholder=muted?'You are muted — you can\'t send messages right now':(announceLocked?'Only the owner can post announcements':(tosReason&&tosReason!=='Checking your account…'?'Chat is locked. See the notice above.':'Message... use @ to ping'));
+  if(input)input.placeholder=muted?'You are muted — you can\'t send messages right now':(announceLocked?'Only the owner can post announcements':(shitLocked?'Only mods, admins and owners can post here':(tosReason&&tosReason!=='Checking your account…'?'Chat is locked. See the notice above.':'Message... use @ to ping')));
   // Announcements have no message length limit (owner-only, so no spam risk) —
   // every other channel keeps the normal 2000-char cap (MVPs get double: see maxMsgFor()).
   if(input){if(inAnnouncements)input.removeAttribute('maxlength');else input.maxLength=maxMsgFor(ME.id)}
@@ -83,7 +86,7 @@ function renderChat(){
     menuBtn.onclick=()=>{view.roomKey=null;view.section=null;DB.watchMessages(null);goHome(true)};
     // No sidebar visible here to show unread DMs/rooms — so the only way to
     // know is a badge riding the back arrow itself.
-    const totalUnread=DB.unreadDMs(ME.id)+DB.unreadRooms(ME.id)+(view.roomKey===CFG.ANNOUNCEMENTS_ROOM?0:DB.unreadAnnouncements(ME.id));
+    const totalUnread=DB.unreadDMs(ME.id)+DB.unreadRooms(ME.id)+(view.roomKey===CFG.ANNOUNCEMENTS_ROOM?0:DB.unreadAnnouncements(ME.id))+(view.roomKey===CFG.SHITPOST_ROOM?0:DB.unreadShitposts(ME.id));
     menuBtnBadge.textContent=totalUnread>99?'99+':totalUnread;
     menuBtnBadge.classList.toggle('show',totalUnread>0);
     if(typeof refreshMarkRead==='function')refreshMarkRead();
@@ -200,6 +203,7 @@ function renderOnlinePill(isGlobalSection){
   let ids,label;
   if(key===CFG.GLOBAL_ROOM){ids=DB.presenceIds();label='Online in Global Chat'}
   else if(key===CFG.ANNOUNCEMENTS_ROOM){ids=DB.presenceIds();label='Online in Announcements'}
+  else if(key===CFG.SHITPOST_ROOM){ids=DB.presenceIds();label='Online in Shitpost'}
   else if(key===CFG.VIP_ROOM){ids=DB.presenceIds();label='Online in VIP Lounge'}
   else if(key===CFG.MVP_ROOM){ids=DB.presenceIds();label='Online in MVP Lounge'}
   else if(key&&String(key).startsWith('dm_')){ids=DB.presenceIds();label='Online in this DM'}

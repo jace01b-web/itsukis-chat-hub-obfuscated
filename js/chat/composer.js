@@ -32,7 +32,7 @@ msgIn.addEventListener('keydown',e=>{
 function hilite(){[...$('#mentionPop').children].forEach((c,i)=>c.classList.toggle('sel',i===view.mentionSel))}
 function mentionCandidates(){
   const key=view.roomKey;let ids=[];
-  if(key===CFG.GLOBAL_ROOM||key===CFG.ANNOUNCEMENTS_ROOM)ids=DB.allUsers().map(u=>u.id);
+  if(key===CFG.GLOBAL_ROOM||key===CFG.ANNOUNCEMENTS_ROOM||key===CFG.SHITPOST_ROOM)ids=DB.allUsers().map(u=>u.id);
   else if(key?.startsWith('dm_'))ids=key.split('_').slice(1).map(Number);
   else ids=DB.getRoom(key)?.members||[];
   return ids.map(i=>DB.getUser(i)).filter(Boolean);
@@ -115,6 +115,7 @@ async function send(){
   if(DB.isBanned(ME.id)){toast('Your account has been banned.','bad');return}
   {const br=(typeof chatBlockReason==='function')?chatBlockReason():null;if(br){toast(br,'bad');if(TOS_GATE.accepted===false&&typeof modalTos==='function'&&!$('#modalRoot').innerHTML.trim())modalTos({});return}}
   if(view.roomKey===CFG.ANNOUNCEMENTS_ROOM&&!isOwner(ME.id)){toast('Only the owner can post announcements.','bad');return}
+  if(view.roomKey===CFG.SHITPOST_ROOM&&!isStaff(ME.id)){toast('Only mods, admins and owners can post in #shitpost.','bad');return}
 
   if(view.editingId){
     if(!text){toast('Message can\'t be empty.','bad');return}

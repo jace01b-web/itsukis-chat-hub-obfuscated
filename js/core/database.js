@@ -210,6 +210,7 @@ const DB=(()=>{
     // while I'm not currently looking at that room.
     watchPreview(CFG.GLOBAL_ROOM);
     watchPreview(CFG.ANNOUNCEMENTS_ROOM);
+    watchPreview(CFG.SHITPOST_ROOM);
     // Blocking: my own blocked list, and the mirror list of who has blocked me (blockedBy/myId/*
     // is written by whoever blocks me, so I can filter their messages and they can filter mine).
     listen('blocked/'+myId,v=>{C.blocked[myId]=v?Object.keys(v).map(Number):[]});
@@ -1107,7 +1108,7 @@ const DB=(()=>{
     // everywhere it can see (see purgeUserMessages), so no admin script is needed.
     async searchUserMessages(userId){
       userId=Number(userId);
-      const keys=['global','announcements',...C.myRoomIds.filter(id=>C.rooms[id]),
+      const keys=['global','announcements','shitpost',...C.myRoomIds.filter(id=>C.rooms[id]),
         ...(C.friends[myId]||[]).map(f=>dmKey(myId,f))];
       const results=[];
       await Promise.all(keys.map(async key=>{
@@ -1174,7 +1175,7 @@ const DB=(()=>{
     // (the rules let a sender delete their own messages, banned or not).
     async purgeUserMessages(userId){
       userId=Number(userId);
-      const keys=[CFG.GLOBAL_ROOM,'announcements'];
+      const keys=[CFG.GLOBAL_ROOM,'announcements','shitpost'];
       if(isOwner(myId)||DB.vipInfo(myId))keys.push(CFG.VIP_ROOM);
       if(mvpAccess(myId))keys.push(CFG.MVP_ROOM);
       (C.myRoomIds||[]).filter(r=>C.rooms[r]).forEach(r=>keys.push(r));
@@ -1482,6 +1483,7 @@ const DB=(()=>{
       if(typeof tosGateGuard==='function')await tosGateGuard();   // TOS not accepted / VPN / IP-banned network -> throws, nothing is sent
       if(key===CFG.VIP_ROOM&&!DB.vipInfo(senderId))throw new Error('VIP Chat is for VIP members. Win VIP from the Daily Spin.');
       if(key===CFG.MVP_ROOM&&!mvpAccess(senderId))throw new Error('MVP Chat is for MVPs. MVP is a 0.1% prize on the Daily Spin.');
+      if(key===CFG.SHITPOST_ROOM&&!isStaff(senderId))throw new Error('Only mods, admins and owners can post in #shitpost.');
       if(key!==CFG.ANNOUNCEMENTS_ROOM&&text&&text.length>maxMsgFor(senderId))throw new Error('Message is too long (max '+maxMsgFor(senderId)+' characters'+(isMvp(senderId)||isOwner(senderId)?'':'; MVPs get '+CFG.MAX_MSG*CFG.MVP_MSG_MULT)+').');
       if(DB.isBanned(senderId))throw new Error('Your account has been banned.');
       // The local ban list can lag (or not be loaded yet) right after a ban. Ask the server directly so a
@@ -1749,7 +1751,7 @@ const DB=(()=>{
     // current friend-request count from the badge.
     async markAllRead(uid){
       const stamp=Math.round(Date.now()+SKEW);
-      const keys=new Set([CFG.GLOBAL_ROOM]);   // announcements are left alone on purpose
+      const keys=new Set([CFG.GLOBAL_ROOM]);   // announcements + shitpost are left alone on purpose
       (C.myRoomIds||[]).forEach(id=>keys.add(id));
       (C.friends[uid]||[]).forEach(f=>keys.add(dmKey(uid,f)));
       const upd={};
@@ -1763,6 +1765,8 @@ const DB=(()=>{
     },
     // New announcements since the user last opened the Announcements room (same rule as DMs/rooms).
     unreadAnnouncements(uid){return DB.unreadIn(CFG.ANNOUNCEMENTS_ROOM,uid)},
+    // Same for #shitpost: own badge, and (like announcements) NOT cleared by "Mark all as read".
+    unreadShitposts(uid){return DB.unreadIn(CFG.SHITPOST_ROOM,uid)},
     unreadRooms(uid){
       let n=0;
       (C.myRoomIds||[]).forEach(id=>{n+=DB.unreadIn(id,uid)});

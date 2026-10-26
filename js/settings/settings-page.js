@@ -834,6 +834,7 @@ function openSettings(fromChat){
   function keyLabel(key){
     if(key===CFG.GLOBAL_ROOM)return '🌍 Global Chat';
     if(key===CFG.ANNOUNCEMENTS_ROOM)return '📢 Announcements';
+    if(key===CFG.SHITPOST_ROOM)return '💩 Shitpost';
     if(key===CFG.VIP_ROOM)return '💎 VIP Lounge';
     if(key===CFG.MVP_ROOM)return '🏆 MVP Lounge';
     if(key.startsWith('dm_')){

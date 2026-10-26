@@ -32,6 +32,8 @@ function openChat(mode,section){
       view.roomKey=myRooms.length?myRooms[0].id:null;
     }else if(section==='announcements'){
       view.roomKey=CFG.ANNOUNCEMENTS_ROOM;
+    }else if(section==='shitpost'){
+      view.roomKey=CFG.SHITPOST_ROOM;
     }else if(section==='vip'){
       view.roomKey=CFG.VIP_ROOM;
     }else if(section==='mvp'){
@@ -88,6 +90,11 @@ function modalGlobalChoice(){
         <h3>Announcements</h3>
         <span class="ann-badge" id="gcAnnBadge"></span>
       </button>
+      <button class="gc-card gc-shitpost" id="gcShitpost" type="button">
+        <div class="gc-ic">💩</div>
+        <div class="gc-sp-copy"><h3>Shitpost</h3><span class="gc-sp-sub">Staff post the dumb stuff. Everyone can read.</span></div>
+        <span class="ann-badge" id="gcShitBadge"></span>
+      </button>
     </div>
   </div></div>`;
   refreshAnnPicker();
@@ -96,6 +103,7 @@ function modalGlobalChoice(){
   $('#gcGlobal').onclick=()=>close(()=>openChat('global','global'));
   $('#gcRooms').onclick=()=>close(()=>openChat('global','rooms'));
   $('#gcAnnouncements').onclick=()=>close(()=>openChat('global','announcements'));
+  $('#gcShitpost').onclick=()=>close(()=>openChat('global','shitpost'));
   $('#gcVip').onclick=()=>close(()=>openChat('global','vip'));
   if($('#gcMvp'))$('#gcMvp').onclick=()=>close(()=>openChat('global','mvp'));
   $('#gcSpin').onclick=()=>close(()=>openSpin());

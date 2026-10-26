@@ -44,6 +44,8 @@ function refreshAnnPicker(){
   const n=DB.unreadAnnouncements(ME.id);
   b.textContent=n>99?'99+':n;b.classList.toggle('show',n>0);
   b.title=n+' new announcement'+(n===1?'':'s');
+  const sb=document.getElementById('gcShitBadge');
+  if(sb){const k=DB.unreadShitposts(ME.id);sb.textContent=k>99?'99+':k;sb.classList.toggle('show',k>0);sb.title=k+' new shitpost'+(k===1?'':'s')}
 }
 
 
