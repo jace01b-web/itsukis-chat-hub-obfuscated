@@ -11,6 +11,7 @@
 
 const DiscordShell=(function(){
   const LOGO='<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" fill="currentColor"><path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>';
+  const SHIT_IC='<svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><defs><linearGradient id="dlShitG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9824f"/><stop offset="1" stop-color="#6d4120"/></linearGradient></defs><path d="M16 3.5c1.6 1.2 2.4 2.7 2.1 4.3 3 .5 4.6 2.4 4.5 4.6 2.7.7 4.6 2.9 4.6 5.6 0 1.1-.3 2-.8 2.8 1.2.7 1.9 1.8 1.9 3.1 0 2.8-3.3 4.6-12.3 4.6S3.7 26.7 3.7 23.9c0-1.3.7-2.4 1.9-3.1-.5-.8-.8-1.7-.8-2.8 0-2.7 1.9-4.9 4.6-5.6-.1-2.2 1.5-4.1 4.5-4.6C13.6 6.2 14.4 4.7 16 3.5z" fill="url(#dlShitG)" stroke="#4a2a12" stroke-width="1.2" stroke-linejoin="round"/><path d="M9.2 20.2c4.2 1.5 9.4 1.5 13.6 0M11 13.6c3.2 1 6.8 1 10 0" fill="none" stroke="#e9c79b" stroke-opacity=".55" stroke-width="1.4" stroke-linecap="round"/><ellipse cx="12.4" cy="17.2" rx="2.1" ry="2.5" fill="#fff"/><ellipse cx="19.6" cy="17.2" rx="2.1" ry="2.5" fill="#fff"/><circle cx="12.9" cy="17.6" r="1.1" fill="#2a1608"/><circle cx="19.1" cy="17.6" r="1.1" fill="#2a1608"/><path d="M12.6 22.4c2 1.6 4.8 1.6 6.8 0" fill="none" stroke="#2a1608" stroke-width="1.4" stroke-linecap="round"/></svg>';
   const GEAR='<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor"><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.6a.5.5 0 0 0 .1-.6l-1.9-3.3a.5.5 0 0 0-.6-.2l-2.4 1a7.4 7.4 0 0 0-1.7-1l-.4-2.5a.5.5 0 0 0-.5-.4h-3.8a.5.5 0 0 0-.5.4l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1a.5.5 0 0 0-.6.2L2.6 8.8a.5.5 0 0 0 .1.6l2 1.6a7.6 7.6 0 0 0 0 2l-2 1.6a.5.5 0 0 0-.1.6l1.9 3.3a.5.5 0 0 0 .6.2l2.4-1a7.4 7.4 0 0 0 1.7 1l.4 2.5a.5.5 0 0 0 .5.4h3.8a.5.5 0 0 0 .5-.4l.4-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1a.5.5 0 0 0 .6-.2l1.9-3.3a.5.5 0 0 0-.1-.6zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>';
   const EXTRAS_IC='<svg viewBox="0 0 20 20" width="24" height="24" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1.8" fill="#8b7cff"/><rect x="11.5" y="2.5" width="6" height="6" rx="1.8" fill="currentColor"/><rect x="2.5" y="11.5" width="6" height="6" rx="1.8" fill="currentColor"/><rect x="11.5" y="11.5" width="6" height="6" rx="1.8" fill="#ff7cc0"/></svg>';
   let lastOn=null,tab='online',q='';
@@ -34,7 +35,7 @@ const DiscordShell=(function(){
       {id:'global',t:'Global Chat',ic:'🌍',active:g&&!sec},
       {id:'rooms',t:'Rooms',ic:'🚪',active:g&&sec==='rooms',badge:unreadRooms},
       {id:'ann',t:'Announcements',ic:'📢',active:g&&sec==='announcements',badge:unreadAnn},
-      {id:'shit',t:'Shitpost',ic:'💩',active:g&&sec==='shitpost',badge:unreadShit},
+      {id:'shit',t:'Shitpost',ic:SHIT_IC,active:g&&sec==='shitpost',badge:unreadShit,cls:'dl-rail-shit'},
       {id:'vip',t:'VIP Lounge',ic:'💎',active:g&&sec==='vip'},
       ...(hasMvpPerks(ME.id)?[{id:'mvp',t:'MVP Lounge',ic:'🏆',active:g&&sec==='mvp',cls:'dl-rail-mvp'}]:[]),
       {sep:1},

@@ -1117,3 +1117,10 @@ html.discord-look #chatPage.mvp-mode .vb-gem{font-size:24px}
 html.discord-look .dl-mem-h.dl-mem-h-mvp{font-weight:800;letter-spacing:.06em;background:var(--mvp-holo);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:mvpHolo 6s linear infinite}
 html.discord-look .dl-mem-h.dl-mem-h-mvp[style*="--rc"]::before{content:'🏆';width:auto;height:auto;background:none;border-radius:0;font-size:12px;-webkit-text-fill-color:initial;filter:drop-shadow(0 0 5px rgba(255,47,160,.9))}
 html.discord-look .dl-mem:has(.mvp-nm){background:linear-gradient(90deg,rgba(255,47,160,.12),rgba(62,230,255,.05) 60%,transparent);box-shadow:inset 2px 0 0 rgba(255,47,160,.7)}
+
+/* ---------- Shitpost rail button: warm brown tile + a little wobble, like the MVP one has its glow ---------- */
+html.discord-look .dl-rail-btn.dl-rail-shit{color:#fff;background:linear-gradient(145deg,#4a2e1a,#2b1a0e)!important;box-shadow:0 0 0 1px rgba(214,160,100,.35),0 4px 12px rgba(0,0,0,.35)}
+html.discord-look .dl-rail-btn.dl-rail-shit .dl-rail-ic svg{width:30px;height:30px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));transition:transform .25s cubic-bezier(.3,1.5,.5,1)}
+html.discord-look .dl-rail-btn.dl-rail-shit:hover,html.discord-look .dl-rail-btn.dl-rail-shit.active{background:linear-gradient(145deg,#b8763c,#7a4620)!important;box-shadow:0 0 0 1px rgba(255,214,160,.6),0 0 16px rgba(214,140,60,.55)}
+html.discord-look .dl-rail-btn.dl-rail-shit:hover .dl-rail-ic svg{transform:rotate(-8deg) scale(1.12)}
+html.discord-look .dl-rail-btn.dl-rail-shit .dl-rail-pill{background:#e0a869}
