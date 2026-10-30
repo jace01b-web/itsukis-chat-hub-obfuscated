@@ -12,11 +12,13 @@
 
   function fail(msg){
     console.error('[loader]',msg);
-    var h=document.getElementById('loadingHint'),r=document.getElementById('loadingRetry'),sp=document.querySelector('.spinner');
+    var h=document.getElementById('loadingHint'),r=document.getElementById('loadingRetry'),sp=document.querySelector('.ld-orbit');
     if(h)h.textContent='Failed to start: '+String(msg).slice(0,200);
     if(r)r.classList.remove('hidden');
     if(sp)sp.classList.add('hidden');
+    try{document.documentElement.classList.remove('booting')}catch(_){}
   }
+  var BOOT=window.ICHBoot||{prog:function(){},phase:function(){},step:function(){},done:function(){}};
 
   // start downloading the app files right away, while the Firebase SDK is still loading
   M.js.forEach(function(f){
@@ -35,13 +37,15 @@
     .then(function(mods){
       window.FB=Object.assign.apply(null,[{}].concat(mods));
       return new Promise(function(resolve,reject){
-        var left=M.js.length,failed=null;
+        var left=M.js.length,failed=null,total=M.js.length;
+        BOOT.step('js');BOOT.phase('Starting the app — 0 of '+total);
+        function tick(){BOOT.phase('Starting the app — '+(total-left)+' of '+total);BOOT.prog(90+Math.round(6*(total-left)/total))}
         M.js.forEach(function(f){
           var s=document.createElement('script');
           s.src='js/'+f+Q;
           s.async=false;                       // download in parallel, execute in insertion order
-          s.onload=function(){if(--left===0)failed?reject(failed):resolve()};
-          s.onerror=function(){failed=failed||new Error('Could not load js/'+f);if(--left===0)reject(failed)};
+          s.onload=function(){left--;tick();if(left===0)failed?reject(failed):resolve()};
+          s.onerror=function(){failed=failed||new Error('Could not load js/'+f);left--;tick();if(left===0)reject(failed)};
           document.head.appendChild(s);
         });
       });

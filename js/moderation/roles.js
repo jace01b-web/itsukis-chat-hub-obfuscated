@@ -44,6 +44,59 @@ function isStaff(id){return isOwner(id)||isAdmin(id)||isMod(id)}
 /* MVP: permanent role (mvp/$id), won from the Daily Spin (0.1%) or given by an owner. It has NO moderation powers —
    only perks (longer messages/descriptions, image banner, 3 daily spins, MVP chat, free permanent VIP) and it ranks
    above Admin/Mod in member lists. Hiding the tag only changes how the NAME looks; the perks stay. */
+/* ==========================================================================
+ * CUSTOM ROLES (customroles/ in the database)
+ * Decorative, backend-only roles — "Developer", "Builder", "OG", whatever you want. They look like
+ * Mod/Admin (own colour, own group in the member list, own tag next to the name) and rank ABOVE VIP,
+ * but they grant NOTHING: no moderation powers, no rooms, no perks, no longer messages. Purely cosmetic.
+ *
+ * Shape (write it from your backend / the Firebase console — the client only ever READS it):
+ *
+ *   customroles/
+ *     developer/
+ *       name:   "Developer"        (shown on the tag and the member-list group; <= 24 chars)
+ *       color:  "#00d4ff"          (optional, hex; defaults to the site accent)
+ *       icon:   "\u{1F6E0}"        (optional emoji or up to 3 characters)
+ *       rank:   50                 (optional; higher sits higher in the member list. Default 0)
+ *       members: { "7": 1, "12": 1 }   (user IDs -> 1)
+ *
+ * Database rules must make it world-readable and client-unwritable (see SETUP-CUSTOMROLES.md):
+ *   "customroles": { ".read": true, ".write": false }
+ * ========================================================================== */
+let CUSTOM_ROLES_CACHE={};
+let CUSTOM_ROLES_LOADED=false;
+// Letters, numbers, spaces, _ and -, up to 40 characters — and at least one non-space, so a key
+// that is nothing but whitespace (a slip in the console) does not become a real role.
+const CR_ID_RE=/^(?=.*[^\s])[A-Za-z0-9 _-]{1,40}$/;
+const CR_HEX_RE=/^#[0-9a-fA-F]{3,8}$/;
+// One cleaned-up role, or null when the entry is junk. Everything here comes from the database,
+// so nothing is trusted: ids, names and colours are all validated before they reach the DOM.
+function crClean(id,v){
+  if(!v||typeof v!=='object'||!CR_ID_RE.test(String(id)))return null;
+  const name=String(v.name==null?id:v.name).trim().slice(0,24);
+  if(!name)return null;
+  return{
+    id:String(id),
+    name,
+    color:CR_HEX_RE.test(v.color||'')?v.color:'#7c6cff',
+    icon:(typeof v.icon==='string'&&v.icon.trim())?Array.from(v.icon.trim()).slice(0,3).join(''):'',
+    rank:Number.isFinite(Number(v.rank))?Number(v.rank):0,
+    members:(v.members&&typeof v.members==='object')?v.members:{}
+  };
+}
+// Every custom role, highest rank first (ties broken by name) — the order they are listed in.
+function customRoleList(){
+  const out=[];
+  for(const k in CUSTOM_ROLES_CACHE){const r=crClean(k,CUSTOM_ROLES_CACHE[k]);if(r)out.push(r)}
+  return out.sort((a,b)=>b.rank-a.rank||a.name.localeCompare(b.name));
+}
+function crHasMember(r,id){const m=r.members[String(Number(id))];return m===1||m===true}
+// Which custom roles this person has, in listing order.
+function customRolesOf(id){id=Number(id);if(!id&&id!==0)return[];return customRoleList().filter(r=>crHasMember(r,id))}
+// The one that represents them (their highest-ranked), used for the name tag and member group.
+function topCustomRole(id){return customRolesOf(id)[0]||null}
+function hasCustomRole(id,roleId){return customRolesOf(id).some(r=>r.id===roleId)}
+
 function isMvp(id){try{return DB.isMvp(id)}catch(_){return false}}
 function hasMvpPerks(id){return isMvp(id)||isOwner(id)}      // owners get every MVP perk too
 function maxMsgFor(id){return CFG.MAX_MSG*(hasMvpPerks(id)?CFG.MVP_MSG_MULT:1)}

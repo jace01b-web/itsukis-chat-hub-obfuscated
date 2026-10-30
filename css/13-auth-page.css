@@ -237,7 +237,6 @@
   #homePage .home-wrap{margin:0 auto;flex:none;min-height:100%;justify-content:center}
 }
 @media(max-width:480px){.tqq-side{margin-top:22px}}
-@media(max-width:360px){.ad-contact{white-space:normal}}
 
 /* ---- Auth page: Game Hubs preview ---- */
 .auth-col{display:flex;flex-direction:column;gap:14px;min-width:0}
@@ -344,23 +343,21 @@
 }
 @media(max-height:580px){#authPage .auth-head{display:none}}
 
-/* ---- Ad-space promo (replaces the TQQ card) ---- */
-@keyframes adPop{0%,100%{transform:translateY(0) rotate(-8deg) scale(1)}50%{transform:translateY(-6px) rotate(6deg) scale(1.1)}}
-@keyframes adRing{0%{transform:scale(.6);opacity:.7}100%{transform:scale(1.9);opacity:0}}
-@keyframes adDash{to{stroke-dashoffset:-40}}
-@keyframes adBlink{0%,100%{opacity:.75}50%{opacity:1}}
-.tqq-img.ad-visual{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
-  background:radial-gradient(70% 90% at 50% 0%,rgba(124,108,255,.5),transparent 70%),radial-gradient(70% 90% at 90% 100%,rgba(255,108,180,.42),transparent 70%),linear-gradient(135deg,#221a4a,#3a1f57)}
-.ad-visual::before{box-shadow:none!important}
-.ad-visual{border:2px dashed rgba(255,255,255,.28);background-clip:padding-box}
-.ad-ring{position:absolute;left:50%;top:38%;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;border:2px solid rgba(255,140,200,.7);animation:adRing 2.6s ease-out infinite;pointer-events:none}
-.ad-mega{position:relative;font-size:40px;line-height:1;filter:drop-shadow(0 6px 14px rgba(0,0,0,.45));animation:adPop 3s ease-in-out infinite;z-index:3}
-.ad-yours{position:relative;z-index:3;font-size:12.5px;font-weight:800;letter-spacing:.2em;color:#fff;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);animation:adBlink 2.2s ease-in-out infinite}
-.ad-contact{margin-top:12px;font-size:12.5px;white-space:nowrap;color:var(--muted);animation:tqqRise .7s ease 1.2s both}
-.ad-user{position:relative;display:inline-flex;align-items:center;gap:6px;padding:3px 5px 3px 9px;margin:0 1px;border-radius:999px;font:inherit;font-weight:800;color:#fff;cursor:pointer;
-  background:linear-gradient(135deg,rgba(88,101,242,.4),rgba(255,108,180,.3));border:1px solid rgba(255,255,255,.2);transition:transform .25s cubic-bezier(.16,1,.3,1),box-shadow .25s ease,background .25s}
-.ad-user:hover{transform:translateY(-2px) scale(1.05);box-shadow:0 6px 18px rgba(124,108,255,.45)}
-.ad-user:active{transform:scale(.96)}
-.ad-copy{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.16);color:#e6e2ff}
-.ad-user.ok{background:linear-gradient(135deg,rgba(76,214,160,.5),rgba(46,160,120,.4))}
-@media(prefers-reduced-motion:reduce){.ad-ring,.ad-mega,.ad-yours,.ad-contact{animation:none!important}.ad-contact{opacity:1}}
+/* ---- Official Discord server card (took over the old ad slot; see index.html #discordPromo) ---- */
+@keyframes dcPop{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-5px) scale(1.04)}}
+@keyframes dcRing{0%{transform:scale(.7);opacity:.6}100%{transform:scale(1.8);opacity:0}}
+.dc-visual{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+  border-radius:16px;padding:22px 14px 18px;overflow:hidden;isolation:isolate;
+  background:radial-gradient(75% 95% at 50% 0%,rgba(88,101,242,.55),transparent 72%),
+    radial-gradient(70% 90% at 90% 100%,rgba(124,108,255,.35),transparent 70%),
+    linear-gradient(140deg,#262a54,#1b1d3a);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),0 10px 24px rgba(0,0,0,.34)}
+.dc-visual::after{content:"";position:absolute;left:50%;top:44px;width:76px;height:76px;margin:-38px 0 0 -38px;
+  border-radius:50%;border:2px solid rgba(140,152,255,.65);animation:dcRing 2.8s ease-out infinite;pointer-events:none}
+.dc-logo{position:relative;z-index:3;display:grid;place-items:center;width:58px;height:58px;border-radius:18px;color:#fff;
+  background:#5865f2;box-shadow:0 10px 24px rgba(88,101,242,.5);animation:dcPop 3.4s ease-in-out infinite}
+.dc-logo svg{width:34px;height:34px}
+.dc-chips{position:relative;z-index:3;display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.dc-chips i{font-style:normal;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  padding:4px 9px;border-radius:999px;color:#dfe2ff;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.17)}
+@media(prefers-reduced-motion:reduce){.dc-logo,.dc-visual::after{animation:none!important}}

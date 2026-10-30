@@ -13,6 +13,11 @@ const DiscordShell=(function(){
   const LOGO='<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" fill="currentColor"><path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>';
   const GEAR='<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor"><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.6a.5.5 0 0 0 .1-.6l-1.9-3.3a.5.5 0 0 0-.6-.2l-2.4 1a7.4 7.4 0 0 0-1.7-1l-.4-2.5a.5.5 0 0 0-.5-.4h-3.8a.5.5 0 0 0-.5.4l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1a.5.5 0 0 0-.6.2L2.6 8.8a.5.5 0 0 0 .1.6l2 1.6a7.6 7.6 0 0 0 0 2l-2 1.6a.5.5 0 0 0-.1.6l1.9 3.3a.5.5 0 0 0 .6.2l2.4-1a7.4 7.4 0 0 0 1.7 1l.4 2.5a.5.5 0 0 0 .5.4h3.8a.5.5 0 0 0 .5-.4l.4-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1a.5.5 0 0 0 .6-.2l1.9-3.3a.5.5 0 0 0-.1-.6zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>';
   const EXTRAS_IC='<svg viewBox="0 0 20 20" width="24" height="24" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1.8" fill="#8b7cff"/><rect x="11.5" y="2.5" width="6" height="6" rx="1.8" fill="currentColor"/><rect x="2.5" y="11.5" width="6" height="6" rx="1.8" fill="currentColor"/><rect x="11.5" y="11.5" width="6" height="6" rx="1.8" fill="#ff7cc0"/></svg>';
+  // Our own Discord server. In the Discord look the home page is skipped entirely, so without this
+  // the invite (which only lived in the home footer) was unreachable.
+  const DISCORD_INVITE='https://discord.gg/MV8RD9XzvA';
+  const DISCORD_IC='<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="currentColor"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg>';
+  function openDiscord(){try{window.open(DISCORD_INVITE,'_blank','noopener')}catch(_){location.href=DISCORD_INVITE}}
   let lastOn=null,tab='online',q='';
 
   function on(){return typeof DiscordLook!=='undefined'&&DiscordLook.on()}
@@ -21,7 +26,9 @@ const DiscordShell=(function(){
   function railItem(it){
     if(it.sep)return '<div class="dl-rail-sep"></div>';
     const n=it.badge?`<span class="dl-rail-badge">${it.badge>99?'99+':it.badge}</span>`:'';
-    return `<button type="button" class="dl-rail-btn${it.active?' active':''}${it.cls?' '+it.cls:''}" data-rail="${it.id}" title="${it.t}" aria-label="${it.t}"><span class="dl-rail-pill"></span><span class="dl-rail-ic">${it.ic}</span>${n}</button>`;
+    // data-tip gives the Discord-style tooltip to the right of the rail (css/22-discord-look.css);
+    // title is kept as the fallback for touch devices and screen readers.
+    return `<button type="button" class="dl-rail-btn${it.active?' active':''}${it.cls?' '+it.cls:''}" data-rail="${it.id}" data-tip="${esc(it.t)}" title="${esc(it.t)}" aria-label="${esc(it.t)}"><span class="dl-rail-pill"></span><span class="dl-rail-ic">${it.ic}</span>${n}</button>`;
   }
   function renderRail(){
     const r=document.getElementById('dlRail');if(!r||!ME)return;
@@ -40,7 +47,9 @@ const DiscordShell=(function(){
       {sep:1},
       {id:'hubs',t:'Hubs & Tools',ic:'🎮'},
       {id:'extras',t:'Extras',ic:EXTRAS_IC},
-      {id:'gift',t:'Gift Nitro perks',ic:'🎁'}
+      {id:'gift',t:'Gift Nitro perks',ic:'🎁'},
+      {sep:1},
+      {id:'discord',t:'Join our Discord',ic:DISCORD_IC,cls:'dl-rail-discord'}
     ];
     r.innerHTML=items.map(railItem).join('')+`<div class="dl-rail-grow"></div>`+railItem({id:'settings',t:'User Settings',ic:GEAR});
   }
@@ -73,6 +82,34 @@ const DiscordShell=(function(){
   }
   document.addEventListener('click',e=>{if(exPop&&!e.target.closest('.dl-ex-pop')&&!e.target.closest('[data-rail=extras]'))closeExtras()});
   document.addEventListener('keydown',e=>{if(e.key==='Escape')closeExtras()});
+  /* ---------- rail tooltip ----------
+     The rail scrolls, so a CSS ::after tooltip gets clipped by it. One fixed-position node on
+     <body> instead, moved to whichever rail button is hovered or keyboard-focused. */
+  let railTip=null,railTipT=0;
+  function hideRailTip(){clearTimeout(railTipT);if(railTip)railTip.classList.remove('show')}
+  function showRailTip(btn){
+    const txt=btn&&btn.dataset&&btn.dataset.tip;
+    if(!txt||!on()||!desktop())return;
+    if(!railTip){railTip=document.createElement('div');railTip.className='dl-rail-tip';document.body.appendChild(railTip)}
+    railTip.textContent=txt;
+    const r=btn.getBoundingClientRect();
+    railTip.style.left=(r.right+14)+'px';
+    railTip.style.top=(r.top+r.height/2)+'px';
+    clearTimeout(railTipT);railTipT=setTimeout(()=>railTip.classList.add('show'),40);
+  }
+  {
+    document.addEventListener('pointerover',e=>{
+      const b=e.target.closest&&e.target.closest('#dlRail [data-rail]');
+      if(b)showRailTip(b);else if(railTip&&!(e.target.closest&&e.target.closest('#dlRail')))hideRailTip();
+    },{passive:true});
+    document.addEventListener('pointerout',e=>{if(e.target.closest&&e.target.closest('#dlRail [data-rail]'))hideRailTip()},{passive:true});
+    document.addEventListener('focusin',e=>{const b=e.target.closest&&e.target.closest('#dlRail [data-rail]');if(b)showRailTip(b);else hideRailTip()});
+    document.addEventListener('focusout',hideRailTip);
+    window.addEventListener('scroll',hideRailTip,{passive:true,capture:true});
+    window.addEventListener('resize',hideRailTip);
+    document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#dlRail'))hideRailTip()});
+  }
+
   function railClick(e){
     const b=e.target.closest('[data-rail]');if(!b||!ME)return;
     const go={
@@ -86,6 +123,7 @@ const DiscordShell=(function(){
       hubs:()=>modalGameHubs(),
       extras:()=>toggleExtras(b),
       gift:()=>{closeExtras();if(typeof showGiftPromo==='function')showGiftPromo()},
+      discord:()=>{closeExtras();openDiscord()},
       settings:()=>openSettings(false)
     }[b.dataset.rail];
     if(go)go();
@@ -182,7 +220,8 @@ const DiscordShell=(function(){
   function desktop(){return !!(window.matchMedia&&window.matchMedia('(min-width:821px)').matches)}
   function serverMode(){return on()&&desktop()&&!!ME&&view.mode==='global'}
   function renderChannels(list,foot){
-    addHTML(list,`<div class="dl-server-head"><b>Itsukis Chat</b><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>`);
+    let online=0;try{online=DB.onlineCount()}catch(_){}
+    addHTML(list,`<div class="dl-server-head"><b>Itsukis Chat</b><span class="dl-server-on"><i></i>${online} online</span><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>`);
     const cur=view.roomKey;
     const open=sec=>()=>openChat('global',sec);
     let annN=0,shitN=0;try{annN=DB.unreadAnnouncements(ME.id);shitN=DB.unreadShitposts(ME.id)}catch(_){}
@@ -207,6 +246,13 @@ const DiscordShell=(function(){
       }));
     });
     list.appendChild(sbItem('🔑','Join a room',false,modalJoinRoom));
+    // Community: the things that aren't channels but belong in the channel list.
+    addHTML(list,`<div class="sb-section">Community</div>`);
+    const dcItem=sbItem('🔗','Our Discord',false,openDiscord);
+    dcItem.classList.add('dl-sb-discord');
+    list.appendChild(dcItem);
+    const hubItem=sbItem('🎮','Hubs & Tools',false,()=>modalGameHubs());
+    list.appendChild(hubItem);
     foot.innerHTML='';
   }
   /* ---------- DM view: the other person's profile in a right-hand panel (like Discord) ---------- */
@@ -259,7 +305,8 @@ const DiscordShell=(function(){
     }
     return b;
   }
-  /* Role groups, top to bottom: staff, then every Daily Spin role from the rarest prize to the most common one.
+  /* Role groups, top to bottom: staff, then the CUSTOM ROLES from customroles/ (decorative, ranked
+     above VIP), then every Daily Spin role from the rarest prize to the most common one.
      A person is listed once, under the highest group they qualify for. No role = just "Online". */
   const SPIN_RANK=['vipperm','vip1','fire','ice','lucky','neon','crown','rainbow','gold','confetti'];
   const MEM_SHOW_OFF=60;let offAll=false;
@@ -270,6 +317,9 @@ const DiscordShell=(function(){
     if(v&&v.kind==='mvp')return'mvp';        // MVPs are listed ABOVE admins and mods (they have no staff powers, just status)
     if(isAdmin(id))return'admin';
     if(isMod(id))return'mod';
+    // Custom roles: own group, above VIP. Keys are namespaced so a role called "mod" can't collide.
+    let cr=null;try{cr=topCustomRole(id)}catch(_){}
+    if(cr)return'cr:'+cr.id;
     if(v&&v.kind==='perm')return'vipperm';
     if(v&&v.kind==='day')return'vip1';
     let live=null,roles={};try{live=DB.flairOf(id);roles=DB.rolesOf(id)||{}}catch(_){}
@@ -278,6 +328,7 @@ const DiscordShell=(function(){
   }
   function memGroupDefs(){
     const d=[['owner','Owner','#faa81a'],['mvp','MVPs','#ff2fa0'],['admin','Admins','#ed4245'],['mod','Moderators','#3ba55d']];
+    try{customRoleList().forEach(r=>d.push(['cr:'+r.id,r.name,r.color]))}catch(_){}
     SPIN_RANK.forEach(k=>{const pz=SPIN_PRIZES.find(x=>x.id===k);d.push([k,pz?pz.name.replace(/\s*—\s*/,' · '):k,pz?pz.color:'#99aab5'])});
     d.push(['online','Online','#23a559']);
     return d;
@@ -287,8 +338,11 @@ const DiscordShell=(function(){
     const nm=esc(displayUsername(u.username));
     const p=off?null:nameStylePreset(id);
     const mv=!off&&isMvp(id)&&!tagHidden(id,'mvp');
-    const nameH=p?'<span class="nm-user flair-name flair-'+p+'">'+nm+'</span>':'<span class="nm-user'+(mv?' mvp-nm':'')+'">'+nm+(mv?' <span class="mvp-mark" title="MVP">🏆</span>':'')+'</span>';
-    return `<div class="dl-mem${off?' off':''}" data-open-profile="${id}"><span class="dl-fr-av">${avatarHtml(u,u.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot${off?' off':''}"></i></span><span class="dl-mem-nm">${nameH}</span></div>`;
+    // Discord tints a member's name with their top role colour. A won flair still wins (it's their own choice).
+    let cr=null;try{if(!off&&!p)cr=topCustomRole(id)}catch(_){}
+    const crS=cr?' style="color:'+esc(cr.color)+'"':'';
+    const nameH=p?'<span class="nm-user flair-name flair-'+p+'">'+nm+'</span>':'<span class="nm-user'+(mv?' mvp-nm':'')+(cr?' cr-nm':'')+'"'+crS+'>'+nm+(mv?' <span class="mvp-mark" title="MVP">🏆</span>':'')+'</span>';
+    return `<div class="dl-mem${off?' off':''}" data-open-profile="${id}"${cr?` title="${esc(cr.name)}"`:''}><span class="dl-fr-av">${avatarHtml(u,u.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot${off?' off':''}"></i></span><span class="dl-mem-nm">${nameH}</span></div>`;
   }
   function renderMembers(){
     const m=document.getElementById('dlMembers'),btn=ensureMembersBtn();
@@ -318,7 +372,8 @@ const DiscordShell=(function(){
     const nameOf=id=>{const u=DB.getUser(id);return u?displayUsername(u.username):'Loading…'};
     const cmp=(a,b)=>nameOf(a).toLowerCase().localeCompare(nameOf(b).toLowerCase());
     const defs=memGroupDefs(),buckets={};defs.forEach(d=>buckets[d[0]]=[]);
-    onIds.forEach(id=>buckets[memGroupOf(id)].push(id));
+    // A group key always exists in defs, but customroles/ can change between the two calls — never throw over it.
+    onIds.forEach(id=>{const k=memGroupOf(id);(buckets[k]||buckets.online).push(id)});
     let html='';
     defs.forEach(([k,label,col])=>{
       const arr=buckets[k];if(!arr.length)return;arr.sort(cmp);

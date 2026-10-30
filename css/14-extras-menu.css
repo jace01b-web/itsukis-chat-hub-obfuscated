@@ -127,6 +127,7 @@ html.anti-lag .extras.open .ex-ic::before{animation:none!important}
 #exZoom{--rgb:40,140,255;--c1:#6cc0ff;--c2:#1c6bff}
 .ex-voice,.ex-group-voice{--rgb:150,92,255;--c1:#ff9a5a;--c2:#8a5cff}
 #exLauncher{--rgb:124,108,255;--c1:#a99bff;--c2:#5a4bff}
+#exDiscord{--rgb:88,101,242;--c1:#949cf7;--c2:#4752c4}
 .ex-item,.ex-group{position:relative;border-radius:22px;
   background:radial-gradient(120% 160% at 0% 0%,rgba(var(--rgb),.34),transparent 62%),linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02)),rgba(18,19,34,.55);
   box-shadow:inset 0 0 0 1px rgba(var(--rgb),.38),inset 0 1px 0 rgba(255,255,255,.16),0 6px 16px rgba(0,0,0,.22);

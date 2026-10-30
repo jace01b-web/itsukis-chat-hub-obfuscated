@@ -55,7 +55,7 @@ function updateEmojiPop(pop,pos,before){
   view.mentionSel=0;pop.innerHTML='';
   res.forEach((r,i)=>{
     const d=document.createElement('div');d.className=i===0?'sel':'';
-    d.innerHTML=`<span style="font-size:18px;display:inline-block;width:26px;text-align:center">${r.emoji}</span> :${esc(r.name)}:`;
+    d.innerHTML=`<span style="font-size:18px;display:inline-block;width:26px;text-align:center">${esc(r.emoji)}</span> :${esc(r.name)}:`;
     d.onclick=()=>{
       const start=pos-m[2].length-1;
       msgIn.value=msgIn.value.slice(0,start)+r.emoji+' '+msgIn.value.slice(pos);

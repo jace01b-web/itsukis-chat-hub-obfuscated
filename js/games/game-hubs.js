@@ -63,6 +63,7 @@ const CUSTOM_HUBS=[
   {sec:"hubs",name:"Zaka",url:"https://my.browser-education.space/index.svg",desc:"Zaka's web proxy for opening blocked sites.",icon:"Zaka",color:"blue"},
   /* ---- tools ---- */
   /* ---- links ---- */
+  {sec:"links",name:"Official Launchers",url:"https://github.com/AniItsukiCoded/readme/blob/main/readme.md",desc:"Every official launcher for Itsukis Chat Hub. If one is blocked, the next one works — start here.",icon:"🚀",color:"violet"},
   {sec:"links",name:"Cineby",url:"https://cineby.tech/",desc:"Movie and sports streaming. Not proxied, so some networks may block it.",icon:"cine",color:"yellow"},
   {sec:"links",name:"Code Editor (Web)",url:"https://hcodx.com/editor",desc:"A feature-packed online code editor.",icon:"CE",color:"green"},
   {sec:"links",name:"CPS Test",url:"https://redragonshop.com/pages/cps-test",desc:"Test how many clicks per second you can hit.",icon:"CPS",color:"orange"},
@@ -70,6 +71,37 @@ const CUSTOM_HUBS=[
   {sec:"links",name:"Scratch",url:"https://scratch.mit.edu/",desc:"Games, music and animations made by the Scratch community.",icon:"S",color:"orange"}
 ];
 let _hubSec='apps',_pxGroup='',_hubDir=0;
+/* ---------- "use the official launchers" notice ----------
+   Games and proxies behave much better opened from a launcher than from a plain tab (schools that
+   auto-close about:blank, sites that refuse to run in an iframe, ...). This asks people to go
+   through the official launcher list and remembers that they dismissed it. */
+const LAUNCHER_README='https://github.com/AniItsukiCoded/readme/blob/main/readme.md';
+const HUB_NOTE_KEY='ich.hubLauncherNote';
+function hubNoteDismissed(){try{return localStorage.getItem(HUB_NOTE_KEY)==='1'}catch(_){return false}}
+function dismissHubNote(){try{localStorage.setItem(HUB_NOTE_KEY,'1')}catch(_){}}
+function hubNoteHTML(){
+  if(hubNoteDismissed())return '';
+  return `<div class="gh-launch" id="ghLaunch" role="note">
+    <span class="gh-launch-ic" aria-hidden="true">🚀</span>
+    <div class="gh-launch-tx">
+      <b>Open these from a launcher</b>
+      <small>Games, proxies and apps work far better launched than opened in a plain tab — and the official launcher list always has a mirror that still works.</small>
+    </div>
+    <div class="gh-launch-go">
+      <a class="btn small" href="${LAUNCHER_README}" target="_blank" rel="noopener noreferrer">View official launchers&nbsp;↗</a>
+      <button type="button" class="gh-launch-x" id="ghLaunchX" title="Don't show this again" aria-label="Don't show this again">✕</button>
+    </div>
+  </div>`;
+}
+function wireHubNote(){
+  const x=document.getElementById('ghLaunchX');if(!x)return;
+  x.onclick=e=>{
+    e.stopPropagation();
+    const n=document.getElementById('ghLaunch');if(!n)return;
+    dismissHubNote();
+    n.classList.add('gone');setTimeout(()=>n.remove(),240);
+  };
+}
 const GAME_HUB_ALLOWLIST=new Set(Object.keys(HUB_INFO));
 function hubInfoFor(sec,name){
   const k=(name||'').trim().toLowerCase();
@@ -88,12 +120,15 @@ function modalGameHubs(){
       <div class="gh-set-row"><div><b>Open links in an iframe</b><small>On (default): links open in a viewer inside this site. Off: they open in a new tab. Saved to your account, so it follows you to every device.</small></div>
       <label class="switch"><input type="checkbox" id="ghIframe"><span class="slider"></span></label></div>
       <div class="gh-set-note">Some sites refuse to load inside an iframe. If one shows blank, use "Open in new tab" in the viewer.</div>
+      <div class="gh-set-row"><div><b>Official launchers</b><small>Blocked, or a site won't open? Launch the hub from one of the official launchers instead of a plain tab.</small></div>
+      <a class="btn sec small" href="${LAUNCHER_README}" target="_blank" rel="noopener noreferrer" style="flex:none">Open list&nbsp;↗</a></div>
     </div>
-    <div id="ghMain"><div class="field" id="ghSearchWrap" style="margin-top:14px"><input id="ghSearch" placeholder="Search everything..." autocomplete="off"></div>
+    <div id="ghMain">${hubNoteHTML()}<div class="field" id="ghSearchWrap" style="margin-top:14px"><input id="ghSearch" placeholder="Search everything..." autocomplete="off"></div>
     <div class="gh-body"><nav class="gh-side" id="ghSide" aria-label="Proxy sections"><div class="gh-side-in" id="ghSideIn"></div></nav><div class="hub-list" id="ghList"><div class="empty">Loading...</div></div></div>
     <div class="hub-tabs" id="ghTabs" role="tablist"></div></div></div>
   </div></div>`;
   $('#ghX').onclick=closeGameHubs;
+  wireHubNote();
   const ifc=$('#ghIframe');ifc.checked=hubOpenMode()==='iframe';
   ifc.onchange=()=>setHubOpenMode(ifc.checked?'iframe':'tab');
   let busy=false;

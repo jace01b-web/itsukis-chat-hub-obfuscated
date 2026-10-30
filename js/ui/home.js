@@ -15,7 +15,7 @@ $('#homeChip').onclick=()=>openAccount();
 // Shared sign-out logic — called from the Account modal's Sign Out button.
 async function doSignOut(){
   $('#modalRoot').innerHTML='';
-  await DB.signOut();ME=null;lastCount={};_styleSig='';
+  await DB.signOut();ME=null;lastCount={};_styleSig='';_styleApplySig='';   // both style caches, or the next sign-in skips re-applying
   // reset app-wide look on the sign-in screen
   const r=document.documentElement;['--ui-alpha','--ui-blur'].forEach(p=>r.style.removeProperty(p));
   paintBg($('#bgLayer'),$('#bgDimEl'),{bgType:'none'});

@@ -1,7 +1,11 @@
 /* ==========================================================================
  * js/manifest.js - the one list of files the site loads.
  *
- *   css : stylesheets inside /css, applied in this order (later files override earlier ones)
+ *   css : stylesheets inside /css, applied in this order (later files override earlier ones).
+ *         NOTE: index.html fetches the stylesheets itself (it has to - they come from the raw repo,
+ *         which browsers refuse to apply through <link>), so the CSS list that actually loads is the
+ *         one in index.html. This copy must be kept identical to it; it is the documentation of the
+ *         order, and the single-file build in dist/ uses it.
  *   js  : scripts inside /js, executed in this order. They share one global scope, so a file can
  *         only USE things at load time that an earlier file already defined. (Functions that are
  *         merely called later, from clicks/timers/etc., can live anywhere.)
@@ -29,9 +33,14 @@ window.APP_MANIFEST={
     "16-rules-modal.css",
     "17-halloween.css",
     "18-music-profile-cosmetics.css",
+    "19-mobile-sidebar.css",
+    "20-voice-channel.css",
     "22-discord-look.css",
-    "24-file-attachments.css"
+    "24-file-attachments.css",
+    "25-custom-roles.css"
   ],
+  /* Not loaded on purpose: 23-lockdown.css belongs to js/features/lockdown.js, which is kept in the
+     repo but left out of the load list (its master switch is ON, so loading it would lock the site). */
   js:[
     "core/firebase-imports.js",
     "core/diagnostics.js",

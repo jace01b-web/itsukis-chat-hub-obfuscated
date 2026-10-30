@@ -32,7 +32,7 @@ function renderMain(){
   }else{
     const r=DB.getRoom(key);
     title=r?`🔒 ${esc(r.name)}`:'Room';
-    if(r)title+=`  (code: ${r.code})`;
+    if(r)title+=`  (code: ${esc(r.code)})`;   // goes into innerHTML below
   }
   $('#chatTitle').innerHTML=headerAv+title;
   const hAv=$('#chatTitle').querySelector('[data-open-profile]');

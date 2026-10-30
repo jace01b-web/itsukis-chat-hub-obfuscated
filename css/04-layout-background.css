@@ -15,18 +15,11 @@
 .page{position:absolute;inset:0;display:flex;flex-direction:column;animation:fadeIn .35s ease}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes spin{to{transform:rotate(360deg)}}
-#loadingPage{align-items:center;justify-content:center}
-/* ===== LOADING — same neutral glass card as the auth screen (.card), plus a
-   two-tone gradient ring spinner with a soft pulsing glow behind it. ===== */
-#loadingPage .loading-card{display:flex;flex-direction:column;align-items:center;text-align:center;padding:40px 44px}
-.spinner-wrap{position:relative;width:56px;height:56px;display:flex;align-items:center;justify-content:center}
-.spinner{position:relative;width:56px;height:56px;border-radius:50%;
-  border:4px solid rgba(255,255,255,.14);
-  border-top-color:var(--accent);border-right-color:var(--accent2);
-  animation:spin .85s cubic-bezier(.5,0,.5,1) infinite}
-.spinner-glow{position:absolute;inset:-16px;border-radius:50%;z-index:-1;
-  background:radial-gradient(circle,rgba(124,108,255,.4),transparent 70%);
-  filter:blur(8px);animation:pulseGlow 1.8s ease-in-out infinite}
+/* ===== LOADING SCREEN =====
+   Its markup AND its styles live inline in index.html (<style id="boot-critical">), because every
+   stylesheet here is fetched from the raw repo — styling the loading screen from this file would
+   mean it only appears once the thing it is supposed to cover for has already finished loading.
+   Nothing about #loadingPage belongs in this file. */
 @keyframes pulseGlow{0%,100%{opacity:.45;transform:scale(.88)}50%{opacity:1;transform:scale(1.1)}}
 
 /* ===== FULL-SCREEN BACKGROUND (fixed, always fills the entire viewport, blur clipped inside) =====

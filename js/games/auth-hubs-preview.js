@@ -7,7 +7,6 @@
 (function(){
   var teaser=document.getElementById('ghTeaser'),track=document.getElementById('ghTrack'),sub=document.getElementById('ghTeaserSub');
   if(!teaser||!track)return;
-  var URL_='https://raw.githubusercontent.com/Cra-Z-Gaming/VUS/refs/heads/main/apps.json';
   var INFO=window.HUB_INFO||{},ALLOW={};Object.keys(INFO).forEach(function(k){ALLOW[k]=INFO[k].n});
   var COL={white:['rgba(255,255,255,.14)','#f8fafc'],green:['rgba(34,197,94,.16)','#4ade80'],blue:['rgba(59,130,246,.16)','#60a5fa'],rose:['rgba(244,63,94,.16)','#fb7185'],violet:['rgba(139,92,246,.16)','#a78bfa'],yellow:['rgba(234,179,8,.16)','#fde047'],cyan:['rgba(6,182,212,.16)','#22d3ee'],lime:['rgba(132,204,22,.16)','#a3e635'],orange:['rgba(249,115,22,.16)','#fb923c'],red:['rgba(239,68,68,.16)','#f87171'],purple:['rgba(168,85,247,.16)','#c084fc'],black:['rgba(255,255,255,.08)','#e2e8f0'],grey:['rgba(148,163,184,.16)','#cbd5e1'],amber:['rgba(245,158,11,.16)','#fbbf24']};
   var FALLBACK_COLS=['violet','cyan','green','rose','amber','blue','orange','purple','lime','red','grey'];
@@ -20,16 +19,10 @@
     if(sub)sub.textContent=hubs.length+' game hubs inside · tap to peek';
   }
   renderMarquee();
-
-  // Try to load the live list (same source the real Game Hubs uses); keep the built-in list if it fails
-  try{
-    var ctl=window.AbortController?new AbortController():null,t=setTimeout(function(){ctl&&ctl.abort()},6000);
-    fetch(URL_+'?v='+Date.now(),{cache:'no-store',signal:ctl?ctl.signal:undefined}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){
-      clearTimeout(t);
-      var list=(d.hubs||[]).filter(function(h){return h&&h.name&&h.url&&ALLOW[String(h.name).trim().toLowerCase()]}).map(function(h){var k=String(h.name).trim().toLowerCase(),i=INFO[k]||{};return{name:i.n||String(h.name).trim(),desc:i.d||h.desc||'',icon:h.icon||'',color:h.color||i.c||'grey'}});
-      if(list.length){hubs=list;renderMarquee()}
-    }).catch(function(){});
-  }catch(e){}
+  /* This used to also fetch VUS's apps.json on every single page load to "refresh" the list.
+     The real hub list is hand-written now (CUSTOM_HUBS in js/games/game-hubs.js) and this teaser
+     is built from js/games/hub-info.js, so that request only cost a cross-origin round trip on
+     every boot — and failed outright on networks that block raw.githubusercontent.com. Removed. */
 
   var ROOT=null;
   function close(){

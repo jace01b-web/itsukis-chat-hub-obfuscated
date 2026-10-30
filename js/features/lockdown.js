@@ -412,7 +412,7 @@ function lockReactionRow(key,msgId){
   const pills=list.map(r=>{
     const names=r.ids.map(id=>{const u=DB.getUser(id);return(u&&!u.deleted)?displayUsername(u.username):'Deleted User'});
     const who=names.length<=6?names.join(', '):names.slice(0,6).join(', ')+' and '+(names.length-6)+' more';
-    return`<button class="reaction-pill${r.mine?' mine':''}" data-emoji="${esc(r.emoji)}" title="${esc(who)}"><span class="rp-emoji">${r.emoji}</span><span class="rp-count">${r.ids.length}</span></button>`;
+    return`<button class="reaction-pill${r.mine?' mine':''}" data-emoji="${esc(r.emoji)}" title="${esc(who)}"><span class="rp-emoji">${esc(r.emoji)}</span><span class="rp-count">${r.ids.length}</span></button>`;
   }).join('');
   return`<div class="reactions-row">${pills}<button class="reaction-pill reaction-add" data-add-reaction title="Add reaction">+</button></div>`;
 }

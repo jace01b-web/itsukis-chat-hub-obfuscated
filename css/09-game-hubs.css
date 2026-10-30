@@ -77,6 +77,34 @@
 .gh-set-row b{display:block;font-size:14px}
 .gh-set-row small{display:block;margin-top:3px;color:var(--muted);font-size:12px;line-height:1.45}
 .gh-set-note{font-size:12px;color:var(--muted);padding:0 4px}
+.gh-set-row a.btn{display:inline-flex;align-items:center;color:var(--text);text-decoration:none;white-space:nowrap}
+
+/* ---- "open these from a launcher" notice at the top of Hubs & Tools (js/games/game-hubs.js) ---- */
+.gh-launch{display:flex;align-items:center;gap:13px;margin-top:14px;padding:13px 15px;border-radius:16px;
+  border:1px solid rgba(124,108,255,.42);
+  background:linear-gradient(120deg,rgba(124,108,255,.2),rgba(255,108,180,.12) 60%,rgba(124,108,255,.08));
+  animation:ghLaunchIn .45s cubic-bezier(.16,1,.3,1) both;transition:opacity .22s ease,transform .22s ease,margin .22s ease}
+.gh-launch.gone{opacity:0;transform:translateY(-6px) scale(.985)}
+@keyframes ghLaunchIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.gh-launch-ic{flex:none;font-size:24px;line-height:1;animation:ghLaunchBob 3.2s ease-in-out infinite}
+@keyframes ghLaunchBob{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-4px) rotate(4deg)}}
+.gh-launch-tx{min-width:0;flex:1}
+.gh-launch-tx b{display:block;font-size:14px}
+.gh-launch-tx small{display:block;margin-top:3px;font-size:12px;line-height:1.45;color:var(--muted)}
+.gh-launch-go{display:flex;align-items:center;gap:8px;flex:none}
+.gh-launch-go .btn{display:inline-flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;white-space:nowrap}
+.gh-launch-x{width:28px;height:28px;flex:none;border-radius:9px;font-size:13px;line-height:1;color:var(--muted);
+  background:rgba(255,255,255,.07);border:1px solid var(--border);transition:.15s}
+.gh-launch-x:hover{color:#fff;background:rgba(255,255,255,.14)}
+@media(max-width:560px){
+  .gh-launch{flex-wrap:wrap;gap:10px}
+  .gh-launch-ic{font-size:21px}
+  .gh-launch-go{width:100%;justify-content:space-between}
+  .gh-launch-go .btn{flex:1;text-align:center}
+}
+@media(prefers-reduced-motion:reduce){.gh-launch,.gh-launch-ic{animation:none!important}}
+html.discord-look .gh-launch{border-radius:8px;border-color:rgba(88,101,242,.5);background:rgba(88,101,242,.12)}
+html.discord-look .gh-launch-x{border-radius:4px;background:var(--dl-bg3);border-color:transparent}
 .modal .hidden{display:none!important}
 /* iframe viewer */
 .hub-frame-box{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;background:var(--bg,#0b0b12)}

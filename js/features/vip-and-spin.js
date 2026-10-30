@@ -53,14 +53,18 @@ function vipBadgeHTML(id){
 
 // Whole-name rendering: the VIP tier (permanent => Legend, live 24h => Star) styles the
 // title AND the username together. A flair (if any) still colors the username itself.
+/* Tier order, highest first: Owner, MVP, then any CUSTOM ROLE (decorative, see js/moderation/roles.js),
+   then permanent VIP (Legend) and 24h VIP (Star). A custom role outranks VIP on the name for the same
+   reason it is listed above VIP in the member list \u2014 it says who someone is, not what they bought. */
 function vipTierOf(id){
   try{
     const v=DB.vipInfo(id,true);
-    if(!v)return null;
-    if(v.kind==='owner')return{cls:'tier-owner',ic:'\u{1F531}',label:'Owner',tip:'Server owner'};
-    if(v.kind==='mvp')return{cls:'tier-mvp',ic:'\u{1F3C6}',label:'MVP',tip:'MVP \u2014 permanent'};
-    if(v.kind==='perm')return{cls:'tier-legend',ic:'\u{1F451}',label:'Legend',tip:'Permanent VIP'};
-    if(v.kind==='day')return{cls:'tier-star',ic:'\u{1F31E}',label:'Star',tip:'24-hour VIP'};
+    if(v&&v.kind==='owner')return{cls:'tier-owner',ic:'\u{1F531}',label:'Owner',tip:'Server owner'};
+    if(v&&v.kind==='mvp')return{cls:'tier-mvp',ic:'\u{1F3C6}',label:'MVP',tip:'MVP \u2014 permanent'};
+    const cr=topCustomRole(id);
+    if(cr)return{cls:'tier-custom',ic:cr.icon||'\u2756',label:cr.name,tip:cr.name,color:cr.color};
+    if(v&&v.kind==='perm')return{cls:'tier-legend',ic:'\u{1F451}',label:'Legend',tip:'Permanent VIP'};
+    if(v&&v.kind==='day')return{cls:'tier-star',ic:'\u{1F31E}',label:'Star',tip:'24-hour VIP'};
   }catch(_){}
   return null;
 }
@@ -70,7 +74,8 @@ function fullNameHTML(id,escapedName){
   if(!t)return styledNameHTML(id,escapedName);
   const p=nameStylePreset(id);
   const user=p?'<span class="nm-user flair-name flair-'+p+'">'+escapedName+'</span>':'<span class="nm-user">'+escapedName+'</span>';
-  return '<span class="nm-wrap '+t.cls+'" title="'+t.tip+'"><span class="nm-title"><span class="nm-ic">'+t.ic+'</span>'+t.label+'</span>'+user+'</span>';
+  const style=t.color?' style="--rc:'+esc(t.color)+'"':'';
+  return '<span class="nm-wrap '+t.cls+'"'+style+' title="'+esc(t.tip)+'"><span class="nm-title"><span class="nm-ic">'+esc(t.ic)+'</span>'+esc(t.label)+'</span>'+user+'</span>';
 }
 // Role pills for the profile card (VIP tier, live flair, permanent roles, confetti).
 function profileRolesHTML(id){
@@ -81,6 +86,11 @@ function profileRolesHTML(id){
     else if(v&&v.kind==='mvp')out+='<span class="pf-role mvp-role" title="MVP \u2014 permanent">\u{1F3C6} MVP \u00B7 Forever'+(v.since?' <small>since '+new Date(v.since).toLocaleDateString(undefined,{month:'short',year:'numeric'})+'</small>':'')+'</span>';
     else if(v&&v.kind==='perm')out+='<span class="pf-role vip-perm">\u{1F48E} VIP \u00B7 Forever</span>';
     else if(v&&v.kind==='day')out+='<span class="pf-role vip-day">\u{1F31E} VIP \u2014 1 Day</span>';
+    // Custom roles (decorative, backend-only): all of them, highest rank first, right under the tier pill.
+    customRolesOf(id).forEach(r=>{
+      out+='<span class="pf-role custom-role" style="--rc:'+esc(r.color)+'" title="'+esc(r.name)+'">'+
+        (r.icon?esc(r.icon)+' ':'')+esc(r.name)+'</span>';
+    });
     const live=DB.flairOf(id),roles=DB.rolesOf(id);
     const seen={};
     const hf=false,hc=false;   // hiding a tag never removes it from the profile

@@ -1,11 +1,13 @@
 /* ==========================================================================
  * js/games/hub-info.js
- * Shared Game Hubs info (display names/descriptions). To add a hub: add it to apps.json, then add one line here
+ * Shared Game Hubs info (display names/descriptions) for the sign-in screen teaser
  * Plain (non-module) script that runs in place while the page is parsed - see its <script> tag in index.html.
  * ========================================================================== */
-/* Shared Game Hubs info. Keys = lowercase hub name from apps.json. Only hubs listed here are shown;
-   n = display name, d = description (overrides apps.json), c/i = optional colour / icon fallback.
-   To add a hub: add it to apps.json, then add one line here. */
+/* Shared Game Hubs info. Keys = the hub's name in lowercase. n = display name, d = description,
+   c/i = optional colour / icon fallback.
+   This drives the "Game Hubs" teaser on the sign-in screen (js/games/auth-hubs-preview.js), so keep it
+   matching the real list in CUSTOM_HUBS (js/games/game-hubs.js) — listing a hub here that is not in
+   CUSTOM_HUBS advertises a hub nobody can actually open. */
 window.HUB_INFO={
 "kbh games":{n:"KBH Games",d:"More browser games to dig through. A few titles may be hit or miss."},
 "reids games":{n:"Reids Games",d:"A solid game collection with some movies mixed in."},
@@ -18,11 +20,9 @@ window.HUB_INFO={
 "sigma os":{n:"Sigma OS",d:"A Windows 11–style desktop with games and apps."},
 "noah's tutoring":{n:"Noah's Tutoring",d:"A big game library. It can be a little laggy while it loads."},
 "noah's tutoring launcher":{n:"Noah's Tutoring Launcher",d:"Same library as Noah's Tutoring, but opens behind a launch button."},
-"lucide":{n:"Lucide",d:"Web proxy for reaching sites that are otherwise blocked. Works well.",c:"orange"},
 "project bugs":{n:"Project Bugs",d:"A Google Sites page packed with games, with thumbnails so they're easy to browse.",c:"purple"},
 "calcsolver":{n:"CalcSolver",d:"Looks like a calculator site. Turn on Code mode, then tap (0) four times to open the game hub.",c:"grey"},
 "mantle":{n:"Mantle",d:"Quality over quantity: modded Minecraft, an AI assistant and a proxy in one app.",c:"red"},
-"fern":{n:"Fern",d:"Another web proxy for opening blocked sites.",c:"lime"},
 "game 'n go games 1":{n:"Game 'N Go Games 1",d:"A game hub that looks and feels like a computer desktop.",c:"cyan"},
 "game 'n go games 2":{n:"Game 'N Go Games 2",d:"Backup mirror of Game 'N Go, handy if the first one is down.",c:"cyan"},
 "zaka":{n:"Zaka",d:"Zaka's web proxy for opening blocked sites.",c:"blue"},
@@ -30,6 +30,11 @@ window.HUB_INFO={
 "gust":{n:"Gust",d:"Another game hub to try when your usual ones are blocked.",c:"white"},
 "unblockedzone!":{n:"UnblockedZone!",d:"A very popular game site that keeps several mirrors as backups.",c:"red"},
 "idk 10.0":{n:"idk 10.0",d:"A desktop-style game hub with a big selection of games.",c:"purple"},
+"duckmath":{n:"Duckmath",d:"Duckmath game hub.",c:"lime"},
+"nexus":{n:"Nexus",d:"A straightforward hub of links to games.",c:"violet"},
+"nike hub":{n:"Nike Hub",d:"Both a web proxy and a games hub.",c:"orange"},
+"nova":{n:"Nova",d:"A hub of game links, handy when the bigger sites are blocked.",c:"blue"},
+"otonic":{n:"Otonic",d:"Proxy with a search bar plus games.",c:"cyan"},
 "ghost hub cinema":{n:"Ghost Hub Cinema",d:"A collection of movies to browse and watch.",c:"white"}
 };
 

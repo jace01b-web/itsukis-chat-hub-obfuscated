@@ -245,7 +245,7 @@ function reactionRowHTML(msgId){
     });
     const who=names.length<=6?names.join(', '):names.slice(0,6).join(', ')+' and '+(names.length-6)+' more';
     return`<button class="reaction-pill${r.mine?' mine':''}" data-emoji="${esc(r.emoji)}" title="${esc(who)}">
-      <span class="rp-emoji">${r.emoji}</span><span class="rp-count">${r.ids.length}</span>
+      <span class="rp-emoji">${esc(r.emoji)}</span><span class="rp-count">${r.ids.length}</span>
     </button>`;
   }).join('');
   return`<div class="reactions-row">${pills}<button class="reaction-pill reaction-add" data-add-reaction title="Add reaction">+</button></div>`;

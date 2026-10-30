@@ -1117,3 +1117,105 @@ html.discord-look #chatPage.mvp-mode .vb-gem{font-size:24px}
 html.discord-look .dl-mem-h.dl-mem-h-mvp{font-weight:800;letter-spacing:.06em;background:var(--mvp-holo);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:mvpHolo 6s linear infinite}
 html.discord-look .dl-mem-h.dl-mem-h-mvp[style*="--rc"]::before{content:'🏆';width:auto;height:auto;background:none;border-radius:0;font-size:12px;-webkit-text-fill-color:initial;filter:drop-shadow(0 0 5px rgba(255,47,160,.9))}
 html.discord-look .dl-mem:has(.mvp-nm){background:linear-gradient(90deg,rgba(255,47,160,.12),rgba(62,230,255,.05) 60%,transparent);box-shadow:inset 2px 0 0 rgba(255,47,160,.7)}
+
+/* ==========================================================================
+ * v20: polish pass — rail tooltips, the Discord invite, unread channels, member list,
+ *      focus rings, scrollbars everywhere, and the small bits that still looked "not quite Discord".
+ * ========================================================================== */
+
+/* ---------- rail tooltips (Discord): a real element on <body>, because the rail scrolls ----------
+   A ::after tooltip would be clipped by the rail's own scroll box, so js/ui/discord-shell.js parks
+   one fixed-position node next to whichever rail button is hovered or focused. */
+.dl-rail-tip{position:fixed;z-index:9500;left:0;top:0;pointer-events:none;white-space:nowrap;
+  padding:8px 12px;border-radius:6px;font-size:14px;font-weight:600;line-height:1.2;
+  background:#111214;color:#f2f3f5;box-shadow:0 8px 16px rgba(0,0,0,.4);
+  opacity:0;transform:translate(-4px,-50%);transition:opacity .1s ease,transform .1s ease}
+.dl-rail-tip.show{opacity:1;transform:translate(0,-50%)}
+.dl-rail-tip::before{content:"";position:absolute;right:100%;top:50%;transform:translateY(-50%);
+  border:6px solid transparent;border-right-color:#111214;border-left:0}
+html.discord-look[data-dl-theme="light"] .dl-rail-tip,
+html.discord-look[data-dl-theme="light"] .dl-rail-tip::before{background:#f2f3f5;color:#060607;border-right-color:#f2f3f5}
+/* the rail uses the body-level tooltip above, so suppress the generic ::after one on its buttons */
+html.discord-look #dlRail [data-tip]::after,html.discord-look #dlRail [data-tip]::before{display:none!important}
+/* the native title tooltip is the fallback where there is no hover (touch) */
+@media (hover:none){.dl-rail-tip{display:none}}
+
+/* ---------- rail press feedback ---------- */
+@media(min-width:821px){
+  html.discord-look .dl-rail-btn:active{transform:translateY(1px)}
+  html.discord-look .dl-rail-btn.dl-rail-home{background:#5865f2!important;color:#fff}
+  html.discord-look .dl-rail-btn.dl-rail-home:hover{background:#4752c4!important}
+}
+
+/* ---------- channels: unread ones go white and bold with a dot on the rail edge (Discord) ---------- */
+html.discord-look .sb-item{position:relative}
+html.discord-look .sb-item:has(.badge){color:var(--dl-head);font-weight:600}
+html.discord-look .sb-item:has(.badge)::before{content:"";position:absolute;left:-5px;top:50%;width:8px;height:8px;
+  border-radius:0 4px 4px 0;background:var(--dl-head);transform:translateY(-50%)}
+html.discord-look .sb-item .badge{margin-left:auto;min-width:16px;height:16px;padding:0 5px;border-radius:8px;
+  font-size:11px;font-weight:700;line-height:16px}
+html.discord-look .sb-section{color:var(--dl-muted)}
+html.discord-look .sb-section:hover{color:var(--dl-text)}
+
+/* ---------- member list: tighter rows, hover that reads as a row and not a card ---------- */
+html.discord-look .dl-mem{border-radius:4px;transition:background-color .12s ease}
+html.discord-look .dl-mem:hover{background:var(--dl-hover)}
+html.discord-look .dl-mem.off{opacity:.42}
+html.discord-look .dl-mem.off:hover{opacity:.72}
+html.discord-look .dl-mem-more{width:calc(100% - 8px);margin:6px 4px 0;padding:6px 8px;border-radius:4px;
+  font-size:13px;font-weight:600;color:var(--dl-muted);background:transparent;border:0;text-align:left;cursor:pointer}
+html.discord-look .dl-mem-more:hover{background:var(--dl-hover);color:var(--dl-head)}
+
+/* ---------- keyboard focus: Discord's blue ring, on everything that can take focus ---------- */
+html.discord-look :focus-visible{outline:2px solid #00a8fc;outline-offset:2px;border-radius:4px}
+html.discord-look .dl-rail-btn:focus-visible{outline-offset:3px}
+html.discord-look button:focus:not(:focus-visible){outline:none}
+
+/* ---------- scrollbars: the same thin Discord bar in every scrolling panel, not just two ---------- */
+html.discord-look{scrollbar-width:thin;scrollbar-color:var(--dl-scroll) transparent}
+html.discord-look .dl-members,html.discord-look .modal,html.discord-look .online-list,
+html.discord-look .hub-list,html.discord-look .gh-side-in,html.discord-look #dlFrBody{
+  scrollbar-width:thin;scrollbar-color:var(--dl-scroll) transparent}
+html.discord-look .dl-members::-webkit-scrollbar,html.discord-look .modal::-webkit-scrollbar,
+html.discord-look .online-list::-webkit-scrollbar,html.discord-look .hub-list::-webkit-scrollbar,
+html.discord-look .gh-side-in::-webkit-scrollbar,html.discord-look #dlFrBody::-webkit-scrollbar{width:8px;height:8px}
+html.discord-look .dl-members::-webkit-scrollbar-thumb,html.discord-look .modal::-webkit-scrollbar-thumb,
+html.discord-look .online-list::-webkit-scrollbar-thumb,html.discord-look .hub-list::-webkit-scrollbar-thumb,
+html.discord-look .gh-side-in::-webkit-scrollbar-thumb,html.discord-look #dlFrBody::-webkit-scrollbar-thumb{
+  background:var(--dl-scroll);border-radius:4px;border:0}
+html.discord-look .dl-members::-webkit-scrollbar-track,html.discord-look .modal::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- composer: Discord proportions, and the send button only lights up with something to send ---------- */
+html.discord-look .composer .row{padding:0 8px;min-height:44px}
+html.discord-look .row textarea{padding:11px 4px;line-height:1.375;max-height:50vh}
+html.discord-look .row textarea::placeholder{color:var(--dl-muted);opacity:1}
+html.discord-look .composer .row:focus-within{box-shadow:none}
+html.discord-look .send{font-size:18px;transition:color .12s ease,transform .12s ease}
+html.discord-look .send:hover{color:#949cf7;transform:scale(1.08)}
+html.discord-look .send:active{transform:scale(.94)}
+html.discord-look .icon-btn:hover{color:var(--dl-head)}
+html.discord-look .previews{padding:10px 0 0}
+
+/* ---------- top bar: the channel name reads like Discord's "# channel" ---------- */
+html.discord-look .topbar h2{display:flex;align-items:center;gap:6px;letter-spacing:0}
+html.discord-look .topbar .btn.sec.small{background:transparent!important;color:var(--dl-muted);box-shadow:none}
+html.discord-look .topbar .btn.sec.small:hover{color:var(--dl-head);background:var(--dl-hover)!important}
+html.discord-look #dlMembersBtn{background:transparent;border:0;color:var(--dl-muted);
+  width:34px;height:34px;display:grid;place-items:center;border-radius:4px;cursor:pointer;transition:.12s}
+html.discord-look #dlMembersBtn:hover{color:var(--dl-head);background:var(--dl-hover)}
+html.discord-look #dlMembersBtn.active{color:var(--dl-head)}
+
+/* ---------- modals: Discord's flat panel with a quiet divider under the title ---------- */
+html.discord-look .modal h2{font-size:20px;font-weight:700;color:var(--dl-head)}
+html.discord-look .modal .hint{color:var(--dl-muted)}
+html.discord-look .modal-x{border-radius:4px;background:transparent;color:var(--dl-muted)}
+html.discord-look .modal-x:hover{background:var(--dl-hover);color:var(--dl-head)}
+
+/* ---------- hubs & tools inside the Discord look ---------- */
+html.discord-look .hub-row,html.discord-look .list-row{border-radius:6px}
+html.discord-look .hub-row:hover{background:var(--dl-hover);border-color:transparent}
+html.discord-look .hub-tab{border-radius:4px}
+html.discord-look .hub-pill{border-radius:4px;background:#5865f2}
+
+/* ---------- loading screen handoff: no double fade when the app appears ---------- */
+html.discord-look #loadingPage{animation:none}

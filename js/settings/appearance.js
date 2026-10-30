@@ -33,7 +33,24 @@ function paintBg(layer,dim,s){
   layer.style.filter=s.bgType==='image'&&s.bgBlur>0?`blur(${s.bgBlur}px)`:'none';
   dim.style.opacity=(s.bgDim||0)/100;
 }
+/* renderChat() calls applyStyle() on every re-render, and a re-render happens on every database
+   change. Re-writing a dozen custom properties on <html> (plus repainting the background layer)
+   invalidates style for the whole document, so doing it when nothing actually changed was a steady
+   drip of wasted work during busy chat. The app-wide call is now a no-op unless something it
+   depends on really changed — the live settings preview still applies every time, because it
+   passes draft settings (a different signature) or a different target. */
+let _styleApplySig='';
+function styleSig(s){
+  return JSON.stringify([s.meBubble,s.meText,s.radius,s.font,FONTS[s.font]||FONTS.system,s.size,s.bold,s.italic,
+    s.bgType,s.bgColor,s.bgColor2,s.bgFit,s.bgBlur,s.bgDim,s.bgImage?s.bgImage.length:0,
+    s.uiOpacity,s.uiBlur,typeof DiscordLook!=='undefined'&&DiscordLook.on()]);
+}
 function applyStyle(target=document.documentElement,s=ME.settings){
+  if(target===document.documentElement){
+    const sig=styleSig(s);
+    if(sig===_styleApplySig)return;
+    _styleApplySig=sig;
+  }
   target.style.setProperty('--b-me',hexToRgba(s.meBubble,.6));
   target.style.setProperty('--b-me-text',s.meText);
   target.style.setProperty('--b-radius',s.radius+'px');

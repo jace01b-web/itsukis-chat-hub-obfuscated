@@ -4,6 +4,8 @@ For schools that auto close about:blank tabs, a new bypass has been made and wor
 
 May I also add both ICH (Itsukis Chat Hub) and VUS (Vlads Unblocked Sites) are having a colab soon and a whole new launcher, so stay tuned.
 
+**→ [Official launcher list](https://github.com/AniItsukiCoded/readme/blob/main/readme.md) ←** — always start here. If one launcher is blocked, the next one works. The site also links it from **Hubs & Tools**.
+
 EASY links:
 
 Google Scripts (Fixing):

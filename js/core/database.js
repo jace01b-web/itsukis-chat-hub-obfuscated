@@ -32,7 +32,21 @@ const DB=(()=>{
       if(s.exists()){C.users[id]=s.val();if(ready)emit()}
     }).catch(()=>{}).finally(()=>fetchingUsers.delete(id));
   }
-  const emit=()=>listeners.forEach(f=>{try{f()}catch(e){console.error(e)}});
+  /* emit() tells the UI "something changed" and every listener re-renders. Roughly 25 Firebase
+     listeners are live at once, and a single action (sending a message, someone coming online,
+     signing in) makes several of them fire in the same tick — which used to mean several full
+     re-renders back to back, and a visible stutter on login and in busy chats.
+     So emit() is coalesced: however many times it is called, the listeners run once, on the next
+     frame. In a hidden tab requestAnimationFrame is paused, so a timer is used instead — ping
+     notifications and the ban self-purge have to keep working while the tab is in the background. */
+  let _emitPending=false;
+  function _flushEmit(){_emitPending=false;listeners.forEach(f=>{try{f()}catch(e){console.error(e)}})}
+  const emit=()=>{
+    if(_emitPending)return;
+    _emitPending=true;
+    if(document.visibilityState==='hidden')setTimeout(_flushEmit,0);
+    else requestAnimationFrame(_flushEmit);
+  };
   const dmKey=(a,b)=>'dm_'+[a,b].sort((x,y)=>x-y).join('_');
   // MVP: mvp/$id holds the time (ms) the role was granted; true/1 also count. Never expires — only an owner removes it.
   const mvpOn=id=>{const v=C.mvp[Number(id)];return v===true||v===1||(typeof v==='number'&&v>0)};
@@ -176,6 +190,12 @@ const DB=(()=>{
       unsubs.push(onValue(R('secretowner/'+sid),sn=>done(sn.val()===1),()=>done(false)));}
     listen('mods',v=>{MODS_CACHE=v||{};MODS_LOADED=true;});
     listen('admin',v=>{ADMINS_CACHE=v||{};ADMINS_LOADED=true;});
+    // Custom roles: decorative only, written from the backend, never by the client (see js/moderation/roles.js).
+    listen('customroles',v=>{
+      CUSTOM_ROLES_CACHE=(v&&typeof v==='object')?v:{};CUSTOM_ROLES_LOADED=true;
+      if(ready)emit();
+      if(typeof DiscordShell!=='undefined'){try{DiscordShell.refresh()}catch(_){}}
+    });
     listen('appVersion',v=>{APP_VERSION_CACHE=v||null;APP_VERSION_LOADED=true;checkForcedVersion();});
     listen('dmMembers',v=>C.dmMembers=v||{});
     listen('vip',v=>{C.vip=v||{};if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
@@ -498,6 +518,12 @@ const DB=(()=>{
       return null},
     flairOf:(id)=>{const f=C.flair[Number(id)];return(f&&typeof f.until==='number'&&f.until>Date.now()+SKEW)?f.preset:null},
     rolesOf:(id)=>C.roles[Number(id)]||{},
+    /* Custom roles (decorative, backend-only). customRoles() = every role, highest rank first;
+       customRolesOf(id) = the ones that person has; topCustomRole(id) = the one shown on their name. */
+    customRoles:()=>customRoleList(),
+    customRolesOf:(id)=>customRolesOf(id),
+    topCustomRole:(id)=>topCustomRole(id),
+    customRolesLoaded:()=>CUSTOM_ROLES_LOADED,
     isMvp:mvpOn,
     mvpAccess,
     mvpSince:(id)=>{const v=C.mvp[Number(id)];return(typeof v==='number'&&v>1)?v:0},

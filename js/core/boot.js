@@ -7,8 +7,10 @@
 'use strict';
 
 /* ---------- Boot ---------- */
+const BOOTUI=window.ICHBoot||{prog(){},phase(){},step(){},done(){}};
 (async function init(){
   let settled=false;
+  BOOTUI.step('net');BOOTUI.prog(96);BOOTUI.phase('Connecting…');
   DB.settle().then(()=>settled=true);
   setTimeout(()=>{
     if(settled||view.page!=='loadingPage')return;
@@ -39,10 +41,15 @@
   }
   else if(DB.hadSessionError()){
     // couldn't confirm the account (network) — do NOT ask for a username; offer a reload instead
-    show('loadingPage');$('.spinner').classList.add('hidden');
+    show('loadingPage');
+    const orb=$('.ld-orbit');if(orb)orb.classList.add('hidden');
+    const pg=$('#loadingPage');if(pg)pg.classList.remove('ld-gone','hidden');
     $('#loadingHint').textContent="Couldn't reach the server to load your account.";
     $('#loadingRetry').classList.remove('hidden');
   }
   else if(DB.needsProfile()){show('authPage');modalPickUsername()}
   else show('authPage');
+  // Fade the loading screen out ON TOP of whichever page just appeared (the session-error branch
+  // above deliberately keeps it up, so it is the one case that skips this).
+  if(!(!ME&&DB.hadSessionError()))BOOTUI.done();
 })();

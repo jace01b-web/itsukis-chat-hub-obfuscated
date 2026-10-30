@@ -33,7 +33,7 @@ html.anti-lag .music-controls button::after,html.anti-lag .cp-eye::after,html.an
   display:none!important;
 }
 /* 4) ambient / looping decoration (loading spinners, typing dots and one-shot message entrances are kept) */
-html.anti-lag .np-eq i,html.anti-lag .spinner-glow,html.anti-lag .sess-ic,html.anti-lag .music-note.spin,
+html.anti-lag .np-eq i,html.anti-lag .sess-ic,html.anti-lag .music-note.spin,
 html.anti-lag .pf-banner.banner-anim::after,html.anti-lag .acc-banner-preview.banner-anim::after,
 html.anti-lag .vip-ring,html.anti-lag .vip-sheen,html.anti-lag .vip-sparks,html.anti-lag .vip-gem,html.anti-lag .vip-gem::before,html.anti-lag .vip-title,
 html.anti-lag .flair-rainbow,html.anti-lag .flair-name,html.anti-lag .nm-wrap .nm-user,html.anti-lag .nm-wrap.tier-mvp,html.anti-lag .nm-wrap.tier-mvp::after,html.anti-lag .dl-mem-nm .nm-user.mvp-nm,
