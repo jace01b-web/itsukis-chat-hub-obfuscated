@@ -11,8 +11,8 @@
     if(!p||p.classList.contains('hidden')||!h)return;
     h.textContent='Failed to start: '+String(msg||'unknown error').slice(0,200);
     if(r)r.classList.remove('hidden');
-    var sp=document.querySelector('.ld-orbit');if(sp)sp.classList.add('hidden');
-    try{document.documentElement.classList.remove('booting')}catch(_){}   // never leave the app hidden behind a dead loading screen
+    // never leave the app hidden behind a dead loading screen
+    try{window.ICHBoot.fail();window.ICHBoot.reveal()}catch(_){document.documentElement.classList.remove('booting')}
   }
   window.addEventListener('error',function(e){show(e.message||(e.error&&e.error.message))});
   window.addEventListener('unhandledrejection',function(e){show(e.reason&&e.reason.message||e.reason)});

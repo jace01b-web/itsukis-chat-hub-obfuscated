@@ -12,13 +12,12 @@
 
   function fail(msg){
     console.error('[loader]',msg);
-    var h=document.getElementById('loadingHint'),r=document.getElementById('loadingRetry'),sp=document.querySelector('.ld-orbit');
+    var h=document.getElementById('loadingHint'),r=document.getElementById('loadingRetry');
     if(h)h.textContent='Failed to start: '+String(msg).slice(0,200);
     if(r)r.classList.remove('hidden');
-    if(sp)sp.classList.add('hidden');
-    try{document.documentElement.classList.remove('booting')}catch(_){}
+    try{window.ICHBoot.fail();window.ICHBoot.reveal()}catch(_){document.documentElement.classList.remove('booting')}
   }
-  var BOOT=window.ICHBoot||{prog:function(){},phase:function(){},step:function(){},done:function(){}};
+  var BOOT=window.ICHBoot||{prog:function(){},phase:function(){},step:function(){},done:function(){},fail:function(){},reveal:function(){}};
 
   // start downloading the app files right away, while the Firebase SDK is still loading
   M.js.forEach(function(f){

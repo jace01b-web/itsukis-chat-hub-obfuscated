@@ -139,7 +139,8 @@ async function tosLoadState(id){
   }
 }
 
-/* ---------- ban hooks (called from DB.banUser / DB.unbanUser, and the owner IP-ban tool). The server does the work. ---------- */
+/* ---------- ban hooks (called from DB.banUser / DB.unbanUser, and the staff IP-ban tool). The server does the work,
+   and re-checks the caller's role itself — owners and admins may both ban and unban an IP. ---------- */
 async function tosIpBanUser(id){const {j}=await tosApi('ipban',{action:'ban',userId:Number(id),reason:'account banned'});return !!j.ok}
 async function tosIpUnbanUser(id){const {j}=await tosApi('ipban',{action:'unban',userId:Number(id)});return !!j.ok}
 async function tosManualIpBan(action,ip,reason){

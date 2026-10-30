@@ -7,7 +7,7 @@
 'use strict';
 
 /* ---------- Boot ---------- */
-const BOOTUI=window.ICHBoot||{prog(){},phase(){},step(){},done(){}};
+const BOOTUI=window.ICHBoot||{prog(){},phase(){},step(){},done(){},fail(){},reveal(){}};
 (async function init(){
   let settled=false;
   BOOTUI.step('net');BOOTUI.prog(96);BOOTUI.phase('Connecting…');
@@ -42,8 +42,8 @@ const BOOTUI=window.ICHBoot||{prog(){},phase(){},step(){},done(){}};
   else if(DB.hadSessionError()){
     // couldn't confirm the account (network) — do NOT ask for a username; offer a reload instead
     show('loadingPage');
-    const orb=$('.ld-orbit');if(orb)orb.classList.add('hidden');
     const pg=$('#loadingPage');if(pg)pg.classList.remove('ld-gone','hidden');
+    BOOTUI.fail();
     $('#loadingHint').textContent="Couldn't reach the server to load your account.";
     $('#loadingRetry').classList.remove('hidden');
   }

@@ -227,17 +227,6 @@ function openSettings(fromChat){
         </div>
       </div>
       <div class="set-card">
-        <div class="section-h" style="margin-top:0">🌐 IP ban</div>
-        <div class="field"><label>IP address (copy it from the Discord TOS log)</label><input id="modIpVal" type="text" maxlength="45" placeholder="e.g. 203.0.113.42" autocomplete="off" style="width:100%"></div>
-        <div class="field" style="margin-top:8px"><label>Reason (optional)</label><input id="modIpWhy" type="text" maxlength="120" placeholder="e.g. raid on 10/13" autocomplete="off" style="width:100%"></div>
-        <div class="actions" style="justify-content:flex-start;margin-top:10px">
-          <button class="btn danger" id="modIpBan" type="button">Ban IP</button>
-          <button class="btn sec" id="modIpUnban" type="button">Unban IP</button>
-          <span class="hint" id="modIpMsg" style="align-self:center"></span>
-        </div>
-        <div class="hint" style="margin-top:8px">Banned IPs can't chat (even on new accounts). Banning an account bans its logged IP automatically. IPv6 is banned by /64 network. On a shared network (like a school) this affects everyone on it, so unban when it's over.</div>
-      </div>
-      <div class="set-card">
         <div class="section-h" style="margin-top:0">📢 Announcement</div>
         <div class="field"><label>Message</label><textarea id="modAnnText" maxlength="300" rows="3" placeholder="e.g. Server restarting in 5 minutes!" style="width:100%;resize:vertical"></textarea></div>
         <div class="set-grid" style="margin-top:10px">
@@ -311,9 +300,22 @@ function openSettings(fromChat){
         </div>
         <div class="actions" style="justify-content:flex-start;margin-top:10px">
           <button class="btn" style="background:var(--danger)" id="modBanGo">Ban</button>
-          ${isOwner(ME.id)?'<button class="btn sec" id="modUnbanGo">Unban</button>':''}
+          <button class="btn sec" id="modUnbanGo">Unban</button>
         </div>
-        <div class="hint" style="margin-top:8px">${isOwner(ME.id)?'':'Admins can ban anyone except owners and other admins. Only an owner can unban. '}Banned accounts show as "Deleted User", reserve their old username so it can't be taken while banned, and can't send messages, change settings, or do anything else — but they stay signed in so they can't ban-evade by making a new account. Unbanning gives them a new generated username (which they can change anytime) and frees their old one for reuse.</div>
+        <div class="section-h" style="margin-top:14px;font-size:13px">Currently banned <span id="modBanCount" class="hint"></span></div>
+        <div id="modBanList" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto"></div>
+        <div class="hint" style="margin-top:8px">${isOwner(ME.id)?'':'Admins can ban and unban anyone except owners and other admins. '}Banned accounts show as "Deleted User", reserve their old username so it can't be taken while banned, and can't send messages, change settings, or do anything else — but they stay signed in so they can't ban-evade by making a new account. Unbanning gives them a new generated username (which they can change anytime) and frees their old one for reuse.</div>
+      </div>`:''}
+      ${(isOwner(ME.id)||isAdmin(ME.id))?`<div class="set-card">
+        <div class="section-h" style="margin-top:0">🌐 IP ban</div>
+        <div class="field"><label>IP address (copy it from the Discord TOS log)</label><input id="modIpVal" type="text" maxlength="45" placeholder="e.g. 203.0.113.42" autocomplete="off" style="width:100%"></div>
+        <div class="field" style="margin-top:8px"><label>Reason (optional)</label><input id="modIpWhy" type="text" maxlength="120" placeholder="e.g. raid on 10/13" autocomplete="off" style="width:100%"></div>
+        <div class="actions" style="justify-content:flex-start;margin-top:10px">
+          <button class="btn danger" id="modIpBan" type="button">Ban IP</button>
+          <button class="btn sec" id="modIpUnban" type="button">Unban IP</button>
+          <span class="hint" id="modIpMsg" style="align-self:center"></span>
+        </div>
+        <div class="hint" style="margin-top:8px">Banned IPs can't chat (even on new accounts). Banning an account bans its logged IP automatically. IPv6 is banned by /64 network. On a shared network (like a school) this affects everyone on it, so unban when it's over. Owners and admins can both ban and unban.</div>
       </div>`:''}
       ${isOwner(ME.id)?`      <div class="set-card">
         <div class="section-h" style="margin-top:0">🚀 Version control</div>
@@ -383,6 +385,8 @@ function openSettings(fromChat){
           <button class="btn" style="background:var(--danger)" id="modMuteGo">Mute</button>
           <button class="btn sec" id="modUnmuteGo">Unmute</button>
         </div>
+        <div class="section-h" style="margin-top:16px;font-size:13px">Currently muted <span id="modMuteCount" class="hint"></span></div>
+        <div id="modMuteList" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto"></div>
         <div class="hint" style="margin-top:8px">${isOwner(ME.id)?'Muted users can still read messages and use menus, just can\'t send anything until the mute expires or is lifted.':isAdmin(ME.id)?'Muted users can still read messages and use menus, just can\'t send anything until the mute expires or is lifted. Admins can mute for up to 7 days, and owners and other admins can\'t be muted.':'Muted users can still read messages and use menus, just can\'t send anything until the timeout expires or is lifted. Timeouts are capped at 1 day, and owners, admins and other mods can\'t be muted.'}</div>
       </div>
       ${isStaff(ME.id)?`<div class="set-card">
@@ -406,6 +410,8 @@ function openSettings(fromChat){
     </div></div></div>`;
   const $$=id=>root.querySelector(id);
   let musicUnsub=null,musicTimeUnsub=null,musicMounted=false;
+  let banListStop=null;   // DB.onChange unsubscribe for the Moderation > Currently banned list
+  let muteListTimer=null; // 1s ticker for the Moderation > Currently muted countdowns
   function musicWidgetVolume(){
     const sl=$$('#mVol');
     return sl?+sl.value:(s.music&&s.music.volume!=null?s.music.volume:55);
@@ -697,15 +703,74 @@ function openSettings(fromChat){
         catch(err){toast(err.message,'bad')}
       };
     }
+    /* Live list of everyone currently banned, with a one-click Unban on each row. banned/ is
+       readable by any signed-in account, so this needs no extra rule. An admin can't act on an
+       owner or another admin, so those rows show the reason instead of a button. */
+    const renderBanList=()=>{
+      const box=$$('#modBanList'),cnt=$$('#modBanCount');if(!box)return;
+      const ids=DB.bannedIds().sort((a,b)=>a-b);
+      if(cnt)cnt.textContent=ids.length?'('+ids.length+')':'';
+      if(!ids.length){box.innerHTML='<div class="hint">Nobody is banned right now.</div>';return}
+      const iAmOwner=isOwner(ME.id);
+      box.innerHTML=ids.map(id=>{
+        const u=DB.getUser(id);
+        const nm=(u&&!u.deleted&&u.username)?displayUsername(u.username):'Deleted User';
+        const locked=!iAmOwner&&(isOwner(id)||isAdmin(id));
+        return '<div class="list-row" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px">'+
+          '<span>\u{1F528} <b>'+esc(nm)+'</b> <span class="hint">#'+id+'</span></span>'+
+          (locked?'<span class="hint">owner / admin</span>'
+                 :'<button class="btn sec small" data-unban="'+id+'" type="button">Unban</button>')+
+          '</div>';
+      }).join('');
+      box.querySelectorAll('[data-unban]').forEach(b=>b.onclick=async()=>{
+        const id=+b.dataset.unban;
+        b.disabled=true;b.textContent='Unbanning\u2026';
+        try{
+          const newName=await DB.unbanUser(id);
+          toast(newName?('User #'+id+' unbanned \u2014 back as @'+newName+'.')
+                       :('User #'+id+' unbanned. Their profile comes back the next time they sign in.'));
+          setTimeout(renderBanList,250);
+        }catch(err){toast(err.message,'bad');b.disabled=false;b.textContent='Unban'}
+      });
+    };
+    renderBanList();
+    if($$('#modBanList'))banListStop=DB.onChange(()=>{try{renderBanList()}catch(_){}});
+    /* Same idea for mutes: who is muted right now, how long is left, and one click to lift it.
+       Unmuting is already open to mods, admins and owners, so every staff member sees this. */
+    const renderMuteList=()=>{
+      const box=$$('#modMuteList'),cnt=$$('#modMuteCount');if(!box)return;
+      const ids=DB.mutedIds();
+      if(cnt)cnt.textContent=ids.length?'('+ids.length+')':'';
+      if(!ids.length){box.innerHTML='<div class="hint">Nobody is muted right now.</div>';return}
+      box.innerHTML=ids.map(id=>{
+        const u=DB.getUser(id);
+        const nm=(u&&!u.deleted&&u.username)?displayUsername(u.username):'User';
+        let left='';try{left=fmtMuteRemaining(DB.muteRemainingMs(id))}catch(_){}
+        return '<div class="list-row" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px">'+
+          '<span>\u{1F507} <b>'+esc(nm)+'</b> <span class="hint">#'+id+(left?' \u00B7 '+esc(left)+' left':'')+'</span></span>'+
+          '<button class="btn sec small" data-unmute="'+id+'" type="button">Unmute</button></div>';
+      }).join('');
+      box.querySelectorAll('[data-unmute]').forEach(b=>b.onclick=async()=>{
+        const id=+b.dataset.unmute;b.disabled=true;
+        try{await DB.unmuteUser(id);toast('User #'+id+' unmuted.');setTimeout(renderMuteList,250)}
+        catch(err){toast(err.message,'bad');b.disabled=false}
+      });
+    };
+    renderMuteList();
+    if($$('#modMuteList'))muteListTimer=setInterval(renderMuteList,1000);   // the countdowns tick
     $$('#modBanGo')&&($$('#modBanGo').onclick=async()=>{
       const id=+$$('#modBanId').value;
       if(!id){toast('Enter a user ID','bad');return}
-      try{await DB.banUser(id);toast('User #'+id+' banned.')}catch(err){toast(err.message,'bad')}
+      try{await DB.banUser(id);toast('User #'+id+' banned.');setTimeout(renderBanList,250)}catch(err){toast(err.message,'bad')}
     });
     $$('#modUnbanGo')&&($$('#modUnbanGo').onclick=async()=>{
       const id=+$$('#modBanId').value;
       if(!id){toast('Enter a user ID','bad');return}
-      try{await DB.unbanUser(id);toast('User #'+id+' unbanned and restored (or restored on their next sign-in).')}catch(err){toast(err.message,'bad')}
+      try{
+        const newName=await DB.unbanUser(id);
+        toast(newName?('User #'+id+' unbanned — back as @'+newName+'.')
+                     :('User #'+id+' unbanned. Their profile comes back the next time they sign in.'));
+      }catch(err){toast(err.message,'bad')}
     });
     $$('#modRetention')&&($$('#modRetention').onchange=async e=>{
       try{await DB.setRetention(+e.target.value);toast(+e.target.value?'Messages older than '+e.target.value+' day(s) will be cleaned up.':'Automatic cleanup is off.')}
@@ -1012,11 +1077,11 @@ function openSettings(fromChat){
     }catch(_){$$('#fileTxt').textContent='❌ Could not load that image'}
     preview();
   };
-  const closeRevert=()=>{if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();closeModalAnimated(root,()=>{applyStyle(document.documentElement,ME.settings);refitAllAvatars();MusicPlayer.applyPrefs(ME.settings.music)})};
+  const closeRevert=()=>{if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();if(banListStop){banListStop();banListStop=null}if(muteListTimer){clearInterval(muteListTimer);muteListTimer=null}closeModalAnimated(root,()=>{applyStyle(document.documentElement,ME.settings);refitAllAvatars();MusicPlayer.applyPrefs(ME.settings.music)})};
   $$('#sCancel').onclick=closeRevert;
   $$('#sX').onclick=closeRevert;
   // Discord look: the profile card at the top of the nav opens your account/profile (settings are reverted first, like Cancel)
-  const goAccount=()=>{if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();closeModalAnimated(root,()=>{applyStyle(document.documentElement,ME.settings);refitAllAvatars();MusicPlayer.applyPrefs(ME.settings.music);openAccount()})};
+  const goAccount=()=>{if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();if(banListStop){banListStop();banListStop=null}if(muteListTimer){clearInterval(muteListTimer);muteListTimer=null}closeModalAnimated(root,()=>{applyStyle(document.documentElement,ME.settings);refitAllAvatars();MusicPlayer.applyPrefs(ME.settings.music);openAccount()})};
   const t0=root.querySelector('#sTitle');if(t0&&typeof DiscordLook!=='undefined'&&DiscordLook.on())t0.textContent='Messages';
   const prof=root.querySelector('#sProfile');
   if(prof){prof.onclick=goAccount;prof.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();goAccount()}}}
@@ -1028,7 +1093,7 @@ function openSettings(fromChat){
   });
   $$('#sReset').onclick=()=>{
     Object.assign(s,{meBubble:'#7c6cff',meText:'#ffffff',radius:16,font:'system',customFont:'',size:15,bold:false,italic:false,bgType:'gradient',bgColor:'#2a1f5c',bgColor2:'#7c2f66',bgImage:'',bgFit:'cover',bgBlur:0,bgDim:30,uiOpacity:50,uiBlur:18,autoScrollBottom:true,filterLocal:true,pings:{everyone:true,sound:true,desktop:true},music:{enabled:true,volume:15,shuffle:true}});
-    if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();
+    if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();if(banListStop){banListStop();banListStop=null}if(muteListTimer){clearInterval(muteListTimer);muteListTimer=null}
     MusicPlayer.setBackground(false);
     DB.updateSettings(ME.id,s).catch(()=>{});
     ME=DB.currentUser();
@@ -1041,7 +1106,7 @@ function openSettings(fromChat){
     const b=$$('#sSave');b.disabled=true;b.textContent='Saving...';
     try{
       await DB.updateSettings(ME.id,s);
-      ME=DB.currentUser();if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();
+      ME=DB.currentUser();if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();if(banListStop){banListStop();banListStop=null}if(muteListTimer){clearInterval(muteListTimer);muteListTimer=null}
       closeModalAnimated(root,()=>{
         applyStyle(document.documentElement,ME.settings);MusicPlayer.applyPrefs(ME.settings.music);toast('Saved!');
         // Re-render the message list immediately so a filter toggle change (or any other

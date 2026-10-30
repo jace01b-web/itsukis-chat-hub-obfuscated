@@ -1216,15 +1216,20 @@ const DB=(()=>{
       return items.length?DB.deleteMessagesBulk(items):{ok:0,fail:0};
     },
     async unbanUser(id){
-      if(!isOwner(myId))throw new Error('Only owners can unban.');
+      // Owners and admins can both unban. An admin may not touch an owner or another admin —
+      // the same limit that applies to banning — and the database rules enforce it again server-side.
+      if(!isOwner(myId)&&!isAdmin(myId))throw new Error('Only owners and admins can unban.');
+      if(!isOwner(myId)&&(isOwner(id)||isAdmin(id)))throw new Error('Admins can\'t unban owners or other admins.');
       // An unban is now an EXPLICIT record (banned/$id = false) instead of the flag simply vanishing.
       // A missing flag is what a client sees before banned/ has loaded, so "missing" must never be
       // read as "unbanned" — that misreading is what silently un-froze banned accounts.
       await set(R('banned/'+id),false);
       try{if(typeof tosIpUnbanUser==='function')tosIpUnbanUser(id).catch(()=>{})}catch(_){}
       C.banned[id]=false;checkBanLock(myId,C.banned); // update local state immediately; don't wait on the listener round-trip
-      // Restore the profile right now (new username, un-delete). If the rules/email prevent it,
-      // the account still repairs itself on its own next sign-in (restoreBannedAccount).
+      // Restore the profile right now (new username, un-delete). Only an OWNER can do this part —
+      // the rules deliberately keep "write someone else's username" to owners — so for an admin's
+      // unban this returns null and the account repairs itself on its own next sign-in instead
+      // (restoreBannedAccount). Either way the unban itself has already landed.
       try{return await DB.ownerRestoreUnbanned(id)}catch(e){console.warn('owner restore skipped:',e&&(e.code||e.message))}
       // NOTE: this is deliberately all an owner CAN do here. users/$id only lets an owner
       // write it in the exact "ban" shape (deleted:true, username:'Deleted User') — there's
@@ -1265,6 +1270,13 @@ const DB=(()=>{
       emit();
       return newName;
     },
+    // Everyone whose mute has not expired yet, soonest to expire first.
+    mutedIds(){const n=Date.now()+SKEW;return Object.keys(C.muted||{})
+      .filter(k=>typeof C.muted[k]==='number'&&C.muted[k]>n)
+      .map(Number).filter(x=>!isNaN(x))
+      .sort((a,b)=>C.muted[a]-C.muted[b])},
+    // Everyone currently banned (an explicit false means "unbanned", so only true counts).
+    bannedIds(){return Object.keys(C.banned||{}).filter(k=>C.banned[k]===true).map(Number).filter(n=>!isNaN(n))},
     async confirmBannedOnServer(id){try{return(await get(R('banned/'+id))).val()===true}catch(_){return false}},
     isBanned(id){return!!C.banned&&!!C.banned[id]},
     /* --- Automatic cleanup of old data ---

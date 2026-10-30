@@ -245,15 +245,25 @@ function openUserProfile(id,opts){
     const blockBtnHtml=(!isMe&&!deleted&&!blockedMe&&!iBlocked)?`<button class="btn sec small" id="pfBlock" style="width:100%">Block user</button>`:'';
     let modHtml='';
     const iAmOwner=isOwner(ME.id),iAmAdmin=isAdmin(ME.id),iAmMod=isMod(ME.id);
-    if(!isMe&&!deleted&&iAmOwner&&!owner){
+    // Banning freezes the profile as "Deleted User" with deleted:true, so a banned account is
+    // ALWAYS also flagged deleted. Gating these buttons on !deleted therefore hid Unban on exactly
+    // the accounts that need it — nobody could unban from a profile card at all. `gone` is the one
+    // case with nothing to moderate: deleted and not banned, i.e. the person deleted themselves.
+    const gone=deleted&&!banned;
+    if(!isMe&&!gone&&iAmOwner&&!owner){
       // Owners: full powers — ban/unban plus mute at any duration.
       modHtml=banned
         ?`<button class="btn sec small" id="pfUnban">Unban</button>`
         :`<button class="btn sec small" id="pfMute">🔇 Mute</button><button class="btn danger small" id="pfBan">🔨 Ban</button>`;
-    }else if(!isMe&&!deleted&&iAmAdmin&&!owner&&!admin&&!banned){
-      // Admins: mute (up to 7 days) and ban — on anyone except owners and other admins. Unbanning stays owner-only.
-      modHtml=`<button class="btn sec small" id="pfMute">🔇 Mute</button><button class="btn danger small" id="pfBan">🔨 Ban</button>`;
-    }else if(!isMe&&!deleted&&iAmMod&&!owner&&!mod&&!admin&&!banned){
+    }else if(!isMe&&!gone&&iAmAdmin&&!owner&&!admin){
+      // Admins: mute (up to 7 days), ban AND unban — on anyone except owners and other admins.
+      // An admin's unban lifts the ban immediately; the profile itself (username, "Deleted User")
+      // is repaired by that account's own client the next time they sign in, because only an
+      // owner is allowed to write somebody else's username.
+      modHtml=banned
+        ?`<button class="btn sec small" id="pfUnban">Unban</button>`
+        :`<button class="btn sec small" id="pfMute">🔇 Mute</button><button class="btn danger small" id="pfBan">🔨 Ban</button>`;
+    }else if(!isMe&&!gone&&iAmMod&&!owner&&!mod&&!admin&&!banned){
       // Mods: mute/unmute only (preset durations, enforced in modalMuteConfirm/DB.muteUser
       // and again server-side by the rules), no ban, and never against an owner or
       // another mod — banned users are owner-only to unban, so mods see nothing there.
@@ -371,8 +381,14 @@ function openUserProfile(id,opts){
     if(el2('pfBan'))el2('pfBan').onclick=()=>{root.innerHTML='';modalBanConfirm(id,name)};
     if(el2('pfMute'))el2('pfMute').onclick=()=>{root.innerHTML='';modalMuteConfirm(id,name)};
     if(el2('pfUnban'))el2('pfUnban').onclick=async()=>{
-      try{await DB.unbanUser(id);toast(name+' unbanned and restored (or restored on their next sign-in).');render()}
-      catch(e){toast(e.message,'bad')}
+      const b=el2('pfUnban');if(b)b.disabled=true;
+      try{
+        const newName=await DB.unbanUser(id);
+        toast(newName?('User #'+id+' unbanned — back as @'+newName+'.')
+                     :('User #'+id+' unbanned. Their profile comes back the next time they sign in.'));
+        render();
+      }
+      catch(e){toast(e.message,'bad');if(b)b.disabled=false}
     };
   };
   tryRender();

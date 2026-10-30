@@ -1,5 +1,5 @@
 /* POST /api/ipban  {idToken, action:'ban'|'unban', ip? | userId?, reason?}
- * Staff only (checked on the server). ban: owners + admins. unban: owners only. Browsers can no longer write ipBans/ themselves.
+ * Staff only (checked on the server). ban and unban: owners + admins. Browsers can no longer write ipBans/ themselves.
  * Banning an account bans EVERY network that account has been seen on (ipSeen/), not just the last one. */
 const L = require('./_lib');
 module.exports = async (req, res) => {
@@ -15,7 +15,7 @@ module.exports = async (req, res) => {
     if (!me) return L.send(res, 403, { error: 'No account.' });
     const role = await L.roleOf(me);
     const action = b.action === 'unban' ? 'unban' : 'ban';
-    if (action === 'ban' ? !role.admin : !role.owner) return L.send(res, 403, { error: action === 'ban' ? 'Owners and admins only.' : 'Owners only.' });
+    if (!role.admin) return L.send(res, 403, { error: 'Owners and admins only.' });   // role.admin is true for owners too
 
     let hashes = [], shown, targetId = null;
     if (b.ip) {
@@ -25,7 +25,9 @@ module.exports = async (req, res) => {
     } else if (b.userId) {
       targetId = Number(b.userId);
       if (!targetId) return L.send(res, 400, { error: 'Bad user id.' });
-      if ((await L.roleOf(targetId)).owner) return L.send(res, 403, { error: 'Owners cannot be IP-banned.' });
+      const tRole = await L.roleOf(targetId);
+      if (tRole.owner) return L.send(res, 403, { error: 'Owners cannot be IP-banned.' });
+      if (!role.owner && tRole.admin) return L.send(res, 403, { error: 'Admins cannot IP-ban other admins.' });
       const seen = (await L.adb('GET', 'ipSeen/' + targetId)) || {};
       const t = await L.adb('GET', 'tosAccepted/' + targetId + '/h');
       hashes = Object.keys(seen); if (typeof t === 'string' && !hashes.includes(t)) hashes.push(t);
