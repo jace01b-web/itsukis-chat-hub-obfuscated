@@ -1,6 +1,6 @@
 /* ==========================================================================
  * css/09-game-hubs.css
- * Launchers modal (js/games/game-hubs.js).
+ * "Games have moved" panel (js/games/game-hubs.js).
  *
  * This file used to hold the hub list, the proxy two-pane browser and the in-site iframe viewer.
  * Those are gone — everything is played through the launcher now — so all that is left is the
@@ -8,7 +8,7 @@
  * Order matters (later files override earlier ones) - see js/manifest.js
  * ========================================================================== */
 
-.lch-modal{max-width:520px}
+.lch-modal{max-width:560px}
 .lch-modal .hint{margin-top:6px;line-height:1.55}
 
 .lch-main,.lch-sec{display:flex;align-items:center;gap:13px;text-decoration:none;color:inherit;
@@ -33,7 +33,7 @@
   display:grid;place-items:center;background:rgba(255,255,255,.07);border:1px solid var(--border)}
 
 .lch-tx{min-width:0}
-.lch-tx b{display:block;font-size:14.5px}
+.lch-tx b{display:block;font-size:14px}
 .lch-tx small{display:block;margin-top:2px;font-size:12px;line-height:1.45;color:var(--muted)}
 .lch-main .lch-tx b{font-size:16px}
 

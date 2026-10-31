@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-10-30.04">
+<meta name="build-version" content="2026-10-30.05">
 
 
 <title>Itsukis Chat Hub</title>
@@ -755,7 +755,11 @@ input[type=color]{display:none!important}
    to lay out differently. */
 .modal h2{margin-bottom:6px;font-size:22px}
 .modal .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
-.modal.wide .actions{position:sticky;bottom:-28px;margin:16px -28px -28px;padding:14px 28px;background:linear-gradient(to top,var(--ui-panel) 70%,transparent);border-radius:0 0 22px 22px;z-index:3}
+/* Only the modal's OWN footer row. This used to be ".modal.wide .actions", which also caught every
+   .actions row nested inside the settings panels (Ban/Unban, IP ban, Mute, Give VIP, TOS log...) and
+   turned each of them into a sticky, negative-margin, full-bleed bar that overlapped the content
+   under it. The direct-child combinator is what the Discord-look override already assumed. */
+.modal.wide>.actions{position:sticky;bottom:-28px;margin:16px -28px -28px;padding:14px 28px;background:linear-gradient(to top,var(--ui-panel) 70%,transparent);border-radius:0 0 22px 22px;z-index:3}
 .modal.wide .preview-box{position:sticky;top:-28px;z-index:3;margin-top:8px}
 .set-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .ver-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
@@ -849,7 +853,7 @@ input[type=color]{display:none!important}
 
 /* ==========================================================================
  * css/09-game-hubs.css
- * Launchers modal (js/games/game-hubs.js).
+ * "Games have moved" panel (js/games/game-hubs.js).
  *
  * This file used to hold the hub list, the proxy two-pane browser and the in-site iframe viewer.
  * Those are gone — everything is played through the launcher now — so all that is left is the
@@ -857,7 +861,7 @@ input[type=color]{display:none!important}
  * Order matters (later files override earlier ones) - see js/manifest.js
  * ========================================================================== */
 
-.lch-modal{max-width:520px}
+.lch-modal{max-width:560px}
 .lch-modal .hint{margin-top:6px;line-height:1.55}
 
 .lch-main,.lch-sec{display:flex;align-items:center;gap:13px;text-decoration:none;color:inherit;
@@ -882,7 +886,7 @@ input[type=color]{display:none!important}
   display:grid;place-items:center;background:rgba(255,255,255,.07);border:1px solid var(--border)}
 
 .lch-tx{min-width:0}
-.lch-tx b{display:block;font-size:14.5px}
+.lch-tx b{display:block;font-size:14px}
 .lch-tx small{display:block;margin-top:2px;font-size:12px;line-height:1.45;color:var(--muted)}
 .lch-main .lch-tx b{font-size:16px}
 
@@ -10777,12 +10781,15 @@ $('#menuBtn').onclick=()=>$('#sidebar').classList.toggle('open');
 
 /* ==========================================================================
  * js/games/game-hubs.js
- * Launchers.
+ * "Games have moved" panel.
  *
  * The games, hubs, proxies and the in-site iframe viewer used to live here. They are gone on
  * purpose: everything is played through the official launcher now, which is the only thing that
- * reliably survives school filters and about:blank-closing. All that is left is the pointer to
- * the launcher list, so nobody goes hunting for a hub browser that no longer exists.
+ * reliably survives school filters and about:blank-closing.
+ *
+ * The buttons that open this are still called Games, on purpose — somebody looking for the games
+ * goes looking for "Games", and this panel is how they find out where they went. All it does is
+ * explain the move and point at the launcher list.
  *
  * modalGameHubs() / closeGameHubs() keep their names because the home tile, the Discord-look rail
  * and the Escape-key handler all call them.
@@ -10797,8 +10804,8 @@ const DISCORD_HELP='https://discord.gg/MV8RD9XzvA';
 function modalGameHubs(){
   $('#modalRoot').innerHTML=`<div class="modal-bg" id="ghBg"><div class="modal lch-modal">
     <button class="modal-x" id="ghX" type="button" aria-label="Close">✕</button>
-    <h2>🚀 Launchers</h2>
-    <div class="hint">Games, proxies and apps live in the launcher now — not in here. The launcher opens them in a way school networks don't close, and it always has a mirror that still works.</div>
+    <h2>🎮 Games have moved</h2>
+    <div class="hint">Games, proxies and apps are in the <b>launcher</b> now, not in here. The launcher opens them in a way school networks don't close, and the list below always has a mirror that still works.</div>
 
     <a class="lch-main" href="${LAUNCHER_README}" target="_blank" rel="noopener noreferrer">
       <span class="lch-ic" aria-hidden="true">🚀</span>
@@ -12362,7 +12369,7 @@ function renderComposeContext(){
     return c.offsetParent!==null;
   }
 
-  // Close the topmost closable panel (Settings, Launchers, friends/DM dialogs...) the same way its
+  // Close the topmost closable panel (Settings, Games, friends/DM dialogs...) the same way its
   // own Cancel/Close button would, so unsaved-settings revert etc. still run. Required dialogs (rules, username
   // setup, Halloween popups) have no Cancel/Close button and are left alone.
   function closeTopPanel(){
@@ -12372,7 +12379,7 @@ function renderComposeContext(){
     const root=document.getElementById('modalRoot');
     const bg=root&&root.querySelector('.modal-bg:not(.closing)');
     if(bg){
-      if(bg.id==='ghBg'&&typeof closeGameHubs==='function'){closeGameHubs();return true}   // Launchers
+      if(bg.id==='ghBg'&&typeof closeGameHubs==='function'){closeGameHubs();return true}   // "Games have moved"
       // Each panel's own close/cancel control: Daily Spin (#spinX), Halloween Pass (#hwX), Cosmetics (#csX),
       // Settings (#sCancel), profile cards, confirm dialogs (…Cancel / …Close) and generic X buttons.
       const btn=bg.querySelector('#spinX,#hwX,#csX,#sCancel,.gv-x,.pf-x,.modal-x,[id$="Cancel"],[id$="Close"],[id$="cancel"],[id$="close"],.modal-close,.cc-close');
@@ -12392,7 +12399,7 @@ function renderComposeContext(){
 
     /* ---------- Escape ---------- */
     if(e.key==='Escape'){
-      if(closeTopPanel()){e.preventDefault();return}   // Settings / Launchers / dialogs -> close it
+      if(closeTopPanel()){e.preventDefault();return}   // Settings / Games / dialogs -> close it
       if(overlayOpen())return;                       // pickers & menus close themselves
       const t=e.target;
       if(isEditable(t)){                             // stop typing; don't also leave the page
@@ -15637,7 +15644,7 @@ const DiscordShell=(function(){
       {id:'vip',t:'VIP Lounge',ic:'💎',active:g&&sec==='vip'},
       ...(hasMvpPerks(ME.id)?[{id:'mvp',t:'MVP Lounge',ic:'🏆',active:g&&sec==='mvp',cls:'dl-rail-mvp'}]:[]),
       {sep:1},
-      {id:'hubs',t:'Launchers',ic:'🚀'},
+      {id:'hubs',t:'Games',ic:'🎮'},
       {id:'extras',t:'Extras',ic:EXTRAS_IC},
       {id:'gift',t:'Gift Nitro perks',ic:'🎁'},
       {sep:1},
@@ -15843,7 +15850,7 @@ const DiscordShell=(function(){
     const dcItem=sbItem('🔗','Our Discord',false,openDiscord);
     dcItem.classList.add('dl-sb-discord');
     list.appendChild(dcItem);
-    const hubItem=sbItem('🚀','Launchers',false,()=>modalGameHubs());
+    const hubItem=sbItem('🎮','Games',false,()=>modalGameHubs());
     list.appendChild(hubItem);
     foot.innerHTML='';
   }
@@ -16283,7 +16290,7 @@ const BOOTUI=window.ICHBoot||{prog(){},phase(){},step(){},done(){},fail(){},reve
       <button class="opt" id="goGlobal"><div class="ic">🌍</div><h3>Itsukis Chat</h3><p>Global chat and rooms</p><span class="badge hidden" id="annBadge"></span></button>
       <button class="opt" id="goDMs"><div class="ic">💬</div><h3>Itsuki DMs</h3><p>Private chats and friends</p><span class="badge hidden" id="dmBadge"></span></button>
       <button class="opt" id="goSettings"><div class="ic">⚙️</div><h3>Settings</h3><p>Style your chat and UI</p></button>
-      <button class="opt" id="goGameHubs"><div class="ic">🚀</div><h3>Launchers</h3><p>Where the games live now</p></button>
+      <button class="opt" id="goGameHubs"><div class="ic">🎮</div><h3>Games</h3><p>Moved — tap to see where</p></button>
     </div>
     <div class="home-foot">
       <button class="online-pill" id="homeOnlinePill" type="button" title="Everyone online across Itsuki's Chat, not just this room or DM"><span class="dot"></span><span id="onlineCount">0</span> online</button>

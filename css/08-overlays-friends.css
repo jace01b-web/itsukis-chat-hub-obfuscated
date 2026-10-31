@@ -18,7 +18,11 @@
    to lay out differently. */
 .modal h2{margin-bottom:6px;font-size:22px}
 .modal .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
-.modal.wide .actions{position:sticky;bottom:-28px;margin:16px -28px -28px;padding:14px 28px;background:linear-gradient(to top,var(--ui-panel) 70%,transparent);border-radius:0 0 22px 22px;z-index:3}
+/* Only the modal's OWN footer row. This used to be ".modal.wide .actions", which also caught every
+   .actions row nested inside the settings panels (Ban/Unban, IP ban, Mute, Give VIP, TOS log...) and
+   turned each of them into a sticky, negative-margin, full-bleed bar that overlapped the content
+   under it. The direct-child combinator is what the Discord-look override already assumed. */
+.modal.wide>.actions{position:sticky;bottom:-28px;margin:16px -28px -28px;padding:14px 28px;background:linear-gradient(to top,var(--ui-panel) 70%,transparent);border-radius:0 0 22px 22px;z-index:3}
 .modal.wide .preview-box{position:sticky;top:-28px;z-index:3;margin-top:8px}
 .set-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .ver-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}

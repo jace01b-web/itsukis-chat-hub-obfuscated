@@ -31,7 +31,7 @@
     return c.offsetParent!==null;
   }
 
-  // Close the topmost closable panel (Settings, Launchers, friends/DM dialogs...) the same way its
+  // Close the topmost closable panel (Settings, Games, friends/DM dialogs...) the same way its
   // own Cancel/Close button would, so unsaved-settings revert etc. still run. Required dialogs (rules, username
   // setup, Halloween popups) have no Cancel/Close button and are left alone.
   function closeTopPanel(){
@@ -41,7 +41,7 @@
     const root=document.getElementById('modalRoot');
     const bg=root&&root.querySelector('.modal-bg:not(.closing)');
     if(bg){
-      if(bg.id==='ghBg'&&typeof closeGameHubs==='function'){closeGameHubs();return true}   // Launchers
+      if(bg.id==='ghBg'&&typeof closeGameHubs==='function'){closeGameHubs();return true}   // "Games have moved"
       // Each panel's own close/cancel control: Daily Spin (#spinX), Halloween Pass (#hwX), Cosmetics (#csX),
       // Settings (#sCancel), profile cards, confirm dialogs (…Cancel / …Close) and generic X buttons.
       const btn=bg.querySelector('#spinX,#hwX,#csX,#sCancel,.gv-x,.pf-x,.modal-x,[id$="Cancel"],[id$="Close"],[id$="cancel"],[id$="close"],.modal-close,.cc-close');
@@ -61,7 +61,7 @@
 
     /* ---------- Escape ---------- */
     if(e.key==='Escape'){
-      if(closeTopPanel()){e.preventDefault();return}   // Settings / Launchers / dialogs -> close it
+      if(closeTopPanel()){e.preventDefault();return}   // Settings / Games / dialogs -> close it
       if(overlayOpen())return;                       // pickers & menus close themselves
       const t=e.target;
       if(isEditable(t)){                             // stop typing; don't also leave the page

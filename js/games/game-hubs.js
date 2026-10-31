@@ -1,11 +1,14 @@
 /* ==========================================================================
  * js/games/game-hubs.js
- * Launchers.
+ * "Games have moved" panel.
  *
  * The games, hubs, proxies and the in-site iframe viewer used to live here. They are gone on
  * purpose: everything is played through the official launcher now, which is the only thing that
- * reliably survives school filters and about:blank-closing. All that is left is the pointer to
- * the launcher list, so nobody goes hunting for a hub browser that no longer exists.
+ * reliably survives school filters and about:blank-closing.
+ *
+ * The buttons that open this are still called Games, on purpose — somebody looking for the games
+ * goes looking for "Games", and this panel is how they find out where they went. All it does is
+ * explain the move and point at the launcher list.
  *
  * modalGameHubs() / closeGameHubs() keep their names because the home tile, the Discord-look rail
  * and the Escape-key handler all call them.
@@ -20,8 +23,8 @@ const DISCORD_HELP='https://discord.gg/MV8RD9XzvA';
 function modalGameHubs(){
   $('#modalRoot').innerHTML=`<div class="modal-bg" id="ghBg"><div class="modal lch-modal">
     <button class="modal-x" id="ghX" type="button" aria-label="Close">✕</button>
-    <h2>🚀 Launchers</h2>
-    <div class="hint">Games, proxies and apps live in the launcher now — not in here. The launcher opens them in a way school networks don't close, and it always has a mirror that still works.</div>
+    <h2>🎮 Games have moved</h2>
+    <div class="hint">Games, proxies and apps are in the <b>launcher</b> now, not in here. The launcher opens them in a way school networks don't close, and the list below always has a mirror that still works.</div>
 
     <a class="lch-main" href="${LAUNCHER_README}" target="_blank" rel="noopener noreferrer">
       <span class="lch-ic" aria-hidden="true">🚀</span>
