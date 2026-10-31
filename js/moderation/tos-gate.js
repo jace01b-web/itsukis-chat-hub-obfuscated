@@ -1,9 +1,11 @@
 /* ==========================================================================
  * js/moderation/tos-gate.js
  * Terms of Service gate: nobody can SEND messages until they accept the TOS. Everything else still works.
- *  - Accepting logs username + account ID + IP to the owner's private Discord (via /api/tos, the webhook never touches the browser)
- *    and saves a scrambled IP fingerprint on the account (tosAccepted/$id/h) so bans can also be applied by IP.
- *  - Declining logs nothing and sends nothing anywhere - the gate never runs any IP lookup for people who haven't accepted.
+ *  - Accepting records username + account ID + IP + browser to tosLog/$id (via /api/tos), which the database rules make
+ *    readable by OWNERS ONLY - shown in Settings > Moderation > TOS acceptances. Nothing goes to Discord any more.
+ *    The receipt on the account (tosAccepted/$id) keeps only the version, the time and a scrambled IP fingerprint,
+ *    so staff can see that somebody accepted without seeing their address.
+ *  - Declining records nothing and sends nothing anywhere - the gate never runs any IP lookup for people who haven't accepted.
  *  - IP bans (ipBans/$hash), VPN / proxy / Tor detection (checked in the browser, accepted users only).
  * Loaded by js/loader.js (load order lives in js/manifest.js).
  * ========================================================================== */
@@ -16,9 +18,9 @@ function tosDeclinedThisSession(){try{return sessionStorage.getItem(TOS_DECLINE_
 
 const TOS_SECTIONS=[
   {ic:'💬',t:'Chatting needs this',d:'To <b>send messages</b> you have to accept these terms. If you don\'t, you can still use <b>everything else</b>: read every chat, use the games, hubs, tools, settings and the rest of the site. You just can\'t chat.'},
-  {ic:'📝',hot:true,t:'What gets logged when you accept',d:'When you press <b>Accept</b>, your <b>username</b>, <b>account ID</b>, <b>IP address</b>, the <b>time</b> and your <b>browser info</b> are logged and sent privately to the site owner. A scrambled (hashed) copy of your IP is also saved on your account so IP bans can work. This is used <b>only</b> to stop raids, spam and ban evasion, and so the owner can manually IP-ban people when needed.'},
+  {ic:'📝',hot:true,t:'What gets logged when you accept',d:'When you press <b>Accept</b>, your <b>username</b>, <b>account ID</b>, <b>IP address</b>, the <b>time</b> and your <b>browser info</b> are recorded <b>on this site</b>, where only the owner can read them. They are <b>not</b> sent to Discord or to any outside service. A scrambled (hashed) copy of your IP is also saved on your account so IP bans can work — moderators see that hash, never your address. This is used <b>only</b> to stop raids, spam and ban evasion, and so the owner can IP-ban people when needed.'},
   {ic:'🔒',t:'Private. Never shared.',d:'The log is private to the site owner only. It is never shared, sold, posted or leaked, to anyone, for any reason.'},
-  {ic:'🙅',t:'If you decline',d:'<b>Nothing is logged.</b> Your username, account ID and IP are not recorded and nothing about you is sent to the logging service. You will just be unable to chat. You can change your mind any time in <b>Settings → About</b>.'},
+  {ic:'🙅',t:'If you decline',d:'<b>Nothing is logged.</b> Your username, account ID and IP are not recorded anywhere. You will just be unable to chat. You can change your mind any time in <b>Settings → About</b>.'},
   {ic:'🔨',t:'IP bans',d:'If you are banned, your IP can be banned too, so new accounts from the same network can\'t chat. On a shared network (like a school) other people on that network can be affected until the ban is lifted.'},
   {ic:'🛡️',t:'No VPNs, proxies or Tor',d:'Chat is blocked while your connection looks like a VPN, proxy or Tor exit. Your IP is checked with a third-party detection service for this, only once you have accepted. Turn it off and reload to chat.'},
   {ic:'🚨',t:'Raiding and abuse',d:'Raiding, spamming, harassment, and dodging a ban (alt accounts, VPNs, proxies) will get you banned, including by IP. The server rules still apply on top of these terms.'}
@@ -120,7 +122,7 @@ async function tosAccept(){
     }
   }else{
     // API not reachable (not deployed yet / blocked). Save it the old way. The database rules only allow this while security/enforce is NOT true.
-    try{await set(R('tosAccepted/'+ME.id),{v:CFG.TOS_VERSION,at:Date.now()+SKEW,h:'unverified',ip:'unknown'})}
+    try{await set(R('tosAccepted/'+ME.id),{v:CFG.TOS_VERSION,at:Date.now()+SKEW,h:'unverified'})}   // no ip: raw IPs are the server's to write, into owner-only tosLog/
     catch(e){throw new Error('Could not reach the server to save this. Check your connection and try again.')}
   }
   await tosLoadState(ME.id);

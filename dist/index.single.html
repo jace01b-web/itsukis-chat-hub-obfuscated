@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-10-30.03">
+<meta name="build-version" content="2026-10-30.04">
 
 
 <title>Itsukis Chat Hub</title>
@@ -849,271 +849,58 @@ input[type=color]{display:none!important}
 
 /* ==========================================================================
  * css/09-game-hubs.css
- * Game Hubs list, proxies, iframe viewer, hub settings
+ * Launchers modal (js/games/game-hubs.js).
+ *
+ * This file used to hold the hub list, the proxy two-pane browser and the in-site iframe viewer.
+ * Those are gone — everything is played through the launcher now — so all that is left is the
+ * small panel that points people at the launcher list.
  * Order matters (later files override earlier ones) - see js/manifest.js
  * ========================================================================== */
 
-/* Game Hubs list */
-.gh-body{display:flex;align-items:stretch}
-.gh-body .hub-list{flex:1;min-width:0}
-.gh-side{flex:none;width:0;opacity:0;overflow:hidden;margin-left:0;pointer-events:none;max-height:52vh;margin-top:4px;transition:width .38s cubic-bezier(.16,1,.3,1),margin .38s cubic-bezier(.16,1,.3,1),opacity .26s ease}
-.gh-side.open{width:134px;margin-left:10px;opacity:1;pointer-events:auto}
-.gh-side-in{width:134px;max-height:52vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:2px 3px 2px 2px;transform:translateX(34px) scale(.94);transform-origin:left center;transition:transform .4s cubic-bezier(.16,1.1,.3,1);scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.2) transparent}
-.gh-side.open .gh-side-in{transform:none}
-.gh-side-btn{display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;text-align:left;padding:9px 11px;border-radius:12px;border:1px solid var(--border);background:var(--ui-panel2,rgba(255,255,255,.05));color:var(--muted);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;transition:.15s}
-.gh-side-btn span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.gh-side-btn i{flex:none;font-style:normal;font-size:10px;padding:1px 6px;border-radius:999px;background:rgba(255,255,255,.08)}
-.gh-side-btn:hover{color:#fff;border-color:rgba(124,108,255,.5)}
-.gh-side-btn.on{color:#fff;background:linear-gradient(135deg,rgba(255,138,40,.28),rgba(255,61,129,.18));border-color:rgba(255,160,70,.6)}
-@media(max-width:520px){.gh-side.open{width:98px;margin-left:8px}.gh-side-in{width:98px}.gh-side-btn{padding:8px 8px;font-size:11.5px}}
-@media(prefers-reduced-motion:reduce){.gh-side,.gh-side-in{transition:none}}
-.hub-credit{margin:2px 0 10px;padding:11px 14px;border-radius:14px;font-size:12.5px;line-height:1.5;color:#ffe3bf;background:linear-gradient(120deg,rgba(255,138,40,.16),rgba(255,61,129,.1));border:1px solid rgba(255,160,70,.35)}
-.hub-grp{display:flex;align-items:center;gap:8px;margin:14px 2px 6px;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
-.hub-grp::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.18),transparent)}
-.hub-grp i{order:2;font-style:normal;font-size:10px;padding:1px 7px;border-radius:999px;background:rgba(255,255,255,.08)}
-.hub-row{cursor:pointer;transition:.15s;text-align:left}
-.hub-row:hover{border-color:rgba(124,108,255,.5);background:var(--ui-panel2)}
-.hub-ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:none;overflow:hidden}
-.hub-nm{font-weight:700;font-size:14px}
-.hub-desc{font-size:12px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.hub-arrow{color:var(--muted);flex:none;font-size:15px}
-.hub-tabs{display:flex;gap:4px;margin-top:14px;padding:5px;border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.03)}
-.hub-tab{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:7px;padding:11px 6px;border:0;border-radius:13px;background:transparent;color:var(--muted);font-weight:600;font-size:13.5px;font-family:inherit;cursor:pointer;transition:background .2s,color .2s,box-shadow .2s,transform .12s}
-.hub-tab:hover{color:var(--text);background:rgba(255,255,255,.05)}
-.hub-tab:active{transform:scale(.97)}
-.hub-tab .cnt{font-size:11px;font-weight:700;line-height:1;padding:3px 7px;border-radius:7px;background:rgba(255,255,255,.1);color:var(--muted);transition:background .2s,color .2s}
-.hub-tab.on{color:#fff;background:linear-gradient(135deg,rgba(124,108,255,.38),rgba(255,108,180,.22));box-shadow:inset 0 0 0 1px rgba(124,108,255,.55),0 4px 16px rgba(124,108,255,.2)}
-.hub-tab.on .cnt{background:var(--accent);color:#fff}
-.hub-tab.zero:not(.on){opacity:.4}
-.hub-list.swap{animation:hubSwap .22s ease}
-@keyframes hubSwap{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-@media(max-width:420px){.hub-tab{font-size:12px;gap:5px;padding:10px 3px}.hub-tab .cnt{padding:2px 5px;font-size:10px}}
-.hub-list{max-height:52vh;overflow-y:auto;margin-top:4px}
+.lch-modal{max-width:520px}
+.lch-modal .hint{margin-top:6px;line-height:1.55}
 
-/* Proxies: separate two-pane UI, sections menu on the left */
-.modal.wide{transition:max-width .35s cubic-bezier(.16,1,.3,1)}
-.modal.wide.px-mode{max-width:880px}
-.gh-body{gap:0}
-.gh-side{margin-left:0;margin-top:4px}
-.gh-side.open{width:176px;margin-left:0;margin-right:12px}
-.gh-side-in{width:176px;transform:translateX(-34px) scale(.94);transform-origin:right center;padding:8px;border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.03);box-sizing:border-box;max-height:52vh}
-.gh-side.open .gh-side-in{transform:none}
-.gh-side-title{font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:4px 6px 6px}
-.gh-side-btn{justify-content:flex-start}
-.gh-side-btn span{flex:1}
-.gh-side-btn em{flex:none;width:8px;height:8px;border-radius:50%}
-.gh-side-btn i{margin-left:auto}
-.hub-list.px-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-content:start;align-items:stretch}
-.hub-list.px-grid>.list-row{margin:0}
-.hub-list.px-grid>.hub-credit,.hub-list.px-grid>.hub-grp,.hub-list.px-grid>.px-head,.hub-list.px-grid>.empty{grid-column:1/-1}
-.hub-list.px-grid>.hub-credit{margin:0}
-.hub-list.px-grid>.hub-grp{margin:8px 2px 0}
-.px-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 4px}
-.px-head b{display:block;font-size:18px;font-weight:800}
-.px-head small{color:var(--muted);font-size:12px}
-.px-head span{flex:none;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.08);color:var(--muted)}
+.lch-main,.lch-sec{display:flex;align-items:center;gap:13px;text-decoration:none;color:inherit;
+  border-radius:16px;border:1px solid var(--border);background:var(--ui-panel2);
+  transition:transform .2s cubic-bezier(.16,1,.3,1),border-color .2s ease,box-shadow .2s ease}
+.lch-main:hover,.lch-sec:hover{transform:translateY(-2px);border-color:rgba(124,108,255,.55);
+  box-shadow:0 10px 26px rgba(0,0,0,.3)}
+.lch-main:active,.lch-sec:active{transform:translateY(0) scale(.995)}
 
-/* fixes: long URLs must not overflow the card; lone card spans the row */
-.hub-row .nm{flex:1;min-width:0}
-.hub-row .hub-desc{overflow-wrap:anywhere;word-break:break-word}
-.hub-list.px-grid>.list-row{min-width:0;box-sizing:border-box;}
-.hub-list.px-grid>.list-row.one{grid-column:1/-1}
-/* settings button + pane */
-.gh-gear{right:56px;font-size:16px}
-.gh-set{margin-top:16px;display:flex;flex-direction:column;gap:12px}
-.gh-set.hidden{display:none}
-.gh-set-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 16px;border-radius:16px;border:1px solid var(--border);background:var(--bg2)}
-.gh-set-row b{display:block;font-size:14px}
-.gh-set-row small{display:block;margin-top:3px;color:var(--muted);font-size:12px;line-height:1.45}
-.gh-set-note{font-size:12px;color:var(--muted);padding:0 4px}
-.gh-set-row a.btn{display:inline-flex;align-items:center;color:var(--text);text-decoration:none;white-space:nowrap}
+/* the one that matters */
+.lch-main{margin-top:16px;padding:16px 18px;
+  background:linear-gradient(120deg,rgba(124,108,255,.24),rgba(255,108,180,.14) 62%,rgba(124,108,255,.1));
+  border-color:rgba(124,108,255,.5)}
+.lch-main .lch-ic{font-size:30px;line-height:1;flex:none;animation:lchBob 3.4s ease-in-out infinite}
+@keyframes lchBob{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-5px) rotate(5deg)}}
+.lch-go{margin-left:auto;flex:none;font-size:17px;color:var(--muted)}
+.lch-main:hover .lch-go{color:var(--text)}
 
-/* ---- "open these from a launcher" notice at the top of Hubs & Tools (js/games/game-hubs.js) ---- */
-.gh-launch{display:flex;align-items:center;gap:13px;margin-top:14px;padding:13px 15px;border-radius:16px;
-  border:1px solid rgba(124,108,255,.42);
-  background:linear-gradient(120deg,rgba(124,108,255,.2),rgba(255,108,180,.12) 60%,rgba(124,108,255,.08));
-  animation:ghLaunchIn .45s cubic-bezier(.16,1,.3,1) both;transition:opacity .22s ease,transform .22s ease,margin .22s ease}
-.gh-launch.gone{opacity:0;transform:translateY(-6px) scale(.985)}
-@keyframes ghLaunchIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
-.gh-launch-ic{flex:none;font-size:24px;line-height:1;animation:ghLaunchBob 3.2s ease-in-out infinite}
-@keyframes ghLaunchBob{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-4px) rotate(4deg)}}
-.gh-launch-tx{min-width:0;flex:1}
-.gh-launch-tx b{display:block;font-size:14px}
-.gh-launch-tx small{display:block;margin-top:3px;font-size:12px;line-height:1.45;color:var(--muted)}
-.gh-launch-go{display:flex;align-items:center;gap:8px;flex:none}
-.gh-launch-go .btn{display:inline-flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;white-space:nowrap}
-.gh-launch-x{width:28px;height:28px;flex:none;border-radius:9px;font-size:13px;line-height:1;color:var(--muted);
-  background:rgba(255,255,255,.07);border:1px solid var(--border);transition:.15s}
-.gh-launch-x:hover{color:#fff;background:rgba(255,255,255,.14)}
-@media(max-width:560px){
-  .gh-launch{flex-wrap:wrap;gap:10px}
-  .gh-launch-ic{font-size:21px}
-  .gh-launch-go{width:100%;justify-content:space-between}
-  .gh-launch-go .btn{flex:1;text-align:center}
+.lch-row{display:flex;gap:10px;margin-top:10px}
+.lch-sec{flex:1;min-width:0;padding:13px 14px}
+.lch-ic.sm{font-size:21px;line-height:1;flex:none;width:34px;height:34px;border-radius:11px;
+  display:grid;place-items:center;background:rgba(255,255,255,.07);border:1px solid var(--border)}
+
+.lch-tx{min-width:0}
+.lch-tx b{display:block;font-size:14.5px}
+.lch-tx small{display:block;margin-top:2px;font-size:12px;line-height:1.45;color:var(--muted)}
+.lch-main .lch-tx b{font-size:16px}
+
+.lch-note{margin-top:14px;font-size:12.5px;line-height:1.5;color:var(--muted)}
+.lch-note b{color:var(--text);font-weight:700}
+
+@media(max-width:520px){
+  .lch-row{flex-direction:column}
+  .lch-main{padding:14px}
+  .lch-main .lch-ic{font-size:26px}
 }
-@media(prefers-reduced-motion:reduce){.gh-launch,.gh-launch-ic{animation:none!important}}
-html.discord-look .gh-launch{border-radius:8px;border-color:rgba(88,101,242,.5);background:rgba(88,101,242,.12)}
-html.discord-look .gh-launch-x{border-radius:4px;background:var(--dl-bg3);border-color:transparent}
-.modal .hidden{display:none!important}
-/* iframe viewer */
-.hub-frame-box{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;background:var(--bg,#0b0b12)}
-.hub-frame-bar{display:flex;align-items:center;gap:10px;padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top,0px));border-bottom:1px solid var(--border);background:var(--panel,#16161f)}
-.hf-title{flex:1;min-width:0;text-align:center;font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hf-btn{border:1px solid var(--border);background:var(--ui-panel2,rgba(255,255,255,.06));color:var(--text);border-radius:10px;padding:8px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
-.hf-btn:hover{border-color:rgba(124,108,255,.6)}
-.hub-frame-box iframe{flex:1;width:100%;border:0;background:#fff}
+@media(prefers-reduced-motion:reduce){.lch-main .lch-ic{animation:none}}
 
-/* proxy grid: cards keep their natural height (no squashing) */
-.hub-list.px-grid{grid-auto-rows:max-content}
-.hub-list.px-grid>.list-row{flex:none;align-items:center;min-height:60px;overflow:visible}
-.hub-row .hub-ic{flex:none}
-.hub-row .hub-nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* tab switch animations */
-.hub-list.swapR{animation:hubSwapR .34s cubic-bezier(.16,1,.3,1)}
-.hub-list.swapL{animation:hubSwapL .34s cubic-bezier(.16,1,.3,1)}
-@keyframes hubSwapR{from{opacity:0;transform:translateX(34px)}to{opacity:1;transform:none}}
-@keyframes hubSwapL{from{opacity:0;transform:translateX(-34px)}to{opacity:1;transform:none}}
-.hub-list.swapR>*,.hub-list.swapL>*,.hub-list.swap>*{animation:hubItem .38s cubic-bezier(.16,1,.3,1) backwards}
-.hub-list>*:nth-child(2){animation-delay:.03s}.hub-list>*:nth-child(3){animation-delay:.06s}.hub-list>*:nth-child(4){animation-delay:.09s}.hub-list>*:nth-child(5){animation-delay:.12s}.hub-list>*:nth-child(n+6){animation-delay:.15s}
-@keyframes hubItem{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-/* settings in/out */
-.gh-out-l{animation:ghOutL .17s ease forwards}.gh-out-r{animation:ghOutR .17s ease forwards}
-.gh-in-r{animation:ghInR .28s cubic-bezier(.16,1,.3,1)}.gh-in-l{animation:ghInL .28s cubic-bezier(.16,1,.3,1)}
-@keyframes ghOutL{to{opacity:0;transform:translateX(-26px)}}
-@keyframes ghOutR{to{opacity:0;transform:translateX(26px)}}
-@keyframes ghInR{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
-@keyframes ghInL{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:none}}
-.gh-gear.spin{animation:ghSpin .45s cubic-bezier(.16,1,.3,1)}
-@keyframes ghSpin{from{transform:rotate(-120deg) scale(.8)}to{transform:none}}
-/* iframe viewer in/out + fullscreen */
-.hub-frame-box{animation:hfIn .32s cubic-bezier(.16,1,.3,1)}
-.hub-frame-box.closing{animation:hfOut .24s cubic-bezier(.4,0,1,1) forwards;pointer-events:none}
-@keyframes hfIn{from{opacity:0;transform:scale(.96) translateY(14px)}to{opacity:1;transform:none}}
-@keyframes hfOut{to{opacity:0;transform:scale(.97) translateY(10px)}}
-.hub-frame-bar{animation:hfBar .4s .08s cubic-bezier(.16,1,.3,1) backwards}
-@keyframes hfBar{from{transform:translateY(-100%)}to{transform:none}}
-.hf-exit{display:none;position:absolute;top:calc(10px + env(safe-area-inset-top,0px));right:10px;z-index:2;border:1px solid rgba(255,255,255,.3);background:rgba(0,0,0,.6);color:#fff;border-radius:999px;padding:8px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;backdrop-filter:blur(8px)}
-.hub-frame-box.bare .hub-frame-bar{display:none}
-.hub-frame-box.bare .hf-exit{display:block}
-.hub-frame-box:fullscreen .hub-frame-bar{padding-top:10px}
-@media(max-width:520px){.hf-btn{padding:8px 9px;font-size:12px}.hf-title{display:none}.hub-frame-bar{justify-content:space-between}}
-@media(prefers-reduced-motion:reduce){.hub-frame-box,.hub-frame-bar,.hub-list>*,.hub-list.swapR,.hub-list.swapL,.gh-in-r,.gh-in-l,.gh-out-l,.gh-out-r,.gh-gear.spin{animation-duration:.01s!important}}
-
-/* sliding tab pill */
-.hub-tabs{position:relative}
-.hub-tab{position:relative;z-index:1}
-.hub-tabs .hub-tab.on{background:transparent;box-shadow:none}
-.hub-pill{position:absolute;left:0;top:0;width:0;height:0;border-radius:13px;pointer-events:none;z-index:0;background:linear-gradient(135deg,rgba(124,108,255,.38),rgba(255,108,180,.22));box-shadow:inset 0 0 0 1px rgba(124,108,255,.55),0 4px 16px rgba(124,108,255,.2);transition:transform .45s cubic-bezier(.16,1,.3,1),width .45s cubic-bezier(.16,1,.3,1),height .45s cubic-bezier(.16,1,.3,1)}
-.hub-tab .cnt,.hub-tab{transition:background .25s,color .25s,opacity .25s,transform .12s}
-/* list leave animations (enter animations are swap/swapL/swapR) */
-.hub-list.leaveL{animation:hubLeaveL .15s ease forwards}
-.hub-list.leaveR{animation:hubLeaveR .15s ease forwards}
-.hub-list.leaveD{animation:hubLeaveD .15s ease forwards}
-@keyframes hubLeaveL{to{opacity:0;transform:translateX(-28px)}}
-@keyframes hubLeaveR{to{opacity:0;transform:translateX(28px)}}
-@keyframes hubLeaveD{to{opacity:0;transform:translateY(8px)}}
-/* iframe viewer: smooth loading + reveal */
-.hub-frame-box{background:radial-gradient(120% 90% at 50% 0%,#1c1830 0%,#0b0b12 70%)}
-.hf-stage{position:relative;flex:1;min-height:0}
-.hub-frame-box iframe{position:absolute;inset:0;width:100%;height:100%;flex:none;opacity:0;transform:scale(.985);transition:opacity .5s ease,transform .6s cubic-bezier(.16,1,.3,1)}
-.hub-frame-box.loaded iframe{opacity:1;transform:none}
-.hf-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--text);text-align:center;padding:20px;transition:opacity .4s ease,visibility .4s;animation:hfLoadIn .5s .1s cubic-bezier(.16,1,.3,1) backwards}
-.hf-loading b{font-size:16px}.hf-loading small{color:var(--muted);font-size:12.5px}
-.hub-frame-box.loaded .hf-loading{opacity:0;visibility:hidden;pointer-events:none}
-.hf-spin{width:42px;height:42px;border-radius:50%;border:3px solid rgba(255,255,255,.12);border-top-color:var(--accent,#7c6cff);animation:hfSpin .8s linear infinite}
-@keyframes hfSpin{to{transform:rotate(360deg)}}
-@keyframes hfLoadIn{from{opacity:0;transform:translateY(10px)}}
-.hf-prog{height:3px;overflow:hidden;background:rgba(255,255,255,.06);transition:opacity .4s .2s}
-.hf-prog i{display:block;height:100%;width:40%;border-radius:3px;background:linear-gradient(90deg,transparent,var(--accent,#7c6cff),#ff6cb4,transparent);animation:hfProg 1.1s ease-in-out infinite}
-@keyframes hfProg{from{transform:translateX(-100%)}to{transform:translateX(260%)}}
-.hub-frame-box.loaded .hf-prog{opacity:0}
-.hub-frame-box.bare .hf-prog{display:none}
-@media(prefers-reduced-motion:reduce){.hub-pill,.hf-spin,.hf-prog i,.hub-list.leaveL,.hub-list.leaveR,.hub-list.leaveD{animation-duration:.01s!important;transition-duration:.01s!important}}
-
-/* Hubs & Tools settings: nicer in/out */
-.gh-views.busy{overflow:hidden}
-.gh-out-l{animation:ghOutL .19s cubic-bezier(.4,0,1,1) forwards}
-.gh-out-r{animation:ghOutR .19s cubic-bezier(.4,0,1,1) forwards}
-.gh-in-r{animation:ghInR .46s cubic-bezier(.16,1,.3,1) backwards}
-.gh-in-l{animation:ghInL .46s cubic-bezier(.16,1,.3,1) backwards}
-@keyframes ghOutL{to{opacity:0;transform:translateX(-38px) scale(.97);filter:blur(5px)}}
-@keyframes ghOutR{to{opacity:0;transform:translateX(38px) scale(.97);filter:blur(5px)}}
-@keyframes ghInR{from{opacity:0;transform:translateX(44px) scale(.97);filter:blur(5px)}to{opacity:1;transform:none;filter:none}}
-@keyframes ghInL{from{opacity:0;transform:translateX(-44px) scale(.97);filter:blur(5px)}to{opacity:1;transform:none;filter:none}}
-.gh-in-r>*,.gh-in-l>*{animation:ghKid .5s cubic-bezier(.16,1,.3,1) backwards}
-.gh-in-r>*:nth-child(2),.gh-in-l>*:nth-child(2){animation-delay:.06s}
-.gh-in-r>*:nth-child(3),.gh-in-l>*:nth-child(3){animation-delay:.12s}
-@keyframes ghKid{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-#ghTitle{display:inline-block}
-.gh-title-out{animation:ghTOut .19s ease forwards}
-.gh-title-in{animation:ghTIn .42s cubic-bezier(.16,1,.3,1)}
-@keyframes ghTOut{to{opacity:0;transform:translateY(-8px)}}
-@keyframes ghTIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-.gh-gear.spin{animation:ghSpin .6s cubic-bezier(.16,1,.3,1)}
-@keyframes ghSpin{from{transform:rotate(-180deg) scale(.7);opacity:.4}to{transform:none;opacity:1}}
-@media(prefers-reduced-motion:reduce){.gh-out-l,.gh-out-r,.gh-in-r,.gh-in-l,.gh-in-r>*,.gh-in-l>*,.gh-title-out,.gh-title-in{animation-duration:.01s!important}}
-@media(max-width:640px){.hub-list.px-grid{grid-template-columns:minmax(0,1fr)}.gh-side.open{width:112px;margin-right:8px}.gh-side-in{width:112px;padding:6px}}
-.tab-mini{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
-.tab-mini button{background:var(--ui-panel);padding:8px 14px;border-radius:10px;font-size:13px;color:var(--muted);border:1px solid var(--border)}
-.tab-mini button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-.empty{color:var(--muted);text-align:center;padding:40px 20px;font-size:14px;background:var(--ui-panel);border-radius:16px}
-.toast-wrap{position:fixed;top:18px;right:18px;z-index:2000;display:flex;flex-direction:column;gap:8px}
-.toast{background:var(--panel2);border:1px solid var(--border);border-left:4px solid var(--accent);padding:12px 16px;border-radius:12px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:slide .25s}
-.toast.ping{border-left-color:var(--accent2)}
-.toast.ping-rich{max-width:340px;cursor:pointer;padding:12px 16px;border-left-width:5px;background:var(--panel2)}
-.toast.ping-rich .pt-title{font-weight:700;font-size:15px;color:#fff;margin-bottom:2px}
-.toast.ping-rich .pt-where{font-size:12px;color:var(--accent2);font-weight:600;margin-bottom:4px}
-.toast.ping-rich .pt-text{font-size:13.5px;color:var(--text);opacity:.9;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
-.toast.ping-rich .pt-hint{font-size:11px;color:var(--muted);margin-top:5px}
-.typing-bar{height:18px;font-size:12.5px;color:var(--muted);padding:0 8px 3px;display:flex;align-items:center;gap:7px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
-  opacity:0;transform:translateY(4px);transition:opacity .22s ease,transform .22s ease}
-.typing-bar.show{opacity:1;transform:none}
-.typing-bar b{color:var(--text);font-weight:600}
-.typing-dots{display:inline-flex;align-items:center;gap:4px}
-.typing-dots i{width:5px;height:5px;border-radius:50%;background:var(--accent2);
-  box-shadow:0 0 3px rgba(255,108,180,.4);
-  animation:typedot 1.3s cubic-bezier(.45,0,.55,1) infinite}
-.typing-dots i:nth-child(2){animation-delay:.15s}
-.typing-dots i:nth-child(3){animation-delay:.3s}
-
-/* ===== Viewer bar redesign: floating liquid-glass pill that matches the rest of the app ===== */
-.hub-frame-box{background:radial-gradient(120% 90% at 50% 0%,#1c1830 0%,#0b0b12 70%)}
-.hub-frame-wrap{flex:none;padding:10px 12px 8px;padding-top:calc(10px + env(safe-area-inset-top,0px));position:relative;z-index:3}
-.hub-frame-bar{position:relative;display:flex;align-items:center;gap:12px;padding:8px 10px;border:1px solid var(--glass-edge-soft,rgba(255,255,255,.18));border-radius:20px;
-  background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.03)),var(--ui-panel,rgba(15,16,20,.55));
-  -webkit-backdrop-filter:blur(var(--ui-blur,18px)) saturate(1.7);backdrop-filter:blur(var(--ui-blur,18px)) saturate(1.7);
-  box-shadow:var(--glass-shadow,0 18px 44px rgba(0,0,0,.4)),var(--glass-inset,inset 0 1.5px 0 rgba(255,255,255,.3));overflow:hidden}
-/* soft specular sheen sweeping across the glass */
-.hub-frame-bar::before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
-  background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.10) 46%,transparent 62%);background-size:220% 100%;animation:hfSheen 7s ease-in-out infinite}
-@keyframes hfSheen{0%,100%{background-position:120% 0}50%{background-position:-20% 0}}
-.hub-frame-bar>*{position:relative}
-.hf-title{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:9px;font-weight:800;font-size:14.5px;letter-spacing:.2px}
-.hf-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  background:linear-gradient(90deg,#fff,var(--accent,#7c6cff) 60%,var(--accent2,#ff6cb4));-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
-.hf-dot{flex:none;width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,var(--accent,#7c6cff),var(--accent2,#ff6cb4));
-  box-shadow:0 0 0 3px rgba(255,255,255,.06),0 0 12px var(--accent,#7c6cff);animation:hfPulse 2.4s ease-in-out infinite}
-@keyframes hfPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.78);opacity:.65}}
-.hf-actions{display:flex;gap:8px;flex:none}
-.hf-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;font-size:13px;font-weight:700;color:var(--text);
-  border:1px solid var(--glass-edge-soft,rgba(255,255,255,.18));background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.04));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 2px 8px rgba(0,0,0,.25);
-  transition:transform .25s var(--glass-spring,cubic-bezier(.16,1,.3,1)),border-color .2s,box-shadow .2s,background .2s}
-.hf-btn:hover{transform:translateY(-1px);border-color:var(--accent,#7c6cff);box-shadow:inset 0 1px 0 rgba(255,255,255,.34),0 6px 18px rgba(0,0,0,.35),0 0 16px -2px var(--accent,#7c6cff)}
-.hf-btn:active{transform:translateY(0) scale(.96)}
-.hf-btn .hf-ic{flex:none;transition:transform .3s var(--glass-spring,cubic-bezier(.16,1,.3,1))}
-.hf-btn:hover .hf-ic{transform:scale(1.15)}
-.hf-close:hover{border-color:var(--danger,#ff5d73);box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 6px 18px rgba(0,0,0,.35),0 0 16px -2px var(--danger,#ff5d73)}
-.hf-close:hover .hf-ic{transform:rotate(90deg) scale(1.1)}
-.hf-primary{border-color:transparent;color:#fff;background:linear-gradient(135deg,var(--accent,#7c6cff),var(--accent2,#ff6cb4));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 6px 18px -4px var(--accent,#7c6cff)}
-.hf-primary:hover{border-color:transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 8px 22px -2px var(--accent,#7c6cff)}
-.hf-prog{margin:0 18px;border-radius:99px}
-.hub-frame-box iframe{border-radius:16px 16px 0 0}
-.hub-frame-box:fullscreen .hub-frame-wrap{padding-top:10px}
-@media(max-width:560px){.hf-btn span{display:none}.hf-btn{padding:10px 12px}.hf-title{display:flex}.hub-frame-bar{gap:8px}}
-@media(prefers-reduced-motion:reduce){.hub-frame-bar::before,.hf-dot{animation:none}}
-.hub-frame-box.bare .hub-frame-wrap{display:none}
+/* Discord look: flat panels, square-ish corners, blurple accent */
+html.discord-look .lch-main,html.discord-look .lch-sec{border-radius:8px;background:var(--dl-bg3);border-color:transparent}
+html.discord-look .lch-main{background:rgba(88,101,242,.16);border-color:rgba(88,101,242,.5)}
+html.discord-look .lch-main:hover,html.discord-look .lch-sec:hover{transform:none;background:var(--dl-hover);border-color:rgba(88,101,242,.6)}
+html.discord-look .lch-ic.sm{border-radius:6px;background:rgba(255,255,255,.06);border-color:transparent}
 
 /* ==========================================================================
  * css/10-profile-cropper-composer.css
@@ -2121,7 +1908,6 @@ html.anti-lag #chatPage.mvp-mode .vip-bar::before,html.anti-lag .vip-lock.mvp-lo
   #authPage .tabs::before{transition:none}#authPage .err{animation:none}
 }
 
-
 /* ===== AUTH MOTION =====
    Tab switch: old content slides out (JS), new form slides in a short way while its fields rise in one by one,
    the tab thumb springs across and the card eases to its new height.
@@ -2281,49 +2067,18 @@ html.anti-lag #chatPage.mvp-mode .vip-bar::before,html.anti-lag .vip-lock.mvp-lo
 .gh-tx small{font-size:12.5px;color:var(--muted)}
 .gh-lock{margin-left:auto;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;flex:none;background:rgba(255,255,255,.07);color:#cfcaff;transition:background .25s ease,color .25s ease}
 .gh-lock svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.gh-teaser:hover .gh-lock{background:var(--accent);color:#fff;animation:ghaShake .5s ease}
-.gh-marquee{display:block;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent);mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent)}
-.gh-track{display:flex;gap:8px;width:max-content;animation:ghScroll 34s linear infinite}
-.gh-teaser:hover .gh-track{animation-play-state:paused}
-@keyframes ghScroll{to{transform:translateX(-50%)}}
-.gh-chip{padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;background:var(--cbg,rgba(255,255,255,.08));color:var(--cfg,#e2e8f0);border:1px solid rgba(255,255,255,.08)}
-
-.gha-modal .gha-lock{display:flex;align-items:center;gap:12px;margin:16px 0 12px;padding:13px 15px;border-radius:16px;
-  background:linear-gradient(135deg,rgba(255,108,180,.15),rgba(124,108,255,.18));border:1px solid rgba(255,108,180,.32);animation:ghaPop .55s cubic-bezier(.16,1.2,.3,1) .1s both}
-.gha-lock-ic{font-size:26px;flex:none;animation:ghBob 2.8s ease-in-out infinite}
-.gha-lock b{display:block;font-size:14.5px;margin-bottom:2px}
-.gha-lock p{margin:0;font-size:13px;line-height:1.45;color:var(--muted)}
-.gha-lock.shake{animation:ghaShake .5s ease,ghaFlash .9s ease}
-@keyframes ghaPop{from{opacity:0;transform:translateY(10px) scale(.96)}to{opacity:1;transform:none}}
-@keyframes ghaShake{0%,100%{transform:translateX(0)}18%{transform:translateX(-7px)}36%{transform:translateX(6px)}54%{transform:translateX(-4px)}72%{transform:translateX(3px)}}
-@keyframes ghaFlash{0%,100%{box-shadow:0 0 0 0 rgba(255,108,180,0)}30%{box-shadow:0 0 0 4px rgba(255,108,180,.45),0 0 30px rgba(255,108,180,.4)}}
-.gha-actions{display:flex;gap:8px;margin-bottom:14px;animation:ghaPop .5s ease .2s both}
-.gha-actions .btn{flex:1}
-.gha-row{cursor:pointer;opacity:.92;animation:ghaPop .5s cubic-bezier(.16,1,.3,1) both;animation-delay:calc(.15s + var(--i,0)*45ms)}
-.gha-row .hub-arrow{font-size:14px;transition:transform .2s ease}
-.gha-row:hover .hub-arrow{animation:ghaShake .45s ease}
-.gha-row.tap{border-color:rgba(255,108,180,.6)}
+.gh-teaser:hover .gh-lock{background:var(--accent);color:#fff}
 @media(prefers-reduced-motion:reduce){
   .tqq-side,.tqq-glow,.tqq-card,.tqq-card::before,.tqq-badge,.tqq-badge i,.tqq-img,.tqq-img img,.tqq-img::after,.tqq-petal,.tqq-spark,.tqq-title,.tqq-title b,.tqq-join,.tqq-join svg,.tqq-join::after,.tqq-alt,
-  .gh-teaser,.gh-teaser::before,.gh-ic,.gh-track,.gha-lock-ic,.gha-modal .gha-lock,.gha-actions,.gha-row{animation:none!important}
+  .gh-teaser,.gh-teaser::before,.gh-ic{animation:none!important}
   .tqq-badge,.tqq-img,.tqq-title,.tqq-alt,.tqq-side{opacity:1}
 }
 
-/* ===== AUTH: no extra scrolling — Game Hubs sits in the hero (desktop) or a pinned dock (phones/tablets) ===== */
-.gh-teaser.side{margin-top:14px;max-width:420px;animation-delay:.9s}
+/* The teaser sits in the auth column; the old .side/.dock placement needed
+   js/games/auth-hubs-preview.js, which went with the hub browser. */
 @media(max-width:959px){
   #authPage{padding-bottom:calc(78px + env(safe-area-inset-bottom,0px))}
 }
-.gh-teaser.dock{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:40;width:auto;max-width:560px;margin:0 auto;
-  flex-direction:row;align-items:center;gap:10px;padding:9px 12px;border-radius:18px;background:rgba(18,18,40,.86);box-shadow:0 10px 30px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.04)}
-.gh-teaser.dock .gh-top{display:contents}
-.gh-teaser.dock .gh-ic{order:1;width:34px;height:34px;font-size:18px;border-radius:11px}
-.gh-teaser.dock .gh-tx{order:2;flex:none}
-.gh-teaser.dock .gh-tx b{font-size:14px}
-.gh-teaser.dock .gh-tx small{display:none}
-.gh-teaser.dock .gh-marquee{order:3;flex:1;min-width:0}
-.gh-teaser.dock .gh-lock{order:4;margin-left:0;width:30px;height:30px}
-.gh-teaser.dock:hover{transform:translateY(-3px)}
 
 /* tighter card on short screens (Chromebooks, phones) so sign in/up fits without scrolling */
 @media(max-height:800px),(max-width:959px){
@@ -2349,7 +2104,6 @@ html.anti-lag #chatPage.mvp-mode .vip-bar::before,html.anti-lag .vip-lock.mvp-lo
 @media(max-height:800px) and (min-width:960px){
   .auth-preview{display:none}
   .auth-hero .logo{font-size:56px}
-  .gh-teaser.side{margin-top:22px}
 }
 @media(max-height:720px){
   #authPage .auth-head p{display:none}
@@ -4902,158 +4656,6 @@ window.FBS=null;import("https://www.gstatic.com/firebasejs/10.12.2/firebase-stor
 })();
 
 /* ==========================================================================
- * js/games/hub-info.js
- * Shared Game Hubs info (display names/descriptions) for the sign-in screen teaser
- * Plain (non-module) script that runs in place while the page is parsed - see its <script> tag in index.html.
- * ========================================================================== */
-/* Shared Game Hubs info. Keys = the hub's name in lowercase. n = display name, d = description,
-   c/i = optional colour / icon fallback.
-   This drives the "Game Hubs" teaser on the sign-in screen (js/games/auth-hubs-preview.js), so keep it
-   matching the real list in CUSTOM_HUBS (js/games/game-hubs.js) — listing a hub here that is not in
-   CUSTOM_HUBS advertises a hub nobody can actually open. */
-window.HUB_INFO={
-"kbh games":{n:"KBH Games",d:"More browser games to dig through. A few titles may be hit or miss."},
-"reids games":{n:"Reids Games",d:"A solid game collection with some movies mixed in."},
-"greeni":{n:"Greeni",d:"Movies and games together in one place."},
-"polaris hub":{n:"Polaris Hub",d:"One of the biggest libraries here. Loads of games to scroll through."},
-"wither games":{n:"Wither Games",d:"144 hand-picked popular and interesting games."},
-"gn-math":{n:"GN-Math",d:"A well-known game site and a great first stop."},
-"nautilusos":{n:"NautilusOS",d:"A polished, desktop-style interface with games inside."},
-"ultimate game stash":{n:"Ultimate Game Stash",d:"One of the biggest stashes. Use search to find a specific game, like Pokémon Emerald."},
-"sigma os":{n:"Sigma OS",d:"A Windows 11–style desktop with games and apps."},
-"noah's tutoring":{n:"Noah's Tutoring",d:"A big game library. It can be a little laggy while it loads."},
-"noah's tutoring launcher":{n:"Noah's Tutoring Launcher",d:"Same library as Noah's Tutoring, but opens behind a launch button."},
-"project bugs":{n:"Project Bugs",d:"A Google Sites page packed with games, with thumbnails so they're easy to browse.",c:"purple"},
-"calcsolver":{n:"CalcSolver",d:"Looks like a calculator site. Turn on Code mode, then tap (0) four times to open the game hub.",c:"grey"},
-"mantle":{n:"Mantle",d:"Quality over quantity: modded Minecraft, an AI assistant and a proxy in one app.",c:"red"},
-"game 'n go games 1":{n:"Game 'N Go Games 1",d:"A game hub that looks and feels like a computer desktop.",c:"cyan"},
-"game 'n go games 2":{n:"Game 'N Go Games 2",d:"Backup mirror of Game 'N Go, handy if the first one is down.",c:"cyan"},
-"zaka":{n:"Zaka",d:"Zaka's web proxy for opening blocked sites.",c:"blue"},
-"bestspark":{n:"BestSpark",d:"A collection of game hubs plus original games made by the community.",c:"lime"},
-"gust":{n:"Gust",d:"Another game hub to try when your usual ones are blocked.",c:"white"},
-"unblockedzone!":{n:"UnblockedZone!",d:"A very popular game site that keeps several mirrors as backups.",c:"red"},
-"idk 10.0":{n:"idk 10.0",d:"A desktop-style game hub with a big selection of games.",c:"purple"},
-"duckmath":{n:"Duckmath",d:"Duckmath game hub.",c:"lime"},
-"nexus":{n:"Nexus",d:"A straightforward hub of links to games.",c:"violet"},
-"nike hub":{n:"Nike Hub",d:"Both a web proxy and a games hub.",c:"orange"},
-"nova":{n:"Nova",d:"A hub of game links, handy when the bigger sites are blocked.",c:"blue"},
-"otonic":{n:"Otonic",d:"Proxy with a search bar plus games.",c:"cyan"},
-"ghost hub cinema":{n:"Ghost Hub Cinema",d:"A collection of movies to browse and watch.",c:"white"}
-};
-
-/* Non-hub sections of apps.json. Same idea: key = lowercase name, only listed items show. */
-window.HUB_INFO_X={
-apps:{
-"basik (chat)":{n:"BaSik",i:"BaSik",c:"blue",d:"Super lightweight text-only chat. No roles, no images, just messages."},
-"youtube v20":{n:"YouTube V20",i:"YT",c:"rose",d:"A YouTube player with playlists, settings and private + public keys."},
-"unicorn's hideout 🦄":{n:"Unicorn's Hideout 🦄",i:"🦄",c:"purple",d:"unicorngirl38's hideout."}
-},
-tools:{
-"ai code editor":{n:"AI Code Editor",c:"violet",d:"Code editor with built-in AI that can replace, add and delete specific lines."},
-"code editor":{n:"Code Editor",c:"blue",d:"Live HTML editor with an instant preview."},
-"about:blank opener":{n:"about:blank Opener",c:"amber",d:"Opens files and sites in an about:blank tab. Some sites block this kind of cloaking."},
-"timer":{n:"Timer",c:"orange",d:"Stopwatch and countdown timer in one."},
-"local music player":{n:"Local Music Player",c:"rose",d:"Play music files straight from your own device."},
-"file + folder viewer":{n:"File + Folder Viewer",c:"lime",d:"Browse the files and folders on your device."},
-"groq api keys":{n:"Groq API Keys",c:"green",d:"Grab a free Groq API key for AI tools."},
-"notes":{n:"Notes",c:"amber",d:"Quick notes saved right in your browser."},
-"image to base64":{n:"Image to Base64",c:"green",d:"Turn an image into base64 so you can embed it even when the image link is blocked."}
-},
-links:{
-"scratch":{n:"Scratch",c:"orange",d:"Games, music and animations made by the Scratch community."},
-"get youtube key":{n:"Get YouTube Key",c:"rose",d:"Step-by-step guide to getting a YouTube Data API v3 key."},
-"google doodles":{n:"Google Doodles",c:"blue",d:"Minesweeper, Solitaire, Snake and lots more Google games."},
-"cineby":{n:"Cineby",c:"yellow",d:"Movie and sports streaming. Not proxied, so some networks may block it."},
-"code editor":{n:"Code Editor (Web)",c:"green",d:"A feature-packed online code editor."},
-"cps test":{n:"CPS Test",c:"orange",d:"Test how many clicks per second you can hit."}
-}
-};
-
-/* ==========================================================================
- * js/games/auth-hubs-preview.js
- * Game Hubs preview strip on the sign in / sign up screen (locked until login)
- * Plain (non-module) script that runs in place while the page is parsed - see its <script> tag in index.html.
- * ========================================================================== */
-/* Game Hubs preview on the sign in / sign up screen (locked until login) */
-(function(){
-  var teaser=document.getElementById('ghTeaser'),track=document.getElementById('ghTrack'),sub=document.getElementById('ghTeaserSub');
-  if(!teaser||!track)return;
-  var INFO=window.HUB_INFO||{},ALLOW={};Object.keys(INFO).forEach(function(k){ALLOW[k]=INFO[k].n});
-  var COL={white:['rgba(255,255,255,.14)','#f8fafc'],green:['rgba(34,197,94,.16)','#4ade80'],blue:['rgba(59,130,246,.16)','#60a5fa'],rose:['rgba(244,63,94,.16)','#fb7185'],violet:['rgba(139,92,246,.16)','#a78bfa'],yellow:['rgba(234,179,8,.16)','#fde047'],cyan:['rgba(6,182,212,.16)','#22d3ee'],lime:['rgba(132,204,22,.16)','#a3e635'],orange:['rgba(249,115,22,.16)','#fb923c'],red:['rgba(239,68,68,.16)','#f87171'],purple:['rgba(168,85,247,.16)','#c084fc'],black:['rgba(255,255,255,.08)','#e2e8f0'],grey:['rgba(148,163,184,.16)','#cbd5e1'],amber:['rgba(245,158,11,.16)','#fbbf24']};
-  var FALLBACK_COLS=['violet','cyan','green','rose','amber','blue','orange','purple','lime','red','grey'];
-  var hubs=Object.keys(ALLOW).map(function(k,i){return{name:ALLOW[k],desc:INFO[k].d||'',icon:'',color:INFO[k].c||FALLBACK_COLS[i%FALLBACK_COLS.length]}});
-  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-  function col(h){return COL[(h.color||'').toLowerCase()]||COL.grey}
-  function renderMarquee(){
-    var one=hubs.map(function(h){var c=col(h);return '<span class="gh-chip" style="--cbg:'+c[0]+';--cfg:'+c[1]+'">'+esc(h.name)+'</span>'}).join('');
-    track.innerHTML=one+one;
-    if(sub)sub.textContent=hubs.length+' game hubs inside · tap to peek';
-  }
-  renderMarquee();
-  /* This used to also fetch VUS's apps.json on every single page load to "refresh" the list.
-     The real hub list is hand-written now (CUSTOM_HUBS in js/games/game-hubs.js) and this teaser
-     is built from js/games/hub-info.js, so that request only cost a cross-origin round trip on
-     every boot — and failed outright on networks that block raw.githubusercontent.com. Removed. */
-
-  var ROOT=null;
-  function close(){
-    if(!ROOT)return;var r=ROOT;ROOT=null;document.removeEventListener('keydown',onKey,true);
-    r.classList.add('closing');setTimeout(function(){r.remove()},200);
-  }
-  function onKey(e){if(e.key==='Escape'){e.stopPropagation();close()}}
-  function shake(row){
-    var b=document.getElementById('ghaLock');if(!b)return;
-    b.classList.remove('shake');void b.offsetWidth;b.classList.add('shake');
-    if(row){row.classList.add('tap');setTimeout(function(){row.classList.remove('tap')},700)}
-  }
-  function goTab(id){close();var b=document.getElementById(id);if(b)b.click()}
-  function open(){
-    if(ROOT)return;
-    var rows=hubs.map(function(h,i){
-      var c=col(h),ic=String(h.icon||'');
-      if(!ic||/^https?:|\/|\./.test(ic))ic=h.name.slice(0,2);
-      return '<div class="list-row hub-row gha-row" style="--i:'+i+'"><div class="hub-ic" style="background:'+c[0]+';color:'+c[1]+'">'+esc(ic.slice(0,4))+'</div>'+
-        '<div class="nm"><div class="hub-nm">'+esc(h.name)+'</div><div class="hub-desc">'+esc(h.desc||'Game hub · unlocks when you log in')+'</div></div><div class="hub-arrow">🔒</div></div>';
-    }).join('');
-    var bg=document.createElement('div');bg.className='modal-bg';bg.id='ghaBg';
-    bg.innerHTML='<div class="modal wide gha-modal" role="dialog" aria-modal="true" aria-label="Game Hubs">'+
-      '<button class="modal-x" id="ghaX" type="button">✕</button>'+
-      '<h2>🎮 Game Hubs</h2><div class="hint">Here\'s a look at the game hubs waiting for you inside.</div>'+
-      '<div class="gha-lock" id="ghaLock" role="alert"><div class="gha-lock-ic">🔒</div><div><b>Login required</b><p>You must log in or create an account to use the Game Hubs feature.</p></div></div>'+
-      '<div class="gha-actions"><button class="btn small" id="ghaIn" type="button">Sign In</button><button class="btn sec small" id="ghaUp" type="button">Create Account</button></div>'+
-      '<div class="hub-list gha-list">'+rows+'</div></div>';
-    document.body.appendChild(bg);ROOT=bg;
-    document.addEventListener('keydown',onKey,true);
-    bg.addEventListener('click',function(e){
-      if(e.target===bg)return close();
-      var row=e.target.closest&&e.target.closest('.gha-row');if(row)shake(row);
-    });
-    bg.querySelector('#ghaX').onclick=close;
-    bg.querySelector('#ghaIn').onclick=function(){goTab('tabIn')};
-    bg.querySelector('#ghaUp').onclick=function(){goTab('tabUp')};
-  }
-  teaser.addEventListener('click',open);
-
-  // Placement: left hero column on wide screens, pinned bottom dock everywhere else (no added scrolling)
-  var pg=document.getElementById('authPage'),mq=window.matchMedia('(min-width:960px)');
-  function place(){
-    var hero=document.querySelector('.auth-hero');
-    if(mq.matches&&hero){
-      hero.appendChild(teaser);
-      teaser.classList.add('side');teaser.classList.remove('dock');
-    }else if(pg){
-      pg.appendChild(teaser);
-      teaser.classList.add('dock');teaser.classList.remove('side');
-    }
-  }
-  place();
-  if(mq.addEventListener)mq.addEventListener('change',place);else if(mq.addListener)mq.addListener(place);
-  // never leave the popup hanging around once the auth screen goes away
-  var page=document.getElementById('authPage');
-  if(page&&window.MutationObserver)new MutationObserver(function(){if(page.classList.contains('hidden'))close()}).observe(page,{attributes:true,attributeFilter:['class']});
-})();
-
-/* ==========================================================================
  * js/core/crash-catcher.js
  * If the app crashes while booting, show the reason on the loading screen instead of spinning forever
  * Plain (non-module) script that runs in place while the page is parsed - see its <script> tag in index.html.
@@ -6375,7 +5977,8 @@ const CFG={
   OWNER_IDS:[], // no longer used for permission checks — kept empty; owner status now comes live from owners/$id===1 in the database (see C.owners / isOwner()). Populate owners/$id there from your own backend, not here.
   SEND_COOLDOWN_MS:1500,
   // --- Terms of Service / IP ban / VPN gate (js/moderation/tos-gate.js + the /api functions) ---
-  TOS_VERSION:2,                  // bumped 1->2: every old (and any forged) TOS record is void, everybody re-accepts through the server
+  TOS_VERSION:3,                  // bumped 2->3 for the new logging: every older TOS record is void and everyone re-accepts.
+                                  // Keep this equal to TOS_VERSION in api/_lib.js (and to the TOS_VERSION env var, if you set one).
   TOS_API:'https://itsukis-chat-hub.vercel.app',   // where the /api functions are deployed. The Discord webhook now lives ONLY in the server env.
   ATTEST_EVERY_MS:4*60*1000,      // how often the browser asks the server to re-clear this login (server grants 8 min at a time)
   IP_BAN_FULL_LOCK:false,         // false = an IP-banned network can't CHAT. true = it is locked out of the whole menu like a banned account
@@ -8579,6 +8182,17 @@ const DB=(()=>{
       C.users[id]=nu;C.usernames[newKey]=id;oldKeys.forEach(k=>delete C.usernames[k]);
       emit();
       return newName;
+    },
+    /* Owner-only TOS acceptance log (tosLog/, written by /api/tos with the Admin SDK — see
+       SETUP-SECURITY.md). It holds the raw IP, so the rules let only owners read it, and it is
+       fetched on demand rather than watched: a non-owner's listener would just be denied. */
+    async tosLog(){
+      if(!isOwner(myId))throw new Error('Only owners can see the TOS log.');
+      const sn=await get(R('tosLog'));
+      const v=sn.val()||{};
+      return Object.keys(v).map(id=>({id:Number(id),...(v[id]||{})}))
+        .filter(r=>!isNaN(r.id))
+        .sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0));
     },
     // Everyone whose mute has not expired yet, soonest to expire first.
     mutedIds(){const n=Date.now()+SKEW;return Object.keys(C.muted||{})
@@ -11163,416 +10777,58 @@ $('#menuBtn').onclick=()=>$('#sidebar').classList.toggle('open');
 
 /* ==========================================================================
  * js/games/game-hubs.js
- * Game Hubs & proxies: hub list, proxy browser, iframe viewer, launcher
+ * Launchers.
+ *
+ * The games, hubs, proxies and the in-site iframe viewer used to live here. They are gone on
+ * purpose: everything is played through the official launcher now, which is the only thing that
+ * reliably survives school filters and about:blank-closing. All that is left is the pointer to
+ * the launcher list, so nobody goes hunting for a hub browser that no longer exists.
+ *
+ * modalGameHubs() / closeGameHubs() keep their names because the home tile, the Discord-look rail
+ * and the Escape-key handler all call them.
  * Loaded by js/loader.js (load order lives in js/manifest.js).
- * All js files share one global scope, so functions/consts here are visible to the others.
  * ========================================================================== */
 'use strict';
 
-/* ---------- Game Hubs ---------- */
-let _proxyCredit='';
-const HUB_COLORS={
-  white:{bg:'rgba(255,255,255,.14)',fg:'#f8fafc'},green:{bg:'rgba(34,197,94,.16)',fg:'#4ade80'},
-  blue:{bg:'rgba(59,130,246,.16)',fg:'#60a5fa'},rose:{bg:'rgba(244,63,94,.16)',fg:'#fb7185'},
-  violet:{bg:'rgba(139,92,246,.16)',fg:'#a78bfa'},yellow:{bg:'rgba(234,179,8,.16)',fg:'#fde047'},
-  cyan:{bg:'rgba(6,182,212,.16)',fg:'#22d3ee'},lime:{bg:'rgba(132,204,22,.16)',fg:'#a3e635'},
-  orange:{bg:'rgba(249,115,22,.16)',fg:'#fb923c'},red:{bg:'rgba(239,68,68,.16)',fg:'#f87171'},
-  purple:{bg:'rgba(168,85,247,.16)',fg:'#c084fc'},black:{bg:'rgba(255,255,255,.08)',fg:'#e2e8f0'},
-  grey:{bg:'rgba(148,163,184,.16)',fg:'#cbd5e1'},amber:{bg:'rgba(245,158,11,.16)',fg:'#fbbf24'}
-};
-let _hubData=null,_hubQuery='';
-// Curated allowlist — only these hubs (by name) show up, regardless of whatever else
-// gets added to the "hubs" array in apps.json down the line.
-const HUB_INFO=window.HUB_INFO||{},HUB_INFO_X=window.HUB_INFO_X||{};
-const HUB_SECTIONS=[['apps','Apps'],['hubs','Hubs'],['tools','Tools'],['links','Links']];
-// Custom entries added by hand (the only things shown in the list).
-const CUSTOM_HUBS=[
-  /* ---- apps ---- */
-  {sec:'apps',group:'Apps By Suki',name:'1v1.ARENA',url:'https://raw.githubusercontent.com/jace01b-web/other/refs/heads/main/1v1lol%20remake.html',desc:'Sukis remade version of (1v1 lol)',icon:'1v1',color:'lime'},
-  {sec:'apps',group:'Apps By Suki',name:'Cherri Proxy',url:'https://raw.githubusercontent.com/dadasuki/cherri/refs/heads/main/index.html',desc:'Cherri Proxy, relaunch if blocked to UNBLOCK it.',icon:'🌸',color:'red'},
-  {sec:'apps',group:'Apps By Suki',name:'Gemini (AI)',url:'https://raw.githubusercontent.com/dadasuki/GMUB/refs/heads/main/index.html',desc:'Google Gemini Unblocked, relaunch if blocked to UNBLOCK it.',icon:'AI',color:'blue'},
-  {sec:'apps',group:'Apps By Suki',name:'Sukis Multi Tools',url:'https://raw.githubusercontent.com/jace01b-web/other/refs/heads/main/Sukis%20Multi%20Tools%20App.html',desc:'My multi tools app, including over 20 apps! Includes things like calculators, reaction test, and more!',icon:'SMT',color:'lime'},
-  {sec:'apps',group:'Apps By Suki',name:'The Long Hall [Beta Version]',url:'https://raw.githubusercontent.com/AniItsukiCoded/tlh/refs/heads/main/index.html',desc:'Beta version of my game The Long Hall.',icon:'TLH',color:'red'},
-  {sec:'apps',group:'Apps By Suki',name:'The Long Hall [Multiplayer]',url:'https://raw.githubusercontent.com/AniItsukiCoded/The-Long-Hall-AutoUpd/refs/heads/main/index.html',desc:'The full release version of The Long Hall: the boiled one. Play solo or with friends and try to escape the boiled one.',icon:'TLH',color:'red'},
-  {sec:'apps',group:'Apps By Suki',name:'YouTube Premium',url:'https://raw.githubusercontent.com/AniItsukiCoded/ytfreemium/refs/heads/main/index.html',desc:'Unblocked, ad-free version of YouTube (PremiumTube).',icon:'YT',color:'red'},
-  {sec:'apps',group:'Other',name:'Tuff Client',url:'https://raw.githubusercontent.com/AniItsukiCoded/Tuffclient-by-Dicestacks88/refs/heads/main/index.html',desc:'Eaglercraft Tuff client by Dicestack88.',icon:'TLH',color:'red'},
-  /* ---- hubs ---- */
-  {sec:"hubs",name:"BestSpark",url:"https://theres-a.mcdonalds-in-the-pentagon.com/",desc:"A collection of game hubs plus original games made by the community.",icon:"BS",color:"lime"},
-  {sec:"hubs",name:"CalcSolver",url:"https://calcsolver.net/",desc:"Looks like a calculator site. Turn on Code mode, then tap (0) four times to open the game hub.",icon:"CS",color:"grey"},
-  {sec:'hubs',name:"Duckmath",url:"https://storage.googleapis.com/mathlessons/duckmath.html",desc:"Duckmath game hub.",icon:"DM",color:"lime"},
-  {sec:"hubs",name:"Game 'N Go Games 1",url:"https://gane-n-go.lovable.app/",desc:"A game hub that looks and feels like a computer desktop.",icon:"GNG1",color:"cyan"},
-  {sec:"hubs",name:"Game 'N Go Games 2",url:"https://game-n-go-gaming.lovable.app/",desc:"Backup mirror of Game 'N Go, handy if the first one is down.",icon:"GNG2",color:"cyan"},
-  {sec:"hubs",name:"Ghost Hub Cinema",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUS/refs/heads/main/other/Ghost-Cinema",desc:"A collection of movies to browse and watch.",icon:"GHC",color:"white"},
-  {sec:"hubs",name:"GN-Math",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUSL/refs/heads/main/Other/gn-math",desc:"A well-known game site and a great first stop.",icon:"GN",color:"red"},
-  {sec:"hubs",name:"Greeni",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUSL/refs/heads/main/Other/Greeni",desc:"Movies and games together in one place.",icon:"",color:"green"},
-  {sec:"hubs",name:"Gust",url:"https://cdn.jsdelivr.net/gh/nautilus-os/GUST@latest/svg/site.svg",desc:"Another game hub to try when your usual ones are blocked.",icon:"💨",color:"white"},
-  {sec:"hubs",name:"idk 10.0",url:"https://ugs-desktop-production.up.railway.app/",desc:"A desktop-style game hub with a big selection of games.",icon:"idk",color:"purple"},
-  {sec:"hubs",name:"KBH Games",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUSL/refs/heads/main/Other/KBH-Games.html",desc:"More browser games to dig through. A few titles may be hit or miss.",icon:"KBH",color:"blue"},
-  {sec:"hubs",name:"Mantle",url:"https://sites.google.com/view/mantlemenu/",desc:"Quality over quantity: modded Minecraft, an AI assistant and a proxy in one app.",icon:"M",color:"red"},
-  {sec:"hubs",name:"NautilusOS",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUSL/refs/heads/main/Other/NautilusOS",desc:"A polished, desktop-style interface with games inside.",icon:"NOS",color:"cyan"},
-  {sec:"hubs",name:"Nexus",url:"https://car-meow.github.io/toothbrush",desc:"",icon:"",color:""},
-  {sec:'hubs',name:"Nike Hub",url:"https://originfastly.jsdelivr.net/gh/avaisadev/github.com@latest/index.svg",desc:"Both a web proxy and a games hub.",icon:"NH",color:"orange"},
-  {sec:"hubs",name:"Noah's Tutoring",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUSL/refs/heads/main/Other/Noah's-Tutoring",desc:"A big game library. It can be a little laggy while it loads.",icon:"NT",color:"orange"},
-  {sec:"hubs",name:"Noah's Tutoring Launcher",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUSL/refs/heads/main/Other/Noah's-Tutoring-Launcher",desc:"Same library as Noah's Tutoring, but opens behind a launch button.",icon:"NTL",color:"orange"},
-  {sec:"hubs",name:"Nova",url:"https://6hvyy6vz52-cyber.github.io/nova-hub-links/",desc:"",icon:"Nova",color:""},
-  {sec:'hubs',name:"Otonic",url:"https://gscsoccer.com",desc:"Proxy with a search bar plus games.",icon:"OT",color:"cyan"},
-  {sec:"hubs",name:"Polaris Hub",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUSL/refs/heads/main/Other/PolarisHub",desc:"One of the biggest libraries here. Loads of games to scroll through.",icon:"Polaris",color:"black"},
-  {sec:"hubs",name:"Project Bugs",url:"https://sites.google.com/view/cool-science-facts/",desc:"A Google Sites page packed with games, with thumbnails so they're easy to browse.",icon:"PB",color:"purple"},
-  {sec:"hubs",name:"Reids Games",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUSL/refs/heads/main/Other/REIDS-GAMES",desc:"A solid game collection with some movies mixed in.",icon:"REID",color:"red"},
-  {sec:"hubs",name:"Sigma OS",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUSL/refs/heads/main/Other/Sigma-OS",desc:"A Windows 11–style desktop with games and apps.",icon:"SOS",color:"red"},
-  {sec:"hubs",name:"Ultimate Game Stash",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUSL/refs/heads/main/Other/UltimateGameStash",desc:"One of the biggest stashes. Use search to find a specific game, like Pokémon Emerald.",icon:"UGS",color:"blue"},
-  {sec:"hubs",name:"UnblockedZone!",url:"https://testingcf.jsdelivr.net/combine/gh/googleaccountuser/myfirstrepo@master/windows10background.svg",desc:"A very popular game site that keeps several mirrors as backups.",icon:"UZ!",color:"red"},
-  {sec:"hubs",name:"Wither Games",url:"https://raw.githubusercontent.com/Cra-Z-Gaming/VUSL/refs/heads/main/Other/wither",desc:"144 hand-picked popular and interesting games.",icon:"Wither",color:"red"},
-  {sec:"hubs",name:"Zaka",url:"https://my.browser-education.space/index.svg",desc:"Zaka's web proxy for opening blocked sites.",icon:"Zaka",color:"blue"},
-  /* ---- tools ---- */
-  /* ---- links ---- */
-  {sec:"links",name:"Official Launchers",url:"https://github.com/AniItsukiCoded/readme/blob/main/readme.md",desc:"Every official launcher for Itsukis Chat Hub. If one is blocked, the next one works — start here.",icon:"🚀",color:"violet"},
-  {sec:"links",name:"Cineby",url:"https://cineby.tech/",desc:"Movie and sports streaming. Not proxied, so some networks may block it.",icon:"cine",color:"yellow"},
-  {sec:"links",name:"Code Editor (Web)",url:"https://hcodx.com/editor",desc:"A feature-packed online code editor.",icon:"CE",color:"green"},
-  {sec:"links",name:"CPS Test",url:"https://redragonshop.com/pages/cps-test",desc:"Test how many clicks per second you can hit.",icon:"CPS",color:"orange"},
-  {sec:"links",name:"Google Doodles",url:"https://share.google/wN47yxVARg0bCBcDl",desc:"Minesweeper, Solitaire, Snake and lots more Google games.",icon:"GD",color:"blue"},
-  {sec:"links",name:"Scratch",url:"https://scratch.mit.edu/",desc:"Games, music and animations made by the Scratch community.",icon:"S",color:"orange"}
-];
-let _hubSec='apps',_pxGroup='',_hubDir=0;
-/* ---------- "use the official launchers" notice ----------
-   Games and proxies behave much better opened from a launcher than from a plain tab (schools that
-   auto-close about:blank, sites that refuse to run in an iframe, ...). This asks people to go
-   through the official launcher list and remembers that they dismissed it. */
 const LAUNCHER_README='https://github.com/AniItsukiCoded/readme/blob/main/readme.md';
-const HUB_NOTE_KEY='ich.hubLauncherNote';
-function hubNoteDismissed(){try{return localStorage.getItem(HUB_NOTE_KEY)==='1'}catch(_){return false}}
-function dismissHubNote(){try{localStorage.setItem(HUB_NOTE_KEY,'1')}catch(_){}}
-function hubNoteHTML(){
-  if(hubNoteDismissed())return '';
-  return `<div class="gh-launch" id="ghLaunch" role="note">
-    <span class="gh-launch-ic" aria-hidden="true">🚀</span>
-    <div class="gh-launch-tx">
-      <b>Open these from a launcher</b>
-      <small>Games, proxies and apps work far better launched than opened in a plain tab — and the official launcher list always has a mirror that still works.</small>
-    </div>
-    <div class="gh-launch-go">
-      <a class="btn small" href="${LAUNCHER_README}" target="_blank" rel="noopener noreferrer">View official launchers&nbsp;↗</a>
-      <button type="button" class="gh-launch-x" id="ghLaunchX" title="Don't show this again" aria-label="Don't show this again">✕</button>
-    </div>
-  </div>`;
-}
-function wireHubNote(){
-  const x=document.getElementById('ghLaunchX');if(!x)return;
-  x.onclick=e=>{
-    e.stopPropagation();
-    const n=document.getElementById('ghLaunch');if(!n)return;
-    dismissHubNote();
-    n.classList.add('gone');setTimeout(()=>n.remove(),240);
-  };
-}
-const GAME_HUB_ALLOWLIST=new Set(Object.keys(HUB_INFO));
-function hubInfoFor(sec,name){
-  const k=(name||'').trim().toLowerCase();
-  return (sec==='hubs'?HUB_INFO:(HUB_INFO_X[sec]||{}))[k]||null;
-}
-function isGameHub(h){
-  return GAME_HUB_ALLOWLIST.has((h.name||'').trim().toLowerCase());
-}
+const LAUNCHER_DOWNLOAD='https://github.com/AniItsukiCoded/backups/blob/main/(USE)%20-%20Launcher%20Loader.html';
+const DISCORD_HELP='https://discord.gg/MV8RD9XzvA';
+
 function modalGameHubs(){
-  _hubQuery='';_hubSec='apps';_pxGroup='';
-  $('#modalRoot').innerHTML=`<div class="modal-bg" id="ghBg"><div class="modal wide">
-    <button class="modal-x gh-gear" id="ghGear" title="Hubs &amp; Tools settings" aria-label="Hubs and Tools settings">⚙</button><button class="modal-x" id="ghX">✕</button>
-    <h2 id="ghTitle">🎮 Hubs &amp; Tools</h2>
-    <div class="hint">Game sites, movie hubs, apps, tools and links — pick one to open it (change how in ⚙ settings).</div>
-    <div class="gh-views" id="ghViews"><div class="gh-set hidden" id="ghSet">
-      <div class="gh-set-row"><div><b>Open links in an iframe</b><small>On (default): links open in a viewer inside this site. Off: they open in a new tab. Saved to your account, so it follows you to every device.</small></div>
-      <label class="switch"><input type="checkbox" id="ghIframe"><span class="slider"></span></label></div>
-      <div class="gh-set-note">Some sites refuse to load inside an iframe. If one shows blank, use "Open in new tab" in the viewer.</div>
-      <div class="gh-set-row"><div><b>Official launchers</b><small>Blocked, or a site won't open? Launch the hub from one of the official launchers instead of a plain tab.</small></div>
-      <a class="btn sec small" href="${LAUNCHER_README}" target="_blank" rel="noopener noreferrer" style="flex:none">Open list&nbsp;↗</a></div>
+  $('#modalRoot').innerHTML=`<div class="modal-bg" id="ghBg"><div class="modal lch-modal">
+    <button class="modal-x" id="ghX" type="button" aria-label="Close">✕</button>
+    <h2>🚀 Launchers</h2>
+    <div class="hint">Games, proxies and apps live in the launcher now — not in here. The launcher opens them in a way school networks don't close, and it always has a mirror that still works.</div>
+
+    <a class="lch-main" href="${LAUNCHER_README}" target="_blank" rel="noopener noreferrer">
+      <span class="lch-ic" aria-hidden="true">🚀</span>
+      <span class="lch-tx"><b>Official launcher list</b><small>Every working launcher, kept up to date. Start here.</small></span>
+      <span class="lch-go" aria-hidden="true">↗</span>
+    </a>
+
+    <div class="lch-row">
+      <a class="lch-sec" href="${LAUNCHER_DOWNLOAD}" target="_blank" rel="noopener noreferrer">
+        <span class="lch-ic sm" aria-hidden="true">⬇</span>
+        <span class="lch-tx"><b>Download the launcher</b><small>One file you keep on your device</small></span>
+      </a>
+      <a class="lch-sec" href="${DISCORD_HELP}" target="_blank" rel="noopener noreferrer">
+        <span class="lch-ic sm" aria-hidden="true">💬</span>
+        <span class="lch-tx"><b>All of them blocked?</b><small>Ask in the Discord — new mirrors go up there first</small></span>
+      </a>
     </div>
-    <div id="ghMain">${hubNoteHTML()}<div class="field" id="ghSearchWrap" style="margin-top:14px"><input id="ghSearch" placeholder="Search everything..." autocomplete="off"></div>
-    <div class="gh-body"><nav class="gh-side" id="ghSide" aria-label="Proxy sections"><div class="gh-side-in" id="ghSideIn"></div></nav><div class="hub-list" id="ghList"><div class="empty">Loading...</div></div></div>
-    <div class="hub-tabs" id="ghTabs" role="tablist"></div></div></div>
+
+    <div class="lch-note">You can also get the launcher from <b>Extras → Download Launcher</b> on the home screen.</div>
   </div></div>`;
   $('#ghX').onclick=closeGameHubs;
-  wireHubNote();
-  const ifc=$('#ghIframe');ifc.checked=hubOpenMode()==='iframe';
-  ifc.onchange=()=>setHubOpenMode(ifc.checked?'iframe':'tab');
-  let busy=false;
-  $('#ghGear').onclick=()=>{
-    if(busy)return;busy=true;
-    const views=$('#ghViews'),setP=$('#ghSet'),main=$('#ghMain'),g=$('#ghGear'),t=$('#ghTitle');
-    const toSet=setP.classList.contains('hidden');
-    const out=toSet?main:setP,inn=toSet?setP:main;
-    const h0=views.offsetHeight;
-    views.style.height=h0+'px';views.classList.add('busy');
-    g.classList.remove('spin');void g.offsetWidth;g.classList.add('spin');
-    t.classList.add('gh-title-out');
-    out.classList.add(toSet?'gh-out-l':'gh-out-r');
-    setTimeout(()=>{
-      out.classList.add('hidden');out.classList.remove('gh-out-l','gh-out-r');
-      inn.classList.remove('hidden');
-      views.style.height='auto';const h1=views.offsetHeight;      // natural height of the incoming pane
-      views.style.height=h0+'px';void views.offsetHeight;
-      views.style.transition='height .5s cubic-bezier(.16,1,.3,1)';
-      views.style.height=h1+'px';
-      inn.classList.add(toSet?'gh-in-r':'gh-in-l');
-      t.textContent=toSet?'⚙ Hubs & Tools settings':'🎮 Hubs & Tools';
-      t.classList.remove('gh-title-out');t.classList.add('gh-title-in');
-      g.textContent=toSet?'←':'⚙';
-      if(!toSet)hubPill(true);
-      setTimeout(()=>{
-        inn.classList.remove('gh-in-r','gh-in-l');t.classList.remove('gh-title-in');
-        views.style.transition='';views.style.height='';views.classList.remove('busy');
-        busy=false;
-      },520);
-    },190);
-  };
   $('#ghBg').onclick=e=>{if(e.target.id==='ghBg')closeGameHubs()};
-  $('#ghSearch').oninput=()=>{_hubQuery=$('#ghSearch').value.trim().toLowerCase();renderHubList()};
-  loadHubs();
 }
-// Plays the same fade/scale-down exit the rest of the modals use (see
-// .modal-bg.closing) instead of yanking the panel out instantly.
+
+// Plays the same fade/scale-down exit the rest of the modals use (see .modal-bg.closing)
+// instead of yanking the panel out instantly.
 function closeGameHubs(){
   const bg=$('#ghBg');if(!bg){if($('#modalRoot'))$('#modalRoot').innerHTML='';return}
   bg.classList.add('closing');
   setTimeout(()=>{if($('#modalRoot'))$('#modalRoot').innerHTML=''},200);
-}
-async function loadHubs(){
-  if(_hubData){renderHubList();return}
-  try{
-    // Only your own entries (CUSTOM_HUBS) are listed - nothing is pulled from VUS's apps.json anymore.
-    const out=[];
-    CUSTOM_HUBS.forEach(h=>out.push({...h}));
-    _hubData=out;
-    renderHubList();
-  }catch(e){
-    console.error('[hubs] load failed:',e);
-    const box=$('#ghList');if(!box)return;
-    box.innerHTML=`<div class="empty">Couldn't load the list.<br><button class="btn sec small" id="ghRetry" style="margin-top:10px">Retry</button></div>`;
-    if($('#ghRetry'))$('#ghRetry').onclick=()=>{box.innerHTML='<div class="empty">Loading...</div>';loadHubs()};
-  }
-}
-// Proxies get their own two-pane UI: sections menu on the LEFT, the selected section's proxies on the right.
-function updateProxySide(box,items){
-  const side=$('#ghSide'),inn=$('#ghSideIn');if(!side||!inn)return;
-  const on=_hubSec==='proxies'&&items.length>0;
-  side.classList.toggle('open',on);
-  if(!on)return;                         // keep old buttons while it slides away
-  const groups=[];
-  items.forEach(h=>{if(!h.group)return;let g=groups.find(x=>x.name===h.group);if(!g){g={name:h.group,n:0,color:h.color};groups.push(g)}g.n++});
-  inn.innerHTML='<div class="gh-side-title">Sections</div>';
-  const mk=(key,label,n,dotFg)=>{
-    const b=document.createElement('button');b.type='button';b.className='gh-side-btn'+(_pxGroup===key?' on':'');b.dataset.g=key;
-    b.innerHTML=`<em style="background:${dotFg}"></em><span>${esc(label)}</span><i>${n}</i>`;
-    b.onclick=()=>{if(_pxGroup===key)return;_pxGroup=key;inn.querySelectorAll('.gh-side-btn').forEach(x=>x.classList.toggle('on',x===b));hubTransition(box,0,()=>renderHubList())};
-    inn.appendChild(b);
-  };
-  mk('','All',items.length,'var(--accent)');
-  groups.forEach(g=>mk(g.name,g.name,g.n,(HUB_COLORS[(g.color||'').toLowerCase()]||HUB_COLORS.grey).fg));
-  box.onscroll=null;
-}
-// Sliding highlight behind the active bottom tab.
-document.addEventListener('transitionend',e=>{if(e.target&&e.target.classList&&e.target.classList.contains('modal')&&e.propertyName==='max-width')hubPill(true)});
-function hubPill(instant){
-  const tabs=$('#ghTabs');if(!tabs)return;
-  const pill=tabs.querySelector('.hub-pill'),on=tabs.querySelector('.hub-tab.on');
-  if(!pill||!on||!on.offsetWidth)return;
-  if(instant||!pill._placed){pill.style.transition='none'}
-  pill.style.width=on.offsetWidth+'px';pill.style.height=on.offsetHeight+'px';
-  pill.style.transform='translate('+on.offsetLeft+'px,'+on.offsetTop+'px)';
-  if(instant||!pill._placed){void pill.offsetWidth;pill.style.transition='';pill._placed=true}
-}
-window.addEventListener('resize',()=>hubPill(true));
-// Fade the old list out, swap content, then slide the new one in while the panel height glides to its new size
-// (so the modal never snaps/teleports when the content length changes).
-let _hubTok=0;
-function hubTransition(box,dir,fn){
-  const tok=++_hubTok;
-  const h0=box.offsetHeight;
-  const ALL=['swap','swapL','swapR','leaveL','leaveR','leaveD'];
-  box.classList.remove(...ALL);
-  box.style.transition='none';box.style.overflow='hidden';box.style.height=h0+'px';
-  box.classList.add(dir>0?'leaveL':dir<0?'leaveR':'leaveD');
-  setTimeout(()=>{
-    if(tok!==_hubTok)return;
-    box.classList.remove(...ALL);
-    box.style.height='auto';box.scrollTop=0;
-    fn();
-    const h1=box.offsetHeight;
-    box.style.height=h0+'px';void box.offsetHeight;
-    box.style.transition='height .42s cubic-bezier(.16,1,.3,1)';
-    box.style.height=h1+'px';
-    box.classList.add(dir>0?'swapR':dir<0?'swapL':'swap');
-    setTimeout(()=>{
-      if(tok!==_hubTok)return;
-      box.style.transition='';box.style.height='';box.style.overflow='';box.classList.remove(...ALL);
-    },460);
-  },150);
-}
-function switchHubTab(k){
-  if(_hubSec===k)return;
-  const box=$('#ghList');if(!box)return;
-  const ids=HUB_SECTIONS.map(x=>x[0]);
-  const dir=ids.indexOf(k)>ids.indexOf(_hubSec)?1:-1;
-  _hubSec=k;
-  document.querySelectorAll('#ghTabs .hub-tab').forEach(b=>{const a=b.dataset.k===k;b.classList.toggle('on',a);b.setAttribute('aria-selected',a)});
-  hubPill();                                   // pill starts sliding right away
-  hubTransition(box,dir,()=>renderHubList());
-}
-function renderHubList(swap){
-  const box=$('#ghList');if(!box||!_hubData)return;
-  const q=_hubQuery;
-  const match=h=>!q||h.name.toLowerCase().includes(q)||(h.desc||'').toLowerCase().includes(q)||(h.group||'').toLowerCase().includes(q);
-  const counts={};
-  _hubData.forEach(h=>{if(match(h))counts[h.sec]=(counts[h.sec]||0)+1});
-  const tabs=$('#ghTabs');
-  if(tabs){
-    if(!tabs._built){
-      tabs.innerHTML='<span class="hub-pill"></span>';
-      HUB_SECTIONS.forEach(([k,label])=>{
-        const b=document.createElement('button');
-        b.type='button';b.setAttribute('role','tab');b.dataset.k=k;b.className='hub-tab';
-        b.innerHTML=`<span>${label}</span><span class="cnt"></span>`;
-        b.onclick=()=>switchHubTab(k);
-        tabs.appendChild(b);
-      });
-      tabs._built=true;
-      // The modal animates its width (Proxies view is wider), so the tab bar resizes mid-flight:
-      // keep the pill glued to the active tab on every size change.
-      if(window.ResizeObserver){
-        const ro=new ResizeObserver(()=>hubPill(true));
-        ro.observe(tabs);tabs.querySelectorAll('.hub-tab').forEach(b=>ro.observe(b));
-        tabs._ro=ro;
-      }
-    }
-    tabs.querySelectorAll('.hub-tab').forEach(b=>{
-      const k=b.dataset.k,n=counts[k]||0;
-      b.setAttribute('aria-selected',_hubSec===k);
-      b.classList.toggle('on',_hubSec===k);b.classList.toggle('zero',!n);
-      b.querySelector('.cnt').textContent=n;
-    });
-    hubPill();
-  }
-  const items=_hubData.filter(h=>h.sec===_hubSec&&match(h));
-  const isPx=_hubSec==='proxies';
-  if(isPx&&_pxGroup&&!items.some(h=>h.group===_pxGroup))_pxGroup='';
-  const shown=(isPx&&_pxGroup)?items.filter(h=>h.group===_pxGroup):items;
-  const bd=box.parentNode;if(bd)bd.classList.toggle('px',isPx&&items.length>0);
-  const md=box.closest('.modal');if(md)md.classList.toggle('px-mode',isPx);
-  box.classList.toggle('px-grid',isPx&&items.length>0);
-  updateProxySide(box,items);
-  if(swap){box.classList.remove('swap','swapL','swapR');void box.offsetWidth;box.classList.add(_hubDir>0?'swapR':_hubDir<0?'swapL':'swap')}
-  if(!items.length){
-    const other=Object.values(counts).reduce((a,b)=>a+b,0);
-    box.innerHTML='<div class="empty">'+(q&&other?'No matches in this tab, but '+other+' in the other tabs.':'Nothing found.')+'</div>';
-    return;
-  }
-  box.innerHTML='';
-  if(isPx){
-    const cr=document.createElement('div');cr.className='hub-credit';cr.textContent='\u2764\ufe0f '+_proxyCredit;box.appendChild(cr);
-    if(_pxGroup){const hd=document.createElement('div');hd.className='px-head';hd.innerHTML=`<div><b>${esc(_pxGroup)}</b><small>If one link is blocked, try another.</small></div><span>${shown.length} link${shown.length===1?'':'s'}</span>`;box.appendChild(hd)}
-  }
-  let _lastGrp=null;
-  const _one=shown.length===1;
-  shown.forEach(h=>{
-    if(h.group&&!(isPx&&_pxGroup)&&h.group!==_lastGrp){_lastGrp=h.group;const n=items.filter(x=>x.group===h.group).length;const gh=document.createElement('div');gh.className='hub-grp';gh.dataset.g=h.group;gh.innerHTML=`<span>${esc(h.group)}</span><i>${n}</i>`;box.appendChild(gh)}
-    const c=HUB_COLORS[(h.color||'').toLowerCase()]||HUB_COLORS.grey;
-    const row=document.createElement('div');
-    row.className='list-row hub-row'+(_one?' one':'');
-    row.innerHTML=`<div class="hub-ic" style="background:${c.bg};color:${c.fg}">${esc((h.icon||h.name.slice(0,2)).toString().slice(0,4))}</div>
-      <div class="nm"><div class="hub-nm">${esc(h.name)}</div>${h.desc?`<div class="hub-desc">${esc(h.desc)}</div>`:''}</div>
-      <div class="hub-arrow">↗</div>`;
-    row.onclick=()=>{closeGameHubs();launchHub(h)};
-    box.appendChild(row);
-  });
-}
-// Launches a hub the same way VUS does: raw.githubusercontent.com links are actual page
-// source (served as plain text, not rendered HTML), so they're fetched and written into a
-// fresh about:blank tab. Anything else is a normal link and just opens directly.
-const HUB_MODE_KEY='ich.hubOpenMode';
-// Saved to the account (users/$id/settings/hubOpenMode) so it follows you across devices;
-// localStorage is just a cache. Default is the in-site iframe viewer.
-function hubOpenMode(){
-  try{const v=ME&&ME.settings&&ME.settings.hubOpenMode;if(v==='iframe'||v==='tab')return v}catch(_){}
-  try{const v=localStorage.getItem(HUB_MODE_KEY);if(v==='iframe'||v==='tab')return v}catch(_){}
-  return 'iframe';
-}
-function setHubOpenMode(v){
-  try{localStorage.setItem(HUB_MODE_KEY,v)}catch(_){}
-  try{if(ME&&ME.id!=null)DB.setSettingKey(ME.id,'hubOpenMode',v).catch(()=>{})}catch(_){}
-}
-let _hubFsHandler=null;
-function closeHubFrame(){
-  const e=document.getElementById('hubFrameBox');if(!e||e.classList.contains('closing'))return;
-  try{if(document.fullscreenElement)document.exitFullscreen()}catch(_){}
-  if(_hubFsHandler){document.removeEventListener('fullscreenchange',_hubFsHandler);document.removeEventListener('webkitfullscreenchange',_hubFsHandler);_hubFsHandler=null}
-  e.classList.add('closing');
-  setTimeout(()=>e.remove(),240);
-}
-// Small stroke icons for the viewer bar (inherit colour from the button).
-const _hfSvg=d=>`<svg class="hf-ic" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
-const HF_IC={
-  close:_hfSvg('<path d="M18 6 6 18M6 6l12 12"/>'),
-  full:_hfSvg('<path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/>'),
-  exit:_hfSvg('<path d="M3 8h3a2 2 0 0 0 2-2V3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M21 16h-3a2 2 0 0 0-2 2v3"/>'),
-  tab:_hfSvg('<path d="M15 3h6v6M10 14 21 3M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/>')
-};
-// In-site viewer: shown when the "open in iframe" setting is on.
-function openHubFrame(h,srcdoc){
-  const old=document.getElementById('hubFrameBox');if(old)old.remove();
-  const box=document.createElement('div');box.id='hubFrameBox';box.className='hub-frame-box';
-  box.innerHTML=`<div class="hub-frame-wrap"><div class="hub-frame-bar"><button type="button" class="hf-btn hf-close" id="hfClose">${HF_IC.close}<span>Close</span></button><div class="hf-title"><i class="hf-dot"></i><span class="hf-name">${esc(h.name)}</span></div><div class="hf-actions"><button type="button" class="hf-btn" id="hfFull">${HF_IC.full}<span>Fullscreen</span></button><button type="button" class="hf-btn hf-primary" id="hfTab">${HF_IC.tab}<span>New tab</span></button></div></div></div><div class="hf-prog"><i></i></div><div class="hf-stage"><div class="hf-loading"><div class="hf-spin"></div><b>Loading ${esc(h.name)}…</b><small>Some sites take a few seconds</small></div><iframe id="hfFrame" allow="fullscreen; autoplay; clipboard-write; gamepad; microphone; camera" allowfullscreen referrerpolicy="no-referrer"></iframe></div><button type="button" class="hf-exit" id="hfExit">⤡ Exit fullscreen</button>`;
-  document.body.appendChild(box);
-  const fr=box.querySelector('#hfFrame'),fb=box.querySelector('#hfFull');
-  // reveal the page smoothly once it has loaded (or after a safety timeout)
-  let shown=false;
-  const reveal=()=>{if(shown)return;shown=true;setTimeout(()=>box.classList.add('loaded'),90)};
-  fr.addEventListener('load',reveal);setTimeout(reveal,15000);
-  if(srcdoc!=null)fr.srcdoc=srcdoc;else fr.src=h.url;
-  // Fullscreen puts the IFRAME itself (just the page, no bar) into fullscreen.
-  const canFs=!!(fr.requestFullscreen||fr.webkitRequestFullscreen);
-  const isFs=()=>document.fullscreenElement===fr||document.webkitFullscreenElement===fr||box.classList.contains('bare');
-  const paint=()=>{const f=isFs();fb.innerHTML=(f?HF_IC.exit:HF_IC.full)+'<span>'+(f?'Exit fullscreen':'Fullscreen')+'</span>';box.classList.toggle('is-fs',f)};
-  fb.onclick=()=>{
-    if(!canFs){box.classList.toggle('bare');paint();return}   // e.g. iOS: fill the screen and hide the bar
-    if(isFs())(document.exitFullscreen||document.webkitExitFullscreen).call(document);
-    else{const p=(fr.requestFullscreen||fr.webkitRequestFullscreen).call(fr);if(p&&p.catch)p.catch(()=>{box.classList.add('bare');paint()})}
-  };
-  box.querySelector('#hfExit').onclick=()=>{box.classList.remove('bare');paint()};
-  _hubFsHandler=paint;
-  document.addEventListener('fullscreenchange',paint);document.addEventListener('webkitfullscreenchange',paint);
-  box.querySelector('#hfClose').onclick=closeHubFrame;
-  // "New tab" from the viewer: raw.githubusercontent.com serves source as plain text, so write the
-  // already-fetched page (or fetch it) into about:blank, exactly like the non-iframe mode does.
-  box.querySelector('#hfTab').onclick=()=>{
-    if(!h.url.includes('raw.githubusercontent.com')){window.open(h.url,'_blank','noopener');return}
-    if(srcdoc!=null){openHubBlank(h,srcdoc);return}
-    toast('Loading '+h.name+'...');
-    fetch(h.url+(h.url.includes('?')?'&':'?')+'v='+Date.now(),{cache:'no-store'})
-      .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text()})
-      .then(t=>openHubBlank(h,t))
-      .catch(()=>toast('Failed to load '+h.name,'bad'));
-  };
-}
-// Writes fetched page source into a fresh about:blank tab (so it renders instead of showing raw text).
-function openHubBlank(h,text){
-  const win=window.open('about:blank','_blank');
-  if(!win){toast('Popup blocked — allow popups for this site','bad');return}
-  win.document.open();win.document.write(text);win.document.close();
-}
-function launchHub(h){
-  if(!h.url)return;
-  const asFrame=hubOpenMode()==='iframe';
-  if(!h.url.includes('raw.githubusercontent.com')){
-    if(asFrame)openHubFrame(h);else window.open(h.url,'_blank','noopener');
-    return;
-  }
-  toast('Loading '+h.name+'...');
-  fetch(h.url+(h.url.includes('?')?'&':'?')+'v='+Date.now(),{cache:'no-store'})
-    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text()})
-    .then(text=>{
-      if(asFrame){openHubFrame(h,text);return}
-      openHubBlank(h,text);
-    })
-    .catch(()=>{toast('Failed to load '+h.name,'bad')});
 }
 
 /* ==========================================================================
@@ -13106,22 +12362,20 @@ function renderComposeContext(){
     return c.offsetParent!==null;
   }
 
-  // Close the topmost closable panel (hub viewer, Settings, Hubs & Tools, friends/DM dialogs...) the same way its
+  // Close the topmost closable panel (Settings, Launchers, friends/DM dialogs...) the same way its
   // own Cancel/Close button would, so unsaved-settings revert etc. still run. Required dialogs (rules, username
   // setup, Halloween popups) have no Cancel/Close button and are left alone.
   function closeTopPanel(){
     if(document.querySelector('.hwi'))return false;                    // Halloween guide handles its own Escape
     const ga=document.querySelector('#giftAlertBg:not(.closing) .ga-x');   // Gift Nitro promo (saves "seen" on close)
     if(ga){ga.click();return true}
-    const hf=document.getElementById('hfClose');
-    if(hf&&document.querySelector('.hub-frame-box')){hf.click();return true}
     const root=document.getElementById('modalRoot');
     const bg=root&&root.querySelector('.modal-bg:not(.closing)');
     if(bg){
-      if(bg.id==='ghBg'&&typeof closeGameHubs==='function'){closeGameHubs();return true}
+      if(bg.id==='ghBg'&&typeof closeGameHubs==='function'){closeGameHubs();return true}   // Launchers
       // Each panel's own close/cancel control: Daily Spin (#spinX), Halloween Pass (#hwX), Cosmetics (#csX),
       // Settings (#sCancel), profile cards, confirm dialogs (…Cancel / …Close) and generic X buttons.
-      const btn=bg.querySelector('#spinX,#hwX,#csX,#sCancel,.gv-x,.pf-x,.modal-x:not(.gh-gear),[id$="Cancel"],[id$="Close"],[id$="cancel"],[id$="close"],.modal-close,.cc-close');
+      const btn=bg.querySelector('#spinX,#hwX,#csX,#sCancel,.gv-x,.pf-x,.modal-x,[id$="Cancel"],[id$="Close"],[id$="cancel"],[id$="close"],.modal-close,.cc-close');
       if(btn){btn.click();return true}
     }
     return false;
@@ -13138,7 +12392,7 @@ function renderComposeContext(){
 
     /* ---------- Escape ---------- */
     if(e.key==='Escape'){
-      if(closeTopPanel()){e.preventDefault();return}   // Settings / Hubs & Tools / viewer -> close it
+      if(closeTopPanel()){e.preventDefault();return}   // Settings / Launchers / dialogs -> close it
       if(overlayOpen())return;                       // pickers & menus close themselves
       const t=e.target;
       if(isEditable(t)){                             // stop typing; don't also leave the page
@@ -13535,7 +12789,7 @@ $('#rulesBtn').onclick=()=>modalRules();
 
 /* ==========================================================================
  * js/settings/settings-page.js
- * Settings page (Theme, Music, Pings, Hubs & Tools, Moderation, ...)
+ * Settings page (Theme, Music, Pings, Moderation, ...)
  * Loaded by js/loader.js (load order lives in js/manifest.js).
  * All js files share one global scope, so functions/consts here are visible to the others.
  * ========================================================================== */
@@ -13851,6 +13105,15 @@ function openSettings(fromChat){
           <span class="hint" id="modIpMsg" style="align-self:center"></span>
         </div>
         <div class="hint" style="margin-top:8px">Banned IPs can't chat (even on new accounts). Banning an account bans its logged IP automatically. IPv6 is banned by /64 network. On a shared network (like a school) this affects everyone on it, so unban when it's over. Owners and admins can both ban and unban.</div>
+      </div>`:''}
+      ${isOwner(ME.id)?`<div class="set-card">
+        <div class="section-h" style="margin-top:0">📄 TOS acceptances</div>
+        <div class="hint">Every account that accepted the Terms, newest first, with the IP the server saw. Only owners can read this — it is not posted to Discord any more.</div>
+        <div class="actions" style="justify-content:flex-start;margin-top:10px">
+          <button class="btn sec small" id="tosLogGo" type="button">Load log</button>
+          <span class="hint" id="tosLogMsg" style="align-self:center"></span>
+        </div>
+        <div id="tosLogList" style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;margin-top:10px"></div>
       </div>`:''}
       ${isOwner(ME.id)?`      <div class="set-card">
         <div class="section-h" style="margin-top:0">🚀 Version control</div>
@@ -14293,6 +13556,44 @@ function openSettings(fromChat){
     };
     renderMuteList();
     if($$('#modMuteList'))muteListTimer=setInterval(renderMuteList,1000);   // the countdowns tick
+    /* TOS acceptance log. Fetched on demand (owners only — the rules deny everyone else), and the
+       raw IP is shown with a copy button plus a one-click jump to the IP-ban field above it. */
+    $$('#tosLogGo')&&($$('#tosLogGo').onclick=async()=>{
+      const btn=$$('#tosLogGo'),msg=$$('#tosLogMsg'),box=$$('#tosLogList');
+      btn.disabled=true;btn.textContent='Loading\u2026';if(msg)msg.textContent='';
+      try{
+        const rows=await DB.tosLog();
+        btn.textContent='Refresh';
+        if(msg)msg.textContent=rows.length?(rows.length+' account'+(rows.length===1?'':'s')):'';
+        if(!rows.length){box.innerHTML='<div class="hint">Nothing yet. Records appear as people accept the new Terms.</div>';return}
+        box.innerHTML=rows.map(r=>{
+          const when=r.at?new Date(Number(r.at)).toLocaleString():'-';
+          return '<div class="list-row" style="display:block;padding:8px 10px">'+
+            '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
+              '<b>'+esc(r.name||'(unknown)')+'</b><span class="hint">#'+r.id+'</span>'+
+              '<code style="font-size:12px;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.07)">'+esc(r.ip||'-')+'</code>'+
+              '<button class="btn sec small" data-tos-copy="'+esc(r.ip||'')+'" type="button">Copy IP</button>'+
+              '<button class="btn sec small" data-tos-ban="'+esc(r.ip||'')+'" type="button">Use in IP ban</button>'+
+            '</div>'+
+            '<div class="hint" style="margin-top:4px">'+esc(when)+' \u00B7 TOS v'+esc(String(r.v||'?'))+
+              ' \u00B7 VPN: '+esc(r.vpn||'?')+(r.build?' \u00B7 build '+esc(r.build):'')+'</div>'+
+            (r.ua?'<div class="hint" style="margin-top:2px;word-break:break-word;opacity:.75">'+esc(r.ua)+'</div>':'')+
+          '</div>';
+        }).join('');
+        box.querySelectorAll('[data-tos-copy]').forEach(b=>b.onclick=()=>{
+          const ip=b.dataset.tosCopy;if(!ip)return;
+          try{navigator.clipboard.writeText(ip)}catch(_){}
+          b.textContent='Copied';setTimeout(()=>{b.textContent='Copy IP'},1400);
+        });
+        box.querySelectorAll('[data-tos-ban]').forEach(b=>b.onclick=()=>{
+          const f=$$('#modIpVal');if(!f||!b.dataset.tosBan)return;
+          f.value=b.dataset.tosBan;f.scrollIntoView({block:'center'});f.focus();
+        });
+      }catch(e){
+        btn.textContent='Load log';
+        if(msg)msg.textContent=(e&&e.message)||'Could not read it.';
+      }finally{btn.disabled=false}
+    });
     $$('#modBanGo')&&($$('#modBanGo').onclick=async()=>{
       const id=+$$('#modBanId').value;
       if(!id){toast('Enter a user ID','bad');return}
@@ -15526,9 +14827,11 @@ function csInjectAccount(){
 /* ==========================================================================
  * js/moderation/tos-gate.js
  * Terms of Service gate: nobody can SEND messages until they accept the TOS. Everything else still works.
- *  - Accepting logs username + account ID + IP to the owner's private Discord (via /api/tos, the webhook never touches the browser)
- *    and saves a scrambled IP fingerprint on the account (tosAccepted/$id/h) so bans can also be applied by IP.
- *  - Declining logs nothing and sends nothing anywhere - the gate never runs any IP lookup for people who haven't accepted.
+ *  - Accepting records username + account ID + IP + browser to tosLog/$id (via /api/tos), which the database rules make
+ *    readable by OWNERS ONLY - shown in Settings > Moderation > TOS acceptances. Nothing goes to Discord any more.
+ *    The receipt on the account (tosAccepted/$id) keeps only the version, the time and a scrambled IP fingerprint,
+ *    so staff can see that somebody accepted without seeing their address.
+ *  - Declining records nothing and sends nothing anywhere - the gate never runs any IP lookup for people who haven't accepted.
  *  - IP bans (ipBans/$hash), VPN / proxy / Tor detection (checked in the browser, accepted users only).
  * Loaded by js/loader.js (load order lives in js/manifest.js).
  * ========================================================================== */
@@ -15541,9 +14844,9 @@ function tosDeclinedThisSession(){try{return sessionStorage.getItem(TOS_DECLINE_
 
 const TOS_SECTIONS=[
   {ic:'💬',t:'Chatting needs this',d:'To <b>send messages</b> you have to accept these terms. If you don\'t, you can still use <b>everything else</b>: read every chat, use the games, hubs, tools, settings and the rest of the site. You just can\'t chat.'},
-  {ic:'📝',hot:true,t:'What gets logged when you accept',d:'When you press <b>Accept</b>, your <b>username</b>, <b>account ID</b>, <b>IP address</b>, the <b>time</b> and your <b>browser info</b> are logged and sent privately to the site owner. A scrambled (hashed) copy of your IP is also saved on your account so IP bans can work. This is used <b>only</b> to stop raids, spam and ban evasion, and so the owner can manually IP-ban people when needed.'},
+  {ic:'📝',hot:true,t:'What gets logged when you accept',d:'When you press <b>Accept</b>, your <b>username</b>, <b>account ID</b>, <b>IP address</b>, the <b>time</b> and your <b>browser info</b> are recorded <b>on this site</b>, where only the owner can read them. They are <b>not</b> sent to Discord or to any outside service. A scrambled (hashed) copy of your IP is also saved on your account so IP bans can work — moderators see that hash, never your address. This is used <b>only</b> to stop raids, spam and ban evasion, and so the owner can IP-ban people when needed.'},
   {ic:'🔒',t:'Private. Never shared.',d:'The log is private to the site owner only. It is never shared, sold, posted or leaked, to anyone, for any reason.'},
-  {ic:'🙅',t:'If you decline',d:'<b>Nothing is logged.</b> Your username, account ID and IP are not recorded and nothing about you is sent to the logging service. You will just be unable to chat. You can change your mind any time in <b>Settings → About</b>.'},
+  {ic:'🙅',t:'If you decline',d:'<b>Nothing is logged.</b> Your username, account ID and IP are not recorded anywhere. You will just be unable to chat. You can change your mind any time in <b>Settings → About</b>.'},
   {ic:'🔨',t:'IP bans',d:'If you are banned, your IP can be banned too, so new accounts from the same network can\'t chat. On a shared network (like a school) other people on that network can be affected until the ban is lifted.'},
   {ic:'🛡️',t:'No VPNs, proxies or Tor',d:'Chat is blocked while your connection looks like a VPN, proxy or Tor exit. Your IP is checked with a third-party detection service for this, only once you have accepted. Turn it off and reload to chat.'},
   {ic:'🚨',t:'Raiding and abuse',d:'Raiding, spamming, harassment, and dodging a ban (alt accounts, VPNs, proxies) will get you banned, including by IP. The server rules still apply on top of these terms.'}
@@ -15645,7 +14948,7 @@ async function tosAccept(){
     }
   }else{
     // API not reachable (not deployed yet / blocked). Save it the old way. The database rules only allow this while security/enforce is NOT true.
-    try{await set(R('tosAccepted/'+ME.id),{v:CFG.TOS_VERSION,at:Date.now()+SKEW,h:'unverified',ip:'unknown'})}
+    try{await set(R('tosAccepted/'+ME.id),{v:CFG.TOS_VERSION,at:Date.now()+SKEW,h:'unverified'})}   // no ip: raw IPs are the server's to write, into owner-only tosLog/
     catch(e){throw new Error('Could not reach the server to save this. Check your connection and try again.')}
   }
   await tosLoadState(ME.id);
@@ -16334,7 +15637,7 @@ const DiscordShell=(function(){
       {id:'vip',t:'VIP Lounge',ic:'💎',active:g&&sec==='vip'},
       ...(hasMvpPerks(ME.id)?[{id:'mvp',t:'MVP Lounge',ic:'🏆',active:g&&sec==='mvp',cls:'dl-rail-mvp'}]:[]),
       {sep:1},
-      {id:'hubs',t:'Hubs & Tools',ic:'🎮'},
+      {id:'hubs',t:'Launchers',ic:'🚀'},
       {id:'extras',t:'Extras',ic:EXTRAS_IC},
       {id:'gift',t:'Gift Nitro perks',ic:'🎁'},
       {sep:1},
@@ -16540,7 +15843,7 @@ const DiscordShell=(function(){
     const dcItem=sbItem('🔗','Our Discord',false,openDiscord);
     dcItem.classList.add('dl-sb-discord');
     list.appendChild(dcItem);
-    const hubItem=sbItem('🎮','Hubs & Tools',false,()=>modalGameHubs());
+    const hubItem=sbItem('🚀','Launchers',false,()=>modalGameHubs());
     list.appendChild(hubItem);
     foot.innerHTML='';
   }
@@ -16913,14 +16216,13 @@ const BOOTUI=window.ICHBoot||{prog(){},phase(){},step(){},done(){},fail(){},reve
       <p class="auth-switch only-up">Already have an account? <button type="button" class="linkbtn" data-go="in">Sign in</button></p>
     </div>
 
-    <button type="button" class="gh-teaser" id="ghTeaser" aria-haspopup="dialog">
+    <a class="gh-teaser" id="ghTeaser" href="https://github.com/AniItsukiCoded/readme/blob/main/readme.md" target="_blank" rel="noopener noreferrer">
       <span class="gh-top">
-        <span class="gh-ic">🎮</span>
-        <span class="gh-tx"><b>Game Hubs</b><small id="ghTeaserSub">Tap to see the game sites waiting inside</small></span>
-        <span class="gh-lock" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="3"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg></span>
+        <span class="gh-ic">🚀</span>
+        <span class="gh-tx"><b>Looking for the games?</b><small>They're in the launcher — tap for the official list</small></span>
+        <span class="gh-lock" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14 14 6M8 6h6v6"/></svg></span>
       </span>
-      <span class="gh-marquee" aria-hidden="true"><span class="gh-track" id="ghTrack"></span></span>
-    </button>
+    </a>
     </div>
   </div>
 </div>
@@ -16981,7 +16283,7 @@ const BOOTUI=window.ICHBoot||{prog(){},phase(){},step(){},done(){},fail(){},reve
       <button class="opt" id="goGlobal"><div class="ic">🌍</div><h3>Itsukis Chat</h3><p>Global chat and rooms</p><span class="badge hidden" id="annBadge"></span></button>
       <button class="opt" id="goDMs"><div class="ic">💬</div><h3>Itsuki DMs</h3><p>Private chats and friends</p><span class="badge hidden" id="dmBadge"></span></button>
       <button class="opt" id="goSettings"><div class="ic">⚙️</div><h3>Settings</h3><p>Style your chat and UI</p></button>
-      <button class="opt" id="goGameHubs"><div class="ic">🎮</div><h3>Hubs &amp; Tools</h3><p>Games, apps &amp; links</p></button>
+      <button class="opt" id="goGameHubs"><div class="ic">🚀</div><h3>Launchers</h3><p>Where the games live now</p></button>
     </div>
     <div class="home-foot">
       <button class="online-pill" id="homeOnlinePill" type="button" title="Everyone online across Itsuki's Chat, not just this room or DM"><span class="dot"></span><span id="onlineCount">0</span> online</button>

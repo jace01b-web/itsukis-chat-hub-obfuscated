@@ -20,13 +20,11 @@ const safe=t=>t.replace(/<\/script/gi,'<\\/script');            // keep inline <
 
 /* The same files, in the same order index.html's bootstrap actually RUNS them:
    anti-lag-boot before paint, then the "static late" extras (they are inserted and run while
-   loader.js is still waiting on the Firebase SDK), then the manifest's js list. hub-info.js in
-   particular has to come before games/game-hubs.js, which reads window.HUB_INFO at load. */
+   loader.js is still waiting on the Firebase SDK), then the manifest's js list. */
 const EARLY=['js/early/anti-lag-boot.js'];
 const LATE=[
-  'js/ui/auth-card-motion.js','js/games/hub-info.js','js/games/auth-hubs-preview.js',
-  'js/core/crash-catcher.js','js/ui/extras-download-launcher.js','js/ui/mobile-sidebar.js',
-  'js/features/voice-channel.js'
+  'js/ui/auth-card-motion.js','js/core/crash-catcher.js','js/ui/extras-download-launcher.js',
+  'js/ui/mobile-sidebar.js','js/features/voice-channel.js'
 ];
 const missing=[...EARLY,...LATE,...M.js.map(f=>'js/'+f),...M.css.map(f=>'css/'+f)]
   .filter(p=>!fs.existsSync(path.join(__dirname,p)));

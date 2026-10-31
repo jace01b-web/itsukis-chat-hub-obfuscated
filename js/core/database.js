@@ -1270,6 +1270,17 @@ const DB=(()=>{
       emit();
       return newName;
     },
+    /* Owner-only TOS acceptance log (tosLog/, written by /api/tos with the Admin SDK — see
+       SETUP-SECURITY.md). It holds the raw IP, so the rules let only owners read it, and it is
+       fetched on demand rather than watched: a non-owner's listener would just be denied. */
+    async tosLog(){
+      if(!isOwner(myId))throw new Error('Only owners can see the TOS log.');
+      const sn=await get(R('tosLog'));
+      const v=sn.val()||{};
+      return Object.keys(v).map(id=>({id:Number(id),...(v[id]||{})}))
+        .filter(r=>!isNaN(r.id))
+        .sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0));
+    },
     // Everyone whose mute has not expired yet, soonest to expire first.
     mutedIds(){const n=Date.now()+SKEW;return Object.keys(C.muted||{})
       .filter(k=>typeof C.muted[k]==='number'&&C.muted[k]>n)

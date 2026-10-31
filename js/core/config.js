@@ -44,7 +44,8 @@ const CFG={
   OWNER_IDS:[], // no longer used for permission checks — kept empty; owner status now comes live from owners/$id===1 in the database (see C.owners / isOwner()). Populate owners/$id there from your own backend, not here.
   SEND_COOLDOWN_MS:1500,
   // --- Terms of Service / IP ban / VPN gate (js/moderation/tos-gate.js + the /api functions) ---
-  TOS_VERSION:2,                  // bumped 1->2: every old (and any forged) TOS record is void, everybody re-accepts through the server
+  TOS_VERSION:3,                  // bumped 2->3 for the new logging: every older TOS record is void and everyone re-accepts.
+                                  // Keep this equal to TOS_VERSION in api/_lib.js (and to the TOS_VERSION env var, if you set one).
   TOS_API:'https://itsukis-chat-hub.vercel.app',   // where the /api functions are deployed. The Discord webhook now lives ONLY in the server env.
   ATTEST_EVERY_MS:4*60*1000,      // how often the browser asks the server to re-clear this login (server grants 8 min at a time)
   IP_BAN_FULL_LOCK:false,         // false = an IP-banned network can't CHAT. true = it is locked out of the whole menu like a banned account

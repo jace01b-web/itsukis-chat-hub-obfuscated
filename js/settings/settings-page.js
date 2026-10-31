@@ -1,6 +1,6 @@
 /* ==========================================================================
  * js/settings/settings-page.js
- * Settings page (Theme, Music, Pings, Hubs & Tools, Moderation, ...)
+ * Settings page (Theme, Music, Pings, Moderation, ...)
  * Loaded by js/loader.js (load order lives in js/manifest.js).
  * All js files share one global scope, so functions/consts here are visible to the others.
  * ========================================================================== */
@@ -316,6 +316,15 @@ function openSettings(fromChat){
           <span class="hint" id="modIpMsg" style="align-self:center"></span>
         </div>
         <div class="hint" style="margin-top:8px">Banned IPs can't chat (even on new accounts). Banning an account bans its logged IP automatically. IPv6 is banned by /64 network. On a shared network (like a school) this affects everyone on it, so unban when it's over. Owners and admins can both ban and unban.</div>
+      </div>`:''}
+      ${isOwner(ME.id)?`<div class="set-card">
+        <div class="section-h" style="margin-top:0">📄 TOS acceptances</div>
+        <div class="hint">Every account that accepted the Terms, newest first, with the IP the server saw. Only owners can read this — it is not posted to Discord any more.</div>
+        <div class="actions" style="justify-content:flex-start;margin-top:10px">
+          <button class="btn sec small" id="tosLogGo" type="button">Load log</button>
+          <span class="hint" id="tosLogMsg" style="align-self:center"></span>
+        </div>
+        <div id="tosLogList" style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;margin-top:10px"></div>
       </div>`:''}
       ${isOwner(ME.id)?`      <div class="set-card">
         <div class="section-h" style="margin-top:0">🚀 Version control</div>
@@ -758,6 +767,44 @@ function openSettings(fromChat){
     };
     renderMuteList();
     if($$('#modMuteList'))muteListTimer=setInterval(renderMuteList,1000);   // the countdowns tick
+    /* TOS acceptance log. Fetched on demand (owners only — the rules deny everyone else), and the
+       raw IP is shown with a copy button plus a one-click jump to the IP-ban field above it. */
+    $$('#tosLogGo')&&($$('#tosLogGo').onclick=async()=>{
+      const btn=$$('#tosLogGo'),msg=$$('#tosLogMsg'),box=$$('#tosLogList');
+      btn.disabled=true;btn.textContent='Loading\u2026';if(msg)msg.textContent='';
+      try{
+        const rows=await DB.tosLog();
+        btn.textContent='Refresh';
+        if(msg)msg.textContent=rows.length?(rows.length+' account'+(rows.length===1?'':'s')):'';
+        if(!rows.length){box.innerHTML='<div class="hint">Nothing yet. Records appear as people accept the new Terms.</div>';return}
+        box.innerHTML=rows.map(r=>{
+          const when=r.at?new Date(Number(r.at)).toLocaleString():'-';
+          return '<div class="list-row" style="display:block;padding:8px 10px">'+
+            '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
+              '<b>'+esc(r.name||'(unknown)')+'</b><span class="hint">#'+r.id+'</span>'+
+              '<code style="font-size:12px;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.07)">'+esc(r.ip||'-')+'</code>'+
+              '<button class="btn sec small" data-tos-copy="'+esc(r.ip||'')+'" type="button">Copy IP</button>'+
+              '<button class="btn sec small" data-tos-ban="'+esc(r.ip||'')+'" type="button">Use in IP ban</button>'+
+            '</div>'+
+            '<div class="hint" style="margin-top:4px">'+esc(when)+' \u00B7 TOS v'+esc(String(r.v||'?'))+
+              ' \u00B7 VPN: '+esc(r.vpn||'?')+(r.build?' \u00B7 build '+esc(r.build):'')+'</div>'+
+            (r.ua?'<div class="hint" style="margin-top:2px;word-break:break-word;opacity:.75">'+esc(r.ua)+'</div>':'')+
+          '</div>';
+        }).join('');
+        box.querySelectorAll('[data-tos-copy]').forEach(b=>b.onclick=()=>{
+          const ip=b.dataset.tosCopy;if(!ip)return;
+          try{navigator.clipboard.writeText(ip)}catch(_){}
+          b.textContent='Copied';setTimeout(()=>{b.textContent='Copy IP'},1400);
+        });
+        box.querySelectorAll('[data-tos-ban]').forEach(b=>b.onclick=()=>{
+          const f=$$('#modIpVal');if(!f||!b.dataset.tosBan)return;
+          f.value=b.dataset.tosBan;f.scrollIntoView({block:'center'});f.focus();
+        });
+      }catch(e){
+        btn.textContent='Load log';
+        if(msg)msg.textContent=(e&&e.message)||'Could not read it.';
+      }finally{btn.disabled=false}
+    });
     $$('#modBanGo')&&($$('#modBanGo').onclick=async()=>{
       const id=+$$('#modBanId').value;
       if(!id){toast('Enter a user ID','bad');return}

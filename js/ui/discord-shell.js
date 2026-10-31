@@ -45,7 +45,7 @@ const DiscordShell=(function(){
       {id:'vip',t:'VIP Lounge',ic:'💎',active:g&&sec==='vip'},
       ...(hasMvpPerks(ME.id)?[{id:'mvp',t:'MVP Lounge',ic:'🏆',active:g&&sec==='mvp',cls:'dl-rail-mvp'}]:[]),
       {sep:1},
-      {id:'hubs',t:'Hubs & Tools',ic:'🎮'},
+      {id:'hubs',t:'Launchers',ic:'🚀'},
       {id:'extras',t:'Extras',ic:EXTRAS_IC},
       {id:'gift',t:'Gift Nitro perks',ic:'🎁'},
       {sep:1},
@@ -251,7 +251,7 @@ const DiscordShell=(function(){
     const dcItem=sbItem('🔗','Our Discord',false,openDiscord);
     dcItem.classList.add('dl-sb-discord');
     list.appendChild(dcItem);
-    const hubItem=sbItem('🎮','Hubs & Tools',false,()=>modalGameHubs());
+    const hubItem=sbItem('🚀','Launchers',false,()=>modalGameHubs());
     list.appendChild(hubItem);
     foot.innerHTML='';
   }

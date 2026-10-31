@@ -1,7 +1,9 @@
 /* POST /api/tos  {idToken, id, version, build, bt}
  * Only called when someone presses "I accept". The SERVER reads their IP and writes tosAccepted/<id> (the browser is not allowed to),
- * then logs to your private Discord. A decline never reaches this file. If the Discord post can't be made the accept still counts,
- * but the log line is lost, so keep the webhook healthy. */
+ * then writes the full record - IP, browser, build - to tosLog/<id>, which ONLY owners can read (see database.rules.json).
+ * That replaced the Discord webhook: the log lives with the site instead of behind a webhook URL that anybody holding it can read.
+ * Note what goes where: tosAccepted/<id> is the receipt (version, time, IP *hash*) and is readable by the person and by staff;
+ * tosLog/<id> is the owner-only record and is the only place the raw IP is kept. A decline never reaches this file. */
 const L = require('./_lib');
 module.exports = async (req, res) => {
   if (L.cors(req, res)) return;
@@ -29,19 +31,17 @@ module.exports = async (req, res) => {
 
     const username = String((await L.adb('GET', 'users/' + id + '/username')) || '(unknown)');
     const at = Date.now();
-    await L.adb('PUT', 'tosAccepted/' + id, { v: L.TOS_VERSION, at, h, ip, srv: 1 });
+    // The receipt. No raw IP here any more - only the salted hash, which is what bans match on.
+    await L.adb('PUT', 'tosAccepted/' + id, { v: L.TOS_VERSION, at, h, srv: 1 });
     await L.adb('PATCH', 'ipSeen/' + id, { [h]: at });
-    await L.discord({ username: 'ICH TOS Log', embeds: [{
-      title: 'TOS accepted', color: 0x57f287,
-      fields: [
-        { name: 'Username', value: L.clean(username, 40) || '-', inline: true },
-        { name: 'Account ID', value: String(id), inline: true },
-        { name: 'IP', value: '`' + ip + '`', inline: false },
-        { name: 'VPN/proxy', value: v.checked ? 'no' : 'not checked', inline: true },
-        { name: 'TOS version', value: String(L.TOS_VERSION), inline: true },
-        { name: 'Build', value: L.clean(bc.build, 30), inline: true },
-        { name: 'Browser', value: L.clean(req.headers['user-agent'], 200) || '-', inline: false }
-      ], timestamp: new Date(at).toISOString() }] });
+    // The owner-only record, shown in Settings > Moderation > TOS acceptances.
+    await L.adb('PUT', 'tosLog/' + id, {
+      at, v: L.TOS_VERSION, ip, h,
+      name: L.clean(username, 40),
+      ua: L.clean(req.headers['user-agent'], 200),
+      build: L.clean(bc.build, 30),
+      vpn: v.checked ? 'clear' : 'not checked'
+    });
     L.send(res, 200, { ok: true });
   } catch (e) {
     L.send(res, 500, { error: 'Service unavailable. Try again in a minute.' });

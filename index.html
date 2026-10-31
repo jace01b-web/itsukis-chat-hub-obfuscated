@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-10-30.03">
+<meta name="build-version" content="2026-10-30.04">
 
 
 <title>Itsukis Chat Hub</title>
@@ -108,8 +108,8 @@ html.discord-look #loadingPage .ld-phase{color:#949ba4}
      that actually loads; the manifest copy is only documentation. Never list a file that does
      not exist in /css: a missing one costs 6 failed requests (2 CDNs x 3 rounds) before it gives up. */
   var CSS=["01-base","02-now-playing","03-form-controls","04-layout-background","05-auth-home-basics","06-chat","07-modals-pickers","08-overlays-friends","09-game-hubs","10-profile-cropper-composer","11-glass-theme","12-vip-spin","13-auth-page","14-extras-menu","15-anti-lag","16-rules-modal","17-halloween","18-music-profile-cosmetics","19-mobile-sidebar","20-voice-channel","22-discord-look","24-file-attachments","25-custom-roles"];
-  var JS=["js/loader.js","js/manifest.js","js/auth/auth.js","js/chat/attachments.js","js/chat/chat-header.js","js/chat/chat-view.js","js/chat/composer.js","js/ui/keyboard-shortcuts.js","js/chat/emoji-data.js","js/chat/emoji-picker.js","js/chat/live-sync.js","js/chat/messages.js","js/chat/pings.js","js/chat/text-and-media.js","js/chat/typing-indicator.js","js/core/auto-update.js","js/core/boot.js","js/core/config.js","js/core/crash-catcher.js","js/core/database.js","js/core/diagnostics.js","js/core/firebase-imports.js","js/core/firebase-init.js","js/chat/file-upload.js","js/core/helpers.js","js/core/name-styles.js","js/core/sound.js","js/core/state.js","js/early/anti-lag-boot.js","js/features/gift-promo.js","js/features/halloween.js","js/features/vip-and-spin.js","js/games/auth-hubs-preview.js","js/games/game-hubs.js","js/games/hub-info.js","js/moderation/bans.js","js/moderation/content-filter.js","js/moderation/nsfw-filter.js","js/moderation/roles.js","js/settings/account.js","js/settings/anti-lag.js","js/settings/appearance.js","js/settings/rules.js","js/settings/rules-check.js","js/moderation/tos-gate.js","js/settings/settings-page.js","js/social/friends.js","js/social/rooms.js","js/social/user-profile.js","js/tools/music-player.js","js/tools/now-playing.js","js/ui/auth-card-motion.js","js/ui/context-menu.js","js/ui/controls.js","js/ui/extras-menu.js","js/ui/extras-download-launcher.js","js/ui/home.js","js/ui/liquid-glass.js","js/ui/discord-shell.js","js/ui/modals.js","js/ui/navigation.js","js/ui/sidebar-toggle.js","js/ui/mobile-sidebar.js","js/features/voice-channel.js"];
-  var STATIC_LATE=["js/ui/auth-card-motion.js","js/games/hub-info.js","js/games/auth-hubs-preview.js","js/core/crash-catcher.js","js/loader.js","js/ui/extras-download-launcher.js","js/ui/mobile-sidebar.js","js/features/voice-channel.js"];
+  var JS=["js/loader.js","js/manifest.js","js/auth/auth.js","js/chat/attachments.js","js/chat/chat-header.js","js/chat/chat-view.js","js/chat/composer.js","js/ui/keyboard-shortcuts.js","js/chat/emoji-data.js","js/chat/emoji-picker.js","js/chat/live-sync.js","js/chat/messages.js","js/chat/pings.js","js/chat/text-and-media.js","js/chat/typing-indicator.js","js/core/auto-update.js","js/core/boot.js","js/core/config.js","js/core/crash-catcher.js","js/core/database.js","js/core/diagnostics.js","js/core/firebase-imports.js","js/core/firebase-init.js","js/chat/file-upload.js","js/core/helpers.js","js/core/name-styles.js","js/core/sound.js","js/core/state.js","js/early/anti-lag-boot.js","js/features/gift-promo.js","js/features/halloween.js","js/features/vip-and-spin.js","js/games/game-hubs.js","js/moderation/bans.js","js/moderation/content-filter.js","js/moderation/nsfw-filter.js","js/moderation/roles.js","js/settings/account.js","js/settings/anti-lag.js","js/settings/appearance.js","js/settings/rules.js","js/settings/rules-check.js","js/moderation/tos-gate.js","js/settings/settings-page.js","js/social/friends.js","js/social/rooms.js","js/social/user-profile.js","js/tools/music-player.js","js/tools/now-playing.js","js/ui/auth-card-motion.js","js/ui/context-menu.js","js/ui/controls.js","js/ui/extras-menu.js","js/ui/extras-download-launcher.js","js/ui/home.js","js/ui/liquid-glass.js","js/ui/discord-shell.js","js/ui/modals.js","js/ui/navigation.js","js/ui/sidebar-toggle.js","js/ui/mobile-sidebar.js","js/features/voice-channel.js"];
+  var STATIC_LATE=["js/ui/auth-card-motion.js","js/core/crash-catcher.js","js/loader.js","js/ui/extras-download-launcher.js","js/ui/mobile-sidebar.js","js/features/voice-channel.js"];
 
   function reveal(){BOOT.reveal()}
 
@@ -303,14 +303,13 @@ html.discord-look #loadingPage .ld-phase{color:#949ba4}
       <p class="auth-switch only-up">Already have an account? <button type="button" class="linkbtn" data-go="in">Sign in</button></p>
     </div>
 
-    <button type="button" class="gh-teaser" id="ghTeaser" aria-haspopup="dialog">
+    <a class="gh-teaser" id="ghTeaser" href="https://github.com/AniItsukiCoded/readme/blob/main/readme.md" target="_blank" rel="noopener noreferrer">
       <span class="gh-top">
-        <span class="gh-ic">🎮</span>
-        <span class="gh-tx"><b>Game Hubs</b><small id="ghTeaserSub">Tap to see the game sites waiting inside</small></span>
-        <span class="gh-lock" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="3"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg></span>
+        <span class="gh-ic">🚀</span>
+        <span class="gh-tx"><b>Looking for the games?</b><small>They're in the launcher — tap for the official list</small></span>
+        <span class="gh-lock" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14 14 6M8 6h6v6"/></svg></span>
       </span>
-      <span class="gh-marquee" aria-hidden="true"><span class="gh-track" id="ghTrack"></span></span>
-    </button>
+    </a>
     </div>
   </div>
 </div>
@@ -371,7 +370,7 @@ html.discord-look #loadingPage .ld-phase{color:#949ba4}
       <button class="opt" id="goGlobal"><div class="ic">🌍</div><h3>Itsukis Chat</h3><p>Global chat and rooms</p><span class="badge hidden" id="annBadge"></span></button>
       <button class="opt" id="goDMs"><div class="ic">💬</div><h3>Itsuki DMs</h3><p>Private chats and friends</p><span class="badge hidden" id="dmBadge"></span></button>
       <button class="opt" id="goSettings"><div class="ic">⚙️</div><h3>Settings</h3><p>Style your chat and UI</p></button>
-      <button class="opt" id="goGameHubs"><div class="ic">🎮</div><h3>Hubs &amp; Tools</h3><p>Games, apps &amp; links</p></button>
+      <button class="opt" id="goGameHubs"><div class="ic">🚀</div><h3>Launchers</h3><p>Where the games live now</p></button>
     </div>
     <div class="home-foot">
       <button class="online-pill" id="homeOnlinePill" type="button" title="Everyone online across Itsuki's Chat, not just this room or DM"><span class="dot"></span><span id="onlineCount">0</span> online</button>

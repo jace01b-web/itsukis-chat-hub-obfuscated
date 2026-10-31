@@ -7,7 +7,7 @@
  *   BUILD_SECRET         long random string, same one you give tools/stamp-build.js. Never commit it.
  * OPTIONAL:
  *   MIN_BUILD            oldest build label still allowed, e.g. 2026-10-20.02 (anything older is refused by the server)
- *   TOS_VERSION          default 2
+ *   TOS_VERSION          default 3 (if this env var is set, it WINS - raise it to 3 or delete it)
  *   VPN_API_KEY          free key from https://ipapi.is (VPN / proxy / Tor detection)
  *   VPN_FAIL_CLOSED      1 = if the VPN lookup is down, refuse chat. Default: allow.
  *   BLOCK_DATACENTER     1 = treat hosting / datacenter IPs as VPNs (can hit school filters)
@@ -18,7 +18,7 @@ const net = require('net');
 
 const DB_URL = (process.env.FIREBASE_DB_URL || 'https://itsuki-chat-default-rtdb.firebaseio.com').replace(/\/$/, '');
 const API_KEY = process.env.FIREBASE_API_KEY || 'AIzaSyCns_X-7DF2aQawb2Q3p4YsoaQmvBMuAgM';   // public web key, fine to keep here
-const TOS_VERSION = Number(process.env.TOS_VERSION || 2);
+const TOS_VERSION = Number(process.env.TOS_VERSION || 3);   // keep equal to CFG.TOS_VERSION in js/core/config.js
 const ATTEST_TTL_MS = 8 * 60 * 1000;
 
 function cors(req, res) {
