@@ -184,9 +184,9 @@ const DB=(()=>{
       checkBanLock(myId,C.banned);
     });
     listen('muted',v=>{C.muted=v||{};if(typeof updateMuteLock==='function')updateMuteLock();});
-    listen('owners',v=>{OWNERS_CACHE=v||{};OWNERS_LOADED=true;checkBanLock(myId,C.banned);checkForcedVersion();if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
+    listen('owners',v=>{OWNERS_CACHE=v||{};OWNERS_LOADED=true;checkBanLock(myId,C.banned);if(typeof checkForcedVersion==="function")checkForcedVersion();if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
     {const sid=myId;   // own entry only; a denied/missing read just means "not a secret owner"
-      const done=on=>{SECRET_OWNER_ID=on?sid:null;SECRET_LOADED=true;checkBanLock(myId,C.banned);checkForcedVersion();if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}if(ready)emit()};
+      const done=on=>{SECRET_OWNER_ID=on?sid:null;SECRET_LOADED=true;checkBanLock(myId,C.banned);if(typeof checkForcedVersion==="function")checkForcedVersion();if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}if(ready)emit()};
       unsubs.push(onValue(R('secretowner/'+sid),sn=>done(sn.val()===1),()=>done(false)));}
     listen('mods',v=>{MODS_CACHE=v||{};MODS_LOADED=true;});
     listen('admin',v=>{ADMINS_CACHE=v||{};ADMINS_LOADED=true;});
@@ -196,7 +196,7 @@ const DB=(()=>{
       if(ready)emit();
       if(typeof DiscordShell!=='undefined'){try{DiscordShell.refresh()}catch(_){}}
     });
-    listen('appVersion',v=>{APP_VERSION_CACHE=v||null;APP_VERSION_LOADED=true;checkForcedVersion();});
+    listen('appVersion',v=>{APP_VERSION_CACHE=v||null;APP_VERSION_LOADED=true;if(typeof checkForcedVersion==="function")checkForcedVersion();});
     listen('dmMembers',v=>C.dmMembers=v||{});
     listen('vip',v=>{C.vip=v||{};if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
     listen('mvp',v=>{C.mvp=(v&&typeof v==='object')?v:{};if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});

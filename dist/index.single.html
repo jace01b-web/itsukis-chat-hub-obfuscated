@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-10-30.05">
+<meta name="build-version" content="2026-10-31.04">
 
 
 <title>Itsukis Chat Hub</title>
@@ -4493,6 +4493,437 @@ html.discord-look .dl-server-head .dl-server-on{display:inline-flex;align-items:
 html.discord-look .dl-server-head .dl-server-on i{width:7px;height:7px;border-radius:50%;background:#23a559;flex:none}
 .dl-server-head .dl-server-on{display:none}   /* only meaningful in the Discord look's server header */
 
+/* ==========================================================================
+ * css/26-trick-or-treat.css
+ * Halloween 2026 — Trick or Treat event (js/features/trick-or-treat.js)
+ * Order matters (later files override earlier ones) - see js/manifest.js
+ * ========================================================================== */
+
+:root{--tot-o:#ff8a2b;--tot-o2:#ff5b1a;--tot-p:#8b5cf6;--tot-g:#4cd6a0}
+
+/* ---------- home tile ---------- */
+.opt.tot-opt{position:relative;overflow:hidden;
+  background:radial-gradient(120% 140% at 0% 0%,rgba(255,138,43,.26),transparent 62%),var(--ui-panel);
+  border-color:rgba(255,138,43,.45)}
+.opt.tot-opt:hover{border-color:rgba(255,138,43,.85)}
+.opt.tot-opt .ic{animation:totBob 2.6s ease-in-out infinite}
+.tot-opt-glow{position:absolute;inset:-40%;pointer-events:none;z-index:-1;
+  background:radial-gradient(circle at 50% 0%,rgba(255,138,43,.35),transparent 60%);animation:totPulse 3.2s ease-in-out infinite}
+@keyframes totBob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-5px) rotate(4deg)}}
+@keyframes totPulse{0%,100%{opacity:.5}50%{opacity:1}}
+.tot-live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#ff3b3b;margin-right:6px;
+  box-shadow:0 0 0 0 rgba(255,59,59,.7);animation:totBeat 1.6s ease-out infinite;vertical-align:middle}
+@keyframes totBeat{to{box-shadow:0 0 0 8px rgba(255,59,59,0)}}
+
+/* ---------- chat bar ---------- */
+.tot-bar{display:flex;align-items:center;gap:12px;width:calc(100% - 24px);margin:10px 12px 0;padding:10px 14px;
+  text-align:left;border-radius:14px;cursor:pointer;color:var(--text);
+  background:linear-gradient(100deg,rgba(255,138,43,.26),rgba(139,92,246,.18) 70%,rgba(255,138,43,.1));
+  border:1px solid rgba(255,138,43,.5);transition:transform .2s ease,box-shadow .2s ease}
+.tot-bar:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(255,138,43,.22)}
+.tot-bar-ic{font-size:22px;line-height:1;flex:none;animation:totBob 2.8s ease-in-out infinite}
+.tot-bar-tx{flex:1;min-width:0}
+.tot-bar-tx b{display:block;font-size:14px}
+.tot-bar-tx small{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+.tot-bar-go{flex:none;font-size:12px;font-weight:800;padding:5px 11px;border-radius:999px;
+  background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.14);white-space:nowrap}
+
+/* ---------- the panel ---------- */
+.tot-modal{max-width:620px}
+.tot-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-right:38px}   /* clear of the modal's own ✕ */
+.tot-title{display:flex;align-items:center;gap:12px}
+.tot-title h2{margin:0;font-size:22px}
+.tot-title small{display:block;margin-top:2px;font-size:12px;color:var(--muted)}
+.tot-pump{font-size:34px;line-height:1;animation:totBob 2.6s ease-in-out infinite}
+.tot-bucket{display:flex;align-items:baseline;gap:7px;padding:8px 14px;border-radius:14px;
+  background:linear-gradient(135deg,rgba(255,138,43,.26),rgba(255,91,26,.14));border:1px solid rgba(255,138,43,.5)}
+.tot-bucket span{font-size:18px}
+.tot-bucket b{font-size:21px;font-weight:900;font-variant-numeric:tabular-nums}
+.tot-bucket small{font-size:11px;color:var(--muted)}
+
+.tot-tabs{display:flex;gap:6px;margin:16px 0 14px;flex-wrap:wrap}
+.tot-tab{flex:1;min-width:84px;padding:8px 6px;border-radius:12px;font-size:12.5px;font-weight:700;color:var(--muted);white-space:nowrap;
+  background:rgba(255,255,255,.05);border:1px solid var(--border);cursor:pointer;transition:.15s}
+.tot-tab:hover{color:var(--text)}
+.tot-tab.on{color:#fff;background:linear-gradient(135deg,var(--tot-o),var(--tot-o2));border-color:transparent}
+
+/* ---------- street ---------- */
+.tot-street{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tot-door{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 8px 12px;
+  border-radius:16px;cursor:pointer;color:var(--text);border:1px solid var(--border);
+  background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(0,0,0,.18));
+  transition:transform .18s cubic-bezier(.16,1,.3,1),border-color .18s ease,box-shadow .18s ease;
+  animation:totRise .5s cubic-bezier(.16,1,.3,1) both;animation-delay:calc(var(--i) * .05s)}
+@keyframes totRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.tot-door:hover:not(:disabled){transform:translateY(-4px);border-color:rgba(255,138,43,.8);box-shadow:0 12px 26px rgba(255,138,43,.22)}
+.tot-door:disabled{opacity:.45;cursor:default}
+.tot-house{font-size:34px;line-height:1}
+.tot-knob{width:8px;height:8px;border-radius:50%;background:var(--tot-o);box-shadow:0 0 10px var(--tot-o)}
+.tot-knock-t{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.tot-door.knock{animation:totKnock .45s ease}
+@keyframes totKnock{0%,100%{transform:none}25%{transform:translateY(3px) scale(.97)}60%{transform:translateY(-6px) scale(1.03)}}
+
+.tot-res{display:flex;align-items:center;gap:13px;margin-top:14px;padding:14px 16px;border-radius:16px;
+  border:1px solid var(--border);background:var(--ui-panel2);min-height:74px}
+.tot-res.good{border-color:rgba(76,214,160,.5);background:linear-gradient(100deg,rgba(76,214,160,.16),transparent 70%)}
+.tot-res.bad{border-color:rgba(255,93,115,.5);background:linear-gradient(100deg,rgba(255,93,115,.16),transparent 70%)}
+.tot-res.jack{border-color:rgba(255,138,43,.85);background:linear-gradient(100deg,rgba(255,138,43,.3),rgba(139,92,246,.18) 80%)}
+.tot-res-ic{font-size:30px;line-height:1;flex:none}
+.tot-res-tx{flex:1;min-width:0}
+.tot-res-tx b{display:block;font-size:15px}
+.tot-res-tx small{display:block;margin-top:2px;font-size:12.5px;color:var(--muted)}
+.tot-res-n{flex:none;font-size:19px;font-weight:900;font-variant-numeric:tabular-nums}
+.tot-res.good .tot-res-n{color:var(--tot-g)}
+.tot-res.bad .tot-res-n{color:var(--danger)}
+.tot-res.pop{animation:totPop .4s cubic-bezier(.16,1.5,.3,1)}
+@keyframes totPop{from{transform:scale(.96)}to{transform:none}}
+
+.tot-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.tot-stats>div{padding:9px 10px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid var(--border);text-align:center}
+.tot-stats label{display:block;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.tot-stats b{display:block;margin-top:3px;font-size:15px;font-variant-numeric:tabular-nums}
+
+.tot-cd{position:relative;margin-top:12px;height:28px;border-radius:999px;overflow:hidden;
+  background:rgba(255,255,255,.06);border:1px solid var(--border)}
+.tot-cd i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--tot-o2),var(--tot-o));transition:width .25s linear}
+.tot-cd span{position:absolute;inset:0;display:grid;place-items:center;font-size:12px;font-weight:700}
+.tot-cd.ready i{background:linear-gradient(90deg,rgba(76,214,160,.5),rgba(76,214,160,.8))}
+
+/* ---------- leaderboard ---------- */
+.tot-final{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 14px;border-radius:14px;
+  background:rgba(255,255,255,.05);border:1px solid var(--border);margin-bottom:12px}
+.tot-final b{font-size:14px}
+.tot-final span{font-size:12.5px;color:var(--muted)}
+.tot-final.live b{color:#ff6b6b}
+.tot-board{display:flex;flex-direction:column;gap:6px;max-height:360px;overflow-y:auto}
+.tot-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;
+  background:rgba(255,255,255,.04);border:1px solid var(--border)}
+.tot-row.win{background:linear-gradient(100deg,rgba(255,138,43,.18),transparent 75%);border-color:rgba(255,138,43,.45)}
+.tot-row.me{outline:2px solid rgba(124,108,255,.65);outline-offset:-2px}
+.tot-pos{flex:none;width:30px;font-size:16px;font-weight:900;text-align:center}
+.tot-nm{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tot-nm em{font-style:normal;font-size:11.5px;color:var(--muted);font-weight:600}
+.tot-sub{flex:none;font-size:11.5px;color:var(--muted)}
+.tot-candy{flex:none;font-weight:900;font-variant-numeric:tabular-nums;min-width:86px;text-align:right}
+.tot-rw{flex:none}
+.tot-yours{margin-top:11px;font-size:13px;color:var(--muted)}
+.tot-yours b{color:var(--text)}
+.tot-ann{margin-top:12px;width:100%}
+.tot-empty{padding:26px 14px;text-align:center;color:var(--muted);font-size:13.5px}
+
+.tot-over{padding:26px 18px;text-align:center}
+.tot-over span{font-size:40px;display:block;margin-bottom:8px}
+.tot-over b{display:block;font-size:17px}
+.tot-over p{margin:6px auto 14px;max-width:340px;font-size:13px;line-height:1.55;color:var(--muted)}
+
+/* ---------- first-run popup ---------- */
+.tot-intro{max-width:480px;text-align:center;position:relative;overflow:hidden}
+.tot-intro-moon{position:absolute;right:-10px;top:-14px;font-size:70px;opacity:.14;pointer-events:none}
+.tot-intro-pump{font-size:52px;line-height:1;animation:totBob 2.6s ease-in-out infinite}
+.tot-intro h2{margin:8px 0 0;font-size:25px}
+.tot-intro-lead{margin:8px auto 0;max-width:380px;font-size:13.5px;line-height:1.6;color:var(--muted)}
+.tot-intro-lead b{color:var(--text)}
+.tot-intro-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:16px 0 14px;text-align:left}
+.tot-intro-grid>div{padding:11px 12px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid var(--border)}
+.tot-intro-grid span{font-size:20px;line-height:1}
+.tot-intro-grid b{display:block;margin-top:4px;font-size:13.5px}
+.tot-intro-grid small{display:block;margin-top:2px;font-size:11.5px;line-height:1.4;color:var(--muted)}
+.tot-intro-end{font-size:13px;margin-bottom:4px}
+.tot-intro-end b{color:var(--tot-o)}
+.tot-intro .actions{justify-content:center}
+
+@media(max-width:560px){
+  .tot-street{grid-template-columns:repeat(2,1fr)}
+  .tot-stats{grid-template-columns:repeat(2,1fr)}
+  .tot-intro-grid{grid-template-columns:1fr}
+  .tot-sub{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .tot-pump,.tot-bar-ic,.opt.tot-opt .ic,.tot-opt-glow,.tot-live-dot,.tot-intro-pump,.tot-door{animation:none!important}
+}
+
+/* Discord look: flatter, squarer, same colours */
+html.discord-look .tot-bar{border-radius:8px}
+html.discord-look .tot-door,html.discord-look .tot-res,
+html.discord-look .tot-row,html.discord-look .tot-stats>div{border-radius:8px;background:var(--dl-bg3);border-color:transparent}
+html.discord-look .tot-tab{border-radius:4px;background:var(--dl-bg3);border-color:transparent}
+html.discord-look .tot-bucket{border-radius:8px}
+
+/* ==========================================================================
+ * Minigames, shop, achievements, doorbell bonus
+ * ========================================================================== */
+
+/* ---------- doorbell bonus ---------- */
+.tot-bonus{width:100%;margin-top:10px;padding:11px;border-radius:14px;font-size:13.5px;font-weight:800;
+  color:var(--muted);background:rgba(255,255,255,.05);border:1px dashed var(--border);cursor:default}
+.tot-bonus.ready{color:#fff;cursor:pointer;border-style:solid;border-color:transparent;
+  background:linear-gradient(135deg,#4cd6a0,#2a9d78);animation:totGlow 1.8s ease-in-out infinite}
+@keyframes totGlow{0%,100%{box-shadow:0 0 0 0 rgba(76,214,160,.5)}50%{box-shadow:0 0 0 7px rgba(76,214,160,0)}}
+
+/* ---------- minigame list ---------- */
+.tot-games{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.tot-game{display:flex;align-items:center;gap:13px;padding:13px 15px;border-radius:16px;cursor:pointer;
+  text-align:left;color:var(--text);border:1px solid var(--border);background:var(--ui-panel2);transition:.16s}
+.tot-game:hover:not(:disabled){transform:translateY(-2px);border-color:rgba(255,138,43,.7)}
+.tot-game:disabled{opacity:.5;cursor:default}
+.tot-game-ic{font-size:27px;line-height:1;flex:none}
+.tot-game-tx{flex:1;min-width:0}
+.tot-game-tx b{display:block;font-size:14.5px}
+.tot-game-tx small{display:block;margin-top:2px;font-size:12px;color:var(--muted)}
+.tot-game-hi{flex:none;font-size:11.5px;font-weight:700;color:var(--muted);white-space:nowrap}
+.tot-gamecd{margin-top:10px;text-align:center;font-size:12.5px;font-weight:700;color:var(--muted)}
+.tot-gamecd.ready{color:var(--tot-g)}
+
+/* ---------- a running game ---------- */
+#totGameHost.playing{margin-top:12px}
+.totg{padding:14px;border-radius:18px;border:1px solid rgba(255,138,43,.45);
+  background:radial-gradient(120% 120% at 50% 0%,rgba(255,138,43,.14),transparent 60%),var(--ui-bg2)}
+.totg-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.totg-head b{font-size:15px}
+.totg-head small{display:block;margin-top:1px;font-size:12px;color:var(--muted)}
+.totg-score{flex:none;font-size:12px;color:var(--muted)}
+.totg-score b{display:block;font-size:20px;color:var(--text);text-align:right;font-variant-numeric:tabular-nums}
+.totg-time{position:relative;height:8px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08);margin-bottom:12px}
+.totg-time i{display:block;height:100%;width:100%;background:linear-gradient(90deg,var(--tot-o2),var(--tot-o))}
+.totg-time span{position:absolute;right:6px;top:-18px;font-size:11px;font-weight:800;color:var(--muted)}
+
+/* smash */
+.totg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.totg-hole{position:relative;aspect-ratio:1/1;border-radius:16px;cursor:pointer;overflow:hidden;
+  border:1px solid var(--border);background:radial-gradient(70% 70% at 50% 110%,rgba(0,0,0,.5),rgba(255,255,255,.05))}
+.totg-pop{position:absolute;inset:0;display:grid;place-items:center;font-size:34px;
+  transform:translateY(110%);transition:transform .13s ease-out}
+.totg-hole.up .totg-pop{transform:translateY(0)}
+.totg-hole.hit .totg-pop{transform:scale(1.4) rotate(14deg);opacity:0;transition:.14s}
+.totg-hole.ghost.up{border-color:rgba(160,170,255,.5)}
+.totg-hole.bad{animation:totShake .22s}
+@keyframes totShake{0%,100%{transform:none}30%{transform:translateX(-5px)}70%{transform:translateX(5px)}}
+
+/* catch */
+.totg-field{position:relative;height:230px;border-radius:16px;overflow:hidden;touch-action:none;cursor:crosshair;
+  background:linear-gradient(180deg,rgba(139,92,246,.14),rgba(0,0,0,.28));border:1px solid var(--border)}
+.totg-fall{position:absolute;top:0;font-size:24px;transform:translateX(-50%);will-change:top}
+.totg-fall.caught{transform:translateX(-50%) scale(1.6);opacity:0;transition:.18s}
+.totg-bucket{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);font-size:34px;
+  transition:transform .08s ease-out;pointer-events:none;z-index:2}
+.totg-bucket.got{transform:translateX(-50%) scale(1.22)}
+.totg-bucket.oof{transform:translateX(-50%) rotate(-16deg)}
+.totg-hint{margin-top:7px;text-align:center;font-size:11.5px;color:var(--muted)}
+
+/* memory */
+.totg-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.totg-card{position:relative;aspect-ratio:3/4;border-radius:13px;cursor:pointer;border:1px solid var(--border);
+  background:transparent;transform-style:preserve-3d;transition:transform .28s}
+.totg-card.on,.totg-card.done{transform:rotateY(180deg)}
+.totg-back,.totg-face{position:absolute;inset:0;display:grid;place-items:center;border-radius:13px;
+  backface-visibility:hidden;-webkit-backface-visibility:hidden;font-size:26px}
+.totg-back{background:linear-gradient(160deg,rgba(255,138,43,.3),rgba(139,92,246,.2));border:1px solid rgba(255,138,43,.4)}
+.totg-face{transform:rotateY(180deg);background:rgba(255,255,255,.08);border:1px solid var(--border)}
+.totg-card.done .totg-face{background:rgba(76,214,160,.2);border-color:rgba(76,214,160,.5)}
+
+/* finished */
+.totg-done{padding:24px 14px;text-align:center}
+.totg-done span{font-size:40px;display:block}
+.totg-done b{display:block;margin-top:6px;font-size:22px;color:var(--tot-g)}
+.totg-done small{display:block;margin-top:2px;font-size:12.5px;color:var(--muted)}
+.totg-done .btn{margin-top:14px}
+
+/* ---------- shop ---------- */
+.tot-shop{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.tot-item{display:flex;align-items:center;gap:13px;padding:13px 15px;border-radius:16px;
+  border:1px solid var(--border);background:var(--ui-panel2)}
+.tot-item.owned{border-color:rgba(76,214,160,.5);background:linear-gradient(100deg,rgba(76,214,160,.12),transparent 70%)}
+.tot-item-ic{font-size:26px;line-height:1;flex:none}
+.tot-item-tx{flex:1;min-width:0}
+.tot-item-tx b{display:block;font-size:14.5px}
+.tot-item-tx small{display:block;margin-top:2px;font-size:12px;line-height:1.45;color:var(--muted)}
+.tot-item .btn{flex:none;white-space:nowrap}
+
+/* ---------- achievements ---------- */
+.tot-ach-h{margin:18px 0 8px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.tot-ach-h span{float:right;letter-spacing:0;text-transform:none;font-weight:700}
+.tot-ach{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.tot-ach-i{padding:9px 7px;border-radius:12px;text-align:center;border:1px solid var(--border);
+  background:rgba(255,255,255,.04);opacity:.42;filter:grayscale(1)}
+.tot-ach-i.on{opacity:1;filter:none;border-color:rgba(255,138,43,.55);background:rgba(255,138,43,.12)}
+.tot-ach-i span{font-size:21px;line-height:1}
+.tot-ach-i b{display:block;margin-top:3px;font-size:11px}
+.tot-ach-i small{display:none}
+
+@media(max-width:560px){
+  .tot-ach{grid-template-columns:repeat(3,1fr)}
+  .totg-cards{grid-template-columns:repeat(3,1fr)}
+  .totg-field{height:200px}
+  .tot-game-hi{display:none}
+}
+@media(prefers-reduced-motion:reduce){.tot-bonus.ready{animation:none}}
+html.discord-look .totg,html.discord-look .tot-game,html.discord-look .tot-item,
+html.discord-look .totg-hole,html.discord-look .totg-field,html.discord-look .tot-ach-i{border-radius:8px}
+
+/* While a game is running it gets the whole panel — the list and the hint would just push it
+   off the bottom of the modal. */
+#totBody:has(#totGameHost.playing) .tot-games,
+#totBody:has(#totGameHost.playing) .tot-gamecd,
+#totBody:has(#totGameHost.playing)>.hint{display:none}
+#totGameHost.playing{margin-top:0}
+@media(max-width:560px){.tot-tab{min-width:0;flex:1 1 30%}}
+
+/* ---------- Spooky Typer ---------- */
+.totg-word{margin:6px 0 12px;padding:18px 12px;border-radius:14px;text-align:center;
+  font-size:30px;font-weight:900;letter-spacing:.04em;
+  background:rgba(255,255,255,.05);border:1px solid var(--border)}
+.totg-word.hit{animation:totgHit .3s ease}
+.totg-word.miss{animation:totShake .25s ease;border-color:rgba(255,93,115,.7)}
+@keyframes totgHit{0%{transform:scale(1)}40%{transform:scale(1.08);color:var(--tot-g)}100%{transform:scale(1)}}
+.totg-input{width:100%;padding:13px 15px;border-radius:13px;font-size:18px;font-weight:700;text-align:center;
+  background:var(--ui-bg2);border:1px solid var(--border);color:var(--text)}
+.totg-input:focus{outline:none;border-color:var(--tot-o)}
+
+/* ---------- Steady Hand ---------- */
+.totg-steady{padding:6px 0 2px}
+.totg-track{position:relative;height:46px;border-radius:13px;overflow:hidden;
+  background:linear-gradient(180deg,rgba(0,0,0,.3),rgba(255,255,255,.05));border:1px solid var(--border)}
+.totg-zone{position:absolute;top:0;bottom:0;background:linear-gradient(180deg,rgba(76,214,160,.45),rgba(76,214,160,.2));
+  border-left:2px solid var(--tot-g);border-right:2px solid var(--tot-g);transition:background .2s}
+.totg-zone.ok{background:rgba(76,214,160,.75)}
+.totg-zone.no{background:rgba(255,93,115,.6);border-color:var(--danger)}
+.totg-marker{position:absolute;top:50%;transform:translate(-50%,-50%);font-size:26px;z-index:2;will-change:left}
+.totg-rounds{display:flex;gap:6px;justify-content:center;margin-top:11px}
+.totg-rounds i{width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,.14)}
+.totg-rounds i.hit{background:var(--tot-g)}
+.totg-rounds i.miss{background:var(--danger)}
+
+/* Steady Hand's big stop button. Size only — the colour comes from the site's own primary
+   button so it matches every other one. */
+.btn.totg-stop{width:100%;margin-top:11px;padding:13px;font-size:15px}
+.btn.totg-stop:disabled{opacity:.5;cursor:default}
+
+/* ---------- Candy Rain banner ---------- */
+.tot-rain{display:flex;align-items:center;gap:12px;margin:0 0 12px;padding:11px 14px;border-radius:14px;
+  border:1px solid var(--border);background:var(--ui-panel2)}
+.tot-rain b{display:block;font-size:14px}
+.tot-rain small{display:block;margin-top:1px;font-size:12.5px;color:var(--muted)}
+.tot-rain-ic{font-size:26px;line-height:1}
+.tot-rain.on{border-color:rgba(109,180,255,.6);
+  background:linear-gradient(100deg,rgba(109,180,255,.22),rgba(139,92,246,.16) 60%,transparent);
+  animation:totRainPulse 1.9s ease-in-out infinite}
+.tot-rain.on b{color:#bfe0ff;letter-spacing:.3px}
+.tot-rain.on .tot-rain-ic{animation:totRainDrop 1.2s ease-in-out infinite}
+@keyframes totRainPulse{0%,100%{box-shadow:0 0 0 0 rgba(109,180,255,0)}50%{box-shadow:0 0 22px 0 rgba(109,180,255,.4)}}
+@keyframes totRainDrop{0%,100%{transform:translateY(0)}50%{transform:translateY(3px)}}
+.tot-live-dot.rain{background:#6db4ff;box-shadow:0 0 0 0 rgba(109,180,255,.7)}
+.tot-bar.raining{border-color:rgba(109,180,255,.55);
+  background:linear-gradient(100deg,rgba(109,180,255,.2),rgba(139,92,246,.14) 60%,transparent)}
+
+/* ---------- the haunted house pick ---------- */
+.tot-res.haunt{display:block;border-color:rgba(139,92,246,.5);
+  background:linear-gradient(140deg,rgba(139,92,246,.18),transparent 70%)}
+.tot-haunt b{display:block;font-size:15px}
+.tot-haunt small{display:block;margin-top:2px;font-size:12.5px;color:var(--muted)}
+.tot-rooms{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:11px}
+.tot-room{display:flex;flex-direction:column;align-items:center;gap:3px;padding:14px 8px;border-radius:14px;
+  cursor:pointer;color:var(--text);border:1px solid var(--border);background:rgba(255,255,255,.05);transition:.15s}
+.tot-room:hover:not(:disabled){border-color:var(--tot-p);transform:translateY(-2px)}
+.tot-room span{font-size:28px;line-height:1}
+.tot-room em{font-style:normal;font-size:12.5px;color:var(--muted)}
+.tot-room i{font-style:normal;font-size:13px;font-weight:800;color:var(--muted)}
+.tot-room.shown{opacity:.5}
+.tot-room.took{border-color:var(--tot-g);background:linear-gradient(160deg,rgba(76,214,160,.24),transparent)}
+.tot-room.took i{color:var(--tot-g)}
+.tot-room:disabled{cursor:default}
+
+/* ---------- challenges ---------- */
+.tot-tab{position:relative}
+.tot-dot{display:none}
+.tot-dot.on{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;
+  margin-left:5px;padding:0 4px;border-radius:9px;font-style:normal;font-size:11px;font-weight:800;
+  color:#1a0f00;background:var(--tot-g)}
+.tot-quests{display:flex;flex-direction:column;gap:8px}
+.tot-q{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:14px;
+  border:1px solid var(--border);background:var(--ui-panel2)}
+.tot-q-ic{font-size:24px;line-height:1}
+.tot-q-tx{flex:1;min-width:0}
+.tot-q-tx b{display:block;font-size:14px}
+.tot-q-tx small{display:block;font-size:12.5px;color:var(--muted)}
+.tot-q-bar{display:block;height:5px;margin-top:6px;border-radius:3px;overflow:hidden;
+  background:rgba(255,255,255,.08)}
+.tot-q-bar i{display:block;height:100%;border-radius:3px;
+  background:linear-gradient(90deg,var(--tot-o2),var(--tot-o));transition:width .3s}
+.tot-q.ready{border-color:var(--tot-g);background:linear-gradient(100deg,rgba(76,214,160,.16),transparent 70%)}
+.tot-q.ready .tot-q-bar i{background:linear-gradient(90deg,var(--tot-g),#7ef0c4)}
+.tot-q.done{opacity:.62}
+.tot-q.done .tot-q-bar i{background:rgba(255,255,255,.25)}
+
+/* ---------- costumes ---------- */
+.tot-fits{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.tot-fit{display:flex;flex-direction:column;align-items:center;gap:3px;padding:13px 8px;border-radius:14px;
+  cursor:pointer;color:var(--text);border:1px solid var(--border);background:rgba(255,255,255,.05);transition:.15s}
+.tot-fit:hover{border-color:rgba(255,138,43,.6);transform:translateY(-2px)}
+.tot-fit span{font-size:28px;line-height:1;filter:grayscale(1) opacity(.55)}
+.tot-fit b{font-size:12.5px;text-align:center;line-height:1.2}
+.tot-fit small{font-size:11.5px;color:var(--muted)}
+.tot-fit.have span{filter:none}
+.tot-fit.on{border-color:var(--tot-o);background:linear-gradient(160deg,rgba(255,138,43,.24),rgba(255,91,26,.1))}
+.tot-fit.on small{color:var(--tot-o);font-weight:700}
+.tot-fit-ic{font-size:15px}
+
+/* ---------- Street Dash ---------- */
+.totg-dash{position:relative;height:150px;margin-top:10px;border-radius:14px;overflow:hidden;cursor:pointer;
+  border:1px solid var(--border);touch-action:manipulation;user-select:none;
+  background:linear-gradient(180deg,rgba(139,92,246,.16),rgba(0,0,0,.25) 72%)}
+.totg-dash::after{content:'';position:absolute;left:0;right:0;bottom:22px;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent)}
+.totg-runner{position:absolute;left:34px;bottom:24px;font-size:26px;line-height:1;z-index:2;
+  transition:none;will-change:transform}
+.totg-runner.air{filter:drop-shadow(0 6px 5px rgba(0,0,0,.45))}
+.totg-obs{position:absolute;bottom:24px;font-size:20px;line-height:1;will-change:left}
+.totg-dash.crash{animation:totShake .4s}
+@keyframes totShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+
+/* ---------- Potion Brew ---------- */
+.totg-potion{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.totg-potion.bad{animation:totShake .4s}
+.totg-ing{padding:20px 8px;border-radius:16px;font-size:30px;line-height:1;cursor:pointer;
+  color:var(--text);border:1px solid var(--border);background:rgba(255,255,255,.05);transition:.12s}
+.totg-ing:hover:not(:disabled){border-color:rgba(255,138,43,.6)}
+.totg-ing:disabled{cursor:default;opacity:.75}
+.totg-ing.lit{border-color:var(--tot-o);background:linear-gradient(160deg,rgba(255,138,43,.5),rgba(255,91,26,.25));
+  transform:scale(1.06);box-shadow:0 0 20px rgba(255,138,43,.5)}
+.totg-step{margin-top:11px;text-align:center;font-size:14px;font-weight:700;color:var(--muted)}
+
+/* ---------- Ghost Rush ---------- */
+.totg-boo{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  width:100%;height:150px;margin-top:12px;border-radius:16px;cursor:pointer;color:var(--text);
+  border:1px solid var(--border);transition:background .08s,border-color .08s;user-select:none}
+.totg-boo b{font-size:30px;line-height:1.1}
+.totg-boo small{font-size:13px;color:var(--muted)}
+.totg-boo.waiting{background:rgba(255,255,255,.04)}
+.totg-boo.go{border-color:var(--tot-g);background:linear-gradient(160deg,rgba(76,214,160,.4),rgba(76,214,160,.15))}
+.totg-boo.go b{color:#eafff6;letter-spacing:2px}
+.totg-boo.done{border-color:var(--tot-o);background:linear-gradient(160deg,rgba(255,138,43,.26),transparent)}
+
+/* ---------- Odd One Out ---------- */
+.totg-odd{display:grid;grid-template-columns:repeat(var(--n,3),1fr);gap:6px;margin-top:12px}
+.totg-cell{aspect-ratio:1;display:grid;place-items:center;border-radius:10px;cursor:pointer;
+  font-size:clamp(14px,5vw,26px);line-height:1;color:var(--text);
+  border:1px solid var(--border);background:rgba(255,255,255,.05);transition:.1s}
+.totg-cell:hover{border-color:rgba(255,138,43,.6)}
+.totg-cell.yes{border-color:var(--tot-g);background:rgba(76,214,160,.3);transform:scale(.9)}
+.totg-cell.no{border-color:rgba(255,93,115,.6);animation:totShake .3s}
+
+@media(max-width:560px){
+  .tot-fits{grid-template-columns:repeat(2,1fr)}
+  .totg-dash{height:128px}
+  .totg-boo{height:128px}
+  .totg-boo b{font-size:25px}
+}
+html.discord-look .tot-rain,html.discord-look .tot-q,html.discord-look .tot-room,
+html.discord-look .tot-fit,html.discord-look .totg-dash,html.discord-look .totg-boo,
+html.discord-look .totg-ing,html.discord-look .totg-cell{border-radius:8px}
+@media(prefers-reduced-motion:reduce){
+  .tot-rain.on,.tot-rain.on .tot-rain-ic,.totg-dash.crash,.totg-potion.bad,.totg-cell.no{animation:none}
+}
+
 </style>
 <script>
 /* ==========================================================================
@@ -7101,9 +7532,9 @@ const DB=(()=>{
       checkBanLock(myId,C.banned);
     });
     listen('muted',v=>{C.muted=v||{};if(typeof updateMuteLock==='function')updateMuteLock();});
-    listen('owners',v=>{OWNERS_CACHE=v||{};OWNERS_LOADED=true;checkBanLock(myId,C.banned);checkForcedVersion();if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
+    listen('owners',v=>{OWNERS_CACHE=v||{};OWNERS_LOADED=true;checkBanLock(myId,C.banned);if(typeof checkForcedVersion==="function")checkForcedVersion();if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
     {const sid=myId;   // own entry only; a denied/missing read just means "not a secret owner"
-      const done=on=>{SECRET_OWNER_ID=on?sid:null;SECRET_LOADED=true;checkBanLock(myId,C.banned);checkForcedVersion();if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}if(ready)emit()};
+      const done=on=>{SECRET_OWNER_ID=on?sid:null;SECRET_LOADED=true;checkBanLock(myId,C.banned);if(typeof checkForcedVersion==="function")checkForcedVersion();if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}if(ready)emit()};
       unsubs.push(onValue(R('secretowner/'+sid),sn=>done(sn.val()===1),()=>done(false)));}
     listen('mods',v=>{MODS_CACHE=v||{};MODS_LOADED=true;});
     listen('admin',v=>{ADMINS_CACHE=v||{};ADMINS_LOADED=true;});
@@ -7113,7 +7544,7 @@ const DB=(()=>{
       if(ready)emit();
       if(typeof DiscordShell!=='undefined'){try{DiscordShell.refresh()}catch(_){}}
     });
-    listen('appVersion',v=>{APP_VERSION_CACHE=v||null;APP_VERSION_LOADED=true;checkForcedVersion();});
+    listen('appVersion',v=>{APP_VERSION_CACHE=v||null;APP_VERSION_LOADED=true;if(typeof checkForcedVersion==="function")checkForcedVersion();});
     listen('dmMembers',v=>C.dmMembers=v||{});
     listen('vip',v=>{C.vip=v||{};if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
     listen('mvp',v=>{C.mvp=(v&&typeof v==='object')?v:{};if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
@@ -14801,6 +15232,1237 @@ function csInjectAccount(){
 /* HALLOWEEN:END */
 
 /* ==========================================================================
+ * js/features/trick-or-treat-games.js
+ * Halloween 2026 — the nine minigames inside Trick or Treat.
+ *
+ * Each game gets a host element and a done(score) callback; js/features/trick-or-treat.js owns the
+ * scoring, the cooldown and the saving. Everything is plain DOM (no canvas), so it works the same
+ * on a school Chromebook as on a phone.
+ * Loaded by js/loader.js (load order lives in js/manifest.js) — before trick-or-treat.js.
+ * ========================================================================== */
+'use strict';
+
+/* shared helpers -------------------------------------------------------- */
+function totgClear(t){t.forEach(x=>{try{clearInterval(x);clearTimeout(x);cancelAnimationFrame(x)}catch(_){}})}
+function totgCountdown(host,secs,onEnd){
+  const bar=host.querySelector('.totg-time i'),tx=host.querySelector('.totg-time span');
+  const t0=performance.now(),dur=secs*1000;
+  let raf=0;
+  (function step(){
+    const left=Math.max(0,dur-(performance.now()-t0));
+    if(bar)bar.style.width=(left/dur*100)+'%';
+    if(tx)tx.textContent=(left/1000).toFixed(1)+'s';
+    if(left<=0){onEnd();return}
+    raf=requestAnimationFrame(step);
+  })();
+  return()=>cancelAnimationFrame(raf);
+}
+const totgShell=(title,sub,body)=>`
+  <div class="totg">
+    <div class="totg-head"><div><b>${title}</b><small>${sub}</small></div>
+      <div class="totg-score">Score <b id="totgScore">0</b></div></div>
+    <div class="totg-time"><i></i><span></span></div>
+    ${body}
+  </div>`;
+const totgSetScore=n=>{const e=document.getElementById('totgScore');if(e)e.textContent=n};
+
+/* ---------------------------------------------------------------- 1. SMASH
+   Whack-a-mole. Pumpkins are worth a point, ghosts take one away. 16 seconds. */
+function totgSmash(host,done){
+  const HOLES=9;
+  host.innerHTML=totgShell('🔨 Pumpkin Smash','Hit the pumpkins. Leave the ghosts alone.',
+    `<div class="totg-grid">${Array.from({length:HOLES},(_,i)=>`<button type="button" class="totg-hole" data-h="${i}"><span class="totg-pop"></span></button>`).join('')}</div>`);
+  let score=0,alive=true;const timers=[];
+  const holes=[...host.querySelectorAll('.totg-hole')];
+  function spawn(){
+    if(!alive)return;
+    const free=holes.filter(h=>!h.classList.contains('up'));
+    if(free.length){
+      const h=free[Math.floor(Math.random()*free.length)];
+      const ghost=Math.random()<0.3;
+      const pop=h.querySelector('.totg-pop');
+      pop.textContent=ghost?'👻':'🎃';
+      h.classList.add('up');h.classList.toggle('ghost',ghost);
+      h.dataset.ghost=ghost?'1':'';
+      const up=setTimeout(()=>{h.classList.remove('up','hit');},ghost?950:820);
+      timers.push(up);
+    }
+    timers.push(setTimeout(spawn,Math.max(320,700-score*12)));
+  }
+  holes.forEach(h=>h.onclick=()=>{
+    if(!alive||!h.classList.contains('up')||h.classList.contains('hit'))return;
+    h.classList.add('hit');
+    if(h.dataset.ghost){score=Math.max(0,score-1);h.classList.add('bad')}
+    else score++;
+    totgSetScore(score);
+    setTimeout(()=>{h.classList.remove('up','hit','bad')},140);
+  });
+  timers.push(setTimeout(spawn,500));
+  const stop=totgCountdown(host,16,()=>{alive=false;totgClear(timers);stop();done(score)});
+  return()=>{alive=false;totgClear(timers);stop()};
+}
+
+/* ---------------------------------------------------------------- 2. CATCH
+   Move the bucket, catch the sweets, dodge the bombs. 20 seconds. */
+function totgCatch(host,done){
+  host.innerHTML=totgShell('🧺 Candy Catch','Move to catch. Bombs cost you two.',
+    `<div class="totg-field" id="totgField"><div class="totg-bucket" id="totgBucket">🧺</div></div>
+     <div class="totg-hint">Move your mouse or drag across the field</div>`);
+  const field=host.querySelector('#totgField'),bucket=host.querySelector('#totgBucket');
+  let score=0,alive=true,bx=0.5;const items=[];const timers=[];
+  const GOOD=['🍬','🍫','🍭','🍪'];
+  function place(e){
+    const r=field.getBoundingClientRect();
+    const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+    bx=Math.max(0,Math.min(1,x/r.width));
+    bucket.style.left=(bx*100)+'%';
+  }
+  field.addEventListener('mousemove',place);
+  field.addEventListener('touchmove',e=>{place(e);e.preventDefault()},{passive:false});
+  function spawn(){
+    if(!alive)return;
+    const bomb=Math.random()<0.22;
+    const el=document.createElement('div');
+    el.className='totg-fall'+(bomb?' bomb':'');
+    el.textContent=bomb?'💣':GOOD[Math.floor(Math.random()*GOOD.length)];
+    el.dataset.x=Math.random().toFixed(3);
+    el.style.left=(el.dataset.x*100)+'%';
+    el.dataset.y='0';
+    field.appendChild(el);
+    items.push(el);
+    timers.push(setTimeout(spawn,Math.max(230,460-score*6)));
+  }
+  let raf=0,last=performance.now();
+  (function loop(t){
+    if(!alive)return;
+    const dt=Math.min(50,t-last);last=t;
+    const h=field.clientHeight||220;
+    for(let i=items.length-1;i>=0;i--){
+      const el=items[i];
+      let y=Number(el.dataset.y)+dt*0.00042;          // fraction of the field per ms
+      el.dataset.y=y;el.style.top=(y*100)+'%';
+      if(y>=0.80&&y<=0.97&&!el.dataset.done){
+        if(Math.abs(Number(el.dataset.x)-bx)<0.11){
+          el.dataset.done='1';
+          if(el.classList.contains('bomb')){score=Math.max(0,score-2);bucket.classList.add('oof')}
+          else{score++;bucket.classList.add('got')}
+          totgSetScore(score);
+          el.classList.add('caught');
+          setTimeout(()=>bucket.classList.remove('got','oof'),180);
+          setTimeout(()=>el.remove(),180);
+          items.splice(i,1);continue;
+        }
+      }
+      if(y>1.05){el.remove();items.splice(i,1)}
+    }
+    raf=requestAnimationFrame(loop);
+  })(last);
+  timers.push(setTimeout(spawn,400));
+  const stop=totgCountdown(host,20,()=>{alive=false;cancelAnimationFrame(raf);totgClear(timers);stop();done(score)});
+  return()=>{alive=false;cancelAnimationFrame(raf);totgClear(timers);stop()};
+}
+
+/* --------------------------------------------------------------- 3. MEMORY
+   Six pairs. The faster you clear it, the bigger the payout. */
+function totgMemory(host,done){
+  const FACES=['🎃','👻','🦇','🕷️','🍬','💀'];
+  const deck=FACES.concat(FACES).map(f=>({f,k:Math.random()})).sort((a,b)=>a.k-b.k);
+  host.innerHTML=totgShell('🃏 Haunted Memory','Match all six pairs. Faster is worth more.',
+    `<div class="totg-cards">${deck.map((c,i)=>`<button type="button" class="totg-card" data-c="${i}" data-f="${c.f}"><span class="totg-back">🎃</span><span class="totg-face">${c.f}</span></button>`).join('')}</div>`);
+  let open=[],found=0,lock=false,alive=true,moves=0;
+  const t0=performance.now();
+  const cards=[...host.querySelectorAll('.totg-card')];
+  const tx=host.querySelector('.totg-time span'),bar=host.querySelector('.totg-time i');
+  let raf=0;
+  (function tick(){
+    if(!alive)return;
+    const s=(performance.now()-t0)/1000;
+    if(tx)tx.textContent=s.toFixed(1)+'s';
+    if(bar)bar.style.width=Math.max(0,100-s/60*100)+'%';
+    raf=requestAnimationFrame(tick);
+  })();
+  cards.forEach(c=>c.onclick=()=>{
+    if(lock||!alive||c.classList.contains('on')||c.classList.contains('done'))return;
+    c.classList.add('on');open.push(c);
+    if(open.length===2){
+      moves++;totgSetScore(moves+' moves');
+      lock=true;
+      const [a,b]=open;
+      if(a.dataset.f===b.dataset.f){
+        setTimeout(()=>{a.classList.add('done');b.classList.add('done');open=[];lock=false;
+          if(++found===FACES.length){
+            alive=false;cancelAnimationFrame(raf);
+            done(Math.max(1,Math.round((performance.now()-t0)/1000)),'time');
+          }},320);
+      }else{
+        setTimeout(()=>{a.classList.remove('on');b.classList.remove('on');open=[];lock=false},700);
+      }
+    }
+  });
+  // hard stop so nobody sits in it forever
+  const bail=setTimeout(()=>{if(alive){alive=false;cancelAnimationFrame(raf);done(999,'time')}},90000);
+  return()=>{alive=false;cancelAnimationFrame(raf);clearTimeout(bail)};
+}
+
+
+/* ---------------------------------------------------------------- 4. TYPER
+   Type the word before it falls off the list. Pure speed, no luck at all. */
+const TOTG_WORDS=['pumpkin','ghost','candy','spooky','haunted','witch','skeleton','cobweb','lantern',
+  'midnight','costume','monster','vampire','graveyard','shiver','creepy','goblin','cauldron','broomstick',
+  'moonlight','bats','zombie','trick','treat','spider','werewolf','mummy','potion','gravestone','howl'];
+function totgTyper(host,done){
+  host.innerHTML=totgShell('⌨️ Spooky Typer','Type each word and press Enter. 22 seconds.',
+    `<div class="totg-word" id="totgWord"></div>
+     <input class="totg-input" id="totgInput" type="text" autocomplete="off" autocorrect="off"
+            autocapitalize="off" spellcheck="false" placeholder="type it here…">
+     <div class="totg-hint">Spelling counts. Enter submits.</div>`);
+  let score=0,alive=true,word='';
+  const wEl=host.querySelector('#totgWord'),inp=host.querySelector('#totgInput');
+  const next=()=>{word=TOTG_WORDS[Math.floor(Math.random()*TOTG_WORDS.length)];wEl.textContent=word};
+  next();
+  setTimeout(()=>{try{inp.focus()}catch(_){}} ,60);
+  inp.addEventListener('keydown',e=>{
+    e.stopPropagation();                       // the site has global key shortcuts
+    if(e.key!=='Enter'||!alive)return;
+    e.preventDefault();
+    if(inp.value.trim().toLowerCase()===word){
+      score++;totgSetScore(score);
+      wEl.classList.remove('hit');void wEl.offsetWidth;wEl.classList.add('hit');
+      next();
+    }else{
+      wEl.classList.remove('miss');void wEl.offsetWidth;wEl.classList.add('miss');
+    }
+    inp.value='';
+  });
+  const stop=totgCountdown(host,22,()=>{alive=false;stop();try{inp.blur()}catch(_){}done(score)});
+  return()=>{alive=false;stop()};
+}
+
+/* --------------------------------------------------------------- 5. STEADY
+   A marker sweeps the bar; stop it inside the green. The green gets smaller every round.
+   Five rounds, no randomness in the payout — it is entirely how steady you are. */
+function totgSteady(host,done){
+  host.innerHTML=totgShell('🕯️ Steady Hand','Stop the flame inside the green. 5 rounds, each one narrower.',
+    `<div class="totg-steady">
+       <div class="totg-track"><span class="totg-zone" id="totgZone"></span><span class="totg-marker" id="totgMark">🕯️</span></div>
+       <div class="totg-rounds" id="totgRounds"></div>
+     </div>
+     <button type="button" class="btn totg-stop" id="totgStop">Stop it</button>`);
+  const ROUNDS=5;
+  let round=0,score=0,alive=true,raf=0,pos=0,dir=1,zoneA=0,zoneB=0,speed=0.016,settling=false;
+  const zone=host.querySelector('#totgZone'),mark=host.querySelector('#totgMark'),
+        rEl=host.querySelector('#totgRounds'),btn=host.querySelector('#totgStop');
+  const paintRounds=()=>{rEl.innerHTML=Array.from({length:ROUNDS},(_,i)=>
+    `<i class="${i<round?(rEl.dataset['r'+i]==='1'?'hit':'miss'):''}"></i>`).join('')};
+  function setup(){
+    const w=Math.max(8,26-round*4);                 // 26% down to 10% of the bar
+    zoneA=5+Math.random()*(90-w);zoneB=zoneA+w;
+    zone.style.left=zoneA+'%';zone.style.width=w+'%';
+    speed=0.5+round*0.14;                            // percent per frame
+    pos=0;dir=1;
+    paintRounds();
+  }
+  function loop(){
+    if(!alive)return;
+    pos+=dir*speed;
+    if(pos>=100){pos=100;dir=-1}
+    if(pos<=0){pos=0;dir=1}
+    mark.style.left=pos+'%';
+    raf=requestAnimationFrame(loop);
+  }
+  /* `settling` is what stops a second click landing during the half-second pause between rounds:
+     the marker has not moved yet, so without it you could mash the button inside the zone and
+     score the same round over and over (it read "8 of 5" before this guard existed). */
+  function stopIt(){
+    if(!alive||settling)return;
+    settling=true;btn.disabled=true;
+    const ok=pos>=zoneA&&pos<=zoneB;
+    rEl.dataset['r'+round]=ok?'1':'0';
+    if(ok){score++;totgSetScore(score);zone.classList.add('ok')}
+    else zone.classList.add('no');
+    round++;
+    cancelAnimationFrame(raf);
+    setTimeout(()=>{
+      zone.classList.remove('ok','no');
+      if(round>=ROUNDS||!alive){alive=false;paintRounds();done(Math.min(ROUNDS,score));return}
+      settling=false;btn.disabled=false;
+      setup();loop();
+    },520);
+  }
+  btn.onclick=stopIt;
+  setup();loop();
+  const stop=totgCountdown(host,45,()=>{if(alive){alive=false;cancelAnimationFrame(raf);stop();done(score)}});
+  return()=>{alive=false;cancelAnimationFrame(raf);stop()};
+}
+
+/* ----------------------------------------------------------------- 6. DASH
+   An endless runner. One button, so it works the same with a mouse, a finger or the
+   space bar. One hit ends the run, which is what makes a long one worth something. */
+function totgDash(host,done){
+  host.innerHTML=totgShell('🏃 Street Dash','Jump the fences. One hit ends the run.',
+    `<div class="totg-dash" id="totgDash"><span class="totg-runner" id="totgRun">🏃</span></div>
+     <div class="totg-hint">Tap the strip, click it, or press Space to jump.</div>`);
+  const box=host.querySelector('#totgDash'),run=host.querySelector('#totgRun');
+  const PIECES=['🪵','🪦','🎃','🕸️','🧱'];
+  const G=0.0022,JUMP=0.45,RUN_L=34,RUN_R=60,CLEAR=26,OW=20;
+  /* Obstacles enter from no further than START px away, so the first fence arrives about a second
+     in rather than after a long empty run on a wide screen. */
+  const START=300;
+  let alive=true,score=0,raf=0,y=0,vy=0,last=0,nextIn=500,speed=0.40,obs=[];
+  const jump=()=>{if(alive&&y<=0.5)vy=JUMP};
+  const onKey=e=>{if(e.code==='Space'||e.key===' '){e.preventDefault();e.stopPropagation();jump()}};
+  const onTap=e=>{e.preventDefault();jump()};
+  box.addEventListener('pointerdown',onTap);
+  document.addEventListener('keydown',onKey,true);
+  function finish(){
+    if(!alive)return;
+    alive=false;cancelAnimationFrame(raf);
+    document.removeEventListener('keydown',onKey,true);
+    box.removeEventListener('pointerdown',onTap);
+    box.classList.add('crash');
+    stop();
+    setTimeout(()=>done(score),420);
+  }
+  function frame(now){
+    if(!alive)return;
+    const dt=last?Math.min(40,now-last):16;last=now;
+    y+=vy*dt;vy-=G*dt;
+    if(y<0){y=0;vy=0}
+    run.style.transform='translateY('+(-y)+'px)';
+    run.classList.toggle('air',y>2);
+    nextIn-=dt;
+    if(nextIn<=0){
+      const el=document.createElement('span');
+      el.className='totg-obs';el.textContent=PIECES[Math.floor(Math.random()*PIECES.length)];
+      box.appendChild(el);
+      const x0=Math.min(box.clientWidth+10,START);
+      el.style.left=x0+'px';
+      obs.push({el,x:x0});
+      nextIn=620+Math.random()*460-speed*400;    // gets tighter as it speeds up
+      speed=Math.min(0.58,speed+0.014);
+    }
+    for(let i=obs.length-1;i>=0;i--){
+      const o=obs[i];
+      o.x-=speed*dt;
+      o.el.style.left=o.x+'px';
+      if(o.x<RUN_R&&o.x+OW>RUN_L&&y<CLEAR){finish();return}
+      if(o.x<-OW-4){o.el.remove();obs.splice(i,1);score++;totgSetScore(score)}
+    }
+    raf=requestAnimationFrame(frame);
+  }
+  raf=requestAnimationFrame(frame);
+  const stop=totgCountdown(host,30,()=>{if(alive)finish()});
+  return()=>{alive=false;cancelAnimationFrame(raf);stop();
+    document.removeEventListener('keydown',onKey,true);box.removeEventListener('pointerdown',onTap)};
+}
+
+/* --------------------------------------------------------------- 7. POTION
+   Watch the cauldron, repeat the order. One more ingredient every round, so the
+   score is simply how long a sequence you can hold in your head. */
+function totgPotion(host,done){
+  const ING=[{ic:'🍬',c:'a'},{ic:'🦇',c:'b'},{ic:'🕷️',c:'c'},{ic:'👁️',c:'d'}];
+  host.innerHTML=totgShell('🧪 Potion Brew','Watch the order, then repeat it.',
+    `<div class="totg-potion" id="totgPot">
+       ${ING.map((x,i)=>`<button type="button" class="totg-ing" data-ing="${i}">${x.ic}</button>`).join('')}
+     </div>
+     <div class="totg-step" id="totgStep">Watch…</div>`);
+  const btns=[...host.querySelectorAll('[data-ing]')],step=host.querySelector('#totgStep');
+  let seq=[],input=0,score=0,alive=true,showing=true,timers=[];
+  const flash=(i,ms)=>{const b=btns[i];if(!b)return;b.classList.add('lit');
+    timers.push(setTimeout(()=>b.classList.remove('lit'),ms))};
+  function show(){
+    showing=true;input=0;step.textContent='Watch… ('+seq.length+')';
+    btns.forEach(b=>b.disabled=true);
+    const gap=Math.max(320,620-seq.length*22);
+    seq.forEach((v,n)=>timers.push(setTimeout(()=>{if(alive)flash(v,gap*0.55)},n*gap)));
+    timers.push(setTimeout(()=>{
+      if(!alive)return;
+      showing=false;step.textContent='Your turn';
+      btns.forEach(b=>b.disabled=false);
+    },seq.length*gap+180));
+  }
+  function nextRound(){
+    seq.push(Math.floor(Math.random()*ING.length));
+    show();
+  }
+  btns.forEach((b,i)=>b.onclick=()=>{
+    if(!alive||showing)return;
+    flash(i,180);
+    if(seq[input]===i){
+      input++;
+      if(input>=seq.length){
+        // lock input straight away: a stray extra tap in the gap before the next round should
+        // not be read as a wrong ingredient and end the run
+        showing=true;btns.forEach(x=>x.disabled=true);
+        score++;totgSetScore(score);
+        step.textContent='✅ Round '+score+' brewed';
+        if(score>=12){finish();return}
+        timers.push(setTimeout(()=>{if(alive)nextRound()},620));
+      }
+    }else{
+      step.textContent='❌ Wrong ingredient';
+      host.querySelector('.totg-potion').classList.add('bad');
+      finish();
+    }
+  });
+  function finish(){if(!alive)return;alive=false;totgClear(timers);stop();
+    btns.forEach(b=>b.disabled=true);setTimeout(()=>done(score),520)}
+  const stop=totgCountdown(host,60,()=>{if(alive)finish()});
+  timers.push(setTimeout(()=>{if(alive)nextRound()},500));
+  return()=>{alive=false;totgClear(timers);stop()};
+}
+
+/* ---------------------------------------------------------------- 8. GHOST
+   Pure reaction time. Five rounds; the faster you are after BOO, the more it pays.
+   Jumping the gun scores that round zero, so there is no way to cheat it by mashing. */
+function totgGhost(host,done){
+  host.innerHTML=totgShell('👻 Ghost Rush','Tap the moment it says BOO. Not before.',
+    `<button type="button" class="totg-boo waiting" id="totgBoo"><b>Get ready…</b><small>Round 1 of 5</small></button>
+     <div class="totg-hint" id="totgBooH">Wait for it.</div>`);
+  const ROUNDS=5;
+  const pad=host.querySelector('#totgBoo'),hint=host.querySelector('#totgBooH');
+  let round=0,score=0,alive=true,state='wait',t=0,timers=[];
+  function arm(){
+    if(!alive)return;
+    state='wait';pad.className='totg-boo waiting';
+    pad.innerHTML='<b>Get ready…</b><small>Round '+(round+1)+' of '+ROUNDS+'</small>';
+    timers.push(setTimeout(()=>{
+      if(!alive||state!=='wait')return;
+      state='go';t=performance.now();
+      pad.className='totg-boo go';pad.innerHTML='<b>BOO!</b><small>tap now</small>';
+    },1100+Math.random()*2600));
+  }
+  function result(txt,pts){
+    score+=pts;totgSetScore(score);
+    pad.className='totg-boo done';
+    pad.innerHTML='<b>'+txt+'</b><small>+'+pts+'</small>';
+    round++;
+    if(round>=ROUNDS){alive=false;stop();setTimeout(()=>done(score),700);return}
+    timers.push(setTimeout(arm,750));
+  }
+  pad.onclick=()=>{
+    if(!alive)return;
+    if(state==='wait'){state='early';hint.textContent='Too early — that round scored nothing.';result('Too early',0);return}
+    if(state!=='go')return;
+    state='done';
+    const ms=Math.round(performance.now()-t);
+    const pts=Math.max(5,Math.min(100,Math.round(100-(ms-180)/6)));
+    hint.textContent=ms+'ms';
+    result(ms+'ms',pts);
+  };
+  arm();
+  const stop=totgCountdown(host,45,()=>{if(alive){alive=false;done(score)}});
+  return()=>{alive=false;totgClear(timers);stop()};
+}
+
+/* ------------------------------------------------------------------ 9. ODD
+   Spot the one that does not match. The grid grows every time you get it, so it
+   goes from trivial to genuinely hard inside twenty seconds. */
+const TOTG_ODD=[['🍬','🍭'],['💀','☠️'],['🌕','🌝'],['🦇','🐦'],['🕷️','🕸️'],
+  ['🧛','🧟'],['😈','👿'],['🎃','🟠'],['👻','👽'],['🧙','🧝']];
+function totgOdd(host,done){
+  host.innerHTML=totgShell('🔦 Odd One Out','Find the one that is different.',
+    `<div class="totg-odd" id="totgOdd"></div>
+     <div class="totg-hint" id="totgOddH">It gets bigger every time you find it.</div>`);
+  const grid=host.querySelector('#totgOdd'),hint=host.querySelector('#totgOddH');
+  let score=0,alive=true,lock=false;
+  function round(){
+    if(!alive)return;
+    const n=Math.min(7,3+Math.floor(score/2));          // 3×3 up to 7×7
+    const cells=n*n,pair=TOTG_ODD[Math.floor(Math.random()*TOTG_ODD.length)];
+    const flip=Math.random()<0.5,base=pair[flip?1:0],odd=pair[flip?0:1];
+    const at=Math.floor(Math.random()*cells);
+    grid.style.setProperty('--n',n);
+    grid.innerHTML=Array.from({length:cells},(_,i)=>
+      `<button type="button" class="totg-cell" data-odd="${i===at?1:0}">${i===at?odd:base}</button>`).join('');
+    grid.querySelectorAll('[data-odd]').forEach(b=>b.onclick=()=>{
+      if(!alive||lock)return;
+      if(b.dataset.odd==='1'){
+        score++;totgSetScore(score);b.classList.add('yes');
+        lock=true;setTimeout(()=>{lock=false;round()},230);
+      }else{
+        b.classList.add('no');hint.textContent='Not that one.';
+      }
+    });
+  }
+  round();
+  const stop=totgCountdown(host,22,()=>{if(alive){alive=false;stop();done(score)}});
+  return()=>{alive=false;stop()};
+}
+
+/* The list the Minigames tab renders. payout() turns a raw score into candy. */
+const TOT_GAMES=[
+  {id:'smash', n:'Pumpkin Smash', ic:'🔨', d:'16s · hit pumpkins, dodge ghosts', run:totgSmash,
+   payout:s=>Math.min(500,s*16), unit:s=>s+' smashed', ach:s=>s>=20?'smash':''},
+  {id:'catch', n:'Candy Catch',   ic:'🧺', d:'20s · catch sweets, dodge bombs',  run:totgCatch,
+   payout:s=>Math.min(500,s*15), unit:s=>s+' caught',  ach:s=>s>=25?'catch':''},
+  {id:'memory',n:'Haunted Memory',ic:'🃏', d:'Match 6 pairs as fast as you can', run:totgMemory,
+   payout:s=>Math.max(80,Math.min(500,Math.round(500-s*10))), unit:s=>s+'s', ach:s=>s<=20?'memory':''},
+  {id:'typer', n:'Spooky Typer',  ic:'⌨️', d:'22s · type the words, spelling counts', run:totgTyper,
+   payout:s=>Math.min(500,s*26), unit:s=>s+' typed',   ach:s=>s>=12?'typer':''},
+  {id:'steady',n:'Steady Hand',   ic:'🕯️', d:'5 rounds · stop the flame in the green', run:totgSteady,
+   payout:s=>s*95, unit:s=>s+' of 5', ach:s=>s>=5?'steady':''},
+  {id:'dash',  n:'Street Dash',   ic:'🏃', d:'Endless runner · jump the fences', run:totgDash,
+   payout:s=>Math.min(500,s*22), unit:s=>s+' cleared', ach:s=>s>=15?'dash':''},
+  {id:'potion',n:'Potion Brew',   ic:'🧪', d:'Simon says · repeat the order', run:totgPotion,
+   payout:s=>Math.min(500,s*55), unit:s=>'round '+s, ach:s=>s>=8?'potion':''},
+  {id:'ghost', n:'Ghost Rush',    ic:'👻', d:'5 rounds · reaction time', run:totgGhost,
+   payout:s=>Math.min(500,s), unit:s=>s+' pts', ach:s=>s>=380?'ghost':''},
+  {id:'odd',   n:'Odd One Out',   ic:'🔦', d:'22s · spot the one that differs', run:totgOdd,
+   payout:s=>Math.min(500,s*34), unit:s=>s+' found', ach:s=>s>=12?'odd':''}
+];
+
+/* ==========================================================================
+ * js/features/trick-or-treat.js
+ * HALLOWEEN 2026 — TRICK OR TREAT
+ *
+ * A one-night event. Knock on doors, collect candy, play the minigames, spend it in the shop and
+ * climb the leaderboard. There is no betting in it: every way of earning is either skill or a
+ * flat reward, and nothing ever takes candy back off you. Collecting closes at midnight Texas
+ * time on Halloween; the board stays up for a few days afterwards so the top 5 can be paid out.
+ *
+ * Everything lives under tot/p/<id> in the database and is written by the player's own client
+ * (the rules allow only that, and rate-limit it — see SETUP-TRICKORTREAT.md). Nothing here
+ * touches the existing Halloween Pass in js/features/halloween.js; that uses HW_/hw*, this uses
+ * TOT_/tot*.
+ * Loaded by js/loader.js (load order lives in js/manifest.js).
+ * ========================================================================== */
+'use strict';
+
+const TOT={
+  /* Texas time. Oct 31 2026 is CDT (UTC-5); Nov 5 is CST (UTC-6) — DST ends Nov 1. */
+  END:Date.UTC(2026,10,1,5,0,0),          // midnight at the end of Halloween, Central
+  BOARD_END:Date.UTC(2026,10,6,6,0,0),    // board stays visible through the end of Nov 5, Central
+  KNOCK_MS:6000,                          // cooldown between knocks (the rules enforce ~5.5s)
+  MAX:1000000,                            // hard ceiling the rules also apply
+  WINNERS:5,
+  GAME_MS:45000,                          // cooldown between minigames (rules enforce ~40s)
+  BONUS_MS:3600000                        // the free doorbell bonus, once an hour (rules ~58m)
+};
+/* Things you can buy with candy. The permanent one is the money sink that gives the night a shape:
+   grind early, buy the bucket, every door pays more for the rest of the event. */
+const TOT_SHOP=[
+  {id:'rush', ic:'⚡',n:'Sugar Rush', cost:300,d:'Knock and minigame cooldowns halved for 3 minutes.'},
+  {id:'luck', ic:'🍀',n:'Lucky Charm',cost:450,d:'Your next 10 knocks cannot be a trick, and pay 25% more.'},
+  {id:'bag',  ic:'🎒',n:'Bigger Bucket',cost:900,d:'Every door pays 15% more. Lasts the whole event.',once:true}
+];
+/* Costumes are pure decoration — they change nothing about how the night plays, they just show up
+   next to your name on the leaderboard. That makes them a candy sink with no balance consequences,
+   which is exactly what you want somebody spending 6,000 on. */
+const TOT_FITS=[
+  {id:'gh',ic:'👻',n:'Bedsheet Ghost',cost:200},
+  {id:'vm',ic:'🧛',n:'Vampire',       cost:600},
+  {id:'wi',ic:'🧙',n:'Witch',         cost:1200},
+  {id:'sk',ic:'💀',n:'Skeleton',      cost:2000},
+  {id:'pk',ic:'🎃',n:'Pumpkin King',  cost:3500},
+  {id:'cr',ic:'👑',n:'Candy Monarch', cost:6000}
+];
+/* Challenges. Every one is a milestone on a number already being tracked, so there is nothing
+   extra to store except which ones have been cashed in. They give the night a to-do list. */
+const TOT_QUESTS=[
+  {id:'d25',  ic:'🚪',n:'Door to door',    d:'Knock on 25 doors',          pay:200, at:m=>Math.min(1,m.doors/25)},
+  {id:'g3',   ic:'🕹️',n:'Arcade warm-up',  d:'Play 3 minigames',           pay:250, at:m=>Math.min(1,m.games/3)},
+  {id:'h120', ic:'🍫',n:'Big haul',        d:'Get 120+ from one door',     pay:350, at:m=>Math.min(1,m.best/120)},
+  {id:'d75',  ic:'🏘️',n:'Street sweeper',  d:'Knock on 75 doors',          pay:450, at:m=>Math.min(1,m.doors/75)},
+  {id:'e2500',ic:'💰',n:'Collector',       d:'Earn 2,500 candy in total',  pay:500, at:m=>Math.min(1,m.earned/2500)},
+  {id:'g12',  ic:'🎮',n:'Arcade regular',  d:'Play 12 minigames',          pay:600, at:m=>Math.min(1,m.games/12)},
+  {id:'g9',   ic:'🏅',n:'Try everything',  d:'Play all nine minigames',    pay:900, at:m=>Math.min(1,totPlayedN()/totGamesN())},
+  {id:'e10k', ic:'🏦',n:'Candy hoard',     d:'Earn 10,000 candy in total', pay:1200,at:m=>Math.min(1,m.earned/10000)}
+];
+/* Collectables. Cheap to earn, nice to complete, and they show on your leaderboard row. */
+const TOT_ACH=[
+  {id:'first', ic:'🚪',n:'First door',      d:'Knock once'},
+  {id:'bar',   ic:'🍫',n:'Full size',       d:'Get a full-size bar'},
+  {id:'jack',  ic:'🎃',n:'The good house',  d:'Find the jackpot house'},
+  {id:'haunt', ic:'🏚️',n:'Brave',           d:'Go inside the haunted house'},
+  {id:'rain',  ic:'🌧️',n:'Soaked',          d:'Knock during Candy Rain'},
+  {id:'s10',   ic:'🔥',n:'On a roll',       d:'Reach a 10 streak'},
+  {id:'rich',  ic:'💰',n:'Loaded',          d:'Hold 1,000 candy'},
+  {id:'rich5', ic:'🏦',n:'Candy baron',     d:'Hold 5,000 candy'},
+  {id:'fit',   ic:'🪡',n:'Dressed up',      d:'Wear a costume'},
+  {id:'typer', ic:'⌨️',n:'Fast fingers',    d:'12+ words in Spooky Typer'},
+  {id:'steady',ic:'🕯️',n:'Steady hand',     d:'All 5 rounds in Steady Hand'},
+  {id:'smash', ic:'🔨',n:'Smasher',         d:'20+ in Pumpkin Smash'},
+  {id:'catch', ic:'🧺',n:'Safe hands',      d:'25+ in Candy Catch'},
+  {id:'memory',ic:'🃏',n:'Sharp',           d:'Clear Memory in 20s'},
+  {id:'dash',  ic:'🏃',n:'Long legs',       d:'Clear 15 fences in Street Dash'},
+  {id:'potion',ic:'🧪',n:'Alchemist',       d:'Reach round 8 in Potion Brew'},
+  {id:'ghost', ic:'👻',n:'Quick draw',      d:'380+ points in Ghost Rush'},
+  {id:'odd',   ic:'🔦',n:'Eagle eye',       d:'12+ finds in Odd One Out'},
+  {id:'d100',  ic:'🏘️',n:'Whole street',    d:'Knock on 100 doors'},
+  {id:'allg',  ic:'🎯',n:'Nine for nine',   d:'Play all nine minigames'},
+  {id:'quests',ic:'📜',n:'Challenger',      d:'Finish every challenge'}
+];
+const totNow=()=>Date.now()+(typeof SKEW==='number'?SKEW:0);
+const totLive=()=>totNow()<TOT.END;                    // can you still collect?
+const totVisible=()=>totNow()<TOT.BOARD_END;           // is the event still shown at all?
+
+/* ---------- Candy Rain ----------
+   A site-wide double-candy window. It is worked out purely from the clock, so every player hits
+   the same five minutes without anything being stored, broadcast or capable of going out of sync:
+   five minutes of double candy at the top and the bottom of every hour (server clock, via SKEW). */
+const TOT_RAIN={EVERY:1800000,LEN:300000};
+const _totRainT=()=>totNow()%TOT_RAIN.EVERY;
+const totRainOn=()=>totLive()&&_totRainT()<TOT_RAIN.LEN;
+const totRainLeft=()=>totRainOn()?TOT_RAIN.LEN-_totRainT():0;
+const totRainIn=()=>totRainOn()?0:TOT_RAIN.EVERY-_totRainT();
+const totRainX=()=>totRainOn()?2:1;
+const totMs=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return s>=60?(Math.floor(s/60)+'m '+(s%60)+'s'):(s+'s')};
+
+let TOT_ME={played:'',candy:0,earned:0,best:0,doors:0,streak:0,last:0,golden:0,lastg:0,bonus:0,rush:0,luck:0,bag:0,games:0,ach:'',qc:'',fit:'',fits:''};
+let TOT_ALL={};
+let _totUnsub=null,_totBusy=false,_totTab='street',_totTimer=null,_totHaunt=false;
+
+/* ---------- live data ---------- */
+function totWatch(){
+  if(_totUnsub||typeof ME==='undefined'||!ME)return;
+  try{
+    _totUnsub=onValue(R('tot/p'),s=>{
+      TOT_ALL=s.val()||{};
+      const mine=TOT_ALL[ME.id];
+      if(mine&&typeof mine==='object'){
+        TOT_ME={...TOT_ME,...mine};
+        ['candy','earned','best','doors','streak','last','lastg','bonus','rush','luck','bag','games']
+          .forEach(k=>{TOT_ME[k]=Number(TOT_ME[k])||0});
+        ['ach','played','qc','fit','fits'].forEach(k=>{
+          TOT_ME[k]=typeof TOT_ME[k]==='string'?TOT_ME[k]:'';
+        });
+      }
+      totPaint();
+    },e=>console.warn('[tot] read denied',e&&e.code));
+  }catch(e){console.warn('[tot] watch failed',e)}
+}
+function totSave(patch){
+  if(!ME)return Promise.reject(new Error('Not signed in.'));
+  return update(R('tot/p/'+ME.id),patch);
+}
+// Everyone with candy, biggest stash first. Ties break on who got there with fewer doors.
+function totBoard(){
+  return Object.keys(TOT_ALL).map(id=>{
+    const r=TOT_ALL[id]||{};
+    return{id:Number(id),candy:Number(r.candy)||0,earned:Number(r.earned)||0,doors:Number(r.doors)||0,
+           best:Number(r.best)||0,fit:typeof r.fit==='string'?r.fit:''};
+  }).filter(r=>!isNaN(r.id)&&r.candy>0)
+    .sort((a,b)=>b.candy-a.candy||a.doors-b.doors||a.id-b.id);
+}
+function totRankOf(id){const b=totBoard();for(let i=0;i<b.length;i++)if(b[i].id===id)return i+1;return 0}
+// Live profile first; the name stored on the row is the fallback for someone whose record
+// hasn't synced to this client yet, so the board never shows a wall of "User 12".
+const totName=id=>{
+  const u=DB.getUser(id);
+  if(u&&u.username)return displayUsername(u.username);
+  const r=TOT_ALL[id];
+  return (r&&typeof r.name==='string'&&r.name)?displayUsername(r.name):'User '+id;
+};
+const totRushOn=()=>(Number(TOT_ME.rush)||0)>totNow();
+const totKnockMs=()=>totRushOn()?TOT.KNOCK_MS/2:TOT.KNOCK_MS;
+const totGameMs=()=>totRushOn()?TOT.GAME_MS/2:TOT.GAME_MS;
+const totCd=()=>Math.max(0,totKnockMs()-(totNow()-TOT_ME.last));
+const totGameCd=()=>Math.max(0,totGameMs()-(totNow()-(Number(TOT_ME.lastg)||0)));
+const totBonusCd=()=>Math.max(0,TOT.BONUS_MS-(totNow()-(Number(TOT_ME.bonus)||0)));
+const totHas=id=>String(TOT_ME.ach||'').split(',').indexOf(id)!==-1;
+/* Minigame helpers that TOT_QUESTS needs — TOT_GAMES lives in the other file, which loads first,
+   but these are only ever called from a click or a repaint, so guard anyway. */
+const totGamesN=()=>(typeof TOT_GAMES!=='undefined'?TOT_GAMES.length:9);
+const totPlayedN=()=>String(TOT_ME.played||'').split(',').filter(Boolean).length;
+const totOwnsFit=id=>String(TOT_ME.fits||'').split(',').indexOf(id)!==-1;
+const totFitOf=id=>{const f=TOT_FITS.find(x=>x.id===id);return f?f.ic:''};
+const totQDone=id=>String(TOT_ME.qc||'').split(',').indexOf(id)!==-1;
+const totQReady=q=>!totQDone(q.id)&&q.at(TOT_ME)>=1;
+const totQCount=()=>TOT_QUESTS.filter(totQReady).length;
+// Earning one pops a toast, so they feel like a thing you got rather than a number that changed.
+function totGrant(ids){
+  const have=String(TOT_ME.ach||'').split(',').filter(Boolean);
+  let added=[];
+  [].concat(ids).filter(Boolean).forEach(id=>{
+    if(have.indexOf(id)===-1&&TOT_ACH.some(a=>a.id===id)){have.push(id);added.push(id)}
+  });
+  if(!added.length)return null;
+  added.forEach(id=>{const a=TOT_ACH.find(x=>x.id===id);if(a)toast(a.ic+' Unlocked: '+a.n)});
+  return have.join(',').slice(0,200);
+}
+const totNum=n=>Number(n||0).toLocaleString();
+
+/* ---------- the doors ----------
+   Weighted outcomes. The good ones are frequent enough that knocking always feels worth it, and
+   the bad ones only ever take a slice of what you are carrying, never all of it. */
+const TOT_DOORS=[
+  {k:'treat', w:30,ic:'🍬',t:'Treat!',       lo:8,  hi:18, s:['"Happy Halloween!"','A handful of sweets.','They drop a few in your bucket.']},
+  {k:'big',   w:16,ic:'🍭',t:'Big handful!', lo:22, hi:44, s:['They tip the whole bowl in.','"Take as much as you want."','Jackpot of a house.']},
+  {k:'bar',   w:8, ic:'🍫',t:'FULL SIZE BAR',lo:55, hi:95, s:['The legendary full-size bar.','This house gets it.','You hear other kids gasp.']},
+  {k:'jack',  w:2, ic:'🎃',t:'THE GOOD HOUSE',lo:160,hi:280,s:['They were waiting all night for one more kid.','Someone just emptied the bowl into your bucket.']},
+  {k:'gold',  w:5, ic:'✨',t:'Golden wrapper',lo:12, hi:25, s:['Your next 3 knocks are worth double.','It glows. That cannot be normal.']},
+  /* The haunted house doesn't pay out on the spot — it opens three rooms and lets you pick one.
+     Every room pays something, so going in is never worse than not going in. */
+  {k:'haunt', w:4, ic:'🏚️',t:'THE HAUNTED HOUSE',lo:0,hi:0,s:['The door creaks open on its own. Three rooms. Pick one.']},
+  {k:'empty', w:13,ic:'🕸️',t:'Nobody home',  lo:0,  hi:0,  s:['Lights off. Classic.','You knock. Nothing.','A note: "Took the candy, sorry!"']},
+  /* A trick costs you your streak and nothing else. Nobody ever loses candy they already have —
+     the whole night is additive, so there is no gambling feel to knocking on a door. */
+  {k:'trick', w:16,ic:'👻',t:'TRICK!',       lo:0,  hi:0,  s:['Something jumps out and you leg it. Streak gone.','You scream. The street hears it.','The porch was a trap — no candy here.']},
+  {k:'rival', w:10,ic:'🧛',t:'Beaten to it', lo:0,  hi:0,  s:['An older kid got there first. Bowl is empty.','A rival trick-or-treater cleared this one out.']}
+];
+const TOT_W=TOT_DOORS.reduce((t,d)=>t+d.w,0);
+function totRoll(){
+  const buf=new Uint32Array(1);crypto.getRandomValues(buf);
+  let r=(buf[0]/4294967296)*TOT_W,acc=0;
+  for(const d of TOT_DOORS){acc+=d.w;if(r<acc)return d}
+  return TOT_DOORS[0];
+}
+const totRand=(lo,hi)=>lo+Math.floor(Math.random()*(hi-lo+1));
+const totPick=a=>a[Math.floor(Math.random()*a.length)];
+// Streak bonus: every door in a row without being tricked makes the next one worth more, up to +80%.
+const totMult=()=>1+Math.min(TOT_ME.streak,10)*0.08;
+
+async function totKnock(doorEl){
+  if(_totBusy||!ME)return;
+  if(!totLive()){toast('Trick-or-treating is over — the leaderboard is still up.','bad');return}
+  // A haunted-house pick is still worth candy, so don't let the next knock paint over it.
+  if(_totHaunt){toast('Pick a room in the haunted house first.','bad');return}
+  if(totCd()>0)return;
+  _totBusy=true;totPaint();
+  const lucky=(Number(TOT_ME.luck)||0)>0;
+  let d=totRoll();
+  if(lucky){let guard=0;while((d.k==='trick'||d.k==='rival')&&guard++<8)d=totRoll()}   // Lucky Charm: no nasty doors
+  let gain=0,lost=0,note=totPick(d.s);
+  const golden=(Number(TOT_ME.golden)||0)>0;
+  if(d.lo||d.hi){
+    gain=Math.round(totRand(d.lo,d.hi)*totMult()*(golden?2:1)*(lucky?1.25:1)*((Number(TOT_ME.bag)||0)?1.15:1)*totRainX());
+  }
+
+  const bad=d.k==='trick'||d.k==='rival';
+  const candy=Math.max(0,Math.min(TOT.MAX,TOT_ME.candy+gain-lost));
+  const patch={
+    candy,
+    earned:Math.min(TOT.MAX*5,(Number(TOT_ME.earned)||0)+gain),
+    doors:(Number(TOT_ME.doors)||0)+1,
+    best:Math.max(Number(TOT_ME.best)||0,gain),
+    streak:bad?0:(Number(TOT_ME.streak)||0)+1,
+    golden:d.k==='gold'?3:Math.max(0,(Number(TOT_ME.golden)||0)-1),
+    luck:Math.max(0,(Number(TOT_ME.luck)||0)-1),
+    last:Math.round(totNow()),
+    name:String(ME.username||'').slice(0,20)
+  };
+  const won=totGrant(['first',d.k==='bar'?'bar':'',d.k==='jack'?'jack':'',d.k==='haunt'?'haunt':'',
+    totRainOn()?'rain':'',
+    patch.streak>=10?'s10':'',patch.doors>=100?'d100':'',
+    candy>=1000?'rich':'',candy>=5000?'rich5':'']);
+  if(won)patch.ach=won;
+  // show the result straight away; the write catches up
+  TOT_ME={...TOT_ME,...patch};
+  totShowResult(d,gain,lost,note,golden,doorEl);
+  try{await totSave(patch)}
+  catch(e){console.warn('[tot] save failed',e&&e.code);toast('Couldn\'t save that knock ('+(e.code||e.message)+')','bad')}
+  if(d.k==='jack'&&typeof burstConfetti==='function')burstConfetti(160);
+  else if(d.k==='bar'&&typeof burstConfetti==='function')burstConfetti(60);
+  _totBusy=false;totPaint();
+  if(d.k==='haunt')totHaunt();
+}
+
+/* ---------- the haunted house ----------
+   Three rooms, all of them worth entering. The pick is a second, smaller write: it doesn't touch
+   `last`, so it doesn't collide with the knock cooldown the rules enforce on that field. */
+function totHaunt(){
+  const box=document.getElementById('totResult');
+  if(!box)return;
+  _totHaunt=true;
+  const mult=totMult()*((Number(TOT_ME.bag)||0)?1.15:1)*totRainX();
+  const pots=[totRand(300,560),totRand(110,190),totRand(110,190)]
+    .map(v=>Math.round(v*mult));
+  for(let i=pots.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pots[i],pots[j]]=[pots[j],pots[i]]}
+  const ROOMS=[{ic:'🚪',n:'The cellar'},{ic:'🪜',n:'The attic'},{ic:'🕯️',n:'The parlour'}];
+  box.className='tot-res haunt';
+  box.innerHTML=`<div class="tot-haunt">
+    <b>🏚️ Pick a room</b><small>All three have something. One has a lot.</small>
+    <div class="tot-rooms">${ROOMS.map((r,i)=>
+      `<button type="button" class="tot-room" data-room="${i}"><span>${r.ic}</span><em>${esc(r.n)}</em></button>`).join('')}</div>
+  </div>`;
+  box.querySelectorAll('[data-room]').forEach(b=>b.onclick=async()=>{
+    if(!_totHaunt)return;
+    _totHaunt=false;
+    const i=Number(b.dataset.room),pay=pots[i];
+    /* Only the room you went into shows its number. Revealing the other two would turn a free
+       bonus into a near-miss — the whole point is that going in is never a bet. */
+    box.querySelectorAll('[data-room]').forEach((o,n)=>{
+      o.disabled=true;o.classList.add(n===i?'took':'shown');
+      if(n===i)o.insertAdjacentHTML('beforeend','<i>🍬 '+totNum(pay)+'</i>');
+    });
+    const patch={
+      candy:Math.max(0,Math.min(TOT.MAX,TOT_ME.candy+pay)),
+      earned:Math.min(TOT.MAX*5,(Number(TOT_ME.earned)||0)+pay),
+      best:Math.max(Number(TOT_ME.best)||0,pay),
+      name:String(ME.username||'').slice(0,20)
+    };
+    const a=totGrant([patch.candy>=1000?'rich':'',patch.candy>=5000?'rich5':'']);
+    if(a)patch.ach=a;
+    TOT_ME={...TOT_ME,...patch};
+    toast('🏚️ You came out with '+totNum(pay)+' candy.');
+    if(pay>=300&&typeof burstConfetti==='function')burstConfetti(100);
+    totPaint();
+    try{await totSave(patch)}catch(e){toast('That didn\'t save ('+(e.code||e.message)+')','bad')}
+  });
+}
+
+function totShowResult(d,gain,lost,note,golden,doorEl){
+  const box=document.getElementById('totResult');
+  if(doorEl){doorEl.classList.remove('knock');void doorEl.offsetWidth;doorEl.classList.add('knock','used')}
+  if(!box)return;
+  const cls='tot-res '+(gain&&!lost?'good':'')+(lost?' bad':'')+(d.k==='jack'?' jack':'');
+  box.className=cls;
+  box.innerHTML=`<span class="tot-res-ic">${d.ic}</span>
+    <div class="tot-res-tx"><b>${esc(d.t)}</b><small>${esc(note)}</small></div>
+    <span class="tot-res-n">${gain?('+'+totNum(gain)):''}${lost?('−'+totNum(lost)):''}${(!gain&&!lost)?'0':''}</span>`;
+  box.classList.remove('pop');void box.offsetWidth;box.classList.add('pop');
+  if(golden&&gain)toast('✨ Golden wrapper doubled it!');
+}
+
+/* ---------- minigames ---------- */
+let _totGameStop=null;
+function totPlay(id){
+  const g=(typeof TOT_GAMES!=='undefined'?TOT_GAMES:[]).find(x=>x.id===id);
+  const host=document.getElementById('totGameHost');
+  if(!g||!host)return;
+  if(!totLive()){toast('The event is over.','bad');return}
+  if(totGameCd()>0)return;
+  if(_totGameStop){try{_totGameStop()}catch(_){}_totGameStop=null}
+  host.classList.add('playing');
+  _totGameStop=g.run(host,async(score)=>{
+    _totGameStop=null;
+    const pay=Math.max(0,Math.round(g.payout(score))*totRainX());
+    const candy=Math.max(0,Math.min(TOT.MAX,TOT_ME.candy+pay));
+    const hiKey='hi_'+g.id;
+    const patch={
+      candy,
+      earned:Math.min(TOT.MAX*5,(Number(TOT_ME.earned)||0)+pay),
+      games:(Number(TOT_ME.games)||0)+1,
+      lastg:Math.round(totNow()),
+      name:String(ME.username||'').slice(0,20)
+    };
+    patch[hiKey]=g.id==='memory'
+      ? Math.min(9999,(Number(TOT_ME[hiKey])||9999)===0?score:Math.min(Number(TOT_ME[hiKey])||9999,score))
+      : Math.max(Number(TOT_ME[hiKey])||0,score);
+    const played=new Set(String(TOT_ME.played||'').split(',').filter(Boolean));played.add(g.id);
+    patch.played=[...played].join(',').slice(0,60);
+    const a=totGrant([g.ach(score),candy>=1000?'rich':'',candy>=5000?'rich5':'',
+      totRainOn()?'rain':'',played.size>=TOT_GAMES.length?'allg':'']);
+    if(a)patch.ach=a;
+    TOT_ME={...TOT_ME,...patch};
+    host.classList.remove('playing');
+    host.innerHTML=`<div class="totg-done"><span>${g.ic}</span><b>+${totNum(pay)} candy</b>
+      <small>${esc(g.unit(score))}</small>
+      <button type="button" class="btn sec small" id="totGameBack">Back to the games</button></div>`;
+    const bk=document.getElementById('totGameBack');if(bk)bk.onclick=()=>{totBody();totPaint()};
+    if(pay>=300&&typeof burstConfetti==='function')burstConfetti(80);
+    try{await totSave(patch)}catch(e){toast('Score didn\'t save ('+(e.code||e.message)+')','bad')}
+    totPaint();
+  });
+  totPaint();
+}
+function totGamesHTML(){
+  if(!totLive())return `<div class="tot-over"><span>🕯️</span><b>The games are closed</b><p>Everything shut at midnight.</p>
+    <button class="btn" type="button" data-tot-go="board">See the leaderboard</button></div>`;
+  const list=(typeof TOT_GAMES!=='undefined'?TOT_GAMES:[]).map(g=>{
+    const hi=Number(TOT_ME['hi_'+g.id])||0;
+    const hiTx=hi?(g.id==='memory'?('Best '+hi+'s'):('Best '+totNum(hi))):'Not played yet';
+    return `<button type="button" class="tot-game" data-play="${g.id}">
+      <span class="tot-game-ic">${g.ic}</span>
+      <span class="tot-game-tx"><b>${esc(g.n)}</b><small>${esc(g.d)}</small></span>
+      <span class="tot-game-hi">${esc(hiTx)}</span></button>`;
+  }).join('');
+  return `<div class="hint">Nine games, pure skill, up to 500 candy each, nothing to lose. One every ${Math.round(totGameMs()/1000)}s.</div>
+    <div class="tot-games" id="totGames">${list}</div>
+    <div class="tot-gamecd" id="totGameCd"></div>
+    <div id="totGameHost"></div>`;
+}
+
+/* ---------- shop + the free hourly bonus ---------- */
+async function totBuy(id){
+  const it=TOT_SHOP.find(x=>x.id===id);if(!it||!ME)return;
+  if(!totLive()){toast('The shop is closed.','bad');return}
+  if(TOT_ME.candy<it.cost){toast('Not enough candy — you need '+totNum(it.cost)+'.','bad');return}
+  if(it.once&&(Number(TOT_ME.bag)||0)){toast('You already have that.','bad');return}
+  const patch={candy:Math.max(0,TOT_ME.candy-it.cost),name:String(ME.username||'').slice(0,20)};
+  if(id==='rush')patch.rush=Math.round(totNow()+180000);
+  if(id==='luck')patch.luck=10;
+  if(id==='bag')patch.bag=1;
+  TOT_ME={...TOT_ME,...patch};
+  toast(it.ic+' '+it.n+' bought!');
+  totBody();totPaint();
+  try{await totSave(patch)}catch(e){toast('Purchase didn\'t save ('+(e.code||e.message)+')','bad')}
+}
+async function totBonus(){
+  if(!ME||!totLive()||totBonusCd()>0)return;
+  const pay=totRand(120,260);
+  const patch={
+    candy:Math.max(0,Math.min(TOT.MAX,TOT_ME.candy+pay)),
+    earned:Math.min(TOT.MAX*5,(Number(TOT_ME.earned)||0)+pay),
+    bonus:Math.round(totNow()),
+    name:String(ME.username||'').slice(0,20)
+  };
+  TOT_ME={...TOT_ME,...patch};
+  toast('🔔 Doorbell bonus: +'+totNum(pay)+' candy');
+  if(typeof burstConfetti==='function')burstConfetti(40);
+  totPaint();
+  try{await totSave(patch)}catch(e){toast('Bonus didn\'t save ('+(e.code||e.message)+')','bad')}
+}
+/* ---------- costumes ---------- */
+async function totFitBuy(id){
+  const f=TOT_FITS.find(x=>x.id===id);if(!f||!ME)return;
+  if(totOwnsFit(id)){totFitWear(id);return}
+  if(!totLive()){toast('The shop is closed.','bad');return}
+  if(TOT_ME.candy<f.cost){toast('Not enough candy — you need '+totNum(f.cost)+'.','bad');return}
+  const owned=String(TOT_ME.fits||'').split(',').filter(Boolean);owned.push(id);
+  const patch={candy:Math.max(0,TOT_ME.candy-f.cost),fits:owned.join(',').slice(0,60),fit:id,
+               name:String(ME.username||'').slice(0,20)};
+  const a=totGrant(['fit']);if(a)patch.ach=a;
+  TOT_ME={...TOT_ME,...patch};
+  toast(f.ic+' You are now a '+f.n+'.');
+  if(typeof burstConfetti==='function')burstConfetti(50);
+  totBody();totPaint();
+  try{await totSave(patch)}catch(e){toast('Costume didn\'t save ('+(e.code||e.message)+')','bad')}
+}
+async function totFitWear(id){
+  if(!ME||(id&&!totOwnsFit(id)))return;
+  const patch={fit:TOT_ME.fit===id?'':id,name:String(ME.username||'').slice(0,20)};
+  TOT_ME={...TOT_ME,...patch};
+  totBody();totPaint();
+  try{await totSave(patch)}catch(e){toast('Didn\'t save ('+(e.code||e.message)+')','bad')}
+}
+
+/* ---------- challenges ---------- */
+async function totClaim(id){
+  const q=TOT_QUESTS.find(x=>x.id===id);if(!q||!ME)return;
+  if(totQDone(id)||q.at(TOT_ME)<1)return;
+  const done=String(TOT_ME.qc||'').split(',').filter(Boolean);done.push(id);
+  const patch={
+    candy:Math.max(0,Math.min(TOT.MAX,TOT_ME.candy+q.pay)),
+    earned:Math.min(TOT.MAX*5,(Number(TOT_ME.earned)||0)+q.pay),
+    qc:done.join(',').slice(0,120),
+    name:String(ME.username||'').slice(0,20)
+  };
+  const a=totGrant([patch.candy>=1000?'rich':'',patch.candy>=5000?'rich5':'',
+    done.length>=TOT_QUESTS.length?'quests':'']);
+  if(a)patch.ach=a;
+  TOT_ME={...TOT_ME,...patch};
+  toast(q.ic+' '+q.n+' — +'+totNum(q.pay)+' candy');
+  if(typeof burstConfetti==='function')burstConfetti(60);
+  totBody();totPaint();
+  try{await totSave(patch)}catch(e){toast('Claim didn\'t save ('+(e.code||e.message)+')','bad')}
+}
+function totQuestHTML(){
+  const done=TOT_QUESTS.filter(q=>totQDone(q.id)).length;
+  const rows=TOT_QUESTS.map(q=>{
+    const p=Math.max(0,Math.min(1,q.at(TOT_ME)||0)),was=totQDone(q.id),can=!was&&p>=1;
+    return `<div class="tot-q${was?' done':''}${can?' ready':''}">
+      <span class="tot-q-ic">${q.ic}</span>
+      <div class="tot-q-tx"><b>${esc(q.n)}</b><small>${esc(q.d)}</small>
+        <span class="tot-q-bar"><i style="width:${Math.round(p*100)}%"></i></span></div>
+      <button type="button" class="btn sec small" data-claim="${q.id}"${can?'':' disabled'}>
+        ${was?'✓ Claimed':(can?('Claim 🍬 '+totNum(q.pay)):('🍬 '+totNum(q.pay)))}</button>
+    </div>`;
+  }).join('');
+  return `<div class="hint">Challenges track themselves while you play — come back and cash them in.
+    <b>${done} of ${TOT_QUESTS.length}</b> done.</div>
+    <div class="tot-quests">${rows}</div>`;
+}
+function totShopHTML(){
+  const owned=id=>id==='bag'&&(Number(TOT_ME.bag)||0);
+  return `<div class="hint">Spend candy to collect it faster. The bucket is permanent — it pays for itself if you buy it early.</div>
+  <div class="tot-shop">${TOT_SHOP.map(it=>`<div class="tot-item${owned(it.id)?' owned':''}">
+    <span class="tot-item-ic">${it.ic}</span>
+    <div class="tot-item-tx"><b>${esc(it.n)}</b><small>${esc(it.d)}</small></div>
+    <button type="button" class="btn sec small" data-buy="${it.id}"${owned(it.id)?' disabled':''}>${owned(it.id)?'Owned':('🍬 '+totNum(it.cost))}</button>
+  </div>`).join('')}</div>
+  <div class="tot-ach-h">Costumes <span>shows next to your name on the board</span></div>
+  <div class="tot-fits">${TOT_FITS.map(f=>{
+    const have=totOwnsFit(f.id),on=TOT_ME.fit===f.id;
+    return `<button type="button" class="tot-fit${have?' have':''}${on?' on':''}" data-fit="${f.id}">
+      <span>${f.ic}</span><b>${esc(f.n)}</b>
+      <small>${on?'Wearing':(have?'Tap to wear':('🍬 '+totNum(f.cost)))}</small></button>`;
+  }).join('')}</div>
+  <div class="tot-ach-h">Collection <span id="totAchN"></span></div>
+  <div class="tot-ach">${TOT_ACH.map(a=>`<div class="tot-ach-i${totHas(a.id)?' on':''}" title="${esc(a.d)}">
+    <span>${a.ic}</span><b>${esc(a.n)}</b><small>${esc(a.d)}</small></div>`).join('')}</div>`;
+}
+
+/* ---------- the panel ---------- */
+function totOpen(tab){
+  if(!ME)return;
+  _totTab=tab||(totLive()?'street':'board');
+  totWatch();
+  const root=$('#modalRoot');
+  root.innerHTML=`<div class="modal-bg" id="totBg"><div class="modal tot-modal">
+    <button class="modal-x" id="totX" type="button" aria-label="Close">✕</button>
+    <div class="tot-head">
+      <div class="tot-title"><span class="tot-pump">🎃</span><div><h2>Trick or Treat</h2><small id="totClock"></small></div></div>
+      <div class="tot-bucket"><span>🍬</span><b id="totCandy">0</b><small>candy</small></div>
+    </div>
+    <div class="tot-tabs" role="tablist">
+      <button type="button" class="tot-tab" data-tot="street">🚪 Street</button>
+      <button type="button" class="tot-tab" data-tot="games">🕹️ Minigames</button>
+      <button type="button" class="tot-tab" data-tot="quests">📜 Challenges<i class="tot-dot" id="totQDot"></i></button>
+      <button type="button" class="tot-tab" data-tot="shop">🛒 Shop</button>
+      <button type="button" class="tot-tab" data-tot="board">🏆 Board</button>
+    </div>
+    <div id="totBody"></div>
+  </div></div>`;
+  $('#totX').onclick=totClose;
+  $('#totBg').onclick=e=>{if(e.target.id==='totBg')totClose()};
+  root.querySelectorAll('[data-tot]').forEach(b=>b.onclick=()=>{
+    if(_totGameStop){try{_totGameStop()}catch(_){}_totGameStop=null}
+    _totHaunt=false;                       // leaving the street forfeits an unpicked room
+    _totTab=b.dataset.tot;totBody();totPaint();
+  });
+  totBody();totPaint();
+  clearInterval(_totTimer);_totTimer=setInterval(totPaint,250);
+  try{localStorage.setItem('ich.tot.seen','1')}catch(_){}
+}
+function totClose(){
+  clearInterval(_totTimer);_totTimer=null;_totHaunt=false;
+  if(_totGameStop){try{_totGameStop()}catch(_){}_totGameStop=null}
+  const bg=$('#totBg');if(!bg){if($('#modalRoot'))$('#modalRoot').innerHTML='';return}
+  bg.classList.add('closing');
+  setTimeout(()=>{if($('#modalRoot'))$('#modalRoot').innerHTML=''},200);
+}
+function totBody(){
+  const b=document.getElementById('totBody');if(!b)return;
+  document.querySelectorAll('[data-tot]').forEach(x=>x.classList.toggle('on',x.dataset.tot===_totTab));
+  if(_totTab==='street')b.innerHTML=totStreetHTML();
+  else if(_totTab==='games')b.innerHTML=totGamesHTML();
+  else if(_totTab==='quests')b.innerHTML=totQuestHTML();
+  else if(_totTab==='shop')b.innerHTML=totShopHTML();
+  else b.innerHTML=totBoardHTML();
+  totWire();
+}
+function totStreetHTML(){
+  if(!totLive())return `<div class="tot-over"><span>🌙</span><b>Trick-or-treating is over</b><p>The street went quiet at midnight. The leaderboard is still up — check where you landed.</p>
+    <button class="btn" type="button" data-tot-go="board">See the leaderboard</button></div>`;
+  const houses=['🏚️','🏠','🏡','🏘️'];
+  return `<div class="tot-rain" id="totRain"></div>
+  <div class="tot-street">
+    ${houses.map((h,i)=>`<button type="button" class="tot-door" data-door="${i}" style="--i:${i}">
+      <span class="tot-house">${h}</span><span class="tot-knob"></span><span class="tot-knock-t">Knock</span></button>`).join('')}
+  </div>
+  <div class="tot-res" id="totResult"><span class="tot-res-ic">🚪</span><div class="tot-res-tx"><b>Pick a house</b><small>Knock on any door. Some give out full-size bars. Some do not give out anything.</small></div><span class="tot-res-n"></span></div>
+  <div class="tot-stats">
+    <div><label>Streak</label><b id="totStreak">0</b></div>
+    <div><label>Doors</label><b id="totDoors">0</b></div>
+    <div><label>Best haul</label><b id="totBest">0</b></div>
+    <div><label>Rank</label><b id="totRank">—</b></div>
+  </div>
+  <div class="tot-cd" id="totCdWrap"><i id="totCdBar"></i><span id="totCdTx"></span></div>
+  <button type="button" class="tot-bonus" id="totBonusBtn"></button>`;
+}
+function totBoardHTML(){
+  const rows=totBoard(),me=ME?totRankOf(ME.id):0;
+  const over=!totLive();
+  const medal=i=>['🥇','🥈','🥉','4️⃣','5️⃣'][i]||('#'+(i+1));
+  const head=over
+    ?`<div class="tot-final"><b>🏆 Final standings</b><span>Collecting closed at midnight. Top ${TOT.WINNERS} get rewarded.</span></div>`
+    :`<div class="tot-final live"><b>🔴 Live</b><span>Still running — the top ${TOT.WINNERS} at midnight get rewarded.</span></div>`;
+  if(!rows.length)return head+`<div class="tot-empty">Nobody has any candy yet. Be the first.</div>`;
+  const list=rows.slice(0,25).map((r,i)=>{
+    const mine=ME&&r.id===ME.id;
+    return `<div class="tot-row${i<TOT.WINNERS?' win':''}${mine?' me':''}">
+      <span class="tot-pos">${medal(i)}</span>
+      <span class="tot-nm">${r.fit?('<span class="tot-fit-ic" title="costume">'+totFitOf(r.fit)+'</span> '):''}${esc(totName(r.id))}${mine?' <em>(you)</em>':''}</span>
+      <span class="tot-sub">${totNum(r.doors)} doors</span>
+      <span class="tot-candy">🍬 ${totNum(r.candy)}</span>
+      ${(over&&i<TOT.WINNERS&&typeof isOwner==='function'&&ME&&isOwner(ME.id)&&!isOwner(r.id))?`<button type="button" class="btn sec small tot-rw" data-reward="${r.id}">Give VIP</button>`:''}
+    </div>`;
+  }).join('');
+  const mine=me?`<div class="tot-yours">You are <b>#${me}</b> of ${rows.length} with <b>🍬 ${totNum(TOT_ME.candy)}</b>.</div>`
+                :`<div class="tot-yours">You are not on the board yet.</div>`;
+  return head+`<div class="tot-board">${list}</div>${mine}`+
+    ((ME&&typeof isOwner==='function'&&isOwner(ME.id))
+      ?`<button type="button" class="btn sec small tot-ann" id="totAnnounce">📢 Announce this event to everyone</button>`:'');
+}
+function totWire(){
+  const b=document.getElementById('totBody');if(!b)return;
+  b.querySelectorAll('[data-door]').forEach(d=>d.onclick=()=>totKnock(d));
+  b.querySelectorAll('[data-tot-go]').forEach(x=>x.onclick=()=>{_totTab=x.dataset.totGo;totBody();totPaint()});
+  b.querySelectorAll('[data-play]').forEach(x=>x.onclick=()=>totPlay(x.dataset.play));
+  b.querySelectorAll('[data-buy]').forEach(x=>x.onclick=()=>totBuy(x.dataset.buy));
+  b.querySelectorAll('[data-fit]').forEach(x=>x.onclick=()=>totFitBuy(x.dataset.fit));
+  b.querySelectorAll('[data-claim]').forEach(x=>x.onclick=()=>totClaim(x.dataset.claim));
+  const bon=document.getElementById('totBonusBtn');if(bon)bon.onclick=totBonus;
+  b.querySelectorAll('[data-reward]').forEach(x=>x.onclick=async()=>{
+    const id=Number(x.dataset.reward);x.disabled=true;x.textContent='Giving…';
+    try{await DB.giveVip(id,'perm');toast(totName(id)+' is now a Legend (permanent VIP).');x.textContent='✓ Rewarded'}
+    catch(e){toast(e.message||'Failed','bad');x.disabled=false;x.textContent='Give VIP'}
+  });
+  const ann=document.getElementById('totAnnounce');
+  if(ann)ann.onclick=async()=>{
+    ann.disabled=true;ann.textContent='Sending…';
+    try{
+      await DB.sendLiveAnnouncement('🎃 TRICK OR TREAT is live! Knock on doors for candy, play the NINE minigames, finish challenges and buy a costume. 🌧️ CANDY RAIN doubles everything for 5 minutes every half hour. It ends at MIDNIGHT tonight — top 5 get rewarded. Open it from the home screen.',{kind:'event',alsoPost:true});
+      toast('Announced to everyone.');ann.textContent='✓ Announced';
+    }catch(e){toast(e.message||'Could not announce','bad');ann.disabled=false;ann.textContent='📢 Announce this event to everyone'}
+  };
+}
+// One repaint for everything live: the clock, the bucket, the cooldown ring, the shop buttons.
+function totPaint(){
+  const c=document.getElementById('totCandy');if(c)c.textContent=totNum(TOT_ME.candy);
+  // Candy Rain: the same five minutes for everybody, worked out from the clock alone.
+  const rain=document.getElementById('totRain');
+  if(rain){
+    const on=totRainOn();
+    rain.classList.toggle('on',on);
+    rain.innerHTML=on
+      ? `<span class="tot-rain-ic">🌧️</span><div><b>CANDY RAIN — everything pays double</b>
+         <small>Ends in ${totMs(totRainLeft())}. Knock as fast as you can.</small></div>`
+      : `<span class="tot-rain-ic">⏳</span><div><b>Candy Rain in ${totMs(totRainIn())}</b>
+         <small>Five minutes of double candy, every half hour, for everyone at once.</small></div>`;
+  }
+  const qd=document.getElementById('totQDot');
+  if(qd){const n=totQCount();qd.textContent=n?n:'';qd.classList.toggle('on',n>0)}
+  const clock=document.getElementById('totClock');
+  if(clock){
+    const left=TOT.END-totNow();
+    clock.textContent=left>0
+      ?('Ends in '+(typeof fmtDur==='function'?fmtDur(left):Math.round(left/60000)+'m')+' · midnight Texas time')
+      :'Collecting has ended · leaderboard open until Nov 5';
+  }
+  const st=document.getElementById('totStreak');
+  if(st){
+    st.textContent=TOT_ME.streak+(TOT_ME.streak>0?' ×'+totMult().toFixed(2).replace(/0$/,''):'');
+    const dd=document.getElementById('totDoors');if(dd)dd.textContent=totNum(TOT_ME.doors);
+    const bb=document.getElementById('totBest');if(bb)bb.textContent=totNum(TOT_ME.best);
+    const rk=document.getElementById('totRank');if(rk){const r=ME?totRankOf(ME.id):0;rk.textContent=r?('#'+r):'—'}
+  }
+  const cd=totCd(),bar=document.getElementById('totCdBar'),tx=document.getElementById('totCdTx'),wrap=document.getElementById('totCdWrap');
+  if(bar&&tx&&wrap){
+    wrap.classList.toggle('ready',cd<=0);
+    bar.style.width=(100-Math.round(cd/TOT.KNOCK_MS*100))+'%';
+    const buffs=[];
+    if(totRainOn())buffs.push('🌧️ RAIN ×2');
+    if(totRushOn())buffs.push('⚡ Sugar Rush');
+    if((Number(TOT_ME.luck)||0)>0)buffs.push('🍀 Lucky ×'+TOT_ME.luck);
+    if((Number(TOT_ME.golden)||0)>0)buffs.push('✨ Golden ×'+TOT_ME.golden);
+    if((Number(TOT_ME.bag)||0))buffs.push('🎒 +15%');
+    tx.textContent=cd>0?('Next knock in '+(cd/1000).toFixed(1)+'s')
+      :(buffs.length?buffs.join('  ·  '):'Ready — pick a door');
+  }
+  document.querySelectorAll('[data-door]').forEach(d=>{d.disabled=cd>0||_totBusy||!totLive()});
+  const bon=document.getElementById('totBonusBtn');
+  if(bon){
+    const w=totBonusCd();
+    bon.disabled=w>0;
+    bon.className='tot-bonus'+(w>0?'':' ready');
+    bon.innerHTML=w>0?('🔔 Next doorbell bonus in '+(typeof fmtDur==='function'?fmtDur(w):Math.ceil(w/60000)+'m'))
+                     :'🔔 Free doorbell bonus — claim it';
+  }
+  const gcd=document.getElementById('totGameCd');
+  if(gcd){
+    const w=totGameCd();
+    gcd.textContent=w>0?('Next game in '+(w/1000).toFixed(0)+'s'):'Ready to play';
+    gcd.classList.toggle('ready',w<=0);
+    document.querySelectorAll('[data-play]').forEach(x=>{x.disabled=w>0||!totLive()});
+  }
+  const an=document.getElementById('totAchN');
+  if(an)an.textContent=String(TOT_ME.ach||'').split(',').filter(Boolean).length+' / '+TOT_ACH.length;
+  document.querySelectorAll('[data-buy]').forEach(x=>{
+    const it=TOT_SHOP.find(i=>i.id===x.dataset.buy);
+    if(it&&!(it.once&&(Number(TOT_ME.bag)||0)))x.disabled=TOT_ME.candy<it.cost||!totLive();
+  });
+}
+
+/* ---------- getting everyone into it ----------
+   A tile on the home screen, a bar across the top of chat, and a one-time popup. */
+function totBadgeHTML(){
+  const left=TOT.END-totNow();
+  if(!totLive())return 'Final results';
+  // Candy Rain takes over the badge while it is on — it is the thing worth interrupting for.
+  if(totRainOn())return '<span class="tot-live-dot rain"></span>🌧️ CANDY RAIN · '+totMs(totRainLeft());
+  return '<span class="tot-live-dot"></span>'+(typeof fmtDur==='function'?fmtDur(left):'')+' left';
+}
+function totInjectHome(){
+  const opts=document.querySelector('#homePage .options');
+  if(!opts||!totVisible())return;
+  let t=document.getElementById('goTrickOrTreat');
+  if(!t){
+    t=document.createElement('button');
+    t.className='opt tot-opt';t.id='goTrickOrTreat';t.type='button';
+    t.innerHTML='<div class="ic">🎃</div><h3>Trick or Treat</h3><p id="totOptSub">Halloween event</p><span class="tot-opt-glow"></span>';
+    t.onclick=()=>totOpen();
+    opts.insertBefore(t,opts.firstChild);
+  }
+  const sub=document.getElementById('totOptSub');
+  if(sub)sub.innerHTML=totBadgeHTML();
+}
+function totInjectChatBar(){
+  if(!totVisible())return;
+  const anchor=document.querySelector('#chatPage .vip-bar');
+  if(!anchor||!anchor.parentNode)return;
+  let b=document.getElementById('totBar');
+  if(!b){
+    b=document.createElement('button');
+    b.type='button';b.id='totBar';b.className='tot-bar';
+    b.onclick=()=>totOpen();
+    anchor.parentNode.insertBefore(b,anchor);
+  }
+  const live=totLive(),rain=totRainOn();
+  b.classList.toggle('raining',rain);
+  b.innerHTML=`<span class="tot-bar-ic">${rain?'🌧️':'🎃'}</span><span class="tot-bar-tx"><b>${
+      !live?'Trick or Treat — final results':(rain?'CANDY RAIN — everything pays double':'Trick or Treat is live')}</b>
+    <small>${!live?'See where you placed'
+      :(rain?('Ends in '+totMs(totRainLeft())+' — knock as fast as you can')
+            :('Nine minigames, challenges, costumes · next Candy Rain in '+totMs(totRainIn())))}</small></span>
+    <span class="tot-bar-go">${live?totBadgeHTML():'Open'}</span>`;
+}
+// Shown once per account, so nobody misses that the event exists.
+function totMaybeIntro(){
+  if(!ME||!totLive())return;
+  let seen=false;try{seen=localStorage.getItem('ich.tot.intro.'+ME.id)==='1'}catch(_){}
+  if(seen)return;
+  const root=document.getElementById('modalRoot');
+  if(!root||root.innerHTML.trim()!==''||(typeof view!=='undefined'&&view.page==='authPage'))return;
+  try{localStorage.setItem('ich.tot.intro.'+ME.id,'1')}catch(_){}
+  root.innerHTML=`<div class="modal-bg" id="totIntroBg"><div class="modal tot-intro">
+    <button class="modal-x" id="totIntroX" type="button" aria-label="Close">✕</button>
+    <span class="tot-intro-moon">🌕</span>
+    <div class="tot-intro-pump">🎃</div>
+    <h2>Trick or Treat</h2>
+    <p class="tot-intro-lead">It's Halloween. Knock on doors around the site for candy, play <b>nine minigames</b>, finish challenges, buy a costume and get on the leaderboard.</p>
+    <div class="tot-intro-grid">
+      <div><span>🚪</span><b>Knock</b><small>Full-size bars, jackpot houses and a haunted one.</small></div>
+      <div><span>🕹️</span><b>Play</b><small>Nine minigames. Pure skill, nothing to lose.</small></div>
+      <div><span>🌧️</span><b>Candy Rain</b><small>Everything pays double, 5 minutes every half hour.</small></div>
+      <div><span>📜</span><b>Challenges</b><small>Milestones that pay out, plus costumes to buy.</small></div>
+      <div><span>🏆</span><b>Win</b><small>Top 5 at midnight get rewarded.</small></div>
+      <div><span>🔔</span><b>Come back</b><small>A free doorbell bonus every hour.</small></div>
+    </div>
+    <div class="tot-intro-end">Ends at <b>midnight tonight</b>, Texas time.</div>
+    <div class="actions"><button class="btn sec" id="totIntroLater" type="button">Later</button><button class="btn" id="totIntroGo" type="button">🍬 Start trick-or-treating</button></div>
+  </div></div>`;
+  // dismissible every way a dialog should be: the button, the ✕, the backdrop and Escape
+  // (the Escape handler in js/ui/keyboard-shortcuts.js looks for a .modal-x)
+  const shut=()=>{root.innerHTML=''};
+  document.getElementById('totIntroGo').onclick=()=>{shut();totOpen('street')};
+  document.getElementById('totIntroLater').onclick=shut;
+  document.getElementById('totIntroX').onclick=shut;
+  document.getElementById('totIntroBg').onclick=e=>{if(e.target.id==='totIntroBg')shut()};
+}
+
+/* ---------- keeping every entry point on screen ----------
+   This deliberately does NOT rely on DB.onChange alone. Those fire while the app is starting up,
+   and on a quiet account they can all land BEFORE boot.js assigns ME — in which case every one of
+   them bails out and the tile never appears at all (reproduced: it showed on one load and not the
+   next). So a small ticker drives it too: once a second until we are signed in and the entry
+   points exist, then every 15s to keep the countdown fresh. */
+function totSync(){
+  if(typeof ME==='undefined'||!ME)return false;
+  totWatch();
+  try{totInjectHome();totInjectChatBar();totMaybeIntro()}catch(e){console.warn('[tot]',e)}
+  return true;
+}
+if(typeof DB!=='undefined'&&DB.onChange)DB.onChange(()=>{totSync()});
+(function totTick(){
+  let ok=false;
+  try{ok=totSync()}catch(_){}
+  setTimeout(totTick,ok?15000:1000);
+})();
+
+/* ==========================================================================
  * js/settings/rules-check.js
  * Prompts everyone to agree to the rules once per account
  * Loaded by js/loader.js (load order lives in js/manifest.js).
@@ -15644,6 +17306,7 @@ const DiscordShell=(function(){
       {id:'vip',t:'VIP Lounge',ic:'💎',active:g&&sec==='vip'},
       ...(hasMvpPerks(ME.id)?[{id:'mvp',t:'MVP Lounge',ic:'🏆',active:g&&sec==='mvp',cls:'dl-rail-mvp'}]:[]),
       {sep:1},
+      ...((typeof totVisible==='function'&&totVisible())?[{id:'tot',t:'Trick or Treat',ic:'🎃',cls:'dl-rail-tot'}]:[]),
       {id:'hubs',t:'Games',ic:'🎮'},
       {id:'extras',t:'Extras',ic:EXTRAS_IC},
       {id:'gift',t:'Gift Nitro perks',ic:'🎁'},
@@ -15722,6 +17385,7 @@ const DiscordShell=(function(){
       hubs:()=>modalGameHubs(),
       extras:()=>toggleExtras(b),
       gift:()=>{closeExtras();if(typeof showGiftPromo==='function')showGiftPromo()},
+      tot:()=>{closeExtras();if(typeof totOpen==='function')totOpen()},
       discord:()=>{closeExtras();openDiscord()},
       settings:()=>openSettings(false)
     }[b.dataset.rail];

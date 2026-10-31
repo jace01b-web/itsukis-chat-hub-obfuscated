@@ -45,6 +45,7 @@ const DiscordShell=(function(){
       {id:'vip',t:'VIP Lounge',ic:'💎',active:g&&sec==='vip'},
       ...(hasMvpPerks(ME.id)?[{id:'mvp',t:'MVP Lounge',ic:'🏆',active:g&&sec==='mvp',cls:'dl-rail-mvp'}]:[]),
       {sep:1},
+      ...((typeof totVisible==='function'&&totVisible())?[{id:'tot',t:'Trick or Treat',ic:'🎃',cls:'dl-rail-tot'}]:[]),
       {id:'hubs',t:'Games',ic:'🎮'},
       {id:'extras',t:'Extras',ic:EXTRAS_IC},
       {id:'gift',t:'Gift Nitro perks',ic:'🎁'},
@@ -123,6 +124,7 @@ const DiscordShell=(function(){
       hubs:()=>modalGameHubs(),
       extras:()=>toggleExtras(b),
       gift:()=>{closeExtras();if(typeof showGiftPromo==='function')showGiftPromo()},
+      tot:()=>{closeExtras();if(typeof totOpen==='function')totOpen()},
       discord:()=>{closeExtras();openDiscord()},
       settings:()=>openSettings(false)
     }[b.dataset.rail];

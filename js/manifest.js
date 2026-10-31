@@ -37,7 +37,8 @@ window.APP_MANIFEST={
     "20-voice-channel.css",
     "22-discord-look.css",
     "24-file-attachments.css",
-    "25-custom-roles.css"
+    "25-custom-roles.css",
+    "26-trick-or-treat.css"
   ],
   /* Not loaded on purpose: 23-lockdown.css belongs to js/features/lockdown.js, which is kept in the
      repo but left out of the load list (its master switch is ON, so loading it would lock the site). */
@@ -84,6 +85,8 @@ window.APP_MANIFEST={
     "settings/settings-page.js",
     "settings/account.js",
     "features/halloween.js",
+    "features/trick-or-treat-games.js",
+    "features/trick-or-treat.js",
     "settings/rules-check.js",
     "moderation/tos-gate.js",
     "settings/anti-lag.js",
