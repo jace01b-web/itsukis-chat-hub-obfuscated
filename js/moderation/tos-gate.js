@@ -144,7 +144,13 @@ async function tosLoadState(id){
 /* ---------- ban hooks (called from DB.banUser / DB.unbanUser, and the staff IP-ban tool). The server does the work,
    and re-checks the caller's role itself — owners and admins may both ban and unban an IP. ---------- */
 async function tosIpBanUser(id){const {j}=await tosApi('ipban',{action:'ban',userId:Number(id),reason:'account banned'});return !!j.ok}
-async function tosIpUnbanUser(id){const {j}=await tosApi('ipban',{action:'unban',userId:Number(id)});return !!j.ok}
+/* Returns {ok,changed} and THROWS on a server refusal, so DB.unbanUser can tell the staff member
+   whether the network actually got unblocked instead of silently reporting success. */
+async function tosIpUnbanUser(id){
+  const {j,status}=await tosApi('ipban',{action:'unban',userId:Number(id)});
+  if(!j.ok)throw new Error(j.error||('The server refused it ('+status+').'));
+  return {ok:true,changed:Number(j.changed)||0};
+}
 async function tosManualIpBan(action,ip,reason){
   ip=String(ip||'').trim();
   if(!tosValidIp(ip))throw new Error('That is not a valid IP address.');

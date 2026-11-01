@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-10-31.05">
+<meta name="build-version" content="2026-11-01.02">
 
 
 <title>Itsukis Chat Hub</title>
@@ -5014,6 +5014,31 @@ html.discord-look .totg-z,html.discord-look .totg-l,html.discord-look .totg-lane
 html.discord-look .totg-pad{border-radius:8px}
 @media(prefers-reduced-motion:reduce){.totg-z.no,.totg-l.no,.totg-lane.miss{animation:none}}
 
+/* ---------- prizes ---------- */
+.tot-rw-h{margin:18px 0 9px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.tot-rw-list{display:flex;flex-direction:column;gap:6px}
+.tot-rw-row{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:13px;
+  border:1px solid var(--border);background:var(--ui-panel2)}
+.tot-rw-row.me{border-color:var(--tot-o);background:linear-gradient(100deg,rgba(255,138,43,.18),transparent 70%)}
+.tot-rw-m{font-size:20px;line-height:1;width:24px;text-align:center}
+.tot-rw-tx{flex:1;min-width:0}
+.tot-rw-tx b{display:block;font-size:13.5px}
+.tot-rw-tx small{display:block;font-size:12px;color:var(--muted)}
+.tot-rw-p{flex-shrink:0;font-size:12px;font-weight:800;color:var(--tot-g);text-align:right}
+.tot-rw-p.top{color:#ffd27a}
+.tot-rw-what{display:grid;gap:8px;margin-top:11px}
+.tot-rw-what>div{display:flex;gap:11px;align-items:flex-start;padding:10px 12px;border-radius:13px;
+  border:1px solid var(--border);background:rgba(255,255,255,.04)}
+.tot-rw-what span{font-size:20px;line-height:1.2}
+.tot-rw-what b{display:block;font-size:13px}
+.tot-rw-what small{display:block;margin-top:2px;font-size:12px;color:var(--muted);line-height:1.45}
+.tot-rw-note{margin-top:10px;line-height:1.5}
+@media(max-width:560px){
+  .tot-rw-row{flex-wrap:wrap}
+  .tot-rw-p{width:100%;text-align:left}
+}
+html.discord-look .tot-rw-row,html.discord-look .tot-rw-what>div{border-radius:8px;background:var(--dl-input);border-color:transparent}
+
 </style>
 <script>
 /* ==========================================================================
@@ -8662,8 +8687,23 @@ const DB=(()=>{
       // A missing flag is what a client sees before banned/ has loaded, so "missing" must never be
       // read as "unbanned" — that misreading is what silently un-froze banned accounts.
       await set(R('banned/'+id),false);
-      try{if(typeof tosIpUnbanUser==='function')tosIpUnbanUser(id).catch(()=>{})}catch(_){}
       C.banned[id]=false;checkBanLock(myId,C.banned); // update local state immediately; don't wait on the listener round-trip
+      /* Lift the IP ban in the same breath. This used to be fire-and-forget with the error
+         swallowed, so an unban that left the network blocked looked completely successful and the
+         account still couldn't chat. Now it's awaited and the outcome is reported back to the
+         caller, which surfaces it in Settings. It is still never fatal: the account unban has
+         already landed either way. Note the server only clears IP bans recorded against THIS
+         account — a network banned by hand stays banned, which is deliberate. */
+      let ip={tried:false,ok:false,changed:0,error:''};
+      if(typeof tosIpUnbanUser==='function'){
+        ip.tried=true;
+        try{
+          const r=await tosIpUnbanUser(id);
+          ip.ok=!!(r&&r.ok!==false);
+          ip.changed=Number(r&&r.changed)||0;
+        }catch(e){ip.error=(e&&(e.message||e.code))||'failed'}
+      }
+      DB._lastUnbanIp=ip;
       // Restore the profile right now (new username, un-delete). Only an OWNER can do this part —
       // the rules deliberately keep "write someone else's username" to owners — so for an admin's
       // unban this returns null and the account repairs itself on its own next sign-in instead
@@ -8713,10 +8753,76 @@ const DB=(()=>{
        fetched on demand rather than watched: a non-owner's listener would just be denied. */
     async tosLog(){
       if(!isOwner(myId))throw new Error('Only owners can see the TOS log.');
-      const sn=await get(R('tosLog'));
-      const v=sn.val()||{};
-      return Object.keys(v).map(id=>({id:Number(id),...(v[id]||{})}))
+      const out={};
+      /* 1. The rich records. These only exist for people who accepted *through /api/tos since the
+            log was added* — so on its own this is empty on an established site, which is exactly
+            what it looked like: "nothing yet" even though everyone had accepted. */
+      try{
+        const v=(await get(R('tosLog'))).val()||{};
+        Object.keys(v).forEach(id=>{
+          if(v[id]&&typeof v[id]==='object')out[id]={id:Number(id),...v[id]};
+        });
+      }catch(e){console.warn('[tos] log read failed',e&&e.code)}
+      /* 2. Everyone who has ever accepted, from the receipts. No raw IP in here (by design — only
+            the salted hash), but it is the complete list, including acceptances from before the
+            log existed and ones where the API call fell back to a client-side write. */
+      let acc=null;
+      try{acc=(await get(R('tosAccepted'))).val()||{}}
+      catch(_){acc=null}
+      if(acc===null){
+        /* No read permission on the whole collection — read them one at a time instead, which the
+           per-account rule does allow owners to do. Keeps this working without a rules update. */
+        acc={};
+        await Promise.all(Object.keys(C.users||{}).map(async id=>{
+          try{const v=(await get(R('tosAccepted/'+id))).val();if(v&&typeof v==='object')acc[id]=v}
+          catch(_){}
+        }));
+      }
+      Object.keys(acc).forEach(id=>{
+        const a=acc[id];
+        if(!a||typeof a!=='object')return;
+        const row=out[id];
+        if(row){                                   // have the full record; just fill any gaps
+          if(!row.at&&a.at)row.at=Number(a.at)||0;
+          if(!row.v&&a.v)row.v=a.v;
+          return;
+        }
+        out[id]={id:Number(id),at:Number(a.at)||0,v:a.v,h:a.h,noip:true};
+      });
+      // name them from the live user list, so receipt-only rows aren't a wall of "(unknown)"
+      Object.keys(out).forEach(id=>{
+        if(!out[id].name){const u=(C.users||{})[id];if(u&&u.username)out[id].name=u.username}
+      });
+      return Object.keys(out).map(k=>out[k])
         .filter(r=>!isNaN(r.id))
+        .sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0));
+    },
+    /* Every network currently IP-banned, newest first. Staff-only (the rules say so too). Each
+       entry is keyed by the salted hash of the network, not the address — the raw IP is never
+       stored here, so a ban can be listed and lifted but not read back as an address. */
+    async ipBans(){
+      if(!isOwner(myId)&&!isAdmin(myId))throw new Error('Only owners and admins can see IP bans.');
+      let v=null;
+      try{v=(await get(R('ipBans'))).val()||{}}
+      catch(e){v=null}
+      if(v===null){
+        /* No read on the whole collection — probe the networks we know about instead, from the
+           TOS receipts. Finds every ban placed against an account; a network banned by hand with
+           no account attached can't be discovered this way, hence the flag back to the caller. */
+        v={};
+        const ids=Object.keys(C.users||{});
+        const hs=new Set();
+        await Promise.all(ids.map(async id=>{
+          try{const h=(await get(R('tosAccepted/'+id+'/h'))).val();if(typeof h==='string'&&h)hs.add(h)}catch(_){}
+        }));
+        await Promise.all([...hs].map(async h=>{
+          try{const r=(await get(R('ipBans/'+h))).val();if(r)v[h]=r}catch(_){}
+        }));
+        const out=Object.keys(v).map(h=>({h,partial:true,...(v[h]||{})}));
+        out.sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0));
+        return out;
+      }
+      return Object.keys(v).map(h=>({h,...(v[h]&&typeof v[h]==='object'?v[h]:{})}))
         .sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0));
     },
     // Everyone whose mute has not expired yet, soonest to expire first.
@@ -13625,18 +13731,24 @@ function openSettings(fromChat){
       </div>`:''}
       ${(isOwner(ME.id)||isAdmin(ME.id))?`<div class="set-card">
         <div class="section-h" style="margin-top:0">🌐 IP ban</div>
-        <div class="field"><label>IP address (copy it from the Discord TOS log)</label><input id="modIpVal" type="text" maxlength="45" placeholder="e.g. 203.0.113.42" autocomplete="off" style="width:100%"></div>
+        <div class="field"><label>IP address (copy it from the TOS acceptances list above)</label><input id="modIpVal" type="text" maxlength="45" placeholder="e.g. 203.0.113.42" autocomplete="off" style="width:100%"></div>
         <div class="field" style="margin-top:8px"><label>Reason (optional)</label><input id="modIpWhy" type="text" maxlength="120" placeholder="e.g. raid on 10/13" autocomplete="off" style="width:100%"></div>
         <div class="actions" style="justify-content:flex-start;margin-top:10px">
           <button class="btn danger" id="modIpBan" type="button">Ban IP</button>
           <button class="btn sec" id="modIpUnban" type="button">Unban IP</button>
           <span class="hint" id="modIpMsg" style="align-self:center"></span>
         </div>
-        <div class="hint" style="margin-top:8px">Banned IPs can't chat (even on new accounts). Banning an account bans its logged IP automatically. IPv6 is banned by /64 network. On a shared network (like a school) this affects everyone on it, so unban when it's over. Owners and admins can both ban and unban.</div>
+        <div class="section-h" style="margin-top:14px;font-size:13px">Currently IP-banned <span id="modIpCount" class="hint"></span></div>
+        <div class="actions" style="justify-content:flex-start;margin-top:6px">
+          <button class="btn sec small" id="modIpListGo" type="button">Load list</button>
+          <span class="hint" id="modIpListMsg" style="align-self:center"></span>
+        </div>
+        <div id="modIpList" style="display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto;margin-top:8px"></div>
+        <div class="hint" style="margin-top:8px">Banned IPs can't chat (even on new accounts). Banning an account bans every network it has been seen on, and <b>unbanning the account lifts those again</b>. IPv6 is banned by /64 network. On a shared network (like a school) this affects everyone on it, so unban when it's over. Owners and admins can both ban and unban. The list stores a scrambled fingerprint of each network rather than the address itself, so bans can be lifted from here but the raw IP only ever appears in the TOS log above.</div>
       </div>`:''}
       ${isOwner(ME.id)?`<div class="set-card">
         <div class="section-h" style="margin-top:0">📄 TOS acceptances</div>
-        <div class="hint">Every account that accepted the Terms, newest first, with the IP the server saw. Only owners can read this — it is not posted to Discord any more.</div>
+        <div class="hint">Every account that accepted the Terms, newest first. Accounts that accepted through the server show the IP it saw; ones that accepted before IP logging existed show the network fingerprint only. Owners only — it is not posted to Discord any more.</div>
         <div class="actions" style="justify-content:flex-start;margin-top:10px">
           <button class="btn sec small" id="tosLogGo" type="button">Load log</button>
           <span class="hint" id="tosLogMsg" style="align-self:center"></span>
@@ -13968,9 +14080,52 @@ function openSettings(fromChat){
         try{await tosManualIpBan(action,ip,$$('#modIpWhy').value.trim());msg.textContent=action==='ban'?'✅ IP banned.':'✅ IP unbanned.';toast(action==='ban'?'IP banned.':'IP unbanned.')}
         catch(e){msg.textContent='❌ '+e.message}
       };
-      $$('#modIpBan').onclick=()=>go('ban');
-      $$('#modIpUnban').onclick=()=>go('unban');
+      $$('#modIpBan').onclick=()=>go('ban').then(()=>renderIpBans(true));
+      $$('#modIpUnban').onclick=()=>go('unban').then(()=>renderIpBans(true));
     }
+    /* Currently IP-banned. Fetched on demand like the TOS log — the entries are keyed by the
+       salted network fingerprint, so there is no address to show, only who it was banned for. */
+    async function renderIpBans(quiet){
+      const box=$$('#modIpList'),msg=$$('#modIpListMsg'),cnt=$$('#modIpCount'),btn=$$('#modIpListGo');
+      if(!box)return;
+      if(!quiet&&btn){btn.disabled=true;btn.textContent='Loading…'}
+      try{
+        const rows=await DB.ipBans();
+        if(btn){btn.textContent='Refresh';btn.disabled=false}
+        if(cnt)cnt.textContent=rows.length?('— '+rows.length):'';
+        if(msg)msg.textContent=rows.some(r=>r.partial)?'(showing bans tied to known accounts)':'';
+        if(!rows.length){box.innerHTML='<div class="hint">No networks are IP-banned right now.</div>';return}
+        box.innerHTML=rows.map(r=>{
+          const who=r.uid?('account #'+r.uid+(DB.getUser(r.uid)&&DB.getUser(r.uid).username?(' · '+esc(displayUsername(DB.getUser(r.uid).username))):'')):'banned by IP';
+          const when=r.at?new Date(Number(r.at)).toLocaleString():'-';
+          return '<div class="list-row" style="display:block;padding:8px 10px">'+
+            '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
+              '<code style="font-size:12px;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.07)" title="salted network fingerprint">net '+esc(String(r.h).slice(0,12))+'</code>'+
+              '<b style="font-size:13px">'+who+'</b>'+
+              '<button class="btn sec small" data-ipun="'+esc(r.h)+'" type="button">Lift</button>'+
+            '</div>'+
+            '<div class="hint" style="margin-top:4px">'+esc(when)+(r.by?(' · by account #'+esc(String(r.by))):'')+
+              (r.reason?(' · '+esc(r.reason)):'')+'</div>'+
+          '</div>';
+        }).join('');
+        box.querySelectorAll('[data-ipun]').forEach(b=>b.onclick=async()=>{
+          const uid=(rows.find(r=>r.h===b.dataset.ipun)||{}).uid;
+          b.disabled=true;b.textContent='Lifting…';
+          try{
+            /* The API lifts by account (it never takes a hash), so a ban with no account attached
+               has to be lifted with the IP itself in the box above — say so rather than fail mutely. */
+            if(!uid){toast('This one was banned by IP with no account attached — lift it with the address in the box above.','bad');
+              b.disabled=false;b.textContent='Lift';return}
+            await tosIpUnbanUser(Number(uid));
+            toast('Network unbanned.');renderIpBans(true);
+          }catch(e){toast(e.message||'Could not lift it','bad');b.disabled=false;b.textContent='Lift'}
+        });
+      }catch(e){
+        if(btn){btn.textContent='Load list';btn.disabled=false}
+        if(msg)msg.textContent=(e&&e.message)||'Could not read it.';
+      }
+    }
+    $$('#modIpListGo')&&($$('#modIpListGo').onclick=()=>renderIpBans(false));
     if($$('#modAnnGo')){
       const ta=$$('#modAnnText'),cnt=$$('#modAnnCount');
       ta.addEventListener('input',()=>{cnt.textContent=ta.value.length+' / 300'});
@@ -14093,18 +14248,25 @@ function openSettings(fromChat){
         const rows=await DB.tosLog();
         btn.textContent='Refresh';
         if(msg)msg.textContent=rows.length?(rows.length+' account'+(rows.length===1?'':'s')):'';
-        if(!rows.length){box.innerHTML='<div class="hint">Nothing yet. Records appear as people accept the new Terms.</div>';return}
-        box.innerHTML=rows.map(r=>{
+        if(!rows.length){box.innerHTML='<div class="hint">Nobody has accepted the Terms yet.</div>';return}
+        const noip=rows.filter(r=>r.noip).length;
+        box.innerHTML=(noip?('<div class="hint" style="margin-bottom:8px">'+noip+' of these accepted before IP logging was added, or through the fallback path, so there is no raw IP on record for them \u2014 only the network fingerprint bans match on.</div>'):'')+
+          rows.map(r=>{
           const when=r.at?new Date(Number(r.at)).toLocaleString():'-';
+          /* Receipt-only rows have no raw IP \u2014 by design, it was never stored for them. Show the
+             network fingerprint instead of an empty box and two buttons that can't do anything. */
+          const idTag=r.noip
+            ? '<code style="font-size:12px;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.07);opacity:.8" title="salted network fingerprint">'+esc(r.h?('net '+String(r.h).slice(0,10)):'no IP on record')+'</code>'+
+              '<span class="hint">receipt only</span>'
+            : '<code style="font-size:12px;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.07)">'+esc(r.ip||'-')+'</code>'+
+              '<button class="btn sec small" data-tos-copy="'+esc(r.ip||'')+'" type="button">Copy IP</button>'+
+              '<button class="btn sec small" data-tos-ban="'+esc(r.ip||'')+'" type="button">Use in IP ban</button>';
           return '<div class="list-row" style="display:block;padding:8px 10px">'+
             '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
-              '<b>'+esc(r.name||'(unknown)')+'</b><span class="hint">#'+r.id+'</span>'+
-              '<code style="font-size:12px;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.07)">'+esc(r.ip||'-')+'</code>'+
-              '<button class="btn sec small" data-tos-copy="'+esc(r.ip||'')+'" type="button">Copy IP</button>'+
-              '<button class="btn sec small" data-tos-ban="'+esc(r.ip||'')+'" type="button">Use in IP ban</button>'+
+              '<b>'+esc(r.name||'(unknown)')+'</b><span class="hint">#'+r.id+'</span>'+idTag+
             '</div>'+
             '<div class="hint" style="margin-top:4px">'+esc(when)+' \u00B7 TOS v'+esc(String(r.v||'?'))+
-              ' \u00B7 VPN: '+esc(r.vpn||'?')+(r.build?' \u00B7 build '+esc(r.build):'')+'</div>'+
+              (r.noip?'':' \u00B7 VPN: '+esc(r.vpn||'?'))+(r.build?' \u00B7 build '+esc(r.build):'')+'</div>'+
             (r.ua?'<div class="hint" style="margin-top:2px;word-break:break-word;opacity:.75">'+esc(r.ua)+'</div>':'')+
           '</div>';
         }).join('');
@@ -14134,6 +14296,13 @@ function openSettings(fromChat){
         const newName=await DB.unbanUser(id);
         toast(newName?('User #'+id+' unbanned — back as @'+newName+'.')
                      :('User #'+id+' unbanned. Their profile comes back the next time they sign in.'));
+        /* Say plainly what happened to their IP ban. Before this it was attempted silently, so an
+           unban that left the network blocked looked completely successful. */
+        const ip=DB._lastUnbanIp||{};
+        if(ip.tried&&ip.ok)toast(ip.changed?('🌐 Also lifted '+ip.changed+' IP ban'+(ip.changed===1?'':'s')+' for them.')
+                                           :'No IP ban was on file for them.');
+        else if(ip.tried)toast('⚠️ Account unbanned, but the IP ban could not be lifted: '+ip.error+' — lift it by hand below.','bad');
+        if($$('#modIpList')&&$$('#modIpList').children.length)renderIpBans(true);
       }catch(err){toast(err.message,'bad')}
     });
     $$('#modRetention')&&($$('#modRetention').onchange=async e=>{
@@ -15941,29 +16110,29 @@ function totgRhythm(host,done){
 /* The list the Minigames tab renders. payout() turns a raw score into candy. */
 const TOT_GAMES=[
   {id:'smash', n:'Pumpkin Smash', ic:'🔨', d:'16s · hit pumpkins, dodge ghosts', run:totgSmash,
-   payout:s=>Math.min(500,s*16), unit:s=>s+' smashed', ach:s=>s>=20?'smash':''},
+   payout:s=>Math.min(700,s*22), unit:s=>s+' smashed', ach:s=>s>=20?'smash':''},
   {id:'catch', n:'Candy Catch',   ic:'🧺', d:'20s · catch sweets, dodge bombs',  run:totgCatch,
-   payout:s=>Math.min(500,s*15), unit:s=>s+' caught',  ach:s=>s>=25?'catch':''},
+   payout:s=>Math.min(700,s*21), unit:s=>s+' caught',  ach:s=>s>=25?'catch':''},
   {id:'memory',n:'Haunted Memory',ic:'🃏', d:'Match 6 pairs as fast as you can', run:totgMemory,
-   payout:s=>Math.max(80,Math.min(500,Math.round(500-s*10))), unit:s=>s+'s', ach:s=>s<=20?'memory':''},
+   payout:s=>Math.max(140,Math.min(700,Math.round(700-s*13))), unit:s=>s+'s', ach:s=>s<=20?'memory':''},
   {id:'typer', n:'Spooky Typer',  ic:'⌨️', d:'22s · type the words, spelling counts', run:totgTyper,
-   payout:s=>Math.min(500,s*26), unit:s=>s+' typed',   ach:s=>s>=12?'typer':''},
+   payout:s=>Math.min(700,s*36), unit:s=>s+' typed',   ach:s=>s>=12?'typer':''},
   {id:'steady',n:'Steady Hand',   ic:'🕯️', d:'5 rounds · stop the flame in the green', run:totgSteady,
-   payout:s=>s*95, unit:s=>s+' of 5', ach:s=>s>=5?'steady':''},
+   payout:s=>Math.min(700,s*135), unit:s=>s+' of 5', ach:s=>s>=5?'steady':''},
   {id:'dash',  n:'Street Dash',   ic:'🏃', d:'Endless runner · jump the fences', run:totgDash,
-   payout:s=>Math.min(500,s*22), unit:s=>s+' cleared', ach:s=>s>=15?'dash':''},
+   payout:s=>Math.min(700,s*30), unit:s=>s+' cleared', ach:s=>s>=15?'dash':''},
   {id:'potion',n:'Potion Brew',   ic:'🧪', d:'Simon says · repeat the order', run:totgPotion,
-   payout:s=>Math.min(500,s*55), unit:s=>'round '+s, ach:s=>s>=8?'potion':''},
+   payout:s=>Math.min(700,s*76), unit:s=>'round '+s, ach:s=>s>=8?'potion':''},
   {id:'ghost', n:'Ghost Rush',    ic:'👻', d:'5 rounds · reaction time', run:totgGhost,
-   payout:s=>Math.min(500,s), unit:s=>s+' pts', ach:s=>s>=380?'ghost':''},
+   payout:s=>Math.min(700,Math.round(s*1.4)), unit:s=>s+' pts', ach:s=>s>=380?'ghost':''},
   {id:'odd',   n:'Odd One Out',   ic:'🔦', d:'22s · spot the one that differs', run:totgOdd,
-   payout:s=>Math.min(500,s*34), unit:s=>s+' found', ach:s=>s>=12?'odd':''},
+   payout:s=>Math.min(700,s*47), unit:s=>s+' found', ach:s=>s>=12?'odd':''},
   {id:'zombie',n:'Zombie Queue',  ic:'🧟', d:'30s · tap them in number order', run:totgZombie,
-   payout:s=>Math.min(500,s*60), unit:s=>s+' cleared', ach:s=>s>=6?'zombie':''},
+   payout:s=>Math.min(700,s*83), unit:s=>s+' cleared', ach:s=>s>=6?'zombie':''},
   {id:'lantern',n:'Lantern Flash',ic:'🕯️', d:'Remember which lanterns lit', run:totgLantern,
-   payout:s=>Math.min(500,s*58), unit:s=>'round '+s, ach:s=>s>=7?'lantern':''},
+   payout:s=>Math.min(700,s*80), unit:s=>'round '+s, ach:s=>s>=7?'lantern':''},
   {id:'rhythm',n:'Monster Mash',  ic:'🎵', d:'30s · hit the notes in time', run:totgRhythm,
-   payout:s=>Math.min(500,s*9),  unit:s=>s+' pts', ach:s=>s>=45?'rhythm':''}
+   payout:s=>Math.min(700,Math.round(s*8.4)), unit:s=>s+' pts', ach:s=>s>=60?'rhythm':''}
 ];
 
 /* ==========================================================================
@@ -15991,11 +16160,11 @@ const TOT={
   /* Plain UTC instants. Players only ever see the countdown, never a zone name. */
   END:Date.UTC(2026,10,1,18,0,0),         // collecting closes midday Nov 1
   BOARD_END:Date.UTC(2026,10,6,6,0,0),    // board stays visible for a few days after
-  KNOCK_MS:6000,                          // cooldown between knocks (the rules enforce ~5.5s)
+  KNOCK_MS:4000,                          // cooldown between knocks (the rules enforce ~3.5s)
   MAX:1000000,                            // hard ceiling the rules also apply
   WINNERS:5,
-  GAME_MS:45000,                          // cooldown between minigames (rules enforce ~40s)
-  BONUS_MS:3600000                        // the free doorbell bonus, once an hour (rules ~58m)
+  GAME_MS:30000,                          // cooldown between minigames (rules enforce ~27s)
+  BONUS_MS:1800000                        // the free doorbell bonus, every 30 min (rules ~28m)
 };
 /* Things you can buy with candy. The permanent one is the money sink that gives the night a shape:
    grind early, buy the bucket, every door pays more for the rest of the event. */
@@ -16026,6 +16195,22 @@ const TOT_QUESTS=[
   {id:'g12',  ic:'🎮',n:'Arcade regular',  d:'Play 12 minigames',          pay:600, at:m=>Math.min(1,m.games/12)},
   {id:'g9',   ic:'🏅',n:'Try everything',  d:'Play all twelve minigames',  pay:900, at:m=>Math.min(1,totPlayedN()/totGamesN())},
   {id:'e10k', ic:'🏦',n:'Candy hoard',     d:'Earn 10,000 candy in total', pay:1200,at:m=>Math.min(1,m.earned/10000)}
+];
+/* ---------- what the top 5 actually win ----------
+   Written out in one place and shown in three (the Board tab, the intro popup and the payout
+   buttons), because "top 5 get rewarded" on its own tells nobody whether it is worth playing for. */
+const TOT_REWARDS=[
+  {pos:1,medal:'🥇',n:'1st place',  give:'mvp', t:'MVP + permanent VIP',
+   d:'Both. MVP is the rarer one — almost nobody has it.'},
+  {pos:2,medal:'🥈',n:'2nd place',  give:'vip', t:'Permanent VIP',       d:'Legend tier, never expires.'},
+  {pos:3,medal:'🥉',n:'3rd place',  give:'vip', t:'Permanent VIP',       d:'Legend tier, never expires.'},
+  {pos:4,medal:'4️⃣',n:'4th place', give:'vip', t:'Permanent VIP',       d:'Legend tier, never expires.'},
+  {pos:5,medal:'5️⃣',n:'5th place', give:'vip', t:'Permanent VIP',       d:'Legend tier, never expires.'}
+];
+/* And what those two things get you, so the prize means something to somebody who has neither. */
+const TOT_PERKS=[
+  {ic:'💎',n:'VIP (Legend)',d:'The VIP Lounge, the VIP tag and name styling on every message, and the VIP cosmetics. Permanent — it never runs out.'},
+  {ic:'🏆',n:'MVP',         d:'Everything VIP has plus the MVP Lounge, messages twice as long, a longer profile description and a profile banner.'}
 ];
 /* Collectables. Cheap to earn, nice to complete, and they show on your leaderboard row. */
 const TOT_ACH=[
@@ -16062,8 +16247,8 @@ const totVisible=()=>totNow()<TOT.BOARD_END;           // is the event still sho
 /* ---------- Candy Rain ----------
    A site-wide double-candy window. It is worked out purely from the clock, so every player hits
    the same five minutes without anything being stored, broadcast or capable of going out of sync:
-   five minutes of double candy at the top and the bottom of every hour (server clock, via SKEW). */
-const TOT_RAIN={EVERY:1800000,LEN:300000};
+   six minutes of double candy every twenty minutes (server clock, via SKEW). */
+const TOT_RAIN={EVERY:1200000,LEN:360000};   // 6 minutes of double candy every 20 minutes
 const _totRainT=()=>totNow()%TOT_RAIN.EVERY;
 const totRainOn=()=>totLive()&&_totRainT()<TOT_RAIN.LEN;
 const totRainLeft=()=>totRainOn()?TOT_RAIN.LEN-_totRainT():0;
@@ -16082,7 +16267,7 @@ const totLeftTx=()=>{
 
 let TOT_ME={played:'',candy:0,earned:0,best:0,doors:0,streak:0,last:0,golden:0,lastg:0,bonus:0,rush:0,luck:0,bag:0,games:0,ach:'',qc:'',fit:'',fits:''};
 let TOT_ALL={};
-let _totUnsub=null,_totBusy=false,_totTab='street',_totTimer=null,_totHaunt=false;
+let _totUnsub=null,_totBusy=false,_totTab='street',_totTimer=null,_totHaunt=false,_totRolling=false;
 
 /* ---------- live data ---------- */
 function totWatch(){
@@ -16163,11 +16348,11 @@ const totNum=n=>Number(n||0).toLocaleString();
    Weighted outcomes. The good ones are frequent enough that knocking always feels worth it, and
    the bad ones only ever take a slice of what you are carrying, never all of it. */
 const TOT_DOORS=[
-  {k:'treat', w:30,ic:'🍬',t:'Treat!',       lo:8,  hi:18, s:['"Happy Halloween!"','A handful of sweets.','They drop a few in your bucket.']},
-  {k:'big',   w:16,ic:'🍭',t:'Big handful!', lo:22, hi:44, s:['They tip the whole bowl in.','"Take as much as you want."','Jackpot of a house.']},
-  {k:'bar',   w:8, ic:'🍫',t:'FULL SIZE BAR',lo:55, hi:95, s:['The legendary full-size bar.','This house gets it.','You hear other kids gasp.']},
-  {k:'jack',  w:2, ic:'🎃',t:'THE GOOD HOUSE',lo:160,hi:280,s:['They were waiting all night for one more kid.','Someone just emptied the bowl into your bucket.']},
-  {k:'gold',  w:5, ic:'✨',t:'Golden wrapper',lo:12, hi:25, s:['Your next 3 knocks are worth double.','It glows. That cannot be normal.']},
+  {k:'treat', w:30,ic:'🍬',t:'Treat!',       lo:14, hi:30, s:['"Happy Halloween!"','A handful of sweets.','They drop a few in your bucket.']},
+  {k:'big',   w:16,ic:'🍭',t:'Big handful!', lo:38, hi:75, s:['They tip the whole bowl in.','"Take as much as you want."','Jackpot of a house.']},
+  {k:'bar',   w:8, ic:'🍫',t:'FULL SIZE BAR',lo:95, hi:160, s:['The legendary full-size bar.','This house gets it.','You hear other kids gasp.']},
+  {k:'jack',  w:2, ic:'🎃',t:'THE GOOD HOUSE',lo:270,hi:470,s:['They were waiting all night for one more kid.','Someone just emptied the bowl into your bucket.']},
+  {k:'gold',  w:5, ic:'✨',t:'Golden wrapper',lo:20, hi:42, s:['Your next 3 knocks are worth double.','It glows. That cannot be normal.']},
   /* The haunted house doesn't pay out on the spot — it opens three rooms and lets you pick one.
      Every room pays something, so going in is never worse than not going in. */
   {k:'haunt', w:4, ic:'🏚️',t:'THE HAUNTED HOUSE',lo:0,hi:0,s:['The door creaks open on its own. Three rooms. Pick one.']},
@@ -16288,13 +16473,30 @@ async function totKnock(idx,doorEl){
   else if(d.k==='bar'&&typeof burstConfetti==='function')burstConfetti(60);
   _totBusy=false;totPaintStreet();totPaint();
   if(d.k==='haunt'){totHaunt();return}
-  if(TOT_STREET.every(h=>h.done))totFinishStreet();
+  totMaybeNextStreet();
+}
+
+/* Roll the street over once every house has answered.
+   This used to be an inline check at the end of totKnock, which the haunted house jumped straight
+   past with its early `return` — so if the haunted house happened to be the LAST house on the
+   street, every door showed "Knocked" and no new street ever came. The event was stuck there for
+   good (reported from a live game on street #12). Three separate paths led to that same dead end:
+   the haunted house being last, the pick being abandoned by changing tab, and totHaunt() bailing
+   because the result panel wasn't mounted. So the check lives in one guarded place now and is
+   also driven from the repaint tick, which means a street can't stay wedged even if some future
+   path forgets to call it. */
+function totMaybeNextStreet(){
+  if(_totRolling||_totHaunt||_totBusy||!totLive())return false;   // never pay out after the deadline
+  if(!TOT_STREET.length||!TOT_STREET.every(h=>h.done))return false;
+  _totRolling=true;
+  totFinishStreet();
+  return true;
 }
 
 /* Clearing every house on a street pays a small bonus and rolls the next one. That bonus is what
    makes working along the whole street worth more than hammering the one good-looking door. */
 async function totFinishStreet(){
-  const pay=Math.round(totRand(40,90)*totGearX()*totRainX());
+  const pay=Math.round(totRand(90,180)*totGearX()*totRainX());
   const patch={
     candy:Math.max(0,Math.min(TOT.MAX,TOT_ME.candy+pay)),
     earned:Math.min(TOT.MAX*5,(Number(TOT_ME.earned)||0)+pay),
@@ -16305,7 +16507,7 @@ async function totFinishStreet(){
   TOT_ME={...TOT_ME,...patch};
   toast('🏁 Street cleared! +'+totNum(pay)+' candy — walking to the next one.');
   // the number and the houses change together, so the header never shows a street you can still see
-  setTimeout(()=>{_totStreetN++;totNewStreet();totPaintStreet();totPaint()},900);
+  setTimeout(()=>{_totStreetN++;totNewStreet();_totRolling=false;totPaintStreet();totPaint()},900);
   totPaint();
   try{await totSave(patch)}catch(e){console.warn('[tot] street bonus save failed',e&&e.code)}
 }
@@ -16313,12 +16515,35 @@ async function totFinishStreet(){
 /* ---------- the haunted house ----------
    Three rooms, all of them worth entering. The pick is a second, smaller write: it doesn't touch
    `last`, so it doesn't collide with the knock cooldown the rules enforce on that field. */
+/* Pay out a haunted house without the picker — used when there is nowhere to draw the rooms, and
+   when the player navigates away before choosing. Either way the house still pays: the whole
+   premise is that walking in is never worse than not walking in. */
+function totHauntAuto(force){
+  if(!force&&!_totHaunt)return false;
+  _totHaunt=false;
+  if(!ME||!totLive())return false;
+  const pay=Math.round(totRand(190,330)*totMult()*totGearX()*totRainX());
+  const patch={
+    candy:Math.max(0,Math.min(TOT.MAX,TOT_ME.candy+pay)),
+    earned:Math.min(TOT.MAX*5,(Number(TOT_ME.earned)||0)+pay),
+    best:Math.max(Number(TOT_ME.best)||0,pay),
+    name:String(ME.username||'').slice(0,20)
+  };
+  const a=totGrant([patch.candy>=1000?'rich':'',patch.candy>=5000?'rich5':'']);
+  if(a)patch.ach=a;
+  TOT_ME={...TOT_ME,...patch};
+  toast('🏚️ The haunted house gave you '+totNum(pay)+' candy.');
+  totPaint();
+  totSave(patch).catch(()=>{});
+  totMaybeNextStreet();
+  return true;
+}
 function totHaunt(){
   const box=document.getElementById('totResult');
-  if(!box)return;
+  if(!box){totHauntAuto(true);return}
   _totHaunt=true;
   const mult=totMult()*totGearX()*totRainX();
-  const pots=[totRand(300,560),totRand(110,190),totRand(110,190)]
+  const pots=[totRand(500,900),totRand(190,330),totRand(190,330)]
     .map(v=>Math.round(v*mult));
   for(let i=pots.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pots[i],pots[j]]=[pots[j],pots[i]]}
   const ROOMS=[{ic:'🚪',n:'The cellar'},{ic:'🪜',n:'The attic'},{ic:'🕯️',n:'The parlour'}];
@@ -16351,6 +16576,7 @@ function totHaunt(){
     if(pay>=300&&typeof burstConfetti==='function')burstConfetti(100);
     totPaint();
     try{await totSave(patch)}catch(e){toast('That didn\'t save ('+(e.code||e.message)+')','bad')}
+    totMaybeNextStreet();          // the haunted house may well have been the last door
   });
 }
 
@@ -16420,7 +16646,7 @@ function totGamesHTML(){
       <span class="tot-game-tx"><b>${esc(g.n)}</b><small>${esc(g.d)}</small></span>
       <span class="tot-game-hi">${esc(hiTx)}</span></button>`;
   }).join('');
-  return `<div class="hint">Twelve games, pure skill, up to 500 candy each, nothing to lose. One every ${Math.round(totGameMs()/1000)}s.</div>
+  return `<div class="hint">Twelve games, pure skill, up to 700 candy each, nothing to lose. One every ${Math.round(totGameMs()/1000)}s.</div>
     <div class="tot-games" id="totGames">${list}</div>
     <div class="tot-gamecd" id="totGameCd"></div>
     <div id="totGameHost"></div>`;
@@ -16443,7 +16669,7 @@ async function totBuy(id){
 }
 async function totBonus(){
   if(!ME||!totLive()||totBonusCd()>0)return;
-  const pay=Math.round(totRand(120,260)*(1+totFitB()));
+  const pay=Math.round(totRand(220,450)*(1+totFitB()));
   const patch={
     candy:Math.max(0,Math.min(TOT.MAX,TOT_ME.candy+pay)),
     earned:Math.min(TOT.MAX*5,(Number(TOT_ME.earned)||0)+pay),
@@ -16562,7 +16788,7 @@ function totOpen(tab){
   $('#totBg').onclick=e=>{if(e.target.id==='totBg')totClose()};
   root.querySelectorAll('[data-tot]').forEach(b=>b.onclick=()=>{
     if(_totGameStop){try{_totGameStop()}catch(_){}_totGameStop=null}
-    _totHaunt=false;                       // leaving the street forfeits an unpicked room
+    totHauntAuto();                        // leaving the street shouldn't cost you the room
     _totTab=b.dataset.tot;totBody();totPaint();
   });
   totBody();totPaint();
@@ -16646,14 +16872,31 @@ function totBoardHTML(){
       <span class="tot-nm">${r.fit?('<span class="tot-fit-ic" title="costume">'+totFitOf(r.fit)+'</span> '):''}${esc(totName(r.id))}${mine?' <em>(you)</em>':''}</span>
       <span class="tot-sub">${totNum(r.doors)} doors</span>
       <span class="tot-candy">🍬 ${totNum(r.candy)}</span>
-      ${(over&&i<TOT.WINNERS&&typeof isOwner==='function'&&ME&&isOwner(ME.id)&&!isOwner(r.id))?`<button type="button" class="btn sec small tot-rw" data-reward="${r.id}">Give VIP</button>`:''}
+      ${(over&&i<TOT.WINNERS&&typeof isOwner==='function'&&ME&&isOwner(ME.id)&&!isOwner(r.id))
+        ?`<button type="button" class="btn sec small tot-rw" data-reward="${r.id}" data-rank="${i+1}">${i===0?'Give MVP + VIP':'Give VIP'}</button>`:''}
     </div>`;
   }).join('');
   const mine=me?`<div class="tot-yours">You are <b>#${me}</b> of ${rows.length} with <b>🍬 ${totNum(TOT_ME.candy)}</b>.</div>`
                 :`<div class="tot-yours">You are not on the board yet.</div>`;
-  return head+`<div class="tot-board">${list}</div>${mine}`+
+  return head+`<div class="tot-board">${list}</div>${mine}`+totRewardsHTML()+
     ((ME&&typeof isOwner==='function'&&isOwner(ME.id))
       ?`<button type="button" class="btn sec small tot-ann" id="totAnnounce">📢 Announce this event to everyone</button>`:'');
+}
+/* The prize list. Always on the Board tab, during the event and after it. */
+function totRewardsHTML(){
+  const myRank=ME?totRankOf(ME.id):0;
+  return `<div class="tot-rw-h">🎁 Prizes</div>
+  <div class="tot-rw-list">${TOT_REWARDS.map(r=>`
+    <div class="tot-rw-row${myRank===r.pos?' me':''}">
+      <span class="tot-rw-m">${r.medal}</span>
+      <div class="tot-rw-tx"><b>${esc(r.n)}</b><small>${esc(r.d)}</small></div>
+      <span class="tot-rw-p${r.give==='mvp'?' top':''}">${esc(r.t)}</span>
+    </div>`).join('')}</div>
+  <div class="tot-rw-what">${TOT_PERKS.map(p=>`
+    <div><span>${p.ic}</span><div><b>${esc(p.n)}</b><small>${esc(p.d)}</small></div></div>`).join('')}</div>
+  <div class="hint tot-rw-note">Ranked on the candy you are <b>holding</b> when the clock runs out, so spending
+    in the shop is a real trade-off. Ties break towards whoever got there in fewer doors.
+    An owner hands the prizes out from this tab once it ends.</div>`;
 }
 function totWire(){
   const b=document.getElementById('totBody');if(!b)return;
@@ -16665,15 +16908,30 @@ function totWire(){
   b.querySelectorAll('[data-claim]').forEach(x=>x.onclick=()=>totClaim(x.dataset.claim));
   const bon=document.getElementById('totBonusBtn');if(bon)bon.onclick=totBonus;
   b.querySelectorAll('[data-reward]').forEach(x=>x.onclick=async()=>{
-    const id=Number(x.dataset.reward);x.disabled=true;x.textContent='Giving…';
-    try{await DB.giveVip(id,'perm');toast(totName(id)+' is now a Legend (permanent VIP).');x.textContent='✓ Rewarded'}
-    catch(e){toast(e.message||'Failed','bad');x.disabled=false;x.textContent='Give VIP'}
+    const id=Number(x.dataset.reward),rank=Number(x.dataset.rank)||0,first=rank===1;
+    const label=first?'Give MVP + VIP':'Give VIP';
+    x.disabled=true;x.textContent='Giving…';
+    try{
+      await DB.giveVip(id,'perm');
+      if(!first){toast(totName(id)+' is now a Legend (permanent VIP).');x.textContent='✓ VIP given';return}
+      /* First place gets MVP on top. VIP has already landed, so if MVP fails (its rules are a
+         separate publish) say exactly that rather than letting it look like nothing happened. */
+      try{
+        await DB.giveMvp(id);
+        toast('🥇 '+totName(id)+' is now an MVP and a permanent VIP.');
+        x.textContent='✓ MVP + VIP';
+        if(typeof burstConfetti==='function')burstConfetti(140);
+      }catch(e){
+        toast('VIP given, but MVP failed: '+(e.message||'unknown'),'bad');
+        x.textContent='✓ VIP · MVP failed';
+      }
+    }catch(e){toast(e.message||'Failed','bad');x.disabled=false;x.textContent=label}
   });
   const ann=document.getElementById('totAnnounce');
   if(ann)ann.onclick=async()=>{
     ann.disabled=true;ann.textContent='Sending…';
     try{
-      await DB.sendLiveAnnouncement('🎃 TRICK OR TREAT is live! Knock on doors for candy, play the TWELVE minigames, finish challenges and buy a costume. 🌧️ CANDY RAIN doubles everything for 5 minutes every half hour. It ends at MIDNIGHT tonight — top 5 get rewarded. Open it from the home screen.',{kind:'event',alsoPost:true});
+      await DB.sendLiveAnnouncement('🎃 TRICK OR TREAT is live! Knock on doors for candy, play the TWELVE minigames, finish challenges and buy a costume. 🌧️ CANDY RAIN doubles everything for 6 minutes out of every 20. Top 5 get PERMANENT VIP and 1st place also gets MVP. Open it from the home screen.',{kind:'event',alsoPost:true});
       toast('Announced to everyone.');ann.textContent='✓ Announced';
     }catch(e){toast(e.message||'Could not announce','bad');ann.disabled=false;ann.textContent='📢 Announce this event to everyone'}
   };
@@ -16681,6 +16939,8 @@ function totWire(){
 // One repaint for everything live: the clock, the bucket, the cooldown ring, the shop buttons.
 function totPaint(){
   const c=document.getElementById('totCandy');if(c)c.textContent=totNum(TOT_ME.candy);
+  totMaybeNextStreet();      // safety net: a fully-knocked street always rolls on from here
+
   // Candy Rain: the same five minutes for everybody, worked out from the clock alone.
   const rain=document.getElementById('totRain');
   if(rain){
@@ -16690,7 +16950,7 @@ function totPaint(){
       ? `<span class="tot-rain-ic">🌧️</span><div><b>CANDY RAIN — everything pays double</b>
          <small>Ends in ${totMs(totRainLeft())}. Knock as fast as you can.</small></div>`
       : `<span class="tot-rain-ic">⏳</span><div><b>Candy Rain in ${totMs(totRainIn())}</b>
-         <small>Five minutes of double candy, every half hour, for everyone at once.</small></div>`;
+         <small>Six minutes of double candy, every 20 minutes, for everyone at once.</small></div>`;
   }
   const qd=document.getElementById('totQDot');
   if(qd){const n=totQCount();qd.textContent=n?n:'';qd.classList.toggle('on',n>0)}
@@ -16809,9 +17069,9 @@ function totMaybeIntro(){
     <div class="tot-intro-grid">
       <div><span>🚪</span><b>Knock</b><small>Full-size bars, jackpot houses and a haunted one.</small></div>
       <div><span>🕹️</span><b>Play</b><small>Twelve minigames. Pure skill, nothing to lose.</small></div>
-      <div><span>🌧️</span><b>Candy Rain</b><small>Everything pays double, 5 minutes every half hour.</small></div>
+      <div><span>🌧️</span><b>Candy Rain</b><small>Everything pays double, 6 minutes out of every 20.</small></div>
       <div><span>📜</span><b>Challenges</b><small>Milestones that pay out, plus costumes to buy.</small></div>
-      <div><span>🏆</span><b>Win</b><small>Top 5 when the clock runs out get rewarded.</small></div>
+      <div><span>🏆</span><b>Win</b><small>Top 5 get permanent VIP — 1st also gets MVP.</small></div>
       <div><span>🔔</span><b>Come back</b><small>A free doorbell bonus every hour.</small></div>
     </div>
     <div class="tot-intro-end">You have <b>${totLeftTx()}</b> left.</div>
@@ -17022,7 +17282,13 @@ async function tosLoadState(id){
 /* ---------- ban hooks (called from DB.banUser / DB.unbanUser, and the staff IP-ban tool). The server does the work,
    and re-checks the caller's role itself — owners and admins may both ban and unban an IP. ---------- */
 async function tosIpBanUser(id){const {j}=await tosApi('ipban',{action:'ban',userId:Number(id),reason:'account banned'});return !!j.ok}
-async function tosIpUnbanUser(id){const {j}=await tosApi('ipban',{action:'unban',userId:Number(id)});return !!j.ok}
+/* Returns {ok,changed} and THROWS on a server refusal, so DB.unbanUser can tell the staff member
+   whether the network actually got unblocked instead of silently reporting success. */
+async function tosIpUnbanUser(id){
+  const {j,status}=await tosApi('ipban',{action:'unban',userId:Number(id)});
+  if(!j.ok)throw new Error(j.error||('The server refused it ('+status+').'));
+  return {ok:true,changed:Number(j.changed)||0};
+}
 async function tosManualIpBan(action,ip,reason){
   ip=String(ip||'').trim();
   if(!tosValidIp(ip))throw new Error('That is not a valid IP address.');

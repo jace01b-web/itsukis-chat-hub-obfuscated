@@ -23,11 +23,11 @@ const TOT={
   /* Plain UTC instants. Players only ever see the countdown, never a zone name. */
   END:Date.UTC(2026,10,1,18,0,0),         // collecting closes midday Nov 1
   BOARD_END:Date.UTC(2026,10,6,6,0,0),    // board stays visible for a few days after
-  KNOCK_MS:6000,                          // cooldown between knocks (the rules enforce ~5.5s)
+  KNOCK_MS:4000,                          // cooldown between knocks (the rules enforce ~3.5s)
   MAX:1000000,                            // hard ceiling the rules also apply
   WINNERS:5,
-  GAME_MS:45000,                          // cooldown between minigames (rules enforce ~40s)
-  BONUS_MS:3600000                        // the free doorbell bonus, once an hour (rules ~58m)
+  GAME_MS:30000,                          // cooldown between minigames (rules enforce ~27s)
+  BONUS_MS:1800000                        // the free doorbell bonus, every 30 min (rules ~28m)
 };
 /* Things you can buy with candy. The permanent one is the money sink that gives the night a shape:
    grind early, buy the bucket, every door pays more for the rest of the event. */
@@ -58,6 +58,22 @@ const TOT_QUESTS=[
   {id:'g12',  ic:'🎮',n:'Arcade regular',  d:'Play 12 minigames',          pay:600, at:m=>Math.min(1,m.games/12)},
   {id:'g9',   ic:'🏅',n:'Try everything',  d:'Play all twelve minigames',  pay:900, at:m=>Math.min(1,totPlayedN()/totGamesN())},
   {id:'e10k', ic:'🏦',n:'Candy hoard',     d:'Earn 10,000 candy in total', pay:1200,at:m=>Math.min(1,m.earned/10000)}
+];
+/* ---------- what the top 5 actually win ----------
+   Written out in one place and shown in three (the Board tab, the intro popup and the payout
+   buttons), because "top 5 get rewarded" on its own tells nobody whether it is worth playing for. */
+const TOT_REWARDS=[
+  {pos:1,medal:'🥇',n:'1st place',  give:'mvp', t:'MVP + permanent VIP',
+   d:'Both. MVP is the rarer one — almost nobody has it.'},
+  {pos:2,medal:'🥈',n:'2nd place',  give:'vip', t:'Permanent VIP',       d:'Legend tier, never expires.'},
+  {pos:3,medal:'🥉',n:'3rd place',  give:'vip', t:'Permanent VIP',       d:'Legend tier, never expires.'},
+  {pos:4,medal:'4️⃣',n:'4th place', give:'vip', t:'Permanent VIP',       d:'Legend tier, never expires.'},
+  {pos:5,medal:'5️⃣',n:'5th place', give:'vip', t:'Permanent VIP',       d:'Legend tier, never expires.'}
+];
+/* And what those two things get you, so the prize means something to somebody who has neither. */
+const TOT_PERKS=[
+  {ic:'💎',n:'VIP (Legend)',d:'The VIP Lounge, the VIP tag and name styling on every message, and the VIP cosmetics. Permanent — it never runs out.'},
+  {ic:'🏆',n:'MVP',         d:'Everything VIP has plus the MVP Lounge, messages twice as long, a longer profile description and a profile banner.'}
 ];
 /* Collectables. Cheap to earn, nice to complete, and they show on your leaderboard row. */
 const TOT_ACH=[
@@ -94,8 +110,8 @@ const totVisible=()=>totNow()<TOT.BOARD_END;           // is the event still sho
 /* ---------- Candy Rain ----------
    A site-wide double-candy window. It is worked out purely from the clock, so every player hits
    the same five minutes without anything being stored, broadcast or capable of going out of sync:
-   five minutes of double candy at the top and the bottom of every hour (server clock, via SKEW). */
-const TOT_RAIN={EVERY:1800000,LEN:300000};
+   six minutes of double candy every twenty minutes (server clock, via SKEW). */
+const TOT_RAIN={EVERY:1200000,LEN:360000};   // 6 minutes of double candy every 20 minutes
 const _totRainT=()=>totNow()%TOT_RAIN.EVERY;
 const totRainOn=()=>totLive()&&_totRainT()<TOT_RAIN.LEN;
 const totRainLeft=()=>totRainOn()?TOT_RAIN.LEN-_totRainT():0;
@@ -114,7 +130,7 @@ const totLeftTx=()=>{
 
 let TOT_ME={played:'',candy:0,earned:0,best:0,doors:0,streak:0,last:0,golden:0,lastg:0,bonus:0,rush:0,luck:0,bag:0,games:0,ach:'',qc:'',fit:'',fits:''};
 let TOT_ALL={};
-let _totUnsub=null,_totBusy=false,_totTab='street',_totTimer=null,_totHaunt=false;
+let _totUnsub=null,_totBusy=false,_totTab='street',_totTimer=null,_totHaunt=false,_totRolling=false;
 
 /* ---------- live data ---------- */
 function totWatch(){
@@ -195,11 +211,11 @@ const totNum=n=>Number(n||0).toLocaleString();
    Weighted outcomes. The good ones are frequent enough that knocking always feels worth it, and
    the bad ones only ever take a slice of what you are carrying, never all of it. */
 const TOT_DOORS=[
-  {k:'treat', w:30,ic:'🍬',t:'Treat!',       lo:8,  hi:18, s:['"Happy Halloween!"','A handful of sweets.','They drop a few in your bucket.']},
-  {k:'big',   w:16,ic:'🍭',t:'Big handful!', lo:22, hi:44, s:['They tip the whole bowl in.','"Take as much as you want."','Jackpot of a house.']},
-  {k:'bar',   w:8, ic:'🍫',t:'FULL SIZE BAR',lo:55, hi:95, s:['The legendary full-size bar.','This house gets it.','You hear other kids gasp.']},
-  {k:'jack',  w:2, ic:'🎃',t:'THE GOOD HOUSE',lo:160,hi:280,s:['They were waiting all night for one more kid.','Someone just emptied the bowl into your bucket.']},
-  {k:'gold',  w:5, ic:'✨',t:'Golden wrapper',lo:12, hi:25, s:['Your next 3 knocks are worth double.','It glows. That cannot be normal.']},
+  {k:'treat', w:30,ic:'🍬',t:'Treat!',       lo:14, hi:30, s:['"Happy Halloween!"','A handful of sweets.','They drop a few in your bucket.']},
+  {k:'big',   w:16,ic:'🍭',t:'Big handful!', lo:38, hi:75, s:['They tip the whole bowl in.','"Take as much as you want."','Jackpot of a house.']},
+  {k:'bar',   w:8, ic:'🍫',t:'FULL SIZE BAR',lo:95, hi:160, s:['The legendary full-size bar.','This house gets it.','You hear other kids gasp.']},
+  {k:'jack',  w:2, ic:'🎃',t:'THE GOOD HOUSE',lo:270,hi:470,s:['They were waiting all night for one more kid.','Someone just emptied the bowl into your bucket.']},
+  {k:'gold',  w:5, ic:'✨',t:'Golden wrapper',lo:20, hi:42, s:['Your next 3 knocks are worth double.','It glows. That cannot be normal.']},
   /* The haunted house doesn't pay out on the spot — it opens three rooms and lets you pick one.
      Every room pays something, so going in is never worse than not going in. */
   {k:'haunt', w:4, ic:'🏚️',t:'THE HAUNTED HOUSE',lo:0,hi:0,s:['The door creaks open on its own. Three rooms. Pick one.']},
@@ -320,13 +336,30 @@ async function totKnock(idx,doorEl){
   else if(d.k==='bar'&&typeof burstConfetti==='function')burstConfetti(60);
   _totBusy=false;totPaintStreet();totPaint();
   if(d.k==='haunt'){totHaunt();return}
-  if(TOT_STREET.every(h=>h.done))totFinishStreet();
+  totMaybeNextStreet();
+}
+
+/* Roll the street over once every house has answered.
+   This used to be an inline check at the end of totKnock, which the haunted house jumped straight
+   past with its early `return` — so if the haunted house happened to be the LAST house on the
+   street, every door showed "Knocked" and no new street ever came. The event was stuck there for
+   good (reported from a live game on street #12). Three separate paths led to that same dead end:
+   the haunted house being last, the pick being abandoned by changing tab, and totHaunt() bailing
+   because the result panel wasn't mounted. So the check lives in one guarded place now and is
+   also driven from the repaint tick, which means a street can't stay wedged even if some future
+   path forgets to call it. */
+function totMaybeNextStreet(){
+  if(_totRolling||_totHaunt||_totBusy||!totLive())return false;   // never pay out after the deadline
+  if(!TOT_STREET.length||!TOT_STREET.every(h=>h.done))return false;
+  _totRolling=true;
+  totFinishStreet();
+  return true;
 }
 
 /* Clearing every house on a street pays a small bonus and rolls the next one. That bonus is what
    makes working along the whole street worth more than hammering the one good-looking door. */
 async function totFinishStreet(){
-  const pay=Math.round(totRand(40,90)*totGearX()*totRainX());
+  const pay=Math.round(totRand(90,180)*totGearX()*totRainX());
   const patch={
     candy:Math.max(0,Math.min(TOT.MAX,TOT_ME.candy+pay)),
     earned:Math.min(TOT.MAX*5,(Number(TOT_ME.earned)||0)+pay),
@@ -337,7 +370,7 @@ async function totFinishStreet(){
   TOT_ME={...TOT_ME,...patch};
   toast('🏁 Street cleared! +'+totNum(pay)+' candy — walking to the next one.');
   // the number and the houses change together, so the header never shows a street you can still see
-  setTimeout(()=>{_totStreetN++;totNewStreet();totPaintStreet();totPaint()},900);
+  setTimeout(()=>{_totStreetN++;totNewStreet();_totRolling=false;totPaintStreet();totPaint()},900);
   totPaint();
   try{await totSave(patch)}catch(e){console.warn('[tot] street bonus save failed',e&&e.code)}
 }
@@ -345,12 +378,35 @@ async function totFinishStreet(){
 /* ---------- the haunted house ----------
    Three rooms, all of them worth entering. The pick is a second, smaller write: it doesn't touch
    `last`, so it doesn't collide with the knock cooldown the rules enforce on that field. */
+/* Pay out a haunted house without the picker — used when there is nowhere to draw the rooms, and
+   when the player navigates away before choosing. Either way the house still pays: the whole
+   premise is that walking in is never worse than not walking in. */
+function totHauntAuto(force){
+  if(!force&&!_totHaunt)return false;
+  _totHaunt=false;
+  if(!ME||!totLive())return false;
+  const pay=Math.round(totRand(190,330)*totMult()*totGearX()*totRainX());
+  const patch={
+    candy:Math.max(0,Math.min(TOT.MAX,TOT_ME.candy+pay)),
+    earned:Math.min(TOT.MAX*5,(Number(TOT_ME.earned)||0)+pay),
+    best:Math.max(Number(TOT_ME.best)||0,pay),
+    name:String(ME.username||'').slice(0,20)
+  };
+  const a=totGrant([patch.candy>=1000?'rich':'',patch.candy>=5000?'rich5':'']);
+  if(a)patch.ach=a;
+  TOT_ME={...TOT_ME,...patch};
+  toast('🏚️ The haunted house gave you '+totNum(pay)+' candy.');
+  totPaint();
+  totSave(patch).catch(()=>{});
+  totMaybeNextStreet();
+  return true;
+}
 function totHaunt(){
   const box=document.getElementById('totResult');
-  if(!box)return;
+  if(!box){totHauntAuto(true);return}
   _totHaunt=true;
   const mult=totMult()*totGearX()*totRainX();
-  const pots=[totRand(300,560),totRand(110,190),totRand(110,190)]
+  const pots=[totRand(500,900),totRand(190,330),totRand(190,330)]
     .map(v=>Math.round(v*mult));
   for(let i=pots.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pots[i],pots[j]]=[pots[j],pots[i]]}
   const ROOMS=[{ic:'🚪',n:'The cellar'},{ic:'🪜',n:'The attic'},{ic:'🕯️',n:'The parlour'}];
@@ -383,6 +439,7 @@ function totHaunt(){
     if(pay>=300&&typeof burstConfetti==='function')burstConfetti(100);
     totPaint();
     try{await totSave(patch)}catch(e){toast('That didn\'t save ('+(e.code||e.message)+')','bad')}
+    totMaybeNextStreet();          // the haunted house may well have been the last door
   });
 }
 
@@ -452,7 +509,7 @@ function totGamesHTML(){
       <span class="tot-game-tx"><b>${esc(g.n)}</b><small>${esc(g.d)}</small></span>
       <span class="tot-game-hi">${esc(hiTx)}</span></button>`;
   }).join('');
-  return `<div class="hint">Twelve games, pure skill, up to 500 candy each, nothing to lose. One every ${Math.round(totGameMs()/1000)}s.</div>
+  return `<div class="hint">Twelve games, pure skill, up to 700 candy each, nothing to lose. One every ${Math.round(totGameMs()/1000)}s.</div>
     <div class="tot-games" id="totGames">${list}</div>
     <div class="tot-gamecd" id="totGameCd"></div>
     <div id="totGameHost"></div>`;
@@ -475,7 +532,7 @@ async function totBuy(id){
 }
 async function totBonus(){
   if(!ME||!totLive()||totBonusCd()>0)return;
-  const pay=Math.round(totRand(120,260)*(1+totFitB()));
+  const pay=Math.round(totRand(220,450)*(1+totFitB()));
   const patch={
     candy:Math.max(0,Math.min(TOT.MAX,TOT_ME.candy+pay)),
     earned:Math.min(TOT.MAX*5,(Number(TOT_ME.earned)||0)+pay),
@@ -594,7 +651,7 @@ function totOpen(tab){
   $('#totBg').onclick=e=>{if(e.target.id==='totBg')totClose()};
   root.querySelectorAll('[data-tot]').forEach(b=>b.onclick=()=>{
     if(_totGameStop){try{_totGameStop()}catch(_){}_totGameStop=null}
-    _totHaunt=false;                       // leaving the street forfeits an unpicked room
+    totHauntAuto();                        // leaving the street shouldn't cost you the room
     _totTab=b.dataset.tot;totBody();totPaint();
   });
   totBody();totPaint();
@@ -678,14 +735,31 @@ function totBoardHTML(){
       <span class="tot-nm">${r.fit?('<span class="tot-fit-ic" title="costume">'+totFitOf(r.fit)+'</span> '):''}${esc(totName(r.id))}${mine?' <em>(you)</em>':''}</span>
       <span class="tot-sub">${totNum(r.doors)} doors</span>
       <span class="tot-candy">🍬 ${totNum(r.candy)}</span>
-      ${(over&&i<TOT.WINNERS&&typeof isOwner==='function'&&ME&&isOwner(ME.id)&&!isOwner(r.id))?`<button type="button" class="btn sec small tot-rw" data-reward="${r.id}">Give VIP</button>`:''}
+      ${(over&&i<TOT.WINNERS&&typeof isOwner==='function'&&ME&&isOwner(ME.id)&&!isOwner(r.id))
+        ?`<button type="button" class="btn sec small tot-rw" data-reward="${r.id}" data-rank="${i+1}">${i===0?'Give MVP + VIP':'Give VIP'}</button>`:''}
     </div>`;
   }).join('');
   const mine=me?`<div class="tot-yours">You are <b>#${me}</b> of ${rows.length} with <b>🍬 ${totNum(TOT_ME.candy)}</b>.</div>`
                 :`<div class="tot-yours">You are not on the board yet.</div>`;
-  return head+`<div class="tot-board">${list}</div>${mine}`+
+  return head+`<div class="tot-board">${list}</div>${mine}`+totRewardsHTML()+
     ((ME&&typeof isOwner==='function'&&isOwner(ME.id))
       ?`<button type="button" class="btn sec small tot-ann" id="totAnnounce">📢 Announce this event to everyone</button>`:'');
+}
+/* The prize list. Always on the Board tab, during the event and after it. */
+function totRewardsHTML(){
+  const myRank=ME?totRankOf(ME.id):0;
+  return `<div class="tot-rw-h">🎁 Prizes</div>
+  <div class="tot-rw-list">${TOT_REWARDS.map(r=>`
+    <div class="tot-rw-row${myRank===r.pos?' me':''}">
+      <span class="tot-rw-m">${r.medal}</span>
+      <div class="tot-rw-tx"><b>${esc(r.n)}</b><small>${esc(r.d)}</small></div>
+      <span class="tot-rw-p${r.give==='mvp'?' top':''}">${esc(r.t)}</span>
+    </div>`).join('')}</div>
+  <div class="tot-rw-what">${TOT_PERKS.map(p=>`
+    <div><span>${p.ic}</span><div><b>${esc(p.n)}</b><small>${esc(p.d)}</small></div></div>`).join('')}</div>
+  <div class="hint tot-rw-note">Ranked on the candy you are <b>holding</b> when the clock runs out, so spending
+    in the shop is a real trade-off. Ties break towards whoever got there in fewer doors.
+    An owner hands the prizes out from this tab once it ends.</div>`;
 }
 function totWire(){
   const b=document.getElementById('totBody');if(!b)return;
@@ -697,15 +771,30 @@ function totWire(){
   b.querySelectorAll('[data-claim]').forEach(x=>x.onclick=()=>totClaim(x.dataset.claim));
   const bon=document.getElementById('totBonusBtn');if(bon)bon.onclick=totBonus;
   b.querySelectorAll('[data-reward]').forEach(x=>x.onclick=async()=>{
-    const id=Number(x.dataset.reward);x.disabled=true;x.textContent='Giving…';
-    try{await DB.giveVip(id,'perm');toast(totName(id)+' is now a Legend (permanent VIP).');x.textContent='✓ Rewarded'}
-    catch(e){toast(e.message||'Failed','bad');x.disabled=false;x.textContent='Give VIP'}
+    const id=Number(x.dataset.reward),rank=Number(x.dataset.rank)||0,first=rank===1;
+    const label=first?'Give MVP + VIP':'Give VIP';
+    x.disabled=true;x.textContent='Giving…';
+    try{
+      await DB.giveVip(id,'perm');
+      if(!first){toast(totName(id)+' is now a Legend (permanent VIP).');x.textContent='✓ VIP given';return}
+      /* First place gets MVP on top. VIP has already landed, so if MVP fails (its rules are a
+         separate publish) say exactly that rather than letting it look like nothing happened. */
+      try{
+        await DB.giveMvp(id);
+        toast('🥇 '+totName(id)+' is now an MVP and a permanent VIP.');
+        x.textContent='✓ MVP + VIP';
+        if(typeof burstConfetti==='function')burstConfetti(140);
+      }catch(e){
+        toast('VIP given, but MVP failed: '+(e.message||'unknown'),'bad');
+        x.textContent='✓ VIP · MVP failed';
+      }
+    }catch(e){toast(e.message||'Failed','bad');x.disabled=false;x.textContent=label}
   });
   const ann=document.getElementById('totAnnounce');
   if(ann)ann.onclick=async()=>{
     ann.disabled=true;ann.textContent='Sending…';
     try{
-      await DB.sendLiveAnnouncement('🎃 TRICK OR TREAT is live! Knock on doors for candy, play the TWELVE minigames, finish challenges and buy a costume. 🌧️ CANDY RAIN doubles everything for 5 minutes every half hour. It ends at MIDNIGHT tonight — top 5 get rewarded. Open it from the home screen.',{kind:'event',alsoPost:true});
+      await DB.sendLiveAnnouncement('🎃 TRICK OR TREAT is live! Knock on doors for candy, play the TWELVE minigames, finish challenges and buy a costume. 🌧️ CANDY RAIN doubles everything for 6 minutes out of every 20. Top 5 get PERMANENT VIP and 1st place also gets MVP. Open it from the home screen.',{kind:'event',alsoPost:true});
       toast('Announced to everyone.');ann.textContent='✓ Announced';
     }catch(e){toast(e.message||'Could not announce','bad');ann.disabled=false;ann.textContent='📢 Announce this event to everyone'}
   };
@@ -713,6 +802,8 @@ function totWire(){
 // One repaint for everything live: the clock, the bucket, the cooldown ring, the shop buttons.
 function totPaint(){
   const c=document.getElementById('totCandy');if(c)c.textContent=totNum(TOT_ME.candy);
+  totMaybeNextStreet();      // safety net: a fully-knocked street always rolls on from here
+
   // Candy Rain: the same five minutes for everybody, worked out from the clock alone.
   const rain=document.getElementById('totRain');
   if(rain){
@@ -722,7 +813,7 @@ function totPaint(){
       ? `<span class="tot-rain-ic">🌧️</span><div><b>CANDY RAIN — everything pays double</b>
          <small>Ends in ${totMs(totRainLeft())}. Knock as fast as you can.</small></div>`
       : `<span class="tot-rain-ic">⏳</span><div><b>Candy Rain in ${totMs(totRainIn())}</b>
-         <small>Five minutes of double candy, every half hour, for everyone at once.</small></div>`;
+         <small>Six minutes of double candy, every 20 minutes, for everyone at once.</small></div>`;
   }
   const qd=document.getElementById('totQDot');
   if(qd){const n=totQCount();qd.textContent=n?n:'';qd.classList.toggle('on',n>0)}
@@ -841,9 +932,9 @@ function totMaybeIntro(){
     <div class="tot-intro-grid">
       <div><span>🚪</span><b>Knock</b><small>Full-size bars, jackpot houses and a haunted one.</small></div>
       <div><span>🕹️</span><b>Play</b><small>Twelve minigames. Pure skill, nothing to lose.</small></div>
-      <div><span>🌧️</span><b>Candy Rain</b><small>Everything pays double, 5 minutes every half hour.</small></div>
+      <div><span>🌧️</span><b>Candy Rain</b><small>Everything pays double, 6 minutes out of every 20.</small></div>
       <div><span>📜</span><b>Challenges</b><small>Milestones that pay out, plus costumes to buy.</small></div>
-      <div><span>🏆</span><b>Win</b><small>Top 5 when the clock runs out get rewarded.</small></div>
+      <div><span>🏆</span><b>Win</b><small>Top 5 get permanent VIP — 1st also gets MVP.</small></div>
       <div><span>🔔</span><b>Come back</b><small>A free doorbell bonus every hour.</small></div>
     </div>
     <div class="tot-intro-end">You have <b>${totLeftTx()}</b> left.</div>

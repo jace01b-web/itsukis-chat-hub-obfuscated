@@ -1224,8 +1224,23 @@ const DB=(()=>{
       // A missing flag is what a client sees before banned/ has loaded, so "missing" must never be
       // read as "unbanned" — that misreading is what silently un-froze banned accounts.
       await set(R('banned/'+id),false);
-      try{if(typeof tosIpUnbanUser==='function')tosIpUnbanUser(id).catch(()=>{})}catch(_){}
       C.banned[id]=false;checkBanLock(myId,C.banned); // update local state immediately; don't wait on the listener round-trip
+      /* Lift the IP ban in the same breath. This used to be fire-and-forget with the error
+         swallowed, so an unban that left the network blocked looked completely successful and the
+         account still couldn't chat. Now it's awaited and the outcome is reported back to the
+         caller, which surfaces it in Settings. It is still never fatal: the account unban has
+         already landed either way. Note the server only clears IP bans recorded against THIS
+         account — a network banned by hand stays banned, which is deliberate. */
+      let ip={tried:false,ok:false,changed:0,error:''};
+      if(typeof tosIpUnbanUser==='function'){
+        ip.tried=true;
+        try{
+          const r=await tosIpUnbanUser(id);
+          ip.ok=!!(r&&r.ok!==false);
+          ip.changed=Number(r&&r.changed)||0;
+        }catch(e){ip.error=(e&&(e.message||e.code))||'failed'}
+      }
+      DB._lastUnbanIp=ip;
       // Restore the profile right now (new username, un-delete). Only an OWNER can do this part —
       // the rules deliberately keep "write someone else's username" to owners — so for an admin's
       // unban this returns null and the account repairs itself on its own next sign-in instead
@@ -1275,10 +1290,76 @@ const DB=(()=>{
        fetched on demand rather than watched: a non-owner's listener would just be denied. */
     async tosLog(){
       if(!isOwner(myId))throw new Error('Only owners can see the TOS log.');
-      const sn=await get(R('tosLog'));
-      const v=sn.val()||{};
-      return Object.keys(v).map(id=>({id:Number(id),...(v[id]||{})}))
+      const out={};
+      /* 1. The rich records. These only exist for people who accepted *through /api/tos since the
+            log was added* — so on its own this is empty on an established site, which is exactly
+            what it looked like: "nothing yet" even though everyone had accepted. */
+      try{
+        const v=(await get(R('tosLog'))).val()||{};
+        Object.keys(v).forEach(id=>{
+          if(v[id]&&typeof v[id]==='object')out[id]={id:Number(id),...v[id]};
+        });
+      }catch(e){console.warn('[tos] log read failed',e&&e.code)}
+      /* 2. Everyone who has ever accepted, from the receipts. No raw IP in here (by design — only
+            the salted hash), but it is the complete list, including acceptances from before the
+            log existed and ones where the API call fell back to a client-side write. */
+      let acc=null;
+      try{acc=(await get(R('tosAccepted'))).val()||{}}
+      catch(_){acc=null}
+      if(acc===null){
+        /* No read permission on the whole collection — read them one at a time instead, which the
+           per-account rule does allow owners to do. Keeps this working without a rules update. */
+        acc={};
+        await Promise.all(Object.keys(C.users||{}).map(async id=>{
+          try{const v=(await get(R('tosAccepted/'+id))).val();if(v&&typeof v==='object')acc[id]=v}
+          catch(_){}
+        }));
+      }
+      Object.keys(acc).forEach(id=>{
+        const a=acc[id];
+        if(!a||typeof a!=='object')return;
+        const row=out[id];
+        if(row){                                   // have the full record; just fill any gaps
+          if(!row.at&&a.at)row.at=Number(a.at)||0;
+          if(!row.v&&a.v)row.v=a.v;
+          return;
+        }
+        out[id]={id:Number(id),at:Number(a.at)||0,v:a.v,h:a.h,noip:true};
+      });
+      // name them from the live user list, so receipt-only rows aren't a wall of "(unknown)"
+      Object.keys(out).forEach(id=>{
+        if(!out[id].name){const u=(C.users||{})[id];if(u&&u.username)out[id].name=u.username}
+      });
+      return Object.keys(out).map(k=>out[k])
         .filter(r=>!isNaN(r.id))
+        .sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0));
+    },
+    /* Every network currently IP-banned, newest first. Staff-only (the rules say so too). Each
+       entry is keyed by the salted hash of the network, not the address — the raw IP is never
+       stored here, so a ban can be listed and lifted but not read back as an address. */
+    async ipBans(){
+      if(!isOwner(myId)&&!isAdmin(myId))throw new Error('Only owners and admins can see IP bans.');
+      let v=null;
+      try{v=(await get(R('ipBans'))).val()||{}}
+      catch(e){v=null}
+      if(v===null){
+        /* No read on the whole collection — probe the networks we know about instead, from the
+           TOS receipts. Finds every ban placed against an account; a network banned by hand with
+           no account attached can't be discovered this way, hence the flag back to the caller. */
+        v={};
+        const ids=Object.keys(C.users||{});
+        const hs=new Set();
+        await Promise.all(ids.map(async id=>{
+          try{const h=(await get(R('tosAccepted/'+id+'/h'))).val();if(typeof h==='string'&&h)hs.add(h)}catch(_){}
+        }));
+        await Promise.all([...hs].map(async h=>{
+          try{const r=(await get(R('ipBans/'+h))).val();if(r)v[h]=r}catch(_){}
+        }));
+        const out=Object.keys(v).map(h=>({h,partial:true,...(v[h]||{})}));
+        out.sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0));
+        return out;
+      }
+      return Object.keys(v).map(h=>({h,...(v[h]&&typeof v[h]==='object'?v[h]:{})}))
         .sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0));
     },
     // Everyone whose mute has not expired yet, soonest to expire first.

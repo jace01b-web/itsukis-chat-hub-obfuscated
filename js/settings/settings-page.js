@@ -308,18 +308,24 @@ function openSettings(fromChat){
       </div>`:''}
       ${(isOwner(ME.id)||isAdmin(ME.id))?`<div class="set-card">
         <div class="section-h" style="margin-top:0">🌐 IP ban</div>
-        <div class="field"><label>IP address (copy it from the Discord TOS log)</label><input id="modIpVal" type="text" maxlength="45" placeholder="e.g. 203.0.113.42" autocomplete="off" style="width:100%"></div>
+        <div class="field"><label>IP address (copy it from the TOS acceptances list above)</label><input id="modIpVal" type="text" maxlength="45" placeholder="e.g. 203.0.113.42" autocomplete="off" style="width:100%"></div>
         <div class="field" style="margin-top:8px"><label>Reason (optional)</label><input id="modIpWhy" type="text" maxlength="120" placeholder="e.g. raid on 10/13" autocomplete="off" style="width:100%"></div>
         <div class="actions" style="justify-content:flex-start;margin-top:10px">
           <button class="btn danger" id="modIpBan" type="button">Ban IP</button>
           <button class="btn sec" id="modIpUnban" type="button">Unban IP</button>
           <span class="hint" id="modIpMsg" style="align-self:center"></span>
         </div>
-        <div class="hint" style="margin-top:8px">Banned IPs can't chat (even on new accounts). Banning an account bans its logged IP automatically. IPv6 is banned by /64 network. On a shared network (like a school) this affects everyone on it, so unban when it's over. Owners and admins can both ban and unban.</div>
+        <div class="section-h" style="margin-top:14px;font-size:13px">Currently IP-banned <span id="modIpCount" class="hint"></span></div>
+        <div class="actions" style="justify-content:flex-start;margin-top:6px">
+          <button class="btn sec small" id="modIpListGo" type="button">Load list</button>
+          <span class="hint" id="modIpListMsg" style="align-self:center"></span>
+        </div>
+        <div id="modIpList" style="display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto;margin-top:8px"></div>
+        <div class="hint" style="margin-top:8px">Banned IPs can't chat (even on new accounts). Banning an account bans every network it has been seen on, and <b>unbanning the account lifts those again</b>. IPv6 is banned by /64 network. On a shared network (like a school) this affects everyone on it, so unban when it's over. Owners and admins can both ban and unban. The list stores a scrambled fingerprint of each network rather than the address itself, so bans can be lifted from here but the raw IP only ever appears in the TOS log above.</div>
       </div>`:''}
       ${isOwner(ME.id)?`<div class="set-card">
         <div class="section-h" style="margin-top:0">📄 TOS acceptances</div>
-        <div class="hint">Every account that accepted the Terms, newest first, with the IP the server saw. Only owners can read this — it is not posted to Discord any more.</div>
+        <div class="hint">Every account that accepted the Terms, newest first. Accounts that accepted through the server show the IP it saw; ones that accepted before IP logging existed show the network fingerprint only. Owners only — it is not posted to Discord any more.</div>
         <div class="actions" style="justify-content:flex-start;margin-top:10px">
           <button class="btn sec small" id="tosLogGo" type="button">Load log</button>
           <span class="hint" id="tosLogMsg" style="align-self:center"></span>
@@ -651,9 +657,52 @@ function openSettings(fromChat){
         try{await tosManualIpBan(action,ip,$$('#modIpWhy').value.trim());msg.textContent=action==='ban'?'✅ IP banned.':'✅ IP unbanned.';toast(action==='ban'?'IP banned.':'IP unbanned.')}
         catch(e){msg.textContent='❌ '+e.message}
       };
-      $$('#modIpBan').onclick=()=>go('ban');
-      $$('#modIpUnban').onclick=()=>go('unban');
+      $$('#modIpBan').onclick=()=>go('ban').then(()=>renderIpBans(true));
+      $$('#modIpUnban').onclick=()=>go('unban').then(()=>renderIpBans(true));
     }
+    /* Currently IP-banned. Fetched on demand like the TOS log — the entries are keyed by the
+       salted network fingerprint, so there is no address to show, only who it was banned for. */
+    async function renderIpBans(quiet){
+      const box=$$('#modIpList'),msg=$$('#modIpListMsg'),cnt=$$('#modIpCount'),btn=$$('#modIpListGo');
+      if(!box)return;
+      if(!quiet&&btn){btn.disabled=true;btn.textContent='Loading…'}
+      try{
+        const rows=await DB.ipBans();
+        if(btn){btn.textContent='Refresh';btn.disabled=false}
+        if(cnt)cnt.textContent=rows.length?('— '+rows.length):'';
+        if(msg)msg.textContent=rows.some(r=>r.partial)?'(showing bans tied to known accounts)':'';
+        if(!rows.length){box.innerHTML='<div class="hint">No networks are IP-banned right now.</div>';return}
+        box.innerHTML=rows.map(r=>{
+          const who=r.uid?('account #'+r.uid+(DB.getUser(r.uid)&&DB.getUser(r.uid).username?(' · '+esc(displayUsername(DB.getUser(r.uid).username))):'')):'banned by IP';
+          const when=r.at?new Date(Number(r.at)).toLocaleString():'-';
+          return '<div class="list-row" style="display:block;padding:8px 10px">'+
+            '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
+              '<code style="font-size:12px;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.07)" title="salted network fingerprint">net '+esc(String(r.h).slice(0,12))+'</code>'+
+              '<b style="font-size:13px">'+who+'</b>'+
+              '<button class="btn sec small" data-ipun="'+esc(r.h)+'" type="button">Lift</button>'+
+            '</div>'+
+            '<div class="hint" style="margin-top:4px">'+esc(when)+(r.by?(' · by account #'+esc(String(r.by))):'')+
+              (r.reason?(' · '+esc(r.reason)):'')+'</div>'+
+          '</div>';
+        }).join('');
+        box.querySelectorAll('[data-ipun]').forEach(b=>b.onclick=async()=>{
+          const uid=(rows.find(r=>r.h===b.dataset.ipun)||{}).uid;
+          b.disabled=true;b.textContent='Lifting…';
+          try{
+            /* The API lifts by account (it never takes a hash), so a ban with no account attached
+               has to be lifted with the IP itself in the box above — say so rather than fail mutely. */
+            if(!uid){toast('This one was banned by IP with no account attached — lift it with the address in the box above.','bad');
+              b.disabled=false;b.textContent='Lift';return}
+            await tosIpUnbanUser(Number(uid));
+            toast('Network unbanned.');renderIpBans(true);
+          }catch(e){toast(e.message||'Could not lift it','bad');b.disabled=false;b.textContent='Lift'}
+        });
+      }catch(e){
+        if(btn){btn.textContent='Load list';btn.disabled=false}
+        if(msg)msg.textContent=(e&&e.message)||'Could not read it.';
+      }
+    }
+    $$('#modIpListGo')&&($$('#modIpListGo').onclick=()=>renderIpBans(false));
     if($$('#modAnnGo')){
       const ta=$$('#modAnnText'),cnt=$$('#modAnnCount');
       ta.addEventListener('input',()=>{cnt.textContent=ta.value.length+' / 300'});
@@ -776,18 +825,25 @@ function openSettings(fromChat){
         const rows=await DB.tosLog();
         btn.textContent='Refresh';
         if(msg)msg.textContent=rows.length?(rows.length+' account'+(rows.length===1?'':'s')):'';
-        if(!rows.length){box.innerHTML='<div class="hint">Nothing yet. Records appear as people accept the new Terms.</div>';return}
-        box.innerHTML=rows.map(r=>{
+        if(!rows.length){box.innerHTML='<div class="hint">Nobody has accepted the Terms yet.</div>';return}
+        const noip=rows.filter(r=>r.noip).length;
+        box.innerHTML=(noip?('<div class="hint" style="margin-bottom:8px">'+noip+' of these accepted before IP logging was added, or through the fallback path, so there is no raw IP on record for them \u2014 only the network fingerprint bans match on.</div>'):'')+
+          rows.map(r=>{
           const when=r.at?new Date(Number(r.at)).toLocaleString():'-';
+          /* Receipt-only rows have no raw IP \u2014 by design, it was never stored for them. Show the
+             network fingerprint instead of an empty box and two buttons that can't do anything. */
+          const idTag=r.noip
+            ? '<code style="font-size:12px;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.07);opacity:.8" title="salted network fingerprint">'+esc(r.h?('net '+String(r.h).slice(0,10)):'no IP on record')+'</code>'+
+              '<span class="hint">receipt only</span>'
+            : '<code style="font-size:12px;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.07)">'+esc(r.ip||'-')+'</code>'+
+              '<button class="btn sec small" data-tos-copy="'+esc(r.ip||'')+'" type="button">Copy IP</button>'+
+              '<button class="btn sec small" data-tos-ban="'+esc(r.ip||'')+'" type="button">Use in IP ban</button>';
           return '<div class="list-row" style="display:block;padding:8px 10px">'+
             '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
-              '<b>'+esc(r.name||'(unknown)')+'</b><span class="hint">#'+r.id+'</span>'+
-              '<code style="font-size:12px;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.07)">'+esc(r.ip||'-')+'</code>'+
-              '<button class="btn sec small" data-tos-copy="'+esc(r.ip||'')+'" type="button">Copy IP</button>'+
-              '<button class="btn sec small" data-tos-ban="'+esc(r.ip||'')+'" type="button">Use in IP ban</button>'+
+              '<b>'+esc(r.name||'(unknown)')+'</b><span class="hint">#'+r.id+'</span>'+idTag+
             '</div>'+
             '<div class="hint" style="margin-top:4px">'+esc(when)+' \u00B7 TOS v'+esc(String(r.v||'?'))+
-              ' \u00B7 VPN: '+esc(r.vpn||'?')+(r.build?' \u00B7 build '+esc(r.build):'')+'</div>'+
+              (r.noip?'':' \u00B7 VPN: '+esc(r.vpn||'?'))+(r.build?' \u00B7 build '+esc(r.build):'')+'</div>'+
             (r.ua?'<div class="hint" style="margin-top:2px;word-break:break-word;opacity:.75">'+esc(r.ua)+'</div>':'')+
           '</div>';
         }).join('');
@@ -817,6 +873,13 @@ function openSettings(fromChat){
         const newName=await DB.unbanUser(id);
         toast(newName?('User #'+id+' unbanned — back as @'+newName+'.')
                      :('User #'+id+' unbanned. Their profile comes back the next time they sign in.'));
+        /* Say plainly what happened to their IP ban. Before this it was attempted silently, so an
+           unban that left the network blocked looked completely successful. */
+        const ip=DB._lastUnbanIp||{};
+        if(ip.tried&&ip.ok)toast(ip.changed?('🌐 Also lifted '+ip.changed+' IP ban'+(ip.changed===1?'':'s')+' for them.')
+                                           :'No IP ban was on file for them.');
+        else if(ip.tried)toast('⚠️ Account unbanned, but the IP ban could not be lifted: '+ip.error+' — lift it by hand below.','bad');
+        if($$('#modIpList')&&$$('#modIpList').children.length)renderIpBans(true);
       }catch(err){toast(err.message,'bad')}
     });
     $$('#modRetention')&&($$('#modRetention').onchange=async e=>{
