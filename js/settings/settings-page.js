@@ -328,8 +328,10 @@ function openSettings(fromChat){
         <div class="hint">Every account that accepted the Terms, newest first. Accounts that accepted through the server show the IP it saw; ones that accepted before IP logging existed show the network fingerprint only. Owners only — it is not posted to Discord any more.</div>
         <div class="actions" style="justify-content:flex-start;margin-top:10px">
           <button class="btn sec small" id="tosLogGo" type="button">Load log</button>
+          <button class="btn sec small" id="tosPingGo" type="button">Test the server</button>
           <span class="hint" id="tosLogMsg" style="align-self:center"></span>
         </div>
+        <div id="tosDiag"></div>
         <div id="tosLogList" style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;margin-top:10px"></div>
       </div>`:''}
       ${isOwner(ME.id)?`      <div class="set-card">
@@ -703,6 +705,23 @@ function openSettings(fromChat){
       }
     }
     $$('#modIpListGo')&&($$('#modIpListGo').onclick=()=>renderIpBans(false));
+    /* Pings /api/tos and reports exactly what came back. This is the one thing that tells an owner
+       whether the IPs are missing because of history or because the endpoint is simply not there. */
+    $$('#tosPingGo')&&($$('#tosPingGo').onclick=async()=>{
+      const btn=$$('#tosPingGo'),msg=$$('#tosLogMsg');
+      btn.disabled=true;btn.textContent='Testing…';
+      try{
+        const r=await tosApi('tos',{id:ME.id,version:CFG.TOS_VERSION});
+        if(r.status===200&&r.j&&r.j.ok){
+          if(msg)msg.textContent='✅ Server reachable — your own record was just written.';
+          toast('The server answered. IPs will be logged from now on.');
+        }else{
+          if(msg)msg.textContent='⚠️ Server answered '+r.status+': '+((r.j&&r.j.error)||'no message');
+        }
+      }catch(_){
+        if(msg)msg.textContent='❌ Could not reach '+String(CFG.TOS_API||'(TOS_API not set)')+' — '+((TOS_LAST_API&&TOS_LAST_API.err)||'network error');
+      }finally{btn.disabled=false;btn.textContent='Test the server'}
+    });
     if($$('#modAnnGo')){
       const ta=$$('#modAnnText'),cnt=$$('#modAnnCount');
       ta.addEventListener('input',()=>{cnt.textContent=ta.value.length+' / 300'});
@@ -827,6 +846,22 @@ function openSettings(fromChat){
         if(msg)msg.textContent=rows.length?(rows.length+' account'+(rows.length===1?'':'s')):'';
         if(!rows.length){box.innerHTML='<div class="hint">Nobody has accepted the Terms yet.</div>';return}
         const noip=rows.filter(r=>r.noip).length;
+        /* If NOTHING has a server record, the problem isn't history — /api/tos is not being
+           reached at all, and every acceptance is silently falling back to the client write.
+           Say so loudly, with the reason the clients recorded, instead of leaving an owner to
+           guess why 1,229 accounts all show "unverified". */
+        const diag=$$('#tosDiag');
+        if(diag){
+          const srv=rows.length-noip;
+          const why=(rows.find(r=>r.why)||{}).why||'';
+          diag.innerHTML=(rows.length&&!srv)
+            ?('<div class="hint" style="margin:10px 0;padding:10px 12px;border-radius:10px;border:1px solid var(--danger);background:rgba(255,93,115,.12)">'+
+              '<b>No acceptance has ever reached the server.</b> All '+rows.length+' were saved by the browser as a fallback, which is why none of them has an IP. '+
+              'That means <code>/api/tos</code> is unreachable from the site — check that the functions are deployed and that <code>CFG.TOS_API</code> points at them.'+
+              (why?('<br>Last recorded reason: <code>'+esc(why)+'</code>'):'')+
+              '<br>Hit <b>Test the server</b> above for the exact response. Once it works, everyone gets a real record the next time they open the site — they do not need to accept again.</div>')
+            :'';
+        }
         box.innerHTML=(noip?('<div class="hint" style="margin-bottom:8px">'+noip+' of these accepted before IP logging was added, or through the fallback path, so there is no raw IP on record for them \u2014 only the network fingerprint bans match on.</div>'):'')+
           rows.map(r=>{
           const when=r.at?new Date(Number(r.at)).toLocaleString():'-';
@@ -834,7 +869,7 @@ function openSettings(fromChat){
              network fingerprint instead of an empty box and two buttons that can't do anything. */
           const idTag=r.noip
             ? '<code style="font-size:12px;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.07);opacity:.8" title="salted network fingerprint">'+esc(r.h?('net '+String(r.h).slice(0,10)):'no IP on record')+'</code>'+
-              '<span class="hint">receipt only</span>'
+              '<span class="hint">receipt only'+(r.why?(' · '+esc(r.why)):'')+'</span>'
             : '<code style="font-size:12px;padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.07)">'+esc(r.ip||'-')+'</code>'+
               '<button class="btn sec small" data-tos-copy="'+esc(r.ip||'')+'" type="button">Copy IP</button>'+
               '<button class="btn sec small" data-tos-ban="'+esc(r.ip||'')+'" type="button">Use in IP ban</button>';

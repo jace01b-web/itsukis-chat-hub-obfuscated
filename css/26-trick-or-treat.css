@@ -543,3 +543,26 @@ html.discord-look .totg-pad{border-radius:8px}
   .tot-rw-p{width:100%;text-align:left}
 }
 html.discord-look .tot-rw-row,html.discord-look .tot-rw-what>div{border-radius:8px;background:var(--dl-input);border-color:transparent}
+
+/* ---------- prizes, richer ---------- */
+.tot-rw-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.tot-rw-h em{font-style:normal;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--tot-o)}
+.tot-rw-row{align-items:flex-start;position:relative;overflow:hidden}
+.tot-rw-row .tot-rw-m{margin-top:1px}
+.tot-rw-you{font-style:normal;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  margin-left:6px;padding:1px 6px;border-radius:7px;color:#1a0f00;background:var(--tot-o);vertical-align:1px}
+.tot-rw-items{display:flex;flex-wrap:wrap;gap:5px;margin:5px 0 3px}
+.tot-rw-items span{font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:8px;
+  background:rgba(255,255,255,.08);border:1px solid var(--border)}
+/* the three podium places get their own metal, so the top of the list reads at a glance */
+.tot-rw-row.gold{border-color:rgba(255,205,90,.6);background:linear-gradient(100deg,rgba(255,205,90,.18),transparent 72%)}
+.tot-rw-row.gold .tot-rw-items span{background:rgba(255,205,90,.18);border-color:rgba(255,205,90,.4)}
+.tot-rw-row.silver{border-color:rgba(205,214,228,.45);background:linear-gradient(100deg,rgba(205,214,228,.13),transparent 72%)}
+.tot-rw-row.bronze{border-color:rgba(214,146,92,.45);background:linear-gradient(100deg,rgba(214,146,92,.14),transparent 72%)}
+.tot-rw-row.gold::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.14) 50%,transparent 65%);
+  background-size:220% 100%;animation:totShine 4.5s linear infinite}
+@keyframes totShine{from{background-position:140% 0}to{background-position:-40% 0}}
+.tot-row.win2{border-color:rgba(139,92,246,.4);background:linear-gradient(100deg,rgba(139,92,246,.1),transparent 70%)}
+@media(prefers-reduced-motion:reduce){.tot-rw-row.gold::after{animation:none}}
+html.discord-look .tot-rw-items span{background:rgba(255,255,255,.07);border-color:transparent}

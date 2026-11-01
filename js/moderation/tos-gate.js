@@ -79,6 +79,9 @@ function tosBannerSync(reason){
 
 /* ---------- server calls: the SERVER reads the IP, checks VPN / bans / build, and hands out the attestation the database rules require ---------- */
 const BUILD_TOKEN=document.querySelector('meta[name="build-token"]')?.content||'';
+/* Last thing that happened on an /api call, so the owner tools can say WHY the server was not
+   used instead of leaving a silent "unverified" behind. */
+let TOS_LAST_API={at:0,path:'',status:0,err:''};
 async function tosApi(path,body){
   const t=await auth.currentUser.getIdToken();
   const c=typeof AbortController!=='undefined'?new AbortController():null,tm=setTimeout(()=>{try{c&&c.abort()}catch(_){}},9000);
@@ -86,8 +89,45 @@ async function tosApi(path,body){
     const r=await fetch(tosApiBase()+'/api/'+path,{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',signal:c?c.signal:undefined,
       body:JSON.stringify(Object.assign({idToken:t,build:MY_BUILD,bt:BUILD_TOKEN},body||{}))});
     let j=null;try{j=await r.json()}catch(_){}
+    TOS_LAST_API={at:Date.now(),path:path,status:r.status,err:(j&&j.error)||''};
     return{status:r.status,j:j||{}};
+  }catch(e){
+    /* A thrown fetch means the request never reached the function at all: wrong CFG.TOS_API, the
+       deployment is down, CORS, or the 9s abort. That is the case that was being swallowed. */
+    const err=(e&&e.name==='AbortError')?'timeout after 9s':((e&&e.message)||'network error');
+    TOS_LAST_API={at:Date.now(),path:path,status:0,err:err};
+    throw e;
   }finally{clearTimeout(tm)}
+}
+/* Someone who accepted while the API was unreachable has a receipt with h:'unverified' and no
+   server record, so no IP was ever logged for them. Re-posting the same acceptance to /api/tos
+   fixes that in place — the server overwrites the receipt with a real network hash and writes the
+   owner-only tosLog entry — without making them accept anything again. Once per session, quietly:
+   if the API is still down this fails exactly as before and nothing changes. */
+let _tosBackfilled=false;
+async function tosBackfillReceipt(id){
+  if(_tosBackfilled||!ME||ME.id!==id)return false;
+  if(!TOS_GATE.accepted)return false;
+  const st=TOS_STATE||{};
+  if(st.srv||!(st.h==='unverified'||!st.h))return false;     // already has a proper server record
+  _tosBackfilled=true;
+  try{
+    const r=await tosApi('tos',{id:id,version:CFG.TOS_VERSION});
+    if(r&&r.status===200&&r.j&&r.j.ok){
+      await tosLoadState(id);
+      console.info('[tos] receipt backfilled through the server');
+      return true;
+    }
+    console.warn('[tos] backfill refused:',(r&&r.j&&r.j.error)||(r&&r.status));
+  }catch(_){console.warn('[tos] backfill could not reach the server —',tosWhyCode())}
+  return false;
+}
+// Short code stored on the receipt so an owner can see later why the server was skipped.
+function tosWhyCode(){
+  const a=TOS_LAST_API||{};
+  if(a.status===0)return ('neterr:'+(a.err||'?')).slice(0,40);
+  if(a.status)return ('http'+a.status+(a.err?(':'+a.err):'')).slice(0,40);
+  return 'unknown';
 }
 let _attestBusy=null;
 // Asks the server to clear this login. Sets TOS_GATE from the server's answer; the database rules only accept chat writes while the grant is live.
@@ -121,9 +161,13 @@ async function tosAccept(){
       throw new Error(res.j.error||'Could not save. Try again in a minute.');
     }
   }else{
-    // API not reachable (not deployed yet / blocked). Save it the old way. The database rules only allow this while security/enforce is NOT true.
-    try{await set(R('tosAccepted/'+ME.id),{v:CFG.TOS_VERSION,at:Date.now()+SKEW,h:'unverified'})}   // no ip: raw IPs are the server's to write, into owner-only tosLog/
+    /* API not reachable (not deployed yet / blocked). Save it the old way. The database rules only
+       allow this while security/enforce is NOT true.
+       `why` is new: without it every one of these looks identical in the owner panel and there is
+       no way to tell "the functions aren't deployed" from "that one person was offline". */
+    try{await set(R('tosAccepted/'+ME.id),{v:CFG.TOS_VERSION,at:Date.now()+SKEW,h:'unverified',why:tosWhyCode()})}
     catch(e){throw new Error('Could not reach the server to save this. Check your connection and try again.')}
+    console.warn('[tos] saved without the server —',tosWhyCode());
   }
   await tosLoadState(ME.id);
   TOS_GATE.accepted=true;
@@ -234,6 +278,7 @@ function modalTos(opts){
     if(ME&&ME.id!==id)return;
     if(TOS_GATE.accepted)await tosCheckIp();
     tosUiSync();
+    tosBackfillReceipt(id);   // accepted without the server once? try again now.
     if(TOS_GATE.accepted&&!window._attestTimer)window._attestTimer=setInterval(()=>{if(TOS_GATE.accepted&&ME)tosCheckIp().then(tosUiSync)},CFG.ATTEST_EVERY_MS);
     if(TOS_GATE.accepted===false&&!tosDeclinedThisSession()&&!(DB.isBanned&&DB.isBanned(id)))promptWhenIdle();
     // owners/ loads a moment after sign-in; re-sync until it has, so owners are never left locked out of their own chat

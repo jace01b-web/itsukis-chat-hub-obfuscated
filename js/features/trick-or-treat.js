@@ -25,7 +25,8 @@ const TOT={
   BOARD_END:Date.UTC(2026,10,6,6,0,0),    // board stays visible for a few days after
   KNOCK_MS:4000,                          // cooldown between knocks (the rules enforce ~3.5s)
   MAX:1000000,                            // hard ceiling the rules also apply
-  WINNERS:5,
+  WINNERS:5,                              // permanent-VIP places
+  WINNERS2:10,                            // ...and 24h VIP down to here
   GAME_MS:30000,                          // cooldown between minigames (rules enforce ~27s)
   BONUS_MS:1800000                        // the free doorbell bonus, every 30 min (rules ~28m)
 };
@@ -63,17 +64,28 @@ const TOT_QUESTS=[
    Written out in one place and shown in three (the Board tab, the intro popup and the payout
    buttons), because "top 5 get rewarded" on its own tells nobody whether it is worth playing for. */
 const TOT_REWARDS=[
-  {pos:1,medal:'🥇',n:'1st place',  give:'mvp', t:'MVP + permanent VIP',
-   d:'Both. MVP is the rarer one — almost nobody has it.'},
-  {pos:2,medal:'🥈',n:'2nd place',  give:'vip', t:'Permanent VIP',       d:'Legend tier, never expires.'},
-  {pos:3,medal:'🥉',n:'3rd place',  give:'vip', t:'Permanent VIP',       d:'Legend tier, never expires.'},
-  {pos:4,medal:'4️⃣',n:'4th place', give:'vip', t:'Permanent VIP',       d:'Legend tier, never expires.'},
-  {pos:5,medal:'5️⃣',n:'5th place', give:'vip', t:'Permanent VIP',       d:'Legend tier, never expires.'}
+  {pos:1,medal:'🥇',n:'1st place',  give:'mvp',  tier:'gold',
+   items:['🎃 Halloween Champion role','🏆 MVP','💎 Permanent VIP'],
+   d:'The only Champion role that will ever be handed out. Sits above VIP on your name.'},
+  {pos:2,medal:'🥈',n:'2nd place',  give:'perm', tier:'silver',
+   items:['🏅 Halloween Legend role','💎 Permanent VIP'], d:'Legend tier. Never expires.'},
+  {pos:3,medal:'🥉',n:'3rd place',  give:'perm', tier:'bronze',
+   items:['🏅 Halloween Legend role','💎 Permanent VIP'], d:'Legend tier. Never expires.'},
+  {pos:4,medal:'4️⃣',n:'4th place', give:'perm', tier:'',
+   items:['🏅 Halloween Legend role','💎 Permanent VIP'], d:'Legend tier. Never expires.'},
+  {pos:5,medal:'5️⃣',n:'5th place', give:'perm', tier:'',
+   items:['🏅 Halloween Legend role','💎 Permanent VIP'], d:'Legend tier. Never expires.'},
+  {pos:0,medal:'🎖️',n:'6th – 10th', give:'24h', tier:'',from:6,to:10,
+   items:['🎖️ Halloween Top 10 role','💎 VIP for 24 hours'], d:'The role is permanent even though the VIP is not.'},
+  {pos:0,medal:'🍬',n:'Everyone',   give:'',    tier:'',from:11,to:0,
+   items:['Your collection and costumes stay on your account'],
+   d:'Nothing is taken off you when it ends.'}
 ];
 /* And what those two things get you, so the prize means something to somebody who has neither. */
 const TOT_PERKS=[
   {ic:'💎',n:'VIP (Legend)',d:'The VIP Lounge, the VIP tag and name styling on every message, and the VIP cosmetics. Permanent — it never runs out.'},
-  {ic:'🏆',n:'MVP',         d:'Everything VIP has plus the MVP Lounge, messages twice as long, a longer profile description and a profile banner.'}
+  {ic:'🏆',n:'MVP',         d:'Everything VIP has plus the MVP Lounge, messages twice as long, a longer profile description and a profile banner.'},
+  {ic:'🎃',n:'The Halloween roles',d:'A coloured tag next to your name and your own group in the member list, sitting above VIP. They grant nothing on their own — they are there so everyone can see you won this. Permanent, and only ever handed out for this event.'}
 ];
 /* Collectables. Cheap to earn, nice to complete, and they show on your leaderboard row. */
 const TOT_ACH=[
@@ -725,18 +737,19 @@ function totBoardHTML(){
   const over=!totLive();
   const medal=i=>['🥇','🥈','🥉','4️⃣','5️⃣'][i]||('#'+(i+1));
   const head=over
-    ?`<div class="tot-final"><b>🏆 Final standings</b><span>Collecting is closed. Top ${TOT.WINNERS} get rewarded.</span></div>`
-    :`<div class="tot-final live"><b>🔴 Live</b><span>Still running — the top ${TOT.WINNERS} when it ends get rewarded.</span></div>`;
+    ?`<div class="tot-final"><b>🏆 Final standings</b><span>Collecting is closed. Top ${TOT.WINNERS} take permanent VIP, ${TOT.WINNERS+1}–${TOT.WINNERS2} get a day of it.</span></div>`
+    :`<div class="tot-final live"><b>🔴 Live</b><span>Still running — top ${TOT.WINNERS} take permanent VIP, ${TOT.WINNERS+1}–${TOT.WINNERS2} get a day of it.</span></div>`;
   if(!rows.length)return head+`<div class="tot-empty">Nobody has any candy yet. Be the first.</div>`;
   const list=rows.slice(0,25).map((r,i)=>{
     const mine=ME&&r.id===ME.id;
-    return `<div class="tot-row${i<TOT.WINNERS?' win':''}${mine?' me':''}">
+    return `<div class="tot-row${i<TOT.WINNERS?' win':(i<TOT.WINNERS2?' win2':'')}${mine?' me':''}">
       <span class="tot-pos">${medal(i)}</span>
       <span class="tot-nm">${r.fit?('<span class="tot-fit-ic" title="costume">'+totFitOf(r.fit)+'</span> '):''}${esc(totName(r.id))}${mine?' <em>(you)</em>':''}</span>
       <span class="tot-sub">${totNum(r.doors)} doors</span>
       <span class="tot-candy">🍬 ${totNum(r.candy)}</span>
-      ${(over&&i<TOT.WINNERS&&typeof isOwner==='function'&&ME&&isOwner(ME.id)&&!isOwner(r.id))
-        ?`<button type="button" class="btn sec small tot-rw" data-reward="${r.id}" data-rank="${i+1}">${i===0?'Give MVP + VIP':'Give VIP'}</button>`:''}
+      ${(over&&i<TOT.WINNERS2&&typeof isOwner==='function'&&ME&&isOwner(ME.id)&&!isOwner(r.id))
+        ?`<button type="button" class="btn sec small tot-rw" data-reward="${r.id}" data-rank="${i+1}">${
+            i===0?'Give MVP + VIP':(i<TOT.WINNERS?'Give VIP':'Give 24h VIP')}</button>`:''}
     </div>`;
   }).join('');
   const mine=me?`<div class="tot-yours">You are <b>#${me}</b> of ${rows.length} with <b>🍬 ${totNum(TOT_ME.candy)}</b>.</div>`
@@ -747,19 +760,60 @@ function totBoardHTML(){
 }
 /* The prize list. Always on the Board tab, during the event and after it. */
 function totRewardsHTML(){
-  const myRank=ME?totRankOf(ME.id):0;
-  return `<div class="tot-rw-h">🎁 Prizes</div>
+  const rank=ME?totRankOf(ME.id):0;
+  const mineRow=r=>rank&&(r.pos===rank||(r.from&&rank>=r.from&&(!r.to||rank<=r.to)));
+  return `<div class="tot-rw-h"><span>🎁 Prizes</span>
+    ${rank?`<em>you are #${rank}</em>`:''}</div>
   <div class="tot-rw-list">${TOT_REWARDS.map(r=>`
-    <div class="tot-rw-row${myRank===r.pos?' me':''}">
+    <div class="tot-rw-row${r.tier?' '+r.tier:''}${mineRow(r)?' me':''}">
       <span class="tot-rw-m">${r.medal}</span>
-      <div class="tot-rw-tx"><b>${esc(r.n)}</b><small>${esc(r.d)}</small></div>
-      <span class="tot-rw-p${r.give==='mvp'?' top':''}">${esc(r.t)}</span>
+      <div class="tot-rw-tx">
+        <b>${esc(r.n)}${mineRow(r)?' <i class="tot-rw-you">you</i>':''}</b>
+        <div class="tot-rw-items">${r.items.map(it=>`<span>${esc(it)}</span>`).join('')}</div>
+        <small>${esc(r.d)}</small>
+      </div>
     </div>`).join('')}</div>
   <div class="tot-rw-what">${TOT_PERKS.map(p=>`
     <div><span>${p.ic}</span><div><b>${esc(p.n)}</b><small>${esc(p.d)}</small></div></div>`).join('')}</div>
   <div class="hint tot-rw-note">Ranked on the candy you are <b>holding</b> when the clock runs out, so spending
     in the shop is a real trade-off. Ties break towards whoever got there in fewer doors.
     An owner hands the prizes out from this tab once it ends.</div>`;
+}
+/* Paying a winner out.
+   The good path is /api/totaward: it re-derives the placing from tot/p server-side and grants the
+   VIP, the MVP and the commemorative custom role in one go. Custom roles are `.write:false` for
+   every browser (that is the whole point of them), so the role can ONLY come from there.
+   If that endpoint can't be reached, the VIP and MVP parts are still done directly from here so
+   the winner isn't left with nothing, and the owner is told plainly that the role still needs
+   adding — rather than the button quietly doing three quarters of the job. */
+async function totAward(btn){
+  const id=Number(btn.dataset.reward),rank=Number(btn.dataset.rank)||0;
+  const day=rank>TOT.WINNERS;
+  const label=rank===1?'Give MVP + VIP':(day?'Give 24h VIP':'Give VIP');
+  btn.disabled=true;btn.textContent='Giving…';
+  try{
+    const r=await tosApi('totaward',{id:id});
+    if(r&&r.status===200&&r.j&&r.j.ok){
+      toast('🎁 '+totName(id)+' (#'+r.j.place+') got '+(r.j.given||[]).join(', ')+'.');
+      btn.textContent='✓ Paid out';
+      if(typeof burstConfetti==='function')burstConfetti(rank===1?160:80);
+      return;
+    }
+    if(r&&r.j&&r.j.error)throw new Error(r.j.error);
+    throw new Error('status '+(r&&r.status));
+  }catch(e){
+    /* Fall back to what a browser is allowed to do on its own. */
+    try{
+      await DB.giveVip(id,day?'24h':'perm');
+      let got=day?'24h VIP':'permanent VIP';
+      if(rank===1){try{await DB.giveMvp(id);got+=' + MVP'}catch(_){}}
+      toast(totName(id)+' got '+got+', but the role needs adding by hand — the server is unreachable.','bad');
+      btn.textContent='✓ VIP · role pending';
+    }catch(e2){
+      toast(e2.message||e.message||'Failed','bad');
+      btn.disabled=false;btn.textContent=label;
+    }
+  }
 }
 function totWire(){
   const b=document.getElementById('totBody');if(!b)return;
@@ -770,31 +824,12 @@ function totWire(){
   b.querySelectorAll('[data-fit]').forEach(x=>x.onclick=()=>totFitBuy(x.dataset.fit));
   b.querySelectorAll('[data-claim]').forEach(x=>x.onclick=()=>totClaim(x.dataset.claim));
   const bon=document.getElementById('totBonusBtn');if(bon)bon.onclick=totBonus;
-  b.querySelectorAll('[data-reward]').forEach(x=>x.onclick=async()=>{
-    const id=Number(x.dataset.reward),rank=Number(x.dataset.rank)||0,first=rank===1;
-    const label=first?'Give MVP + VIP':'Give VIP';
-    x.disabled=true;x.textContent='Giving…';
-    try{
-      await DB.giveVip(id,'perm');
-      if(!first){toast(totName(id)+' is now a Legend (permanent VIP).');x.textContent='✓ VIP given';return}
-      /* First place gets MVP on top. VIP has already landed, so if MVP fails (its rules are a
-         separate publish) say exactly that rather than letting it look like nothing happened. */
-      try{
-        await DB.giveMvp(id);
-        toast('🥇 '+totName(id)+' is now an MVP and a permanent VIP.');
-        x.textContent='✓ MVP + VIP';
-        if(typeof burstConfetti==='function')burstConfetti(140);
-      }catch(e){
-        toast('VIP given, but MVP failed: '+(e.message||'unknown'),'bad');
-        x.textContent='✓ VIP · MVP failed';
-      }
-    }catch(e){toast(e.message||'Failed','bad');x.disabled=false;x.textContent=label}
-  });
+  b.querySelectorAll('[data-reward]').forEach(x=>x.onclick=()=>totAward(x));
   const ann=document.getElementById('totAnnounce');
   if(ann)ann.onclick=async()=>{
     ann.disabled=true;ann.textContent='Sending…';
     try{
-      await DB.sendLiveAnnouncement('🎃 TRICK OR TREAT is live! Knock on doors for candy, play the TWELVE minigames, finish challenges and buy a costume. 🌧️ CANDY RAIN doubles everything for 6 minutes out of every 20. Top 5 get PERMANENT VIP and 1st place also gets MVP. Open it from the home screen.',{kind:'event',alsoPost:true});
+      await DB.sendLiveAnnouncement('🎃 TRICK OR TREAT is live! Knock on doors for candy, play the TWELVE minigames, finish challenges and buy a costume. 🌧️ CANDY RAIN doubles everything for 6 minutes out of every 20. Top 10 get exclusive Halloween roles — 1st also takes MVP and permanent VIP. Open it from the home screen.',{kind:'event',alsoPost:true});
       toast('Announced to everyone.');ann.textContent='✓ Announced';
     }catch(e){toast(e.message||'Could not announce','bad');ann.disabled=false;ann.textContent='📢 Announce this event to everyone'}
   };
@@ -934,7 +969,7 @@ function totMaybeIntro(){
       <div><span>🕹️</span><b>Play</b><small>Twelve minigames. Pure skill, nothing to lose.</small></div>
       <div><span>🌧️</span><b>Candy Rain</b><small>Everything pays double, 6 minutes out of every 20.</small></div>
       <div><span>📜</span><b>Challenges</b><small>Milestones that pay out, plus costumes to buy.</small></div>
-      <div><span>🏆</span><b>Win</b><small>Top 5 get permanent VIP — 1st also gets MVP.</small></div>
+      <div><span>🏆</span><b>Win</b><small>Top 10 get an exclusive role. 1st takes MVP too.</small></div>
       <div><span>🔔</span><b>Come back</b><small>A free doorbell bonus every hour.</small></div>
     </div>
     <div class="tot-intro-end">You have <b>${totLeftTx()}</b> left.</div>

@@ -1324,7 +1324,7 @@ const DB=(()=>{
           if(!row.v&&a.v)row.v=a.v;
           return;
         }
-        out[id]={id:Number(id),at:Number(a.at)||0,v:a.v,h:a.h,noip:true};
+        out[id]={id:Number(id),at:Number(a.at)||0,v:a.v,h:a.h,why:a.why||'',noip:true};
       });
       // name them from the live user list, so receipt-only rows aren't a wall of "(unknown)"
       Object.keys(out).forEach(id=>{
