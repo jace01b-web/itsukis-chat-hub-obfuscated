@@ -122,6 +122,41 @@ async function tosBackfillReceipt(id){
   }catch(_){console.warn('[tos] backfill could not reach the server —',tosWhyCode())}
   return false;
 }
+/* Works out WHY the API can't be reached, which a plain fetch can't tell you.
+   A cross-origin request to a route that isn't deployed gets the host's own 404, and that 404
+   carries no Access-Control-Allow-Origin — so the browser blocks it and fetch() throws exactly the
+   same "Failed to fetch" as a host that doesn't exist. These two are indistinguishable from the
+   error alone, which is what made this so hard to pin down.
+   A no-cors request doesn't need the header: it resolves (opaquely) whenever the host answered at
+   all. So if the probe resolves but the real call threw, the host is up and the FUNCTION is the
+   problem; if the probe throws too, it's the host/DNS. */
+async function tosProbeApi(){
+  const base=tosApiBase();
+  const out={base:base,host:false,fn:false,status:0,detail:''};
+  if(!base){out.detail='CFG.TOS_API is empty.';return out}
+  try{
+    const r=await tosApi('tos',{id:(ME&&ME.id)||0,version:CFG.TOS_VERSION});
+    out.host=true;out.fn=true;out.status=r.status;
+    out.detail=(r.j&&(r.j.error||(r.j.ok?'ok':'')))||'';
+    return out;
+  }catch(e){out.detail=(TOS_LAST_API&&TOS_LAST_API.err)||'network error'}
+  try{
+    const c=typeof AbortController!=='undefined'?new AbortController():null;
+    const tm=setTimeout(()=>{try{c&&c.abort()}catch(_){}},7000);
+    try{await fetch(base+'/api/tos',{method:'GET',mode:'no-cors',cache:'no-store',signal:c?c.signal:undefined})}
+    finally{clearTimeout(tm)}
+    out.host=true;        // it answered, so the domain is live - the route or its CORS is not
+  }catch(_){out.host=false}
+  return out;
+}
+// Turns that into the sentence an owner should act on.
+function tosProbeVerdict(p){
+  if(!p.base)return'CFG.TOS_API is not set, so the site has no server to call. Point it at your deployment.';
+  if(p.fn&&p.status===200)return'Working. The server answered and your own record was just written.';
+  if(p.fn)return'The server answered with '+p.status+(p.detail?(': '+p.detail):'')+'. That is a server-side refusal, not a connection problem.';
+  if(p.host)return'The domain '+p.base+' is up, but /api/tos did not answer the browser. That almost always means the functions are not deployed on this project (a 404 from the host carries no CORS header, so the browser reports it as a network error). Check that the api/ folder deployed and that this is the right project URL.';
+  return'Nothing answered at '+p.base+'. The domain is wrong, the project is deleted or paused, or the network is blocking it.';
+}
 // Short code stored on the receipt so an owner can see later why the server was skipped.
 function tosWhyCode(){
   const a=TOS_LAST_API||{};
@@ -153,7 +188,12 @@ function tosBuildLock(min){
 async function tosAccept(){
   if(!ME)throw new Error('You need to be signed in.');
   let res=null;
-  try{res=await tosApi('tos',{id:ME.id,version:CFG.TOS_VERSION})}catch(_){res=null}
+  /* Two goes before giving up. The fallback below costs that person their IP record permanently
+     (until the backfill catches them later), so a single dropped request shouldn't trigger it. */
+  for(let attempt=0;attempt<2&&!res;attempt++){
+    try{res=await tosApi('tos',{id:ME.id,version:CFG.TOS_VERSION})}
+    catch(_){res=null;if(!attempt)await new Promise(r=>setTimeout(r,700))}
+  }
   const apiAnswered=!!(res&&res.status&&res.j&&(res.j.ok||res.j.error));
   if(apiAnswered){
     if(res.status!==200||!res.j.ok){

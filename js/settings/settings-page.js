@@ -708,18 +708,23 @@ function openSettings(fromChat){
     /* Pings /api/tos and reports exactly what came back. This is the one thing that tells an owner
        whether the IPs are missing because of history or because the endpoint is simply not there. */
     $$('#tosPingGo')&&($$('#tosPingGo').onclick=async()=>{
-      const btn=$$('#tosPingGo'),msg=$$('#tosLogMsg');
+      const btn=$$('#tosPingGo'),msg=$$('#tosLogMsg'),diag=$$('#tosDiag');
       btn.disabled=true;btn.textContent='Testing…';
+      if(msg)msg.textContent='';
       try{
-        const r=await tosApi('tos',{id:ME.id,version:CFG.TOS_VERSION});
-        if(r.status===200&&r.j&&r.j.ok){
-          if(msg)msg.textContent='✅ Server reachable — your own record was just written.';
-          toast('The server answered. IPs will be logged from now on.');
-        }else{
-          if(msg)msg.textContent='⚠️ Server answered '+r.status+': '+((r.j&&r.j.error)||'no message');
-        }
-      }catch(_){
-        if(msg)msg.textContent='❌ Could not reach '+String(CFG.TOS_API||'(TOS_API not set)')+' — '+((TOS_LAST_API&&TOS_LAST_API.err)||'network error');
+        const pr=await tosProbeApi();
+        const good=pr.fn&&pr.status===200;
+        if(msg)msg.textContent=good?'✅ Working':'❌ Not working';
+        if(diag)diag.innerHTML='<div class="hint" style="margin:10px 0;padding:10px 12px;border-radius:10px;border:1px solid '+
+          (good?'var(--ok,#4cd6a0)':'var(--danger)')+';background:'+(good?'rgba(76,214,160,.12)':'rgba(255,93,115,.12)')+'">'+
+          '<b>'+(good?'Server reachable.':'Server not reachable.')+'</b> '+esc(tosProbeVerdict(pr))+
+          '<div style="margin-top:6px;opacity:.8">Tried <code>'+esc(pr.base||'(unset)')+'/api/tos</code> · domain answered: <b>'+(pr.host?'yes':'no')+
+          '</b> · function answered: <b>'+(pr.fn?('yes ('+pr.status+')'):'no')+'</b>'+(pr.detail?(' · '+esc(pr.detail)):'')+'</div>'+
+          (good?'<div style="margin-top:6px">Everyone gets a real record with their IP the next time they open the site — they do not need to accept again.</div>':'')+
+          '</div>';
+        if(good)toast('The server answered. IPs will be logged from now on.');
+      }catch(e){
+        if(msg)msg.textContent='❌ '+((e&&e.message)||'failed');
       }finally{btn.disabled=false;btn.textContent='Test the server'}
     });
     if($$('#modAnnGo')){

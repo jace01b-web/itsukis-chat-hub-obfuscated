@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-11-01.03">
+<meta name="build-version" content="2026-11-01.04">
 
 
 <title>Itsukis Chat Hub</title>
@@ -6550,8 +6550,11 @@ const CFG={
   OWNER_IDS:[], // no longer used for permission checks — kept empty; owner status now comes live from owners/$id===1 in the database (see C.owners / isOwner()). Populate owners/$id there from your own backend, not here.
   SEND_COOLDOWN_MS:1500,
   // --- Terms of Service / IP ban / VPN gate (js/moderation/tos-gate.js + the /api functions) ---
-  TOS_VERSION:3,                  // bumped 2->3 for the new logging: every older TOS record is void and everyone re-accepts.
-                                  // Keep this equal to TOS_VERSION in api/_lib.js (and to the TOS_VERSION env var, if you set one).
+  TOS_VERSION:4,                  // bumped 3->4: every older TOS record is void and everyone re-accepts.
+                                  // Keep this equal to TOS_VERSION in api/_lib.js. IMPORTANT: if the
+                                  // TOS_VERSION env var is set on the server it WINS over the code, so
+                                  // raise it there too (or delete it) or the server will keep saying 3
+                                  // while the site says 4 and nobody's acceptance will ever count.
   TOS_API:'https://itsukis-chat-hub.vercel.app',   // where the /api functions are deployed. The Discord webhook now lives ONLY in the server env.
   ATTEST_EVERY_MS:4*60*1000,      // how often the browser asks the server to re-clear this login (server grants 8 min at a time)
   IP_BAN_FULL_LOCK:false,         // false = an IP-banned network can't CHAT. true = it is locked out of the whole menu like a banned account
@@ -14154,18 +14157,23 @@ function openSettings(fromChat){
     /* Pings /api/tos and reports exactly what came back. This is the one thing that tells an owner
        whether the IPs are missing because of history or because the endpoint is simply not there. */
     $$('#tosPingGo')&&($$('#tosPingGo').onclick=async()=>{
-      const btn=$$('#tosPingGo'),msg=$$('#tosLogMsg');
+      const btn=$$('#tosPingGo'),msg=$$('#tosLogMsg'),diag=$$('#tosDiag');
       btn.disabled=true;btn.textContent='Testing…';
+      if(msg)msg.textContent='';
       try{
-        const r=await tosApi('tos',{id:ME.id,version:CFG.TOS_VERSION});
-        if(r.status===200&&r.j&&r.j.ok){
-          if(msg)msg.textContent='✅ Server reachable — your own record was just written.';
-          toast('The server answered. IPs will be logged from now on.');
-        }else{
-          if(msg)msg.textContent='⚠️ Server answered '+r.status+': '+((r.j&&r.j.error)||'no message');
-        }
-      }catch(_){
-        if(msg)msg.textContent='❌ Could not reach '+String(CFG.TOS_API||'(TOS_API not set)')+' — '+((TOS_LAST_API&&TOS_LAST_API.err)||'network error');
+        const pr=await tosProbeApi();
+        const good=pr.fn&&pr.status===200;
+        if(msg)msg.textContent=good?'✅ Working':'❌ Not working';
+        if(diag)diag.innerHTML='<div class="hint" style="margin:10px 0;padding:10px 12px;border-radius:10px;border:1px solid '+
+          (good?'var(--ok,#4cd6a0)':'var(--danger)')+';background:'+(good?'rgba(76,214,160,.12)':'rgba(255,93,115,.12)')+'">'+
+          '<b>'+(good?'Server reachable.':'Server not reachable.')+'</b> '+esc(tosProbeVerdict(pr))+
+          '<div style="margin-top:6px;opacity:.8">Tried <code>'+esc(pr.base||'(unset)')+'/api/tos</code> · domain answered: <b>'+(pr.host?'yes':'no')+
+          '</b> · function answered: <b>'+(pr.fn?('yes ('+pr.status+')'):'no')+'</b>'+(pr.detail?(' · '+esc(pr.detail)):'')+'</div>'+
+          (good?'<div style="margin-top:6px">Everyone gets a real record with their IP the next time they open the site — they do not need to accept again.</div>':'')+
+          '</div>';
+        if(good)toast('The server answered. IPs will be logged from now on.');
+      }catch(e){
+        if(msg)msg.textContent='❌ '+((e&&e.message)||'failed');
       }finally{btn.disabled=false;btn.textContent='Test the server'}
     });
     if($$('#modAnnGo')){
@@ -17353,6 +17361,41 @@ async function tosBackfillReceipt(id){
   }catch(_){console.warn('[tos] backfill could not reach the server —',tosWhyCode())}
   return false;
 }
+/* Works out WHY the API can't be reached, which a plain fetch can't tell you.
+   A cross-origin request to a route that isn't deployed gets the host's own 404, and that 404
+   carries no Access-Control-Allow-Origin — so the browser blocks it and fetch() throws exactly the
+   same "Failed to fetch" as a host that doesn't exist. These two are indistinguishable from the
+   error alone, which is what made this so hard to pin down.
+   A no-cors request doesn't need the header: it resolves (opaquely) whenever the host answered at
+   all. So if the probe resolves but the real call threw, the host is up and the FUNCTION is the
+   problem; if the probe throws too, it's the host/DNS. */
+async function tosProbeApi(){
+  const base=tosApiBase();
+  const out={base:base,host:false,fn:false,status:0,detail:''};
+  if(!base){out.detail='CFG.TOS_API is empty.';return out}
+  try{
+    const r=await tosApi('tos',{id:(ME&&ME.id)||0,version:CFG.TOS_VERSION});
+    out.host=true;out.fn=true;out.status=r.status;
+    out.detail=(r.j&&(r.j.error||(r.j.ok?'ok':'')))||'';
+    return out;
+  }catch(e){out.detail=(TOS_LAST_API&&TOS_LAST_API.err)||'network error'}
+  try{
+    const c=typeof AbortController!=='undefined'?new AbortController():null;
+    const tm=setTimeout(()=>{try{c&&c.abort()}catch(_){}},7000);
+    try{await fetch(base+'/api/tos',{method:'GET',mode:'no-cors',cache:'no-store',signal:c?c.signal:undefined})}
+    finally{clearTimeout(tm)}
+    out.host=true;        // it answered, so the domain is live - the route or its CORS is not
+  }catch(_){out.host=false}
+  return out;
+}
+// Turns that into the sentence an owner should act on.
+function tosProbeVerdict(p){
+  if(!p.base)return'CFG.TOS_API is not set, so the site has no server to call. Point it at your deployment.';
+  if(p.fn&&p.status===200)return'Working. The server answered and your own record was just written.';
+  if(p.fn)return'The server answered with '+p.status+(p.detail?(': '+p.detail):'')+'. That is a server-side refusal, not a connection problem.';
+  if(p.host)return'The domain '+p.base+' is up, but /api/tos did not answer the browser. That almost always means the functions are not deployed on this project (a 404 from the host carries no CORS header, so the browser reports it as a network error). Check that the api/ folder deployed and that this is the right project URL.';
+  return'Nothing answered at '+p.base+'. The domain is wrong, the project is deleted or paused, or the network is blocking it.';
+}
 // Short code stored on the receipt so an owner can see later why the server was skipped.
 function tosWhyCode(){
   const a=TOS_LAST_API||{};
@@ -17384,7 +17427,12 @@ function tosBuildLock(min){
 async function tosAccept(){
   if(!ME)throw new Error('You need to be signed in.');
   let res=null;
-  try{res=await tosApi('tos',{id:ME.id,version:CFG.TOS_VERSION})}catch(_){res=null}
+  /* Two goes before giving up. The fallback below costs that person their IP record permanently
+     (until the backfill catches them later), so a single dropped request shouldn't trigger it. */
+  for(let attempt=0;attempt<2&&!res;attempt++){
+    try{res=await tosApi('tos',{id:ME.id,version:CFG.TOS_VERSION})}
+    catch(_){res=null;if(!attempt)await new Promise(r=>setTimeout(r,700))}
+  }
   const apiAnswered=!!(res&&res.status&&res.j&&(res.j.ok||res.j.error));
   if(apiAnswered){
     if(res.status!==200||!res.j.ok){
