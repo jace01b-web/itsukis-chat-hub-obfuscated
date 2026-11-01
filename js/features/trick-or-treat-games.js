@@ -1,6 +1,6 @@
 /* ==========================================================================
  * js/features/trick-or-treat-games.js
- * Halloween 2026 — the nine minigames inside Trick or Treat.
+ * Halloween 2026 — the twelve minigames inside Trick or Treat.
  *
  * Each game gets a host element and a done(score) callback; js/features/trick-or-treat.js owns the
  * scoring, the cooldown and the saving. Everything is plain DOM (no canvas), so it works the same
@@ -167,7 +167,8 @@ function totgMemory(host,done){
     }
   });
   // hard stop so nobody sits in it forever
-  const bail=setTimeout(()=>{if(alive){alive=false;cancelAnimationFrame(raf);done(999,'time')}},90000);
+  // 60s, matching the bar above — it used to run to 90s, so the bar sat empty while you played
+  const bail=setTimeout(()=>{if(alive){alive=false;cancelAnimationFrame(raf);done(999,'time')}},60000);
   return()=>{alive=false;cancelAnimationFrame(raf);clearTimeout(bail)};
 }
 
@@ -185,7 +186,9 @@ function totgTyper(host,done){
      <div class="totg-hint">Spelling counts. Enter submits.</div>`);
   let score=0,alive=true,word='';
   const wEl=host.querySelector('#totgWord'),inp=host.querySelector('#totgInput');
-  const next=()=>{word=TOTG_WORDS[Math.floor(Math.random()*TOTG_WORDS.length)];wEl.textContent=word};
+  const next=()=>{let w=word,g=0;
+    while(w===word&&g++<8)w=TOTG_WORDS[Math.floor(Math.random()*TOTG_WORDS.length)];
+    word=w;wEl.textContent=word};
   next();
   setTimeout(()=>{try{inp.focus()}catch(_){}} ,60);
   inp.addEventListener('keydown',e=>{
@@ -457,6 +460,161 @@ function totgOdd(host,done){
   return()=>{alive=false;stop()};
 }
 
+/* -------------------------------------------------------------- 10. ZOMBIE
+   Tap them in number order. Finding "next" in a scattered grid is a different skill from
+   reacting or remembering, and the grid grows every time you clear one. */
+function totgZombie(host,done){
+  host.innerHTML=totgShell('🧟 Zombie Queue','Tap them in order, 1 first.',
+    `<div class="totg-zq" id="totgZq"></div>
+     <div class="totg-hint" id="totgZqH">Wrong one costs you a second.</div>`);
+  const grid=host.querySelector('#totgZq'),hint=host.querySelector('#totgZqH');
+  const FACES=['🧟','🧟‍♂️','🧟‍♀️'];
+  let score=0,alive=true,need=1,count=4,penalty=0;
+  function round(){
+    if(!alive)return;
+    need=1;
+    const nums=Array.from({length:count},(_,i)=>i+1);
+    for(let i=nums.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[nums[i],nums[j]]=[nums[j],nums[i]]}
+    grid.style.setProperty('--n',Math.min(5,Math.ceil(Math.sqrt(count))+1));
+    grid.innerHTML=nums.map(n=>
+      `<button type="button" class="totg-z" data-n="${n}"><span>${FACES[n%FACES.length]}</span><b>${n}</b></button>`).join('');
+    grid.querySelectorAll('[data-n]').forEach(btn=>btn.onclick=()=>{
+      if(!alive)return;
+      const n=Number(btn.dataset.n);
+      if(n===need){
+        btn.classList.add('got');btn.disabled=true;need++;
+        if(need>count){
+          score++;totgSetScore(score);
+          count=Math.min(12,count+1);
+          hint.textContent='Cleared! '+count+' next.';
+          setTimeout(round,320);
+        }
+      }else{
+        btn.classList.remove('no');void btn.offsetWidth;btn.classList.add('no');
+        penalty+=1;hint.textContent='That was '+n+', you need '+need+'.';
+      }
+    });
+  }
+  round();
+  const stop=totgCountdown(host,30,()=>{if(alive){alive=false;stop();done(Math.max(0,score))}});
+  return()=>{alive=false;stop()};
+}
+
+/* ------------------------------------------------------------- 11. LANTERN
+   Spatial memory: a few lanterns light, then you light the same ones again. Different muscle from
+   Potion Brew, which is a sequence — here it is the shape you have to hold. */
+function totgLantern(host,done){
+  const N=16;
+  host.innerHTML=totgShell('🕯️ Lantern Flash','Remember which ones lit, then tap them.',
+    `<div class="totg-lan" id="totgLan">${Array.from({length:N},(_,i)=>
+      `<button type="button" class="totg-l" data-l="${i}">🕯️</button>`).join('')}</div>
+     <div class="totg-step" id="totgLanS">Watch…</div>`);
+  const cells=[...host.querySelectorAll('[data-l]')],step=host.querySelector('#totgLanS');
+  let score=0,alive=true,want=[],got=[],showing=true,timers=[];
+  function round(){
+    if(!alive)return;
+    showing=true;got=[];
+    const k=Math.min(9,3+Math.floor(score/2));
+    const pool=Array.from({length:N},(_,i)=>i);
+    for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
+    want=pool.slice(0,k);
+    step.textContent='Watch… ('+k+')';
+    cells.forEach(c=>{c.classList.remove('lit','yes','no');c.disabled=true});
+    want.forEach(i=>cells[i].classList.add('lit'));
+    timers.push(setTimeout(()=>{
+      if(!alive)return;
+      cells.forEach(c=>{c.classList.remove('lit');c.disabled=false});
+      showing=false;step.textContent='Your turn — tap '+k;
+    },Math.max(900,1700-score*90)));
+  }
+  cells.forEach((c,i)=>c.onclick=()=>{
+    if(!alive||showing||got.indexOf(i)!==-1)return;
+    got.push(i);
+    if(want.indexOf(i)!==-1){
+      c.classList.add('yes');
+      if(got.filter(x=>want.indexOf(x)!==-1).length===want.length){
+        score++;totgSetScore(score);showing=true;
+        cells.forEach(x=>x.disabled=true);
+        step.textContent='✅ Round '+score;
+        timers.push(setTimeout(round,620));
+      }
+    }else{
+      c.classList.add('no');step.textContent='❌ Not that one';
+      showing=true;cells.forEach(x=>x.disabled=true);
+      finish();
+    }
+  });
+  function finish(){if(!alive)return;alive=false;totgClear(timers);stop();setTimeout(()=>done(score),620)}
+  const stop=totgCountdown(host,60,()=>{if(alive)finish()});
+  timers.push(setTimeout(round,400));
+  return()=>{alive=false;totgClear(timers);stop()};
+}
+
+/* -------------------------------------------------------------- 12. RHYTHM
+   Notes drop down three lanes; hit the lane as its note crosses the line. The only game in the set
+   that asks you to keep time, and it is the one people replay. */
+function totgRhythm(host,done){
+  const LANES=3,ICS=['🎃','👻','🦇'];
+  host.innerHTML=totgShell('🎵 Monster Mash','Hit the lane as the note crosses the line.',
+    `<div class="totg-rh" id="totgRh">
+       ${Array.from({length:LANES},(_,i)=>
+         `<div class="totg-lane" data-lane="${i}"><span class="totg-line"></span>
+            <button type="button" class="totg-pad" data-pad="${i}">${ICS[i]}</button></div>`).join('')}
+     </div>
+     <div class="totg-hint" id="totgRhH">Tap the pad, or press A / S / D.</div>`);
+  const box=host.querySelector('#totgRh'),hint=host.querySelector('#totgRhH');
+  const lanes=[...host.querySelectorAll('.totg-lane')];
+  /* Tuned so notes arrive about twice a second and take a bit over a second to fall — any slower
+     and the lanes sit empty, which is exactly how it played before. */
+  const HIT=0.80,WIN=0.12,SPEED=0.00078;         // line position, how close counts, fall rate
+  let score=0,combo=0,alive=true,raf=0,last=0,nextIn=420,notes=[];
+  function spawn(){
+    const l=Math.floor(Math.random()*LANES);
+    const el=document.createElement('span');
+    el.className='totg-note';el.textContent=ICS[l];el.style.top='-12%';
+    lanes[l].appendChild(el);
+    notes.push({el,l,y:-0.12,hit:false});
+  }
+  function pad(l){
+    if(!alive)return;
+    const p=lanes[l].querySelector('.totg-pad');
+    p.classList.remove('tap');void p.offsetWidth;p.classList.add('tap');
+    // the closest un-hit note in this lane that is near the line
+    let best=null,bd=9;
+    for(const n of notes){if(n.l!==l||n.hit)continue;const d=Math.abs(n.y-HIT);if(d<bd){bd=d;best=n}}
+    if(best&&bd<=WIN){
+      best.hit=true;best.el.classList.add('hit');
+      combo++;score+=1+(combo>=8?2:combo>=4?1:0);     // combos are where a good run pulls ahead
+      totgSetScore(score);
+      hint.textContent=combo>=4?('Combo ×'+combo+'!'):'Hit';
+    }else{
+      combo=0;hint.textContent='Missed';
+      lanes[l].classList.remove('miss');void lanes[l].offsetWidth;lanes[l].classList.add('miss');
+    }
+  }
+  const onKey=e=>{const i={a:0,s:1,d:2}[String(e.key||'').toLowerCase()];
+    if(i===undefined)return;e.preventDefault();e.stopPropagation();pad(i)};
+  document.addEventListener('keydown',onKey,true);
+  host.querySelectorAll('[data-pad]').forEach(b=>b.onclick=()=>pad(Number(b.dataset.pad)));
+  function frame(now){
+    if(!alive)return;
+    const dt=last?Math.min(42,now-last):16;last=now;
+    nextIn-=dt;
+    if(nextIn<=0){spawn();nextIn=Math.max(240,470-score*2)}
+    for(let i=notes.length-1;i>=0;i--){
+      const n=notes[i];
+      n.y+=SPEED*dt;n.el.style.top=(n.y*100)+'%';
+      if(n.y>1.04||n.hit&&n.y>HIT+0.12){n.el.remove();notes.splice(i,1);
+        if(!n.hit)combo=0;}
+    }
+    raf=requestAnimationFrame(frame);
+  }
+  raf=requestAnimationFrame(frame);
+  const stop=totgCountdown(host,30,()=>{if(alive){alive=false;cancelAnimationFrame(raf);stop();
+    document.removeEventListener('keydown',onKey,true);done(score)}});
+  return()=>{alive=false;cancelAnimationFrame(raf);stop();document.removeEventListener('keydown',onKey,true)};
+}
+
 /* The list the Minigames tab renders. payout() turns a raw score into candy. */
 const TOT_GAMES=[
   {id:'smash', n:'Pumpkin Smash', ic:'🔨', d:'16s · hit pumpkins, dodge ghosts', run:totgSmash,
@@ -476,5 +634,11 @@ const TOT_GAMES=[
   {id:'ghost', n:'Ghost Rush',    ic:'👻', d:'5 rounds · reaction time', run:totgGhost,
    payout:s=>Math.min(500,s), unit:s=>s+' pts', ach:s=>s>=380?'ghost':''},
   {id:'odd',   n:'Odd One Out',   ic:'🔦', d:'22s · spot the one that differs', run:totgOdd,
-   payout:s=>Math.min(500,s*34), unit:s=>s+' found', ach:s=>s>=12?'odd':''}
+   payout:s=>Math.min(500,s*34), unit:s=>s+' found', ach:s=>s>=12?'odd':''},
+  {id:'zombie',n:'Zombie Queue',  ic:'🧟', d:'30s · tap them in number order', run:totgZombie,
+   payout:s=>Math.min(500,s*60), unit:s=>s+' cleared', ach:s=>s>=6?'zombie':''},
+  {id:'lantern',n:'Lantern Flash',ic:'🕯️', d:'Remember which lanterns lit', run:totgLantern,
+   payout:s=>Math.min(500,s*58), unit:s=>'round '+s, ach:s=>s>=7?'lantern':''},
+  {id:'rhythm',n:'Monster Mash',  ic:'🎵', d:'30s · hit the notes in time', run:totgRhythm,
+   payout:s=>Math.min(500,s*9),  unit:s=>s+' pts', ach:s=>s>=45?'rhythm':''}
 ];

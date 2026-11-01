@@ -38,6 +38,8 @@ const DiscordShell=(function(){
     const items=[
       {id:'dms',t:'Direct Messages',ic:LOGO,active:dm,badge:unreadDM,cls:'dl-rail-home'},
       {sep:1},
+      // While the event is on it sits above Global — it is the thing we want people to open first.
+      ...((typeof totVisible==='function'&&totVisible())?[{id:'tot',t:'Trick or Treat',ic:'🎃',cls:'dl-rail-tot'},{sep:1}]:[]),
       {id:'global',t:'Global Chat',ic:'🌍',active:g&&!sec},
       {id:'rooms',t:'Rooms',ic:'🚪',active:g&&sec==='rooms',badge:unreadRooms},
       {id:'ann',t:'Announcements',ic:'📢',active:g&&sec==='announcements',badge:unreadAnn},
@@ -45,7 +47,6 @@ const DiscordShell=(function(){
       {id:'vip',t:'VIP Lounge',ic:'💎',active:g&&sec==='vip'},
       ...(hasMvpPerks(ME.id)?[{id:'mvp',t:'MVP Lounge',ic:'🏆',active:g&&sec==='mvp',cls:'dl-rail-mvp'}]:[]),
       {sep:1},
-      ...((typeof totVisible==='function'&&totVisible())?[{id:'tot',t:'Trick or Treat',ic:'🎃',cls:'dl-rail-tot'}]:[]),
       {id:'hubs',t:'Games',ic:'🎮'},
       {id:'extras',t:'Extras',ic:EXTRAS_IC},
       {id:'gift',t:'Gift Nitro perks',ic:'🎁'},

@@ -46,27 +46,57 @@
 .tot-bucket b{font-size:21px;font-weight:900;font-variant-numeric:tabular-nums}
 .tot-bucket small{font-size:11px;color:var(--muted)}
 
-.tot-tabs{display:flex;gap:6px;margin:16px 0 14px;flex-wrap:wrap}
-.tot-tab{flex:1;min-width:84px;padding:8px 6px;border-radius:12px;font-size:12.5px;font-weight:700;color:var(--muted);white-space:nowrap;
-  background:rgba(255,255,255,.05);border:1px solid var(--border);cursor:pointer;transition:.15s}
-.tot-tab:hover{color:var(--text)}
-.tot-tab.on{color:#fff;background:linear-gradient(135deg,var(--tot-o),var(--tot-o2));border-color:transparent}
+/* One inset bar holding five segments, rather than five loose buttons — reads as a proper menu
+   and keeps its shape in every theme. */
+.tot-tabs{display:flex;gap:4px;margin:16px 0 14px;padding:4px;border-radius:15px;
+  background:rgba(0,0,0,.26);border:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.tot-tabs::-webkit-scrollbar{display:none}
+.tot-tab{position:relative;flex:1 1 0;min-width:76px;display:flex;align-items:center;justify-content:center;gap:5px;
+  padding:9px 8px;border-radius:11px;font-size:12.5px;font-weight:700;color:var(--muted);white-space:nowrap;
+  background:transparent;border:0;cursor:pointer;transition:color .15s,background .15s,transform .15s}
+.tot-tab:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.tot-tab:active{transform:scale(.97)}
+.tot-tab.on{color:#fff;background:linear-gradient(135deg,var(--tot-o),var(--tot-o2));
+  box-shadow:0 4px 14px rgba(255,110,20,.32)}
+.tot-tab.on:hover{color:#fff}
 
-/* ---------- street ---------- */
-.tot-street{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.tot-door{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 8px 12px;
-  border-radius:16px;cursor:pointer;color:var(--text);border:1px solid var(--border);
-  background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(0,0,0,.18));
-  transition:transform .18s cubic-bezier(.16,1,.3,1),border-color .18s ease,box-shadow .18s ease;
-  animation:totRise .5s cubic-bezier(.16,1,.3,1) both;animation-delay:calc(var(--i) * .05s)}
+/* ---------- the street ----------
+   A row of houses with a pavement under them and your trick-or-treater walking along it. */
+.tot-walk{border-radius:18px;padding:13px 13px 0;border:1px solid var(--border);
+  background:linear-gradient(180deg,rgba(60,30,90,.4),rgba(0,0,0,.3) 70%)}
+.tot-walk-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:11px}
+.tot-walk-h b{font-size:14px}
+.tot-walk-h small{font-size:12px;color:var(--muted)}
+.tot-houses{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;align-items:end}
+.tot-h{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;padding:11px 4px 9px;
+  border-radius:14px;cursor:pointer;color:var(--text);border:1px solid var(--border);
+  background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(0,0,0,.2));
+  transition:transform .18s cubic-bezier(.16,1,.3,1),border-color .18s,box-shadow .18s,opacity .25s;
+  animation:totRise .45s cubic-bezier(.16,1,.3,1) both;animation-delay:calc(var(--i) * .045s)}
 @keyframes totRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-.tot-door:hover:not(:disabled){transform:translateY(-4px);border-color:rgba(255,138,43,.8);box-shadow:0 12px 26px rgba(255,138,43,.22)}
-.tot-door:disabled{opacity:.45;cursor:default}
-.tot-house{font-size:34px;line-height:1}
-.tot-knob{width:8px;height:8px;border-radius:50%;background:var(--tot-o);box-shadow:0 0 10px var(--tot-o)}
-.tot-knock-t{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.tot-door.knock{animation:totKnock .45s ease}
+.tot-h:hover:not(:disabled){transform:translateY(-5px);border-color:rgba(255,138,43,.8);
+  box-shadow:0 12px 26px rgba(255,138,43,.22)}
+.tot-h:disabled{cursor:default}
+.tot-h-art{position:relative;font-size:30px;line-height:1}
+.tot-h-dec{position:absolute;right:-7px;bottom:-3px;font-size:14px;font-style:normal}
+.tot-h-lamp{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.14)}
+.tot-h-tag{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);
+  text-align:center;line-height:1.2}
+/* lit vs dark is the whole read of the street, so it has to be obvious at a glance */
+.tot-h.lit{border-color:rgba(255,190,90,.4)}
+.tot-h.lit .tot-h-lamp{background:#ffd27a;box-shadow:0 0 12px 2px rgba(255,200,110,.75)}
+.tot-h.lit .tot-h-art{filter:drop-shadow(0 0 12px rgba(255,200,110,.4))}
+.tot-h.dark{opacity:.68}
+.tot-h.dark .tot-h-art{filter:grayscale(.75) brightness(.72)}
+.tot-h.done{opacity:.34;filter:grayscale(.6)}
+.tot-h.done:hover{transform:none;box-shadow:none;border-color:var(--border)}
+.tot-h.here{border-color:var(--tot-o)}
+.tot-h.knock{animation:totKnock .45s ease}
 @keyframes totKnock{0%,100%{transform:none}25%{transform:translateY(3px) scale(.97)}60%{transform:translateY(-6px) scale(1.03)}}
+.tot-pave{position:relative;height:30px;margin:9px -13px 0;border-top:2px dashed rgba(255,255,255,.14);
+  background:linear-gradient(180deg,rgba(0,0,0,.26),transparent)}
+.tot-kid{position:absolute;top:3px;font-size:22px;line-height:1;
+  transition:left .45s cubic-bezier(.3,1.3,.5,1);animation:totBob 2.2s ease-in-out infinite}
 
 .tot-res{display:flex;align-items:center;gap:13px;margin-top:14px;padding:14px 16px;border-radius:16px;
   border:1px solid var(--border);background:var(--ui-panel2);min-height:74px}
@@ -138,18 +168,18 @@
 .tot-intro .actions{justify-content:center}
 
 @media(max-width:560px){
-  .tot-street{grid-template-columns:repeat(2,1fr)}
+  .tot-houses{grid-template-columns:repeat(3,1fr)}
   .tot-stats{grid-template-columns:repeat(2,1fr)}
   .tot-intro-grid{grid-template-columns:1fr}
   .tot-sub{display:none}
 }
 @media(prefers-reduced-motion:reduce){
-  .tot-pump,.tot-bar-ic,.opt.tot-opt .ic,.tot-opt-glow,.tot-live-dot,.tot-intro-pump,.tot-door{animation:none!important}
+  .tot-pump,.tot-bar-ic,.opt.tot-opt .ic,.tot-opt-glow,.tot-live-dot,.tot-intro-pump,.tot-h,.tot-kid{animation:none!important}
 }
 
 /* Discord look: flatter, squarer, same colours */
 html.discord-look .tot-bar{border-radius:8px}
-html.discord-look .tot-door,html.discord-look .tot-res,
+html.discord-look .tot-h,html.discord-look .tot-res,
 html.discord-look .tot-row,html.discord-look .tot-stats>div{border-radius:8px;background:var(--dl-bg3);border-color:transparent}
 html.discord-look .tot-tab{border-radius:4px;background:var(--dl-bg3);border-color:transparent}
 html.discord-look .tot-bucket{border-radius:8px}
@@ -428,3 +458,63 @@ html.discord-look .totg-ing,html.discord-look .totg-cell{border-radius:8px}
 @media(prefers-reduced-motion:reduce){
   .tot-rain.on,.tot-rain.on .tot-rain-ic,.totg-dash.crash,.totg-potion.bad,.totg-cell.no{animation:none}
 }
+
+/* ---------- menu + modal polish ---------- */
+.tot-modal{max-width:680px}
+.tot-dot.on{box-shadow:0 0 0 2px rgba(0,0,0,.35)}
+.tot-fit{position:relative}
+.tot-fit-b{font-style:normal;font-size:10.5px;font-weight:800;letter-spacing:.02em;color:var(--tot-g)}
+.tot-fit:not(.have) .tot-fit-b{color:var(--muted);opacity:.7}
+
+/* The Discord look gets squarer corners and its own surfaces, like everything else in that theme. */
+html.discord-look .tot-tabs{border-radius:6px;background:var(--dl-bg3);border-color:transparent}
+html.discord-look .tot-tab{border-radius:4px}
+html.discord-look .tot-tab:hover{background:var(--dl-bg3)}
+html.discord-look .tot-tab.on{background:#5865f2;box-shadow:none}
+html.discord-look .tot-walk{border-radius:8px;background:var(--dl-bg3);border-color:transparent}
+html.discord-look .tot-h{background:var(--dl-input);border-color:transparent}
+html.discord-look .tot-h.lit{border-color:rgba(255,190,90,.45)}
+html.discord-look .tot-bucket{border-radius:8px}
+html.discord-look .tot-modal{border-radius:8px}
+
+/* ---------- Zombie Queue ---------- */
+.totg-zq{display:grid;grid-template-columns:repeat(var(--n,4),1fr);gap:7px;margin-top:12px}
+.totg-z{display:flex;flex-direction:column;align-items:center;gap:1px;padding:10px 4px;border-radius:12px;
+  cursor:pointer;color:var(--text);border:1px solid var(--border);background:rgba(255,255,255,.05);transition:.12s}
+.totg-z span{font-size:24px;line-height:1}
+.totg-z b{font-size:13px;font-weight:900}
+.totg-z:hover:not(:disabled){border-color:rgba(255,138,43,.6)}
+.totg-z.got{opacity:.3;border-color:var(--tot-g);cursor:default}
+.totg-z.no{animation:totShake .3s;border-color:rgba(255,93,115,.7)}
+
+/* ---------- Lantern Flash ---------- */
+.totg-lan{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:12px}
+.totg-l{aspect-ratio:1;display:grid;place-items:center;border-radius:12px;font-size:clamp(16px,5vw,26px);
+  line-height:1;cursor:pointer;color:var(--text);border:1px solid var(--border);
+  background:rgba(255,255,255,.04);filter:grayscale(1) opacity(.45);transition:.14s}
+.totg-l:hover:not(:disabled){filter:grayscale(.4) opacity(.8)}
+.totg-l.lit{filter:none;border-color:var(--tot-o);background:linear-gradient(160deg,rgba(255,138,43,.45),rgba(255,91,26,.2));
+  box-shadow:0 0 20px rgba(255,170,60,.55);transform:scale(1.05)}
+.totg-l.yes{filter:none;border-color:var(--tot-g);background:rgba(76,214,160,.28)}
+.totg-l.no{filter:none;border-color:rgba(255,93,115,.7);background:rgba(255,93,115,.2);animation:totShake .3s}
+
+/* ---------- Monster Mash ---------- */
+.totg-rh{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;height:210px}
+.totg-lane{position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--border);
+  background:linear-gradient(180deg,rgba(139,92,246,.14),rgba(0,0,0,.28))}
+.totg-line{position:absolute;left:0;right:0;top:80%;height:2px;background:rgba(255,255,255,.35);
+  box-shadow:0 0 10px rgba(255,255,255,.3)}
+.totg-note{position:absolute;left:50%;transform:translateX(-50%);font-size:26px;line-height:1;will-change:top}
+.totg-note.hit{opacity:.25;transform:translateX(-50%) scale(1.5);transition:.18s}
+.totg-pad{position:absolute;left:6px;right:6px;bottom:6px;padding:9px 0;border-radius:10px;font-size:20px;
+  line-height:1;cursor:pointer;color:var(--text);border:1px solid var(--border);background:rgba(255,255,255,.07)}
+.totg-pad.tap{background:linear-gradient(160deg,rgba(255,138,43,.5),rgba(255,91,26,.25));border-color:var(--tot-o)}
+.totg-lane.miss{animation:totShake .25s}
+
+@media(max-width:560px){
+  .totg-rh{height:180px}
+  .totg-note{font-size:21px}
+}
+html.discord-look .totg-z,html.discord-look .totg-l,html.discord-look .totg-lane,
+html.discord-look .totg-pad{border-radius:8px}
+@media(prefers-reduced-motion:reduce){.totg-z.no,.totg-l.no,.totg-lane.miss{animation:none}}
