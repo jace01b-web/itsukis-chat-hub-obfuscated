@@ -566,3 +566,38 @@ html.discord-look .tot-rw-row,html.discord-look .tot-rw-what>div{border-radius:8
 .tot-row.win2{border-color:rgba(139,92,246,.4);background:linear-gradient(100deg,rgba(139,92,246,.1),transparent 70%)}
 @media(prefers-reduced-motion:reduce){.tot-rw-row.gold::after{animation:none}}
 html.discord-look .tot-rw-items span{background:rgba(255,255,255,.07);border-color:transparent}
+
+/* ---------- owner board tools ---------- */
+.tot-mg-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}
+.tot-mg-bar .hint{flex:1;min-width:180px;line-height:1.45}
+.tot-mg{display:inline-flex;align-items:center;gap:4px;margin-left:6px;flex-shrink:0}
+.tot-mg-b{padding:4px 8px;border-radius:9px;font-size:11.5px;font-weight:800;cursor:pointer;
+  color:var(--text);border:1px solid var(--border);background:rgba(255,255,255,.07);transition:.12s;
+  font-variant-numeric:tabular-nums}
+.tot-mg-b:hover:not(:disabled){border-color:var(--tot-o);background:rgba(255,138,43,.18)}
+.tot-mg-b:disabled{opacity:.45;cursor:default}
+.tot-mg-b.bad:hover:not(:disabled){border-color:var(--danger);background:rgba(255,93,115,.18)}
+@media(max-width:560px){
+  .tot-mg{margin-left:0;margin-top:6px;width:100%;justify-content:flex-start}
+}
+html.discord-look .tot-mg-b{border-radius:4px}
+.tot-mg.editing{gap:5px;flex-wrap:wrap}
+.tot-mg-i{width:92px;padding:4px 7px;border-radius:9px;font-size:12px;font-weight:800;
+  color:var(--text);border:1px solid var(--tot-o);background:rgba(0,0,0,.3);
+  font-variant-numeric:tabular-nums}
+.tot-mg-b.ok{border-color:var(--tot-g);background:rgba(76,214,160,.2)}
+.tot-mg-q{font-style:normal;font-size:11.5px;font-weight:700;color:var(--muted)}
+
+/* ---------- milestone roles ---------- */
+.tot-ms{display:flex;flex-direction:column;gap:7px}
+.tot-ms-row{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:13px;
+  border:1px solid var(--border);background:var(--ui-panel2);opacity:.78;transition:.2s}
+.tot-ms-row.got{opacity:1;border-color:var(--c,var(--tot-g))}
+.tot-ms-ic{font-size:22px;line-height:1;filter:grayscale(1) opacity(.6)}
+.tot-ms-row.got .tot-ms-ic{filter:none;text-shadow:0 0 14px var(--c)}
+.tot-ms-tx{flex:1;min-width:0}
+.tot-ms-tx b{display:block;font-size:13.5px}
+.tot-ms-tx small{display:block;font-size:11.5px;color:var(--muted)}
+.tot-ms-s{flex-shrink:0;font-size:11.5px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+.tot-ms-row.got .tot-ms-s{color:var(--tot-g)}
+html.discord-look .tot-ms-row{border-radius:8px;background:var(--dl-input);border-color:transparent}

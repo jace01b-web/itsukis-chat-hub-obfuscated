@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-11-01.04">
+<meta name="build-version" content="2026-11-01.05">
 
 
 <title>Itsukis Chat Hub</title>
@@ -5061,6 +5061,41 @@ html.discord-look .tot-rw-row,html.discord-look .tot-rw-what>div{border-radius:8
 .tot-row.win2{border-color:rgba(139,92,246,.4);background:linear-gradient(100deg,rgba(139,92,246,.1),transparent 70%)}
 @media(prefers-reduced-motion:reduce){.tot-rw-row.gold::after{animation:none}}
 html.discord-look .tot-rw-items span{background:rgba(255,255,255,.07);border-color:transparent}
+
+/* ---------- owner board tools ---------- */
+.tot-mg-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}
+.tot-mg-bar .hint{flex:1;min-width:180px;line-height:1.45}
+.tot-mg{display:inline-flex;align-items:center;gap:4px;margin-left:6px;flex-shrink:0}
+.tot-mg-b{padding:4px 8px;border-radius:9px;font-size:11.5px;font-weight:800;cursor:pointer;
+  color:var(--text);border:1px solid var(--border);background:rgba(255,255,255,.07);transition:.12s;
+  font-variant-numeric:tabular-nums}
+.tot-mg-b:hover:not(:disabled){border-color:var(--tot-o);background:rgba(255,138,43,.18)}
+.tot-mg-b:disabled{opacity:.45;cursor:default}
+.tot-mg-b.bad:hover:not(:disabled){border-color:var(--danger);background:rgba(255,93,115,.18)}
+@media(max-width:560px){
+  .tot-mg{margin-left:0;margin-top:6px;width:100%;justify-content:flex-start}
+}
+html.discord-look .tot-mg-b{border-radius:4px}
+.tot-mg.editing{gap:5px;flex-wrap:wrap}
+.tot-mg-i{width:92px;padding:4px 7px;border-radius:9px;font-size:12px;font-weight:800;
+  color:var(--text);border:1px solid var(--tot-o);background:rgba(0,0,0,.3);
+  font-variant-numeric:tabular-nums}
+.tot-mg-b.ok{border-color:var(--tot-g);background:rgba(76,214,160,.2)}
+.tot-mg-q{font-style:normal;font-size:11.5px;font-weight:700;color:var(--muted)}
+
+/* ---------- milestone roles ---------- */
+.tot-ms{display:flex;flex-direction:column;gap:7px}
+.tot-ms-row{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:13px;
+  border:1px solid var(--border);background:var(--ui-panel2);opacity:.78;transition:.2s}
+.tot-ms-row.got{opacity:1;border-color:var(--c,var(--tot-g))}
+.tot-ms-ic{font-size:22px;line-height:1;filter:grayscale(1) opacity(.6)}
+.tot-ms-row.got .tot-ms-ic{filter:none;text-shadow:0 0 14px var(--c)}
+.tot-ms-tx{flex:1;min-width:0}
+.tot-ms-tx b{display:block;font-size:13.5px}
+.tot-ms-tx small{display:block;font-size:11.5px;color:var(--muted)}
+.tot-ms-s{flex-shrink:0;font-size:11.5px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+.tot-ms-row.got .tot-ms-s{color:var(--tot-g)}
+html.discord-look .tot-ms-row{border-radius:8px;background:var(--dl-input);border-color:transparent}
 
 </style>
 <script>
@@ -16207,7 +16242,7 @@ const TOT_GAMES=[
  *
  * A one-night event. Knock on doors, collect candy, play the minigames, spend it in the shop and
  * climb the leaderboard. There is no betting in it: every way of earning is either skill or a
- * flat reward, and nothing ever takes candy back off you. Collecting closes at noon on Nov 1; the
+ * flat reward, and nothing ever takes candy back off you. Collecting closes at the end of Nov 1; the
  * board stays up for a few days afterwards so the top 5 can be paid out.
  *
  * All deadlines are stored as plain UTC instants and only ever shown to players as a countdown
@@ -16224,10 +16259,11 @@ const TOT_GAMES=[
 
 const TOT={
   /* Plain UTC instants. Players only ever see the countdown, never a zone name. */
-  END:Date.UTC(2026,10,1,18,0,0),         // collecting closes midday Nov 1
+  END:Date.UTC(2026,10,2,6,0,0),          // collecting closes at the end of Nov 1 (extended twice)
   BOARD_END:Date.UTC(2026,10,6,6,0,0),    // board stays visible for a few days after
   KNOCK_MS:4000,                          // cooldown between knocks (the rules enforce ~3.5s)
-  MAX:1000000,                            // hard ceiling the rules also apply
+  MAX:50000000,                           // hard ceiling on candy held (the rules apply it too)
+  EMAX:100000000,                         // ...and on the lifetime total, which the milestones use
   WINNERS:5,                              // permanent-VIP places
   WINNERS2:10,                            // ...and 24h VIP down to here
   GAME_MS:30000,                          // cooldown between minigames (rules enforce ~27s)
@@ -16284,6 +16320,20 @@ const TOT_REWARDS=[
    items:['Your collection and costumes stay on your account'],
    d:'Nothing is taken off you when it ends.'}
 ];
+/* ---------- milestone roles ----------
+   Nothing to do with placing: these are for the total you collect across the whole night, so they
+   are not a race against anybody else. You keep them whatever happens on the leaderboard.
+   Measured on `earned` (the running total) rather than what you are holding, so spending in the
+   shop never costs you one. The role ids and colours must match api/totmilestone.js. */
+const TOT_MILES=[
+  {id:'candy-collector',at:10000,    ic:'🍬',n:'Candy Collector',color:'#4cd6a0'},
+  {id:'candy-hoarder',  at:100000,   ic:'🍫',n:'Candy Hoarder',  color:'#6db4ff'},
+  {id:'candy-tycoon',   at:1000000,  ic:'🎃',n:'Candy Tycoon',   color:'#ff8a2b'},
+  {id:'candy-legend',   at:10000000, ic:'👑',n:'Candy Legend',   color:'#ffcd5a'}
+];
+const totEarned=()=>Number(TOT_ME.earned)||0;
+const totMilesHit=()=>TOT_MILES.filter(m=>totEarned()>=m.at);
+const totMilesNext=()=>TOT_MILES.find(m=>totEarned()<m.at)||null;
 /* And what those two things get you, so the prize means something to somebody who has neither. */
 const TOT_PERKS=[
   {ic:'💎',n:'VIP (Legend)',d:'The VIP Lounge, the VIP tag and name styling on every message, and the VIP cosmetics. Permanent — it never runs out.'},
@@ -16345,7 +16395,7 @@ const totLeftTx=()=>{
 
 let TOT_ME={played:'',candy:0,earned:0,best:0,doors:0,streak:0,last:0,golden:0,lastg:0,bonus:0,rush:0,luck:0,bag:0,games:0,ach:'',qc:'',fit:'',fits:''};
 let TOT_ALL={};
-let _totUnsub=null,_totBusy=false,_totTab='street',_totTimer=null,_totHaunt=false,_totRolling=false;
+let _totUnsub=null,_totBusy=false,_totTab='street',_totTimer=null,_totHaunt=false,_totRolling=false,_totManage=false,_totMgEdit=null;
 
 /* ---------- live data ---------- */
 function totWatch(){
@@ -16369,6 +16419,64 @@ function totWatch(){
 function totSave(patch){
   if(!ME)return Promise.reject(new Error('Not signed in.'));
   return update(R('tot/p/'+ME.id),patch);
+}
+
+/* Claiming the milestone roles.
+   Fired after a save whenever the running total crosses one. The browser sends no figure — the
+   endpoint reads `earned` from the database itself — so this is only a nudge, never a claim.
+   It is also safe to call twice: granting a role somebody already has is a no-op server-side.
+   If the API is unreachable the roles simply stay pending; the next crossing (or the next session)
+   tries again, so nothing is permanently lost. */
+let _totMileSeen=-1,_totMileBusy=false;
+async function totMileCheck(){
+  if(!ME||_totMileBusy)return;
+  const hit=totMilesHit().length;
+  if(hit<=_totMileSeen)return;
+  const first=_totMileSeen<0;
+  _totMileSeen=hit;
+  if(!hit)return;
+  _totMileBusy=true;
+  try{
+    const r=await tosApi('totmilestone',{});
+    if(r&&r.status===200&&r.j&&r.j.ok){
+      const got=r.j.given||[];
+      // only shout about it when something was actually new, not on the first sync of a session
+      if(got.length&&!first)got.forEach(n=>toast('🏅 Milestone role unlocked: '+n));
+      else if(got.length)console.info('[tot] milestone roles granted:',got.join(', '));
+    }
+  }catch(_){ /* server down - try again on the next milestone */ }
+  finally{_totMileBusy=false}
+}
+
+/* ---------- owner tools ----------
+   The database rules already let an owner write (and clear) anybody's tot/p row — that is how a
+   bogus score was always meant to be dealt with. These just put it behind buttons instead of the
+   Firebase console. Candy is the only figure touched: `earned` and `doors` can only ever go up by
+   rule, so they are left alone and stay an honest record of what actually happened. */
+function totOwnerGuard(){
+  if(!ME||typeof isOwner!=='function'||!isOwner(ME.id))throw new Error('Owners only.');
+}
+function totRowOf(id){const r=TOT_ALL[id];return (r&&typeof r==='object')?r:null}
+async function totOwnerCandy(id,delta,absolute){
+  totOwnerGuard();
+  id=Number(id);
+  const row=totRowOf(id);
+  if(!row)throw new Error('That account has no row on the board.');
+  const now=Number(row.candy)||0;
+  const next=Math.max(0,Math.min(TOT.MAX,Math.round(absolute?delta:now+delta)));
+  if(next===now)return next;
+  await update(R('tot/p/'+id),{candy:next});
+  if(TOT_ALL[id])TOT_ALL[id].candy=next;              // paint immediately; the listener confirms
+  if(ME&&id===ME.id)TOT_ME.candy=next;
+  return next;
+}
+async function totOwnerRemove(id){
+  totOwnerGuard();
+  id=Number(id);
+  if(!totRowOf(id))throw new Error('That account has no row on the board.');
+  await remove(R('tot/p/'+id));
+  delete TOT_ALL[id];
+  if(ME&&id===ME.id)TOT_ME={...TOT_ME,candy:0,earned:0,doors:0,streak:0,best:0};
 }
 // Everyone with candy, biggest stash first. Ties break on who got there with fewer doors.
 function totBoard(){
@@ -16528,7 +16636,7 @@ async function totKnock(idx,doorEl){
   const candy=Math.max(0,Math.min(TOT.MAX,TOT_ME.candy+gain-lost));
   const patch={
     candy,
-    earned:Math.min(TOT.MAX*5,(Number(TOT_ME.earned)||0)+gain),
+    earned:Math.min(TOT.EMAX,(Number(TOT_ME.earned)||0)+gain),
     doors:(Number(TOT_ME.doors)||0)+1,
     best:Math.max(Number(TOT_ME.best)||0,gain),
     streak:bad?0:(Number(TOT_ME.streak)||0)+1,
@@ -16547,6 +16655,7 @@ async function totKnock(idx,doorEl){
   totShowResult(d,gain,lost,note,golden,doorEl);
   try{await totSave(patch)}
   catch(e){console.warn('[tot] save failed',e&&e.code);toast('Couldn\'t save that knock ('+(e.code||e.message)+')','bad')}
+  totMileCheck();
   if(d.k==='jack'&&typeof burstConfetti==='function')burstConfetti(160);
   else if(d.k==='bar'&&typeof burstConfetti==='function')burstConfetti(60);
   _totBusy=false;totPaintStreet();totPaint();
@@ -16577,7 +16686,7 @@ async function totFinishStreet(){
   const pay=Math.round(totRand(90,180)*totGearX()*totRainX());
   const patch={
     candy:Math.max(0,Math.min(TOT.MAX,TOT_ME.candy+pay)),
-    earned:Math.min(TOT.MAX*5,(Number(TOT_ME.earned)||0)+pay),
+    earned:Math.min(TOT.EMAX,(Number(TOT_ME.earned)||0)+pay),
     name:String(ME.username||'').slice(0,20)
   };
   const a=totGrant([_totStreetN>=5?'streets':'',patch.candy>=1000?'rich':'',patch.candy>=5000?'rich5':'']);
@@ -16588,6 +16697,7 @@ async function totFinishStreet(){
   setTimeout(()=>{_totStreetN++;totNewStreet();_totRolling=false;totPaintStreet();totPaint()},900);
   totPaint();
   try{await totSave(patch)}catch(e){console.warn('[tot] street bonus save failed',e&&e.code)}
+  totMileCheck();
 }
 
 /* ---------- the haunted house ----------
@@ -16603,7 +16713,7 @@ function totHauntAuto(force){
   const pay=Math.round(totRand(190,330)*totMult()*totGearX()*totRainX());
   const patch={
     candy:Math.max(0,Math.min(TOT.MAX,TOT_ME.candy+pay)),
-    earned:Math.min(TOT.MAX*5,(Number(TOT_ME.earned)||0)+pay),
+    earned:Math.min(TOT.EMAX,(Number(TOT_ME.earned)||0)+pay),
     best:Math.max(Number(TOT_ME.best)||0,pay),
     name:String(ME.username||'').slice(0,20)
   };
@@ -16643,7 +16753,7 @@ function totHaunt(){
     });
     const patch={
       candy:Math.max(0,Math.min(TOT.MAX,TOT_ME.candy+pay)),
-      earned:Math.min(TOT.MAX*5,(Number(TOT_ME.earned)||0)+pay),
+      earned:Math.min(TOT.EMAX,(Number(TOT_ME.earned)||0)+pay),
       best:Math.max(Number(TOT_ME.best)||0,pay),
       name:String(ME.username||'').slice(0,20)
     };
@@ -16654,7 +16764,7 @@ function totHaunt(){
     if(pay>=300&&typeof burstConfetti==='function')burstConfetti(100);
     totPaint();
     try{await totSave(patch)}catch(e){toast('That didn\'t save ('+(e.code||e.message)+')','bad')}
-    totMaybeNextStreet();          // the haunted house may well have been the last door
+    totMileCheck();totMaybeNextStreet();          // the haunted house may well have been the last door
   });
 }
 
@@ -16688,7 +16798,7 @@ function totPlay(id){
     const hiKey='hi_'+g.id;
     const patch={
       candy,
-      earned:Math.min(TOT.MAX*5,(Number(TOT_ME.earned)||0)+pay),
+      earned:Math.min(TOT.EMAX,(Number(TOT_ME.earned)||0)+pay),
       games:(Number(TOT_ME.games)||0)+1,
       lastg:Math.round(totNow()),
       name:String(ME.username||'').slice(0,20)
@@ -16709,7 +16819,7 @@ function totPlay(id){
     const bk=document.getElementById('totGameBack');if(bk)bk.onclick=()=>{totBody();totPaint()};
     if(pay>=300&&typeof burstConfetti==='function')burstConfetti(80);
     try{await totSave(patch)}catch(e){toast('Score didn\'t save ('+(e.code||e.message)+')','bad')}
-    totPaint();
+    totMileCheck();totPaint();
   });
   totPaint();
 }
@@ -16750,7 +16860,7 @@ async function totBonus(){
   const pay=Math.round(totRand(220,450)*(1+totFitB()));
   const patch={
     candy:Math.max(0,Math.min(TOT.MAX,TOT_ME.candy+pay)),
-    earned:Math.min(TOT.MAX*5,(Number(TOT_ME.earned)||0)+pay),
+    earned:Math.min(TOT.EMAX,(Number(TOT_ME.earned)||0)+pay),
     bonus:Math.round(totNow()),
     name:String(ME.username||'').slice(0,20)
   };
@@ -16759,6 +16869,7 @@ async function totBonus(){
   if(typeof burstConfetti==='function')burstConfetti(40);
   totPaint();
   try{await totSave(patch)}catch(e){toast('Bonus didn\'t save ('+(e.code||e.message)+')','bad')}
+  totMileCheck();
 }
 /* ---------- costumes ---------- */
 async function totFitBuy(id){
@@ -16791,7 +16902,7 @@ async function totClaim(id){
   const done=String(TOT_ME.qc||'').split(',').filter(Boolean);done.push(id);
   const patch={
     candy:Math.max(0,Math.min(TOT.MAX,TOT_ME.candy+q.pay)),
-    earned:Math.min(TOT.MAX*5,(Number(TOT_ME.earned)||0)+q.pay),
+    earned:Math.min(TOT.EMAX,(Number(TOT_ME.earned)||0)+q.pay),
     qc:done.join(',').slice(0,120),
     name:String(ME.username||'').slice(0,20)
   };
@@ -16943,6 +17054,7 @@ function totBoardHTML(){
     ?`<div class="tot-final"><b>🏆 Final standings</b><span>Collecting is closed. Top ${TOT.WINNERS} take permanent VIP, ${TOT.WINNERS+1}–${TOT.WINNERS2} get a day of it.</span></div>`
     :`<div class="tot-final live"><b>🔴 Live</b><span>Still running — top ${TOT.WINNERS} take permanent VIP, ${TOT.WINNERS+1}–${TOT.WINNERS2} get a day of it.</span></div>`;
   if(!rows.length)return head+`<div class="tot-empty">Nobody has any candy yet. Be the first.</div>`;
+  const own=!!(ME&&typeof isOwner==='function'&&isOwner(ME.id));
   const list=rows.slice(0,25).map((r,i)=>{
     const mine=ME&&r.id===ME.id;
     return `<div class="tot-row${i<TOT.WINNERS?' win':(i<TOT.WINNERS2?' win2':'')}${mine?' me':''}">
@@ -16953,11 +17065,17 @@ function totBoardHTML(){
       ${(over&&i<TOT.WINNERS2&&typeof isOwner==='function'&&ME&&isOwner(ME.id)&&!isOwner(r.id))
         ?`<button type="button" class="btn sec small tot-rw" data-reward="${r.id}" data-rank="${i+1}">${
             i===0?'Give MVP + VIP':(i<TOT.WINNERS?'Give VIP':'Give 24h VIP')}</button>`:''}
+      ${own&&_totManage?totMgHTML(r):''}
     </div>`;
   }).join('');
   const mine=me?`<div class="tot-yours">You are <b>#${me}</b> of ${rows.length} with <b>🍬 ${totNum(TOT_ME.candy)}</b>.</div>`
                 :`<div class="tot-yours">You are not on the board yet.</div>`;
-  return head+`<div class="tot-board">${list}</div>${mine}`+totRewardsHTML()+
+  return head+
+    (own?`<div class="tot-mg-bar">
+      <button type="button" class="btn sec small" id="totManage">${_totManage?'✓ Managing the board':'🛠 Manage the board'}</button>
+      ${_totManage?'<span class="hint">Adjust or remove anyone. Only candy changes — doors and total earned stay as they were.</span>':''}
+    </div>`:'')+
+    `<div class="tot-board">${list}</div>${mine}`+totRewardsHTML()+
     ((ME&&typeof isOwner==='function'&&isOwner(ME.id))
       ?`<button type="button" class="btn sec small tot-ann" id="totAnnounce">📢 Announce this event to everyone</button>`:'');
 }
@@ -16976,6 +17094,19 @@ function totRewardsHTML(){
         <small>${esc(r.d)}</small>
       </div>
     </div>`).join('')}</div>
+  <div class="tot-rw-h" style="margin-top:16px"><span>🏅 Milestone roles</span>
+    <em>${totNum(totEarned())} collected</em></div>
+  <div class="hint" style="margin-bottom:8px">Not a race — these are for your own running total, and you
+    keep them whatever you place. Spending in the shop never costs you one.</div>
+  <div class="tot-ms">${TOT_MILES.map(m=>{
+    const got=totEarned()>=m.at,pc=Math.max(0,Math.min(1,totEarned()/m.at));
+    return `<div class="tot-ms-row${got?' got':''}">
+      <span class="tot-ms-ic" style="--c:${m.color}">${m.ic}</span>
+      <div class="tot-ms-tx"><b>${esc(m.n)}</b><small>${totNum(m.at)} candy collected</small>
+        <span class="tot-q-bar"><i style="width:${Math.round(pc*100)}%;background:${m.color}"></i></span></div>
+      <span class="tot-ms-s">${got?'✓ Yours':(Math.round(pc*100)+'%')}</span>
+    </div>`;
+  }).join('')}</div>
   <div class="tot-rw-what">${TOT_PERKS.map(p=>`
     <div><span>${p.ic}</span><div><b>${esc(p.n)}</b><small>${esc(p.d)}</small></div></div>`).join('')}</div>
   <div class="hint tot-rw-note">Ranked on the candy you are <b>holding</b> when the clock runs out, so spending
@@ -17018,6 +17149,34 @@ async function totAward(btn){
     }
   }
 }
+/* The control strip for one row, and its two inline editors.
+   These are deliberately inline rather than window.prompt()/confirm() or a modal: the launchers
+   run the site inside sandboxed embeds where the native dialogs are silently blocked (that is why
+   modalUnfriendConfirm exists), and any modal would have to live in #modalRoot — which is where
+   this whole panel already is, so opening one would wipe it. */
+function totMgHTML(r){
+  const e=_totMgEdit;
+  if(e&&e.id===r.id&&e.mode==='set'){
+    return `<span class="tot-mg editing">
+      <input class="tot-mg-i" id="totMgIn" type="number" inputmode="numeric" value="${Number(r.candy)||0}" min="0" max="${TOT.MAX}">
+      <button type="button" class="tot-mg-b ok" data-mgsave="${r.id}">Save</button>
+      <button type="button" class="tot-mg-b" data-mgcancel="1">Cancel</button>
+    </span>`;
+  }
+  if(e&&e.id===r.id&&e.mode==='wipe'){
+    return `<span class="tot-mg editing">
+      <em class="tot-mg-q">Remove them?</em>
+      <button type="button" class="tot-mg-b bad" data-mgwipe="${r.id}">Yes, remove</button>
+      <button type="button" class="tot-mg-b" data-mgcancel="1">Cancel</button>
+    </span>`;
+  }
+  return `<span class="tot-mg">
+    <button type="button" class="tot-mg-b" data-cd="${r.id}" data-by="-100" title="Take 100 candy">−100</button>
+    <button type="button" class="tot-mg-b" data-cd="${r.id}" data-by="100" title="Give 100 candy">+100</button>
+    <button type="button" class="tot-mg-b" data-set="${r.id}" title="Set their candy to an exact number">Set…</button>
+    <button type="button" class="tot-mg-b bad" data-wipe="${r.id}" title="Remove them from the leaderboard">🗑</button>
+  </span>`;
+}
 function totWire(){
   const b=document.getElementById('totBody');if(!b)return;
   totPaintStreet();
@@ -17028,11 +17187,47 @@ function totWire(){
   b.querySelectorAll('[data-claim]').forEach(x=>x.onclick=()=>totClaim(x.dataset.claim));
   const bon=document.getElementById('totBonusBtn');if(bon)bon.onclick=totBonus;
   b.querySelectorAll('[data-reward]').forEach(x=>x.onclick=()=>totAward(x));
+  /* ---- owner board tools ---- */
+  const mg=document.getElementById('totManage');
+  if(mg)mg.onclick=()=>{_totManage=!_totManage;totBody();totPaint()};
+  const redraw=()=>{totBody();totPaint()};
+  const oops=e=>toast((e&&e.message)||'That did not work','bad');
+  b.querySelectorAll('[data-cd]').forEach(x=>x.onclick=async()=>{
+    const id=Number(x.dataset.cd),by=Number(x.dataset.by)||0;
+    x.disabled=true;
+    try{
+      const now=await totOwnerCandy(id,by,false);
+      toast((by>0?'Gave ':'Took ')+totNum(Math.abs(by))+' candy '+(by>0?'to ':'from ')+totName(id)+' — now '+totNum(now)+'.');
+      redraw();
+    }catch(e){oops(e);x.disabled=false}
+  });
+  b.querySelectorAll('[data-set]').forEach(x=>x.onclick=()=>{_totMgEdit={id:Number(x.dataset.set),mode:'set'};redraw();
+    const i=document.getElementById('totMgIn');if(i){i.focus();i.select()}});
+  b.querySelectorAll('[data-wipe]').forEach(x=>x.onclick=()=>{_totMgEdit={id:Number(x.dataset.wipe),mode:'wipe'};redraw()});
+  b.querySelectorAll('[data-mgcancel]').forEach(x=>x.onclick=()=>{_totMgEdit=null;redraw()});
+  b.querySelectorAll('[data-mgsave]').forEach(x=>x.onclick=async()=>{
+    const id=Number(x.dataset.mgsave),i=document.getElementById('totMgIn');
+    const n=Math.round(Number(i&&i.value));
+    if(!isFinite(n)){toast('That is not a number.','bad');return}
+    x.disabled=true;
+    try{const now=await totOwnerCandy(id,n,true);_totMgEdit=null;
+      toast(totName(id)+' now has '+totNum(now)+' candy.');redraw()}
+    catch(e){oops(e);x.disabled=false}
+  });
+  b.querySelectorAll('[data-mgwipe]').forEach(x=>x.onclick=async()=>{
+    const id=Number(x.dataset.mgwipe);x.disabled=true;
+    try{await totOwnerRemove(id);_totMgEdit=null;toast(totName(id)+' removed from the board.');redraw()}
+    catch(e){oops(e);x.disabled=false}
+  });
+  const mgIn=document.getElementById('totMgIn');
+  if(mgIn)mgIn.onkeydown=ev=>{ev.stopPropagation();
+    if(ev.key==='Enter'){ev.preventDefault();const s=b.querySelector('[data-mgsave]');if(s)s.click()}
+    if(ev.key==='Escape'){_totMgEdit=null;redraw()}};
   const ann=document.getElementById('totAnnounce');
   if(ann)ann.onclick=async()=>{
     ann.disabled=true;ann.textContent='Sending…';
     try{
-      await DB.sendLiveAnnouncement('🎃 TRICK OR TREAT is live! Knock on doors for candy, play the TWELVE minigames, finish challenges and buy a costume. 🌧️ CANDY RAIN doubles everything for 6 minutes out of every 20. Top 10 get exclusive Halloween roles — 1st also takes MVP and permanent VIP. Open it from the home screen.',{kind:'event',alsoPost:true});
+      await DB.sendLiveAnnouncement('🎃 TRICK OR TREAT is live! Knock on doors for candy, play the TWELVE minigames, finish challenges and buy a costume. 🌧️ CANDY RAIN doubles everything for 6 minutes out of every 20. Top 10 get exclusive Halloween roles — 1st also takes MVP and permanent VIP. Plus milestone roles at 10k, 100k, 1m and 10m candy collected. Open it from the home screen.',{kind:'event',alsoPost:true});
       toast('Announced to everyone.');ann.textContent='✓ Announced';
     }catch(e){toast(e.message||'Could not announce','bad');ann.disabled=false;ann.textContent='📢 Announce this event to everyone'}
   };
@@ -17172,7 +17367,7 @@ function totMaybeIntro(){
       <div><span>🕹️</span><b>Play</b><small>Twelve minigames. Pure skill, nothing to lose.</small></div>
       <div><span>🌧️</span><b>Candy Rain</b><small>Everything pays double, 6 minutes out of every 20.</small></div>
       <div><span>📜</span><b>Challenges</b><small>Milestones that pay out, plus costumes to buy.</small></div>
-      <div><span>🏆</span><b>Win</b><small>Top 10 get an exclusive role. 1st takes MVP too.</small></div>
+      <div><span>🏆</span><b>Win</b><small>Top 10 get an exclusive role. Milestone roles at 10k, 100k, 1m and 10m.</small></div>
       <div><span>🔔</span><b>Come back</b><small>A free doorbell bonus every hour.</small></div>
     </div>
     <div class="tot-intro-end">You have <b>${totLeftTx()}</b> left.</div>

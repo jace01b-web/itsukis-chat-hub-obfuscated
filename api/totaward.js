@@ -17,7 +17,7 @@
  */
 const L = require('./_lib');
 
-const END = Date.UTC(2026, 10, 1, 18, 0, 0);   // keep equal to TOT.END in js/features/trick-or-treat.js
+const END = Date.UTC(2026, 10, 2, 6, 0, 0);    // keep equal to TOT.END in js/features/trick-or-treat.js
 const PERM_TO = 5, DAY_TO = 10;
 
 /* The roles are created on first use so there is nothing to set up by hand. rank sits them above
