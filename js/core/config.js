@@ -50,6 +50,11 @@ const CFG={
                                   // raise it there too (or delete it) or the server will keep saying 3
                                   // while the site says 4 and nobody's acceptance will ever count.
   TOS_API:'https://itsukis-chat-hub.vercel.app',   // where the /api functions are deployed. The Discord webhook now lives ONLY in the server env.
+  /* BROWSER FALLBACK for when /api is not deployed: the accepting person's browser reads its own IP (ipify), saves it on the receipt, and posts a log
+     to this Discord webhook itself. NOTE: this file is public, so anyone who opens the site can read this URL (and spam or delete the webhook).
+     If that ever happens, make a new webhook and replace this one line. Leave '' to turn the fallback post off. Once /api is deployed the SERVER
+     logs instead (webhook in the Vercel env var) and this is never used. */
+  TOS_WEBHOOK:'https://discord.com/api/webhooks/1566680471822274700/vPrDw2IabLh2_KXKIensrgTdFKvnIg49en6zAMPWzUufAivkFPDoKQl691EdI6oTHkUA',
   ATTEST_EVERY_MS:4*60*1000,      // how often the browser asks the server to re-clear this login (server grants 8 min at a time)
   IP_BAN_FULL_LOCK:false,         // false = an IP-banned network can't CHAT. true = it is locked out of the whole menu like a banned account
   // --- NSFW image detection (Nyckel) ---

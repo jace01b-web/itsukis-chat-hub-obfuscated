@@ -325,7 +325,7 @@ function openSettings(fromChat){
       </div>`:''}
       ${isOwner(ME.id)?`<div class="set-card">
         <div class="section-h" style="margin-top:0">📄 TOS acceptances</div>
-        <div class="hint">Every account that accepted the Terms, newest first. Accounts that accepted through the server show the IP it saw; ones that accepted before IP logging existed show the network fingerprint only. Owners only — it is not posted to Discord any more.</div>
+        <div class="hint">Every account that accepted the Terms, newest first. Accounts that accepted through the server show the IP it saw; ones that accepted before IP logging existed show the network fingerprint only. Only people who accepted the CURRENT terms are listed (older acceptances were reset). Owners only — a private backup copy of each new acceptance is also posted to Discord.</div>
         <div class="actions" style="justify-content:flex-start;margin-top:10px">
           <button class="btn sec small" id="tosLogGo" type="button">Load log</button>
           <button class="btn sec small" id="tosPingGo" type="button">Test the server</button>
@@ -722,6 +722,11 @@ function openSettings(fromChat){
           '</b> · function answered: <b>'+(pr.fn?('yes ('+pr.status+')'):'no')+'</b>'+(pr.detail?(' · '+esc(pr.detail)):'')+'</div>'+
           (good?'<div style="margin-top:6px">Everyone gets a real record with their IP the next time they open the site — they do not need to accept again.</div>':'')+
           '</div>';
+        if(!good){   // the server is not there, so also test the browser fallback: does the Discord webhook receive a log?
+          const dc=await tosClientDiscord({test:true,name:(ME&&ME.username)||'',id:(ME&&ME.id)||0,ip:await tosClientIp()});
+          if(diag)diag.insertAdjacentHTML('beforeend','<div class="hint" style="margin:6px 0 0">Browser fallback → Discord: <b>'+esc(dc)+'</b>'+
+            (dc==='sent'?' — check the channel for a TEST message. New acceptances will log from the browser until the server is deployed.':dc==='not-configured'?' — set CFG.TOS_WEBHOOK in config.js.':' — the webhook URL is wrong, deleted, or blocked by this network.')+'</div>');
+        }
         if(good)toast('The server answered. IPs will be logged from now on.');
       }catch(e){
         if(msg)msg.textContent='❌ '+((e&&e.message)||'failed');
@@ -849,7 +854,7 @@ function openSettings(fromChat){
         const rows=await DB.tosLog();
         btn.textContent='Refresh';
         if(msg)msg.textContent=rows.length?(rows.length+' account'+(rows.length===1?'':'s')):'';
-        if(!rows.length){box.innerHTML='<div class="hint">Nobody has accepted the Terms yet.</div>';return}
+        if(!rows.length){box.innerHTML='<div class="hint">Nobody has accepted the current Terms yet.</div>';return}
         const noip=rows.filter(r=>r.noip).length;
         /* If NOTHING has a server record, the problem isn't history — /api/tos is not being
            reached at all, and every acceptance is silently falling back to the client write.
@@ -857,11 +862,11 @@ function openSettings(fromChat){
            guess why 1,229 accounts all show "unverified". */
         const diag=$$('#tosDiag');
         if(diag){
-          const srv=rows.length-noip;
+          const srv=rows.filter(r=>r.srv).length;
           const why=(rows.find(r=>r.why)||{}).why||'';
           diag.innerHTML=(rows.length&&!srv)
             ?('<div class="hint" style="margin:10px 0;padding:10px 12px;border-radius:10px;border:1px solid var(--danger);background:rgba(255,93,115,.12)">'+
-              '<b>No acceptance has ever reached the server.</b> All '+rows.length+' were saved by the browser as a fallback, which is why none of them has an IP. '+
+              '<b>No acceptance has ever reached the server.</b> All '+rows.length+' were saved by the browser as a fallback, so none of them has a server-verified IP (the ones with an IP below got it from the browser fallback). '+
               'That means <code>/api/tos</code> is unreachable from the site — check that the functions are deployed and that <code>CFG.TOS_API</code> points at them.'+
               (why?('<br>Last recorded reason: <code>'+esc(why)+'</code>'):'')+
               '<br>Hit <b>Test the server</b> above for the exact response. Once it works, everyone gets a real record the next time they open the site — they do not need to accept again.</div>')

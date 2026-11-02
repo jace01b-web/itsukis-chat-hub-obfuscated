@@ -1297,7 +1297,7 @@ const DB=(()=>{
       try{
         const v=(await get(R('tosLog'))).val()||{};
         Object.keys(v).forEach(id=>{
-          if(v[id]&&typeof v[id]==='object')out[id]={id:Number(id),...v[id]};
+          if(v[id]&&typeof v[id]==='object')out[id]={id:Number(id),srv:1,...v[id]};
         });
       }catch(e){console.warn('[tos] log read failed',e&&e.code)}
       /* 2. Everyone who has ever accepted, from the receipts. No raw IP in here (by design — only
@@ -1324,14 +1324,17 @@ const DB=(()=>{
           if(!row.v&&a.v)row.v=a.v;
           return;
         }
-        out[id]={id:Number(id),at:Number(a.at)||0,v:a.v,h:a.h,why:a.why||'',noip:true};
+        const cip=typeof a.ip==='string'?a.ip:'';   // the browser fallback saves a browser-reported IP on the receipt
+        out[id]={id:Number(id),at:Number(a.at)||0,v:a.v,h:a.h,why:a.why||'',ip:cip,noip:!cip,srv:a.srv===1?1:0};
       });
       // name them from the live user list, so receipt-only rows aren't a wall of "(unknown)"
       Object.keys(out).forEach(id=>{
         if(!out[id].name){const u=(C.users||{})[id];if(u&&u.username)out[id].name=u.username}
       });
+      /* Only the CURRENT terms version is listed. Raising CFG.TOS_VERSION voids every older acceptance (those
+         people have to accept again), so the old rows are hidden here and the list starts fresh with new ones. */
       return Object.keys(out).map(k=>out[k])
-        .filter(r=>!isNaN(r.id))
+        .filter(r=>!isNaN(r.id)&&Number(r.v)>=CFG.TOS_VERSION)
         .sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0));
     },
     /* Every network currently IP-banned, newest first. Staff-only (the rules say so too). Each

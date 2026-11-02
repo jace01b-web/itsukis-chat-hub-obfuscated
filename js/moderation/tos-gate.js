@@ -19,7 +19,7 @@ function tosDeclinedThisSession(){try{return sessionStorage.getItem(TOS_DECLINE_
 
 const TOS_SECTIONS=[
   {ic:'💬',t:'Chatting needs this',d:'To <b>send messages</b> you have to accept these terms. If you don\'t, you can still use <b>everything else</b>: read every chat, use the games, hubs, tools, settings and the rest of the site. You just can\'t chat.'},
-  {ic:'📝',hot:true,t:'What gets logged when you accept',d:'When you press <b>Accept</b>, your <b>username</b>, <b>account ID</b>, <b>IP address</b>, the <b>time</b> and your <b>browser info</b> are recorded <b>on this site</b>, where only the owner can read them. A backup copy is also posted to a <b>private Discord channel that only the owner can see</b>. They are <b>not</b> shared with anyone else. A scrambled (hashed) copy of your IP is also saved on your account so IP bans can work — moderators see that hash, never your address. This is used <b>only</b> to stop raids, spam and ban evasion, and so the owner can IP-ban people when needed.'},
+  {ic:'📝',hot:true,t:'What gets logged when you accept',d:'When you press <b>Accept</b>, your <b>username</b>, <b>account ID</b>, <b>IP address</b>, the <b>time</b> and your <b>browser info</b> are recorded <b>on this site</b>, where only the owner can read them. A backup copy is also posted to a <b>private Discord channel that only the owner can see</b>. They are <b>not</b> shared with anyone else. A scrambled (hashed) copy of your IP is also saved on your account so IP bans can work — moderators see that hash, never your address. Your IP is read through a free IP-lookup service (ipify), only at the moment you press <b>Accept</b>. This is used <b>only</b> to stop raids, spam and ban evasion, and so the owner can IP-ban people when needed.'},
   {ic:'🔒',t:'Private. Never shared.',d:'The log and its private Discord backup are for the site owner only. They are never shared, sold or leaked to anyone else, for any reason.'},
   {ic:'🙅',t:'If you decline',d:'<b>Nothing is logged.</b> Your username, account ID and IP are not recorded anywhere. You will just be unable to chat. You can change your mind any time in <b>Settings → About</b>.'},
   {ic:'🔨',t:'IP bans',d:'If you are banned, your IP can be banned too, so new accounts from the same network can\'t chat. On a shared network (like a school) other people on that network can be affected until the ban is lifted.'},
@@ -172,6 +172,71 @@ function tosWhyCode(){
   if(a.status)return ('http'+a.status+(a.err?(':'+a.err):'')).slice(0,40);
   return 'unknown';
 }
+/* ---------- BROWSER FALLBACK (used only when /api is unreachable) ----------
+   The server is the proper way to see an IP. When it is not deployed, the browser reads its own IP from a free lookup service, saves it on the
+   receipt (the database rules already allow an `ip` field there and only owners can read it), posts the log to CFG.TOS_WEBHOOK, and IP bans
+   are stored as a SHA-256 of the network that staff can write and every browser can look up. It is weaker than the server (a tampered
+   client can lie or skip it) but it works with nothing deployed. Lookups only ever run for someone who pressed Accept, or for staff. */
+let _tosIpCache={ip:'',at:0};
+async function tosClientIp(){
+  if(_tosIpCache.ip&&Date.now()-_tosIpCache.at<10*60*1000)return _tosIpCache.ip;
+  const urls=['https://api.ipify.org?format=json','https://api64.ipify.org?format=json','https://ipinfo.io/json'];
+  for(const u of urls){
+    const c=typeof AbortController!=='undefined'?new AbortController():null,tm=setTimeout(()=>{try{c&&c.abort()}catch(_){}},5000);
+    try{
+      const r=await fetch(u,{cache:'no-store',signal:c?c.signal:undefined});const j=await r.json();
+      const ip=String((j&&j.ip)||'').trim();
+      if(ip&&ip.length<=45&&tosValidIp(ip)){_tosIpCache={ip:ip,at:Date.now()};return ip}
+    }catch(_){}finally{clearTimeout(tm)}
+  }
+  return '';
+}
+function tosNormIp(ip){
+  if(/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)||ip.indexOf(':')<0)return ip;
+  const parts=ip.split('::'),a=parts[0]?parts[0].split(':'):[],b=parts.length>1?(parts[1]?parts[1].split(':'):[]):[];
+  const full=(parts.length>1?a.concat(Array(Math.max(0,8-a.length-b.length)).fill('0'),b):a).map(x=>x.padStart(4,'0'));
+  return full.slice(0,4).join(':')+'::/64';   // IPv6 users change their suffix constantly, so ban the /64 network
+}
+async function tosClientHash(ip){
+  if(!(window.crypto&&crypto.subtle))throw new Error('This browser cannot hash an IP here.');
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('ip:'+tosNormIp(ip)));
+  return 'c'+Array.from(new Uint8Array(buf)).map(x=>x.toString(16).padStart(2,'0')).join('').slice(0,32);
+}
+async function tosClientDiscord(f){
+  const url=String(CFG.TOS_WEBHOOK||'');
+  if(!/^https:\/\/(discord|discordapp)\.com\/api\/webhooks\//.test(url))return 'not-configured';
+  const v=x=>'`'+(String(x==null?'':x).replace(/[`\r\n]/g,' ').slice(0,190)||'-')+'`';
+  try{
+    const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      username:'ICH Security',allowed_mentions:{parse:[]},
+      embeds:[{title:(f.test?'TEST - ':'')+'TOS accepted (v'+CFG.TOS_VERSION+') - browser fallback',color:f.test?0x5865f2:0xfaa61a,
+        fields:[{name:'Username',value:v(f.name),inline:true},{name:'Account ID',value:v(f.id),inline:true},{name:'IP',value:v(f.ip||'could not be read'),inline:true},
+          {name:'Source',value:v('browser (server /api unreachable) - IP is browser-reported'),inline:false},
+          {name:'Build',value:v(typeof MY_BUILD==='string'?MY_BUILD:''),inline:true},{name:'Browser',value:v(navigator.userAgent),inline:false}],
+        timestamp:new Date().toISOString()}]
+    })});
+    return r.ok?'sent':'failed-'+r.status;
+  }catch(_){return 'failed'}
+}
+// Used by tosCheckIp when the server cannot answer: is THIS network in ipBans? (needs the ipBans/$h read rule - see RULES-PATCH.md)
+async function tosClientBanCheck(){
+  try{
+    const ip=await tosClientIp();if(!ip)return;
+    const sn=await get(R('ipBans/'+await tosClientHash(ip)));
+    TOS_GATE.ipBanned=sn.exists();
+  }catch(e){console.warn('client ip-ban check unavailable',e&&e.code||e&&e.message||e)}
+}
+// Like tosApi but returns null when the server is simply not there (404 / 5xx / network), so callers can use the browser fallback.
+async function tosApiOrNull(path,body){
+  try{const r=await tosApi(path,body);return(r.status===404||r.status>=500)?null:r}
+  catch(_){return null}
+}
+async function tosFallbackNet(id){
+  const sn=await get(R('tosAccepted/'+Number(id)));const v=sn.exists()?sn.val():null;
+  const ip=v&&typeof v.ip==='string'?v.ip:'';
+  if(!ip)throw new Error('No IP on file for that account yet (it has to accept the terms again first).');
+  return{ip:ip,h:await tosClientHash(ip)};
+}
 let _attestBusy=null;
 // Asks the server to clear this login. Sets TOS_GATE from the server's answer; the database rules only accept chat writes while the grant is live.
 async function tosCheckIp(){
@@ -179,12 +244,13 @@ async function tosCheckIp(){
   _attestBusy=(async()=>{
     try{
       const {status,j}=await tosApi('attest');
+      if(status===404||status>=500){TOS_GATE.apiOk=false;TOS_GATE.checkedAt=Date.now();TOS_GATE.exp=0;await tosClientBanCheck();return}
       TOS_GATE.checkedAt=Date.now();TOS_GATE.apiOk=!(status>=500||status===0);
       TOS_GATE.ipBanned=j.block==='ipban';TOS_GATE.vpn=j.block==='vpn';TOS_GATE.vpnKind=j.kind||'';
       TOS_GATE.banned=j.block==='banned';TOS_GATE.exp=j.ok?j.exp:0;
       if(j.block==='tos'){TOS_GATE.accepted=false}
       if(j.block==='build'){tosBuildLock(j.min)}
-    }catch(e){TOS_GATE.apiOk=false;TOS_GATE.checkedAt=Date.now();TOS_GATE.exp=0;console.warn('attest unavailable',e&&e.message||e)}
+    }catch(e){TOS_GATE.apiOk=false;TOS_GATE.checkedAt=Date.now();TOS_GATE.exp=0;console.warn('attest unavailable',e&&e.message||e);await tosClientBanCheck()}
   })().finally(()=>{_attestBusy=null});
   return _attestBusy;
 }
@@ -213,9 +279,13 @@ async function tosAccept(){
        allow this while security/enforce is NOT true.
        `why` is new: without it every one of these looks identical in the owner panel and there is
        no way to tell "the functions aren't deployed" from "that one person was offline". */
-    try{await set(R('tosAccepted/'+ME.id),{v:CFG.TOS_VERSION,at:Date.now()+SKEW,h:'unverified',why:tosWhyCode()})}
+    const why=tosWhyCode(),cip=await tosClientIp();   // only runs for someone who just pressed Accept
+    const rec={v:CFG.TOS_VERSION,at:Date.now()+SKEW,h:'unverified',why:why};
+    if(cip)rec.ip=cip;
+    try{await set(R('tosAccepted/'+ME.id),rec)}
     catch(e){throw new Error('Could not reach the server to save this. Check your connection and try again.')}
-    console.warn('[tos] saved without the server —',tosWhyCode());
+    console.warn('[tos] saved without the server —',why);
+    try{await tosClientDiscord({name:ME.username,id:ME.id,ip:cip})}catch(_){}   // backup log, never blocks the accept
   }
   await tosLoadState(ME.id);
   TOS_GATE.accepted=true;
@@ -236,19 +306,34 @@ async function tosLoadState(id){
 /* ---------- ban hooks (called from DB.banUser / DB.unbanUser, and the staff IP-ban tool). The server does the work,
    and re-checks the caller's role itself — owners and admins may both ban and unban an IP. ---------- */
 /* Throws with the reason when the network was NOT banned, so the staff member is told instead of finding out when the person comes back. */
-async function tosIpBanUser(id){const {j,status}=await tosApi('ipban',{action:'ban',userId:Number(id),reason:'account banned'});if(!j.ok)throw new Error(j.error||('The server refused it ('+status+').'));return true}
+async function tosIpBanUser(id){
+  const r=await tosApiOrNull('ipban',{action:'ban',userId:Number(id),reason:'account banned'});
+  if(r){if(!r.j.ok)throw new Error(r.j.error||('The server refused it ('+r.status+').'));return true}
+  const n=await tosFallbackNet(id);   // server not deployed: ban the network the account accepted from, straight in the database
+  await set(R('ipBans/'+n.h),{at:Date.now(),by:ME.id,uid:Number(id),reason:'account banned'});
+  return true;
+}
 /* Returns {ok,changed} and THROWS on a server refusal, so DB.unbanUser can tell the staff member
    whether the network actually got unblocked instead of silently reporting success. */
 async function tosIpUnbanUser(id){
-  const {j,status}=await tosApi('ipban',{action:'unban',userId:Number(id)});
-  if(!j.ok)throw new Error(j.error||('The server refused it ('+status+').'));
-  return {ok:true,changed:Number(j.changed)||0};
+  const r=await tosApiOrNull('ipban',{action:'unban',userId:Number(id)});
+  if(r){
+    if(!r.j.ok)throw new Error(r.j.error||('The server refused it ('+r.status+').'));
+    return {ok:true,changed:Number(r.j.changed)||0};
+  }
+  let n;try{n=await tosFallbackNet(id)}catch(_){return {ok:true,changed:0}}
+  const cur=await get(R('ipBans/'+n.h));
+  if(cur.exists()&&Number((cur.val()||{}).uid)===Number(id)){await remove(R('ipBans/'+n.h));return {ok:true,changed:1}}
+  return {ok:true,changed:0};
 }
 async function tosManualIpBan(action,ip,reason){
   ip=String(ip||'').trim();
   if(!tosValidIp(ip))throw new Error('That is not a valid IP address.');
-  const {j}=await tosApi('ipban',{action:action==='ban'?'ban':'unban',ip,reason:String(reason||'').slice(0,120)});
-  if(!j.ok)throw new Error(j.error||'The server refused it.');
+  const r=await tosApiOrNull('ipban',{action:action==='ban'?'ban':'unban',ip,reason:String(reason||'').slice(0,120)});
+  if(r){if(!r.j.ok)throw new Error(r.j.error||'The server refused it.');return true}
+  const h=await tosClientHash(ip);
+  if(action==='ban')await set(R('ipBans/'+h),{at:Date.now(),by:ME.id,uid:null,reason:String(reason||'').slice(0,120)});
+  else await remove(R('ipBans/'+h));
   return true;
 }
 function tosValidIp(ip){return /^(\d{1,3}\.){3}\d{1,3}$/.test(ip)||/^[0-9a-f:]{2,45}$/i.test(ip)&&ip.indexOf(':')>=0}
