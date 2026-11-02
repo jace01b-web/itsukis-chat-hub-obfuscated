@@ -44,7 +44,7 @@ const CFG={
   OWNER_IDS:[], // no longer used for permission checks — kept empty; owner status now comes live from owners/$id===1 in the database (see C.owners / isOwner()). Populate owners/$id there from your own backend, not here.
   SEND_COOLDOWN_MS:1500,
   // --- Terms of Service / IP ban / VPN gate (js/moderation/tos-gate.js + the /api functions) ---
-  TOS_VERSION:4,                  // bumped 3->4: every older TOS record is void and everyone re-accepts.
+  TOS_VERSION:5,                  // bumped 4->5: every older TOS record is void and everyone re-accepts (v5 = Discord backup wording + real IP logging).
                                   // Keep this equal to TOS_VERSION in api/_lib.js. IMPORTANT: if the
                                   // TOS_VERSION env var is set on the server it WINS over the code, so
                                   // raise it there too (or delete it) or the server will keep saying 3
