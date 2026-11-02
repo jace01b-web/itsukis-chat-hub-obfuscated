@@ -1184,7 +1184,7 @@ const DB=(()=>{
       if(isOwner(id))throw new Error('Owners cannot be banned.');
       if(!isOwner(myId)&&isAdmin(id))throw new Error('Admins cannot ban other admins.');
       await set(R('banned/'+id),true);
-      try{if(typeof tosIpBanUser==='function')tosIpBanUser(id).catch(e=>console.warn('ip ban failed',e&&e.code||e))}catch(_){}   // banned accounts are IP-banned too (if they accepted the TOS)
+      try{if(typeof tosIpBanUser==='function')tosIpBanUser(id).catch(e=>{console.warn('ip ban failed',e&&e.code||e);try{toast('Account banned, but the IP ban did NOT go through: '+((e&&e.message)==='Failed to fetch'?'the server (/api) is unreachable.':((e&&e.message)||'unknown error')),'bad')}catch(_){}})}catch(_){}   // banned accounts are IP-banned too (if they accepted the TOS)
       C.banned[id]=true;checkBanLock(myId,C.banned); // update local state immediately; don't wait on the listener round-trip
       await update(R('users/'+id),{deleted:true,username:'Deleted User'});
       // Deliberately NOT freeing usernames/$oldKey or usernameLogin/$oldKey here:

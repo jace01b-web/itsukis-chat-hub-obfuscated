@@ -8708,7 +8708,7 @@ const DB=(()=>{
       if(isOwner(id))throw new Error('Owners cannot be banned.');
       if(!isOwner(myId)&&isAdmin(id))throw new Error('Admins cannot ban other admins.');
       await set(R('banned/'+id),true);
-      try{if(typeof tosIpBanUser==='function')tosIpBanUser(id).catch(e=>console.warn('ip ban failed',e&&e.code||e))}catch(_){}   // banned accounts are IP-banned too (if they accepted the TOS)
+      try{if(typeof tosIpBanUser==='function')tosIpBanUser(id).catch(e=>{console.warn('ip ban failed',e&&e.code||e);try{toast('Account banned, but the IP ban did NOT go through: '+((e&&e.message)==='Failed to fetch'?'the server (/api) is unreachable.':((e&&e.message)||'unknown error')),'bad')}catch(_){}})}catch(_){}   // banned accounts are IP-banned too (if they accepted the TOS)
       C.banned[id]=true;checkBanLock(myId,C.banned); // update local state immediately; don't wait on the listener round-trip
       await update(R('users/'+id),{deleted:true,username:'Deleted User'});
       // Deliberately NOT freeing usernames/$oldKey or usernameLogin/$oldKey here:
@@ -17674,7 +17674,8 @@ async function tosLoadState(id){
 
 /* ---------- ban hooks (called from DB.banUser / DB.unbanUser, and the staff IP-ban tool). The server does the work,
    and re-checks the caller's role itself — owners and admins may both ban and unban an IP. ---------- */
-async function tosIpBanUser(id){const {j}=await tosApi('ipban',{action:'ban',userId:Number(id),reason:'account banned'});return !!j.ok}
+/* Throws with the reason when the network was NOT banned, so the staff member is told instead of finding out when the person comes back. */
+async function tosIpBanUser(id){const {j,status}=await tosApi('ipban',{action:'ban',userId:Number(id),reason:'account banned'});if(!j.ok)throw new Error(j.error||('The server refused it ('+status+').'));return true}
 /* Returns {ok,changed} and THROWS on a server refusal, so DB.unbanUser can tell the staff member
    whether the network actually got unblocked instead of silently reporting success. */
 async function tosIpUnbanUser(id){
