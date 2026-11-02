@@ -140,10 +140,15 @@ const totVisible=()=>totNow()<TOT.BOARD_END;           // is the event still sho
    six minutes of double candy every twenty minutes (server clock, via SKEW). */
 const TOT_RAIN={EVERY:1200000,LEN:360000};   // 6 minutes of double candy every 20 minutes
 const _totRainT=()=>totNow()%TOT_RAIN.EVERY;
-const totRainOn=()=>totLive()&&_totRainT()<TOT_RAIN.LEN;
-const totRainLeft=()=>totRainOn()?TOT_RAIN.LEN-_totRainT():0;
+/* FINAL 30 MINUTES: for the last half hour before TOT.END everything pays x10. It takes over from the normal
+   Candy Rain (x10, not x20) and runs the whole way to the end, so it also counts as "rain" for the banners. */
+const TOT_FINALE={LEN:30*60000,X:10};
+const totFinaleOn=()=>totLive()&&(TOT.END-totNow())<=TOT_FINALE.LEN;
+const totRainOn=()=>totLive()&&(totFinaleOn()||_totRainT()<TOT_RAIN.LEN);
+const totRainLeft=()=>totFinaleOn()?TOT.END-totNow():(totRainOn()?TOT_RAIN.LEN-_totRainT():0);
 const totRainIn=()=>totRainOn()?0:TOT_RAIN.EVERY-_totRainT();
-const totRainX=()=>totRainOn()?2:1;
+const totRainX=()=>totFinaleOn()?TOT_FINALE.X:(totRainOn()?2:1);
+const totRainTitle=()=>totFinaleOn()?'FINAL 30 MINUTES \u2014 everything pays \u00d710':'CANDY RAIN \u2014 everything pays double';
 const totMs=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return s>=60?(Math.floor(s/60)+'m '+(s%60)+'s'):(s+'s')};
 /* How long is left, as a duration. Never a clock time and never a zone — a countdown reads the
    same for everyone and gives nothing away about where the site is run from. */
@@ -1005,8 +1010,8 @@ function totPaint(){
     const on=totRainOn();
     rain.classList.toggle('on',on);
     rain.innerHTML=on
-      ? `<span class="tot-rain-ic">🌧️</span><div><b>CANDY RAIN — everything pays double</b>
-         <small>Ends in ${totMs(totRainLeft())}. Knock as fast as you can.</small></div>`
+      ? `<span class="tot-rain-ic">🌧️</span><div><b>${totRainTitle()}</b>
+         <small>${totFinaleOn()?'The event ends in ':'Ends in '}${totMs(totRainLeft())}. Knock as fast as you can.</small></div>`
       : `<span class="tot-rain-ic">⏳</span><div><b>Candy Rain in ${totMs(totRainIn())}</b>
          <small>Six minutes of double candy, every 20 minutes, for everyone at once.</small></div>`;
   }
@@ -1031,7 +1036,7 @@ function totPaint(){
     wrap.classList.toggle('ready',cd<=0);
     bar.style.width=(100-Math.round(cd/TOT.KNOCK_MS*100))+'%';
     const buffs=[];
-    if(totRainOn())buffs.push('🌧️ RAIN ×2');
+    if(totRainOn())buffs.push(totFinaleOn()?'🔥 FINALE ×10':'🌧️ RAIN ×2');
     if(totRushOn())buffs.push('⚡ Sugar Rush');
     if((Number(TOT_ME.luck)||0)>0)buffs.push('🍀 Lucky ×'+TOT_ME.luck);
     if((Number(TOT_ME.golden)||0)>0)buffs.push('✨ Golden ×'+TOT_ME.golden);
@@ -1073,7 +1078,7 @@ function totBadgeHTML(){
   const left=TOT.END-totNow();
   if(!totLive())return 'Final results';
   // Candy Rain takes over the badge while it is on — it is the thing worth interrupting for.
-  if(totRainOn())return '<span class="tot-live-dot rain"></span>🌧️ CANDY RAIN · '+totMs(totRainLeft());
+  if(totRainOn())return '<span class="tot-live-dot rain"></span>'+(totFinaleOn()?'🔥 FINALE ×10 · ':'🌧️ CANDY RAIN · ')+totMs(totRainLeft());
   return '<span class="tot-live-dot"></span>'+(typeof fmtDur==='function'?fmtDur(left):'')+' left';
 }
 function totInjectHome(){
@@ -1104,9 +1109,9 @@ function totInjectChatBar(){
   const live=totLive(),rain=totRainOn();
   b.classList.toggle('raining',rain);
   b.innerHTML=`<span class="tot-bar-ic">${rain?'🌧️':'🎃'}</span><span class="tot-bar-tx"><b>${
-      !live?'Trick or Treat — final results':(rain?'CANDY RAIN — everything pays double':'Trick or Treat is live')}</b>
+      !live?'Trick or Treat — final results':(rain?totRainTitle():'Trick or Treat is live')}</b>
     <small>${!live?'See where you placed'
-      :(rain?('Ends in '+totMs(totRainLeft())+' — knock as fast as you can')
+      :(rain?((totFinaleOn()?'The event ends in ':'Ends in ')+totMs(totRainLeft())+' — knock as fast as you can')
             :('Twelve minigames, challenges, costumes · next Candy Rain in '+totMs(totRainIn())))}</small></span>
     <span class="tot-bar-go">${live?totBadgeHTML():'Open'}</span>`;
 }
@@ -1127,7 +1132,7 @@ function totMaybeIntro(){
     <div class="tot-intro-grid">
       <div><span>🚪</span><b>Knock</b><small>Full-size bars, jackpot houses and a haunted one.</small></div>
       <div><span>🕹️</span><b>Play</b><small>Twelve minigames. Pure skill, nothing to lose.</small></div>
-      <div><span>🌧️</span><b>Candy Rain</b><small>Everything pays double, 6 minutes out of every 20.</small></div>
+      <div><span>🌧️</span><b>Candy Rain</b><small>Everything pays double, 6 minutes out of every 20. The final 30 minutes pay ×10.</small></div>
       <div><span>📜</span><b>Challenges</b><small>Milestones that pay out, plus costumes to buy.</small></div>
       <div><span>🏆</span><b>Win</b><small>Top 10 get an exclusive role. Milestone roles at 10k, 100k, 1m and 10m.</small></div>
       <div><span>🔔</span><b>Come back</b><small>A free doorbell bonus every hour.</small></div>

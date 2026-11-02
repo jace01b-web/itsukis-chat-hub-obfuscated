@@ -2,7 +2,7 @@
  *
  * REQUIRED environment variables (Vercel > Settings > Environment Variables):
  *   FIREBASE_SA          the whole service-account JSON (Firebase console > Project settings > Service accounts > Generate key)
- *   DISCORD_WEBHOOK_URL  NEW private webhook (the old one was public in config.js - delete it in Discord)
+ *   DISCORD_WEBHOOK_URL  private webhook for the TOS backup log + anti-cheat alerts. Set it HERE only - never paste it into the repo.
  *   IP_HASH_SALT         long random string. Never change it later or old IP bans stop matching.
  *   BUILD_SECRET         long random string, same one you give tools/stamp-build.js. Never commit it.
  * OPTIONAL:
@@ -188,16 +188,16 @@ async function roleOf(id) {
   return { owner, admin: owner || ad === 1 };
 }
 
-/* ---------- Discord (webhook only ever lives in the server env) ---------- */
-// Fallback so it works without the Vercel variable. This file is in a PUBLIC repo, so anyone can read it: if fake logs ever show up, delete this webhook in Discord and make a new one.
-const WEBHOOK_FALLBACK = 'https://discord.com/api/webhooks/1562117320845951157/MobbYHh5lVayswwOt7QxSYXCyZscB4JjAborgCVrjt2vRT0-d2Fmcrkp4Ngc_4Qbpqcy';
+/* ---------- Discord (the webhook only ever lives in the server env - never in the repo or the browser) ----------
+ * Returns 'sent' | 'not-configured' | 'failed-<status>' | 'failed' so /api/tos can tell the owner panel whether the backup worked. */
 async function discord(payload) {
-  const url = process.env.DISCORD_WEBHOOK_URL || WEBHOOK_FALLBACK;
-  if (!url) return;
+  const url = process.env.DISCORD_WEBHOOK_URL;
+  if (!url) return 'not-configured';
   try {
-    await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(Object.assign({ username: 'ICH Security', allowed_mentions: { parse: [] } }, payload)), signal: AbortSignal.timeout(8000) });
-  } catch (_) {}
+    return r.ok ? 'sent' : 'failed-' + r.status;
+  } catch (_) { return 'failed'; }
 }
 const clean = (s, n) => String(s == null ? '' : s).replace(/[`\r\n]/g, ' ').slice(0, n || 100);
 
@@ -209,6 +209,25 @@ function limited(key, max, windowMs) {
   if (hits.size > 5000) hits.clear();
   return arr.length > max;
 }
+// Backup copy of a TOS acceptance, posted to Discord next to the database record.
+async function logTos(f) {
+  const v = x => '`' + (clean(x, 190) || '-') + '`';
+  return discord({ embeds: [{
+    title: (f.test ? 'TEST - ' : '') + 'TOS accepted (v' + f.version + ')',
+    color: f.saved ? 0x57f287 : 0xed4245,
+    fields: [
+      { name: 'Username', value: v(f.name), inline: true },
+      { name: 'Account ID', value: v(f.id), inline: true },
+      { name: 'IP', value: v(f.ip), inline: true },
+      { name: 'Network hash', value: v(String(f.h || '').slice(0, 10)), inline: true },
+      { name: 'VPN check', value: v(f.vpn), inline: true },
+      { name: 'Saved to database', value: v(f.saved ? 'yes' : 'NO - database write failed'), inline: true },
+      { name: 'Build', value: v(f.build), inline: true },
+      { name: 'Browser', value: v(f.ua), inline: false }
+    ],
+    timestamp: new Date(f.at).toISOString()
+  }] });
+}
 // cheat alerts: at most one Discord post per (kind, id) every 10 minutes so nobody can flood the log
 const alerted = new Map();
 async function alert(kind, id, fields) {
@@ -218,4 +237,4 @@ async function alert(kind, id, fields) {
   await discord({ embeds: [{ title: 'Anti-cheat: ' + kind, color: 0xfaa61a, fields: Object.entries(fields).map(([n, v]) => ({ name: n, value: '`' + clean(v, 120) + '`', inline: true })), timestamp: new Date().toISOString() }] });
 }
 
-module.exports = { cors, send, readBody, clientIp, normalizeIp, ipHash, isPrivateIp, vpnCheck, verifyToken, adb, checkBuild, compareBuilds, buildToken, roleOf, discord, alert, clean, limited, net, TOS_VERSION, ATTEST_TTL_MS };
+module.exports = { cors, send, readBody, clientIp, normalizeIp, ipHash, isPrivateIp, vpnCheck, verifyToken, adb, checkBuild, compareBuilds, buildToken, roleOf, discord, logTos, alert, clean, limited, net, TOS_VERSION, ATTEST_TTL_MS };

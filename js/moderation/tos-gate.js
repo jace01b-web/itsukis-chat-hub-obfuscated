@@ -2,7 +2,8 @@
  * js/moderation/tos-gate.js
  * Terms of Service gate: nobody can SEND messages until they accept the TOS. Everything else still works.
  *  - Accepting records username + account ID + IP + browser to tosLog/$id (via /api/tos), which the database rules make
- *    readable by OWNERS ONLY - shown in Settings > Moderation > TOS acceptances. Nothing goes to Discord any more.
+ *    readable by OWNERS ONLY - shown in Settings > Moderation > TOS acceptances. The SERVER also posts a backup copy to a
+ *    private Discord channel (the webhook lives in the server env, never in this file).
  *    The receipt on the account (tosAccepted/$id) keeps only the version, the time and a scrambled IP fingerprint,
  *    so staff can see that somebody accepted without seeing their address.
  *  - Declining records nothing and sends nothing anywhere - the gate never runs any IP lookup for people who haven't accepted.
@@ -18,8 +19,8 @@ function tosDeclinedThisSession(){try{return sessionStorage.getItem(TOS_DECLINE_
 
 const TOS_SECTIONS=[
   {ic:'💬',t:'Chatting needs this',d:'To <b>send messages</b> you have to accept these terms. If you don\'t, you can still use <b>everything else</b>: read every chat, use the games, hubs, tools, settings and the rest of the site. You just can\'t chat.'},
-  {ic:'📝',hot:true,t:'What gets logged when you accept',d:'When you press <b>Accept</b>, your <b>username</b>, <b>account ID</b>, <b>IP address</b>, the <b>time</b> and your <b>browser info</b> are recorded <b>on this site</b>, where only the owner can read them. They are <b>not</b> sent to Discord or to any outside service. A scrambled (hashed) copy of your IP is also saved on your account so IP bans can work — moderators see that hash, never your address. This is used <b>only</b> to stop raids, spam and ban evasion, and so the owner can IP-ban people when needed.'},
-  {ic:'🔒',t:'Private. Never shared.',d:'The log is private to the site owner only. It is never shared, sold, posted or leaked, to anyone, for any reason.'},
+  {ic:'📝',hot:true,t:'What gets logged when you accept',d:'When you press <b>Accept</b>, your <b>username</b>, <b>account ID</b>, <b>IP address</b>, the <b>time</b> and your <b>browser info</b> are recorded <b>on this site</b>, where only the owner can read them. A backup copy is also posted to a <b>private Discord channel that only the owner can see</b>. They are <b>not</b> shared with anyone else. A scrambled (hashed) copy of your IP is also saved on your account so IP bans can work — moderators see that hash, never your address. This is used <b>only</b> to stop raids, spam and ban evasion, and so the owner can IP-ban people when needed.'},
+  {ic:'🔒',t:'Private. Never shared.',d:'The log and its private Discord backup are for the site owner only. They are never shared, sold or leaked to anyone else, for any reason.'},
   {ic:'🙅',t:'If you decline',d:'<b>Nothing is logged.</b> Your username, account ID and IP are not recorded anywhere. You will just be unable to chat. You can change your mind any time in <b>Settings → About</b>.'},
   {ic:'🔨',t:'IP bans',d:'If you are banned, your IP can be banned too, so new accounts from the same network can\'t chat. On a shared network (like a school) other people on that network can be affected until the ban is lifted.'},
   {ic:'🛡️',t:'No VPNs, proxies or Tor',d:'Chat is blocked while your connection looks like a VPN, proxy or Tor exit. Your IP is checked with a third-party detection service for this, only once you have accepted. Turn it off and reload to chat.'},
@@ -112,7 +113,7 @@ async function tosBackfillReceipt(id){
   if(st.srv||!(st.h==='unverified'||!st.h))return false;     // already has a proper server record
   _tosBackfilled=true;
   try{
-    const r=await tosApi('tos',{id:id,version:CFG.TOS_VERSION});
+    const r=await tosApi('tos',{id:id,version:CFG.TOS_VERSION,backfill:true});   // backfill: saved to the database only, NOT posted to Discord (they accepted under the older wording)
     if(r&&r.status===200&&r.j&&r.j.ok){
       await tosLoadState(id);
       console.info('[tos] receipt backfilled through the server');
@@ -135,8 +136,8 @@ async function tosProbeApi(){
   const out={base:base,host:false,fn:false,status:0,detail:''};
   if(!base){out.detail='CFG.TOS_API is empty.';return out}
   try{
-    const r=await tosApi('tos',{id:(ME&&ME.id)||0,version:CFG.TOS_VERSION});
-    out.host=true;out.fn=true;out.status=r.status;
+    const r=await tosApi('tos',{id:(ME&&ME.id)||0,version:CFG.TOS_VERSION,test:true});
+    out.host=true;out.fn=true;out.status=r.status;out.discord=(r.j&&r.j.discord)||'';
     out.detail=(r.j&&(r.j.error||(r.j.ok?'ok':'')))||'';
     return out;
   }catch(e){out.detail=(TOS_LAST_API&&TOS_LAST_API.err)||'network error'}
@@ -152,10 +153,17 @@ async function tosProbeApi(){
 // Turns that into the sentence an owner should act on.
 function tosProbeVerdict(p){
   if(!p.base)return'CFG.TOS_API is not set, so the site has no server to call. Point it at your deployment.';
-  if(p.fn&&p.status===200)return'Working. The server answered and your own record was just written.';
+  if(p.fn&&p.status===200)return'Working. The server answered and your own record was just written.'+tosDiscordNote(p.discord);
+  if(p.fn&&p.status===404)return'The server answered 404: there is no /api/tos at '+p.base+'. The site itself is not the problem (it works from about:blank, the API allows every origin). The api/ folder of this repo is simply not deployed on that Vercel project - it is probably serving a different repo (the launcher). Deploy THIS repo to a Vercel project, set the env vars from api/_lib.js, then point CFG.TOS_API at that project.';
   if(p.fn)return'The server answered with '+p.status+(p.detail?(': '+p.detail):'')+'. That is a server-side refusal, not a connection problem.';
   if(p.host)return'The domain '+p.base+' is up, but /api/tos did not answer the browser. That almost always means the functions are not deployed on this project (a 404 from the host carries no CORS header, so the browser reports it as a network error). Check that the api/ folder deployed and that this is the right project URL.';
   return'Nothing answered at '+p.base+'. The domain is wrong, the project is deleted or paused, or the network is blocking it.';
+}
+function tosDiscordNote(d){
+  if(d==='sent')return' Discord backup: sent (check the channel for a TEST message).';
+  if(d==='not-configured')return' Discord backup: NOT configured - add the DISCORD_WEBHOOK_URL env var in Vercel and redeploy.';
+  if(d)return' Discord backup failed ('+d+') - the webhook URL is probably wrong or was deleted.';
+  return'';
 }
 // Short code stored on the receipt so an owner can see later why the server was skipped.
 function tosWhyCode(){
