@@ -986,6 +986,10 @@ function boot(){
 window.__vcDiag=function(){return {fb:!!S.fb,me:S.me,joined:S.joined,joining:S.joining,stage:S.stage,gen:S.gen,err:S.err&&{code:S.err.code,title:S.err.title},members:S.members,voiceOn:S.voiceOn,sdk:!!window.AgoraRTC,tokenUrl:CFG.TOKEN_URL,appId:CFG.APP_ID,log:S.log.slice(-40)}};
 window.__vcTest=selfTest;                 // console: await __vcTest()
 window.__vcApi={join:join,leave:leave};   // console / automated tests
+/* Used by the Discord channel sidebar: open the voice panel, and list who is in the channel
+   so they can be drawn underneath it the way Discord does. */
+window.voiceOpen=function(){try{openVoice()}catch(e){console.warn('[voice] open failed',e)}};
+window.voiceMemberIds=function(){try{return Object.keys(S.members||{}).map(Number).filter(function(n){return !isNaN(n)})}catch(e){return[]}};
 function wireExtras(){
   var b=$('exVoice');if(!b||b.__vc)return;b.__vc=1;
   b.addEventListener('click',function(e){e.preventDefault();openVoice()});
