@@ -15,6 +15,7 @@
 window.APP_MANIFEST={
   firebase:{version:"10.12.2",modules:["firebase-app","firebase-auth","firebase-app-check","firebase-database"],storage:"firebase-storage"},
   css:[
+    "00-discord-theme.css",
     "01-base.css",
     "02-now-playing.css",
     "03-form-controls.css",
@@ -25,7 +26,6 @@ window.APP_MANIFEST={
     "08-overlays-friends.css",
     "09-game-hubs.css",
     "10-profile-cropper-composer.css",
-    "11-glass-theme.css",
     "12-vip-spin.css",
     "13-auth-page.css",
     "14-extras-menu.css",
@@ -38,7 +38,8 @@ window.APP_MANIFEST={
     "22-discord-look.css",
     "24-file-attachments.css",
     "25-custom-roles.css",
-    "26-trick-or-treat.css"
+    "26-trick-or-treat.css",
+    "99-discord-shell.css"
   ],
   /* Not loaded on purpose: 23-lockdown.css belongs to js/features/lockdown.js, which is kept in the
      repo but left out of the load list (its master switch is ON, so loading it would lock the site). */
@@ -53,6 +54,7 @@ window.APP_MANIFEST={
     "core/firebase-init.js",
     "chat/file-upload.js",
     "moderation/roles.js",
+    "discord/model.js",
     "moderation/nsfw-filter.js",
     "moderation/bans.js",
     "core/database.js",
@@ -90,13 +92,16 @@ window.APP_MANIFEST={
     "settings/rules-check.js",
     "moderation/tos-gate.js",
     "settings/anti-lag.js",
-    "social/rooms.js",
     "social/friends.js",
     "chat/live-sync.js",
     "chat/typing-indicator.js",
     "ui/extras-menu.js",
     "ui/liquid-glass.js",
     "ui/discord-shell.js",
+    "discord/ui.js",
+    "discord/server-settings.js",
+    "discord/shop.js",
+    "discord/moderation.js",
     "ui/context-menu.js",
     "core/boot.js"
   ]
