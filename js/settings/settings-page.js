@@ -83,15 +83,9 @@ function openSettings(fromChat){
 
     <div data-p="ui" class="hidden">
       <div class="set-card">
-        <div class="section-h" style="margin-top:0">💬 Discord look</div>
-        <div class="toggle-row" style="margin-bottom:0">
-          <div>
-            <div style="font-weight:600;font-size:14px">Discord look</div>
-            <div class="hint" style="margin-top:2px">Off by default. Makes the whole site feel like Discord: it opens straight into your DMs, with a server-style bar on the left, a Friends page, a user panel, flat panels and plain message rows instead of chat bubbles. The main-menu ad is hidden and your custom background is covered while it's on. Saved to your account, so it follows you to every device.</div>
-          </div>
-          <label class="switch"><input type="checkbox" id="sDiscordLook" ${DiscordLook.on()?'checked':''}><span class="slider"></span></label>
-        </div>
-        <div style="margin-top:12px"><button type="button" class="btn sec small" id="sLookAsk">Choose Normal or Discord again…</button></div>
+        <div class="section-h" style="margin-top:0">💬 Appearance</div>
+        <div class="hint">ICH uses the Discord look everywhere now — server rail, channels, roles and member list.
+        There is no separate "normal" look to switch back to, so the old toggle is gone. Pick a theme below.</div>
       </div>
       <div class="set-card dl-only" id="dlThemeCard">
         <div class="section-h" style="margin-top:0">🎨 Theme</div>
@@ -1062,8 +1056,8 @@ function openSettings(fromChat){
       const u=DB.getUser(other);
       return '💬 DM with '+(u?esc(u.username):'#'+other);
     }
-    const r=DB.getRoom(key);
-    return r?('🔒 '+esc(r.name)):('🔒 Room '+key);
+    let ch=null;try{ch=DModel.channelByKey(key)}catch(_){}
+    return ch?('# '+esc(ch.name)):('# '+esc(String(key).slice(0,24)));
   }
   function renderModDelResults(resBox,userId,results){
     if(!results.length){resBox.innerHTML='<div class="hint">No messages found for #'+userId+' in any conversation you can see.</div>';return}
@@ -1117,7 +1111,7 @@ function openSettings(fromChat){
     s.bgBlur=+$$('#sBlur').value;s.bgDim=+$$('#sDim').value;
     s.uiOpacity=+$$('#sUiO').value;s.uiBlur=+$$('#sUiB').value;
     s.autoScrollBottom=$$('#sAutoScroll').checked;
-    s.discordLook=DiscordLook.on();
+    s.discordLook=true;   // always on
     s.antiLag=AntiLag.on();   // keep the Save payload in step with the toggle (it saves itself instantly)
     s.filterLocal=$$('#sFilterLocal').checked;
     s.pings={everyone:$$('#sPe').checked,sound:$$('#sPs').checked,desktop:$$('#sPd').checked};
@@ -1195,8 +1189,7 @@ function openSettings(fromChat){
   $$('#sMusicBg').addEventListener('change',e=>MusicPlayer.setBackground(e.target.checked));
   // Anti-lag is an account setting (synced across devices); applied instantly and saved straight away.
   $$('#sAntiLag').addEventListener('change',e=>AntiLag.set(e.target.checked));
-  $$('#sDiscordLook').addEventListener('change',e=>DiscordLook.set(e.target.checked));
-  $$('#sLookAsk')&&($$('#sLookAsk').onclick=()=>DiscordLook.ask());
+  // #sLookAsk and #sDiscordLook were removed: the Discord look is permanent.
   $$('#dlThemeCard')&&$$('#dlThemeCard').addEventListener('click',e=>{
     const b=e.target.closest('[data-dl-theme]');if(!b)return;
     DiscordLook.setTheme(b.dataset.dlTheme);

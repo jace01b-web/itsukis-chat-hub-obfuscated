@@ -54,9 +54,10 @@ const DiscordLook=(function(){
     if(was!==!!v){try{if(v){de.style.setProperty('--ui-alpha','1');de.style.setProperty('--ui-blur','0px')}else if(typeof ME!=='undefined'&&ME&&ME.settings&&typeof applyStyle==='function')applyStyle(de,ME.settings);else{de.style.removeProperty('--ui-alpha');de.style.removeProperty('--ui-blur')}}catch(_){}}
     if(was!==!!v&&typeof DiscordShell!=='undefined')DiscordShell.refresh(true)}
   function cache(v){try{localStorage.setItem(KEY,v?'1':'0')}catch(_){}}
+  // Kept so older callers don't throw, but the look can no longer be turned off.
   function set(v){
-    v=!!v;cache(v);apply(v);
-    if(typeof ME!=='undefined'&&ME&&ME.id!=null)DB.setSettingKey(ME.id,'discordLook',v).catch(()=>{});
+    cache(true);apply(true);
+    if(typeof ME!=='undefined'&&ME&&ME.id!=null)DB.setSettingKey(ME.id,'discordLook',true).catch(()=>{});
   }
   // ---- theme (only has a visible effect while Discord look is on) ----
   const TKEY='ich.discordTheme',DEFAULT_THEME='ash';
@@ -111,9 +112,8 @@ const DiscordLook=(function(){
   }
   function sync(){
     if(typeof ME==='undefined'||!ME||!ME.settings)return;
-    if(!chosen())ask();
-    const v=ME.settings.discordLook;
-    if(typeof v==='boolean'&&v!==on()){cache(v);apply(v)}
+    /* The Discord look is the site's only look now, so the first-run "pick a look" question is
+       gone and a stale settings.discordLook===false from an older build must NOT switch it off. */
     const t=ME.settings.discordTheme;
     if(typeof t==='string'&&validTheme(t)&&resolve(t)!==theme()){try{localStorage.setItem(TKEY,t)}catch(_){}applyTheme(t)}
   }
