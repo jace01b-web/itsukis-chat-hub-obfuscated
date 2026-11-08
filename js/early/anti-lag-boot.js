@@ -6,7 +6,10 @@
 try{if(localStorage.getItem('ich.antiLag')==='1')document.documentElement.classList.add('anti-lag')}catch(_){}
 
 /* Discord look: per-device cache of the account setting, OFF unless switched on. Applied before first paint. */
-try{if(localStorage.getItem('ich.discordLook')==='1')document.documentElement.classList.add('discord-look')}catch(_){}
+/* The Discord look is no longer optional - it is the site's only look, so the class goes on
+   unconditionally and before first paint (no flash of the old theme on a slow connection). */
+document.documentElement.classList.add('discord-look');
+try{localStorage.setItem('ich.discordLook','1')}catch(_){}
 
 /* Discord look themes. Single source of truth: this table builds the CSS (below) AND the swatches in Settings.
    Each theme only sets the --dl-* palette variables used by css/22-discord-look.css. Nothing here applies unless html.discord-look is on. */
