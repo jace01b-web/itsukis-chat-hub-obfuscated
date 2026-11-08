@@ -17,15 +17,39 @@ let TOS_STATE=null;                       // {v,at,h} once accepted
 const TOS_DECLINE_KEY='ich_tos_declined'; // sessionStorage only - a decline is never sent anywhere
 function tosDeclinedThisSession(){try{return sessionStorage.getItem(TOS_DECLINE_KEY)==='1'}catch(_){return false}}
 
+/* ---------- Terms of Service, v6 ----------
+   v6 replaces v5. Everyone re-accepts, because the site changed shape: it is now a Discord-style
+   client where anyone can create a server, hand out roles and moderate their own members. The
+   terms have to say who is responsible for what in that arrangement, and how punishments scope.
+   Bump CFG.TOS_VERSION and api/_lib.js together whenever this list changes materially. */
 const TOS_SECTIONS=[
-  {ic:'💬',t:'Chatting needs this',d:'To <b>send messages</b> you have to accept these terms. If you don\'t, you can still use <b>everything else</b>: read every chat, use the games, hubs, tools, settings and the rest of the site. You just can\'t chat.'},
-  {ic:'📝',hot:true,t:'What gets logged when you accept',d:'When you press <b>Accept</b>, your <b>username</b>, <b>account ID</b>, <b>IP address</b>, the <b>time</b> and your <b>browser info</b> are recorded <b>on this site</b>, where only the owner can read them. A backup copy is also posted to a <b>private Discord channel that only the owner can see</b>. They are <b>not</b> shared with anyone else. A scrambled (hashed) copy of your IP is also saved on your account so IP bans can work — moderators see that hash, never your address. Your IP is read through a free IP-lookup service (ipify), only at the moment you press <b>Accept</b>. This is used <b>only</b> to stop raids, spam and ban evasion, and so the owner can IP-ban people when needed.'},
-  {ic:'🔒',t:'Private. Never shared.',d:'The log and its private Discord backup are for the site owner only. They are never shared, sold or leaked to anyone else, for any reason.'},
-  {ic:'🙅',t:'If you decline',d:'<b>Nothing is logged.</b> Your username, account ID and IP are not recorded anywhere. You will just be unable to chat. You can change your mind any time in <b>Settings → About</b>.'},
-  {ic:'🔨',t:'IP bans',d:'If you are banned, your IP can be banned too, so new accounts from the same network can\'t chat. On a shared network (like a school) other people on that network can be affected until the ban is lifted.'},
-  {ic:'🛡️',t:'No VPNs, proxies or Tor',d:'Chat is blocked while your connection looks like a VPN, proxy or Tor exit. Your IP is checked with a third-party detection service for this, only once you have accepted. Turn it off and reload to chat.'},
-  {ic:'🚨',t:'Raiding and abuse',d:'Raiding, spamming, harassment, and dodging a ban (alt accounts, VPNs, proxies) will get you banned, including by IP. The server rules still apply on top of these terms.'}
+  {ic:'\u{1F4AC}',t:'Chatting needs this',d:'To <b>send messages</b> you have to accept these terms. If you don\'t, you can still use <b>everything else</b>: read every channel you have access to, browse servers, use the games, hubs, tools and settings. You just can\'t post.'},
+
+  {ic:'\u{1F3E0}',hot:true,t:'ICH is the home server',d:'<b>Itsukis Chat Hub</b> is the site itself. Every account is a member of it and <b>nobody can leave it</b>. A ban or timeout given in ICH is a <b>site-wide</b> action by the site owners and affects your whole account.'},
+
+  {ic:'\u{1F310}',hot:true,t:'Other servers are their own places',d:'Anyone can create a server. A punishment given in <b>someone else\'s server</b> applies to <b>that server only</b>: being banned, timed out or network-banned there does <b>not</b> touch your account, does not affect ICH, and does not stop you joining or staying in other servers. Equally, being timed out in ICH does not silence you in other people\'s servers.'},
+
+  {ic:'\u{1F451}',t:'If you run a server, you are responsible for it',d:'Server owners choose their own roles, permissions and moderators, and are responsible for what happens in their server. The site owners can still act on anything that breaks these terms or the law, <b>including removing a server entirely</b>. Giving someone the <b>Administrator</b> permission gives them everything short of deleting the server \u2014 only hand it to people you trust.'},
+
+  {ic:'\u{1F517}',t:'Invites and Discover',d:'Invite links let anyone who has the link join your server, until the invite expires or runs out of uses. Listing a server in <b>Discover</b> makes its name, icon, description and member count <b>public to everyone on ICH</b>. Don\'t put anything private in them.'},
+
+  {ic:'\u{1F4DD}',hot:true,t:'What gets logged when you accept',d:'When you press <b>Accept</b>, your <b>username</b>, <b>account ID</b>, <b>IP address</b>, the <b>time</b> and your <b>browser info</b> are recorded <b>on this site</b>, where only the site owner can read them. A backup copy is posted to a <b>private Discord channel only the owner can see</b>. They are <b>not</b> shared with anyone else. A scrambled (hashed) copy of your IP is saved on your account so IP bans can work \u2014 moderators see that hash, never your address. Your IP is read through a free IP-lookup service (ipify), only at the moment you press <b>Accept</b>. It is used <b>only</b> to stop raids, spam and ban evasion.'},
+
+  {ic:'\u{1F512}',t:'Private. Never shared.',d:'The log and its private Discord backup are for the site owner only. Server owners never see your IP or your IP hash \u2014 a network ban in their server is applied without ever revealing your address to them. Nothing is sold, shared or leaked.'},
+
+  {ic:'\u{1F6AB}',t:'If you decline',d:'<b>Nothing is logged.</b> Your username, account ID and IP are not recorded anywhere. You just won\'t be able to post. You can change your mind any time in <b>Settings \u2192 About</b>.'},
+
+  {ic:'\u{1F528}',t:'Bans and network bans',d:'A site ban can include your <b>IP</b>, so new accounts from the same network can\'t chat. A server owner can also network-ban you from <b>their own server only</b>. On a shared network (like a school) other people on it can be affected until the ban is lifted.'},
+
+  {ic:'\u{1F6E1}\uFE0F',t:'No VPNs, proxies or Tor',d:'Chat is blocked while your connection looks like a VPN, proxy or Tor exit. Your IP is checked with a third-party detection service for this, only once you have accepted. Turn it off and reload to chat.'},
+
+  {ic:'\u{1F4E4}',t:'What you post',d:'You keep ownership of what you post, and you are responsible for it. Don\'t upload anything illegal, anything you have no right to share, or anything sexual involving minors \u2014 that is reported, not just removed. Uploaded images (including server icons and avatars) are stored on this site and visible to anyone who can see where you posted them.'},
+
+  {ic:'\u{1F6A8}',t:'Raiding and abuse',d:'Raiding, spamming, harassment, mass-pinging and dodging a ban (alt accounts, VPNs, proxies) will get you banned, including by IP. Creating servers to evade a ban or to harass people counts too. Server rules still apply on top of these terms.'},
+
+  {ic:'\u{1F504}',t:'These terms can change',d:'If they change in a way that matters, the version is raised and everyone is asked to accept again. Continuing to chat after that means you accept the new version.'}
 ];
+
 
 /* ---------- state ---------- */
 function tosApiBase(){return String(CFG.TOS_API||'').replace(/\/$/,'')}
