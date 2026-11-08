@@ -36,26 +36,30 @@ $('#formIn').onsubmit=async e=>{
   catch(err){$('#inErr').textContent=err.message}
   finally{if(b)b.disabled=false}
 };
+/* Sign-up is username + password, with no email at all.
+   DB.createUser() already supports this: with no email it registers the account against the
+   internal alias "<username>@itsuki.local" and records usernameLogin/<username> so signing in by
+   username keeps working. Existing accounts that DO have a real email still sign in exactly as
+   before - nothing about them changes. */
 $('#formUp').onsubmit=async e=>{
   e.preventDefault();$('#upErr').textContent='';
-  const u=$('#upUser').value.trim(),em=$('#upEmail').value.trim(),p=$('#upPw').value,p2=$('#upPw2').value;
+  const u=$('#upUser').value.trim(),p=$('#upPw').value,p2=$('#upPw2').value;
   try{
     if(!CFG.USERNAME_RE.test(u))throw new Error('Username must be 1-20 chars: 0-9, a-z, A-Z, ".", "_", "-".');
     if(p.length<CFG.MIN_PW)throw new Error(`Password must be at least ${CFG.MIN_PW} characters.`);
     if(p!==p2)throw new Error('Passwords do not match.');
     const b=e.submitter;if(b)b.disabled=true;
-    const user=await DB.createUser({username:u,email:em,password:p});
-    // show the popup RIGHT AWAY; sign-out happens quietly in the background
+    const user=await DB.createUser({username:u,password:p});
     $('#formUp').reset();$('#upUserHint').textContent='';
     authTab('in');$('#inId').value=user.username;$('#inPw').value='';
-    modalSignupSuccess(user,!!em);
+    modalSignupSuccess(user,false);
     DB.signOut().catch(()=>{});
   }catch(err){$('#upErr').textContent=err.message}
   finally{const b=e.submitter;if(b)b.disabled=false}
 };
-$('#googleBtn').onclick=async()=>{
-  try{
-    const r=await DB.googleSignIn();
-    if(r.needsProfile){show('authPage');modalPickUsername()}else{goHome();giftPromoToast()}
-  }catch(err){toast(err.message,'bad')}
-};
+/* Google sign-in is retired: accounts are username + password only. The button is removed from
+   the markup, so this just guards against an older cached index.html still containing it. */
+{
+  const gb=$('#googleBtn');
+  if(gb)gb.remove();
+}
