@@ -28,7 +28,15 @@ const BOOTUI=window.ICHBoot||{prog(){},phase(){},step(){},done(){},fail(){},reve
   ME=DB.currentUser();
   checkForcedVersion(); // re-evaluate now that ME (and so owner status) is actually known
   if(ME){
+    // servers / channels / roles listeners, and restore the last server that was open
+    try{
+      DModel.start(ME.id);
+      const last=localStorage.getItem('ich.sid');
+      view.sid=last||DModel.ICH_ID;
+    }catch(e){console.warn('[boot] server model failed to start',e);view.sid=DModel.ICH_ID}
     applyStyle(document.documentElement,ME.settings);goHome();
+    // somebody opened an invite link: offer to join once the shell is up
+    try{setTimeout(()=>{try{handleInviteLink()}catch(e){console.warn('[boot] invite link',e)}},900)}catch(_){}
     // Browsers block audio until the user interacts with the page at least
     // once — so try immediately (works if this reload came from an in-app
     // navigation) and otherwise retry on the very first click/keypress.

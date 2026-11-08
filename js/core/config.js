@@ -44,11 +44,22 @@ const CFG={
   OWNER_IDS:[], // no longer used for permission checks — kept empty; owner status now comes live from owners/$id===1 in the database (see C.owners / isOwner()). Populate owners/$id there from your own backend, not here.
   SEND_COOLDOWN_MS:1500,
   // --- Terms of Service / IP ban / VPN gate (js/moderation/tos-gate.js + the /api functions) ---
-  TOS_VERSION:5,                  // bumped 4->5: every older TOS record is void and everyone re-accepts (v5 = Discord backup wording + real IP logging).
+  TOS_VERSION:6,                  // bumped 5->6: every older TOS record is void and everyone re-accepts (v6 = servers, roles, invites, Discover and per-server moderation).
                                   // Keep this equal to TOS_VERSION in api/_lib.js. IMPORTANT: if the
                                   // TOS_VERSION env var is set on the server it WINS over the code, so
                                   // raise it there too (or delete it) or the server will keep saying 3
                                   // while the site says 4 and nobody's acceptance will ever count.
+  /* The canonical address of the site. Used to build invite links when the page itself has no
+     usable URL - which is the normal case here, because the site is usually opened inside an
+     about:blank / blob launcher window where location.href is "about:blank" and location.origin
+     is the string "null". Point this at whichever deployment you want invite links to open. */
+  SITE_URL:'https://itsukis-chat-hub.vercel.app/',
+  /* Server limits. Creating is capped low because each server is real storage; joining is capped
+     high and scales with the paid tiers. Site owners are exempt. */
+  MAX_SERVERS_OWNED:5,
+  MAX_SERVERS_JOINED:100,
+  MAX_SERVERS_JOINED_VIP:200,
+  MAX_SERVERS_JOINED_MVP:300,
   TOS_API:'https://itsukis-chat-hub.vercel.app',   // where the /api functions are deployed. The Discord webhook now lives ONLY in the server env.
   /* BROWSER FALLBACK for when /api is not deployed: the accepting person's browser reads its own IP (ipify), saves it on the receipt, and posts a log
      to this Discord webhook itself. NOTE: this file is public, so anyone who opens the site can read this URL (and spam or delete the webhook).
