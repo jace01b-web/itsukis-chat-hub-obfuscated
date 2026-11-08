@@ -27,10 +27,7 @@ $('#backHome').onclick=()=>{view.roomKey=null;view.section=null;DB.watchMessages
 function openChat(mode,section){
   view.mode=mode;view.section=section||null;view.pending=[];clearPendingFiles();renderPreviews();
   if(mode==='global'){
-    if(section==='rooms'){
-      const myRooms=DB.myRooms(ME.id);
-      view.roomKey=myRooms.length?myRooms[0].id:null;
-    }else if(section==='announcements'){
+    if(section==='announcements'){
       view.roomKey=CFG.ANNOUNCEMENTS_ROOM;
     }else if(section==='shitpost'){
       view.roomKey=CFG.SHITPOST_ROOM;
@@ -39,7 +36,16 @@ function openChat(mode,section){
     }else if(section==='mvp'){
       view.roomKey=hasMvpPerks(ME.id)?CFG.MVP_ROOM:CFG.GLOBAL_ROOM;
     }else{
+      // No specific section: open whichever channel of the current server was last read.
+      // Falls back to #general, which is the old 'global' message key.
       view.roomKey=CFG.GLOBAL_ROOM;
+      try{
+        const s=view.sid||DModel.ICH_ID;
+        const want=localStorage.getItem('ich.ch.'+s);
+        const list=DModel.channels(s).filter(c=>c.type!=='voice'&&DModel.canIn(s,c,'view',ME.id));
+        const pick=list.find(c=>c.id===want)||list[0];
+        if(pick)view.roomKey=pick.key;
+      }catch(_){}
     }
   }else{
     // Always land on Friends & Requests first when opening DMs — jumping

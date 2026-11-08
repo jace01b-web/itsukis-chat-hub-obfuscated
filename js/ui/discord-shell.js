@@ -20,7 +20,8 @@ const DiscordShell=(function(){
   function openDiscord(){try{window.open(DISCORD_INVITE,'_blank','noopener')}catch(_){location.href=DISCORD_INVITE}}
   let lastOn=null,tab='online',q='';
 
-  function on(){return typeof DiscordLook!=='undefined'&&DiscordLook.on()}
+  // The Discord look is no longer a setting - it is the only look the site has.
+  function on(){return true}
 
   /* ---------- server rail ---------- */
   function railItem(it){
@@ -30,31 +31,95 @@ const DiscordShell=(function(){
     // title is kept as the fallback for touch devices and screen readers.
     return `<button type="button" class="dl-rail-btn${it.active?' active':''}${it.cls?' '+it.cls:''}" data-rail="${it.id}" data-tip="${esc(it.t)}" title="${esc(it.t)}" aria-label="${esc(it.t)}"><span class="dl-rail-pill"></span><span class="dl-rail-ic">${it.ic}</span>${n}</button>`;
   }
+  function sid(){return view.sid||DModel.ICH_ID}
+  // "Itsukis Chat Hub" shows as ICH on the rail; every other server gets Discord's initials
+  // treatment (first letter of each word, up to two).
+  function serverInitials(name){
+    const w=String(name||'?').trim().split(/\s+/).filter(Boolean);
+    if(!w.length)return '?';
+    return (w.length===1?w[0].slice(0,2):w[0][0]+w[1][0]).toUpperCase();
+  }
+  function serverIconHTML(srv){
+    if(srv.id===DModel.ICH_ID)return '<b>ICH</b>';
+    // an uploaded picture wins over an emoji, which wins over the initials
+    if(srv.img&&DModel.isSafeServerImg(srv.img))return '<img src="'+esc(srv.img)+'" alt="">';
+    if(srv.icon&&srv.icon.length<=8)return esc(srv.icon);
+    return '<b>'+esc(serverInitials(srv.name))+'</b>';
+  }
+  // Total unread across every channel of a server, so the rail badge means what it does on Discord.
+  function serverUnread(s){
+    let n=0;
+    try{
+      DModel.channels(s).forEach(c=>{
+        if(c.type==='voice')return;
+        if(!DModel.canIn(s,c,'view',ME.id))return;
+        n+=DB.unreadIn(c.key,ME.id)||0;
+      });
+    }catch(_){}
+    return n;
+  }
+  function railWrap(it){
+    if(it.sep)return '<div class="dl-rail-sep"></div>';
+    return '<div class="dl-rail-item"'+(it.sid?' data-sid="'+esc(it.sid)+'" draggable="true"':'')+'>'+railItem(it)+'</div>';
+  }
   function renderRail(){
     const r=document.getElementById('dlRail');if(!r||!ME)return;
-    const dm=view.mode==='dms',g=view.mode==='global',sec=view.section;
-    let unreadDM=0,unreadRooms=0,unreadAnn=0,unreadShit=0;
-    try{unreadDM=DB.unreadDMs(ME.id);unreadRooms=DB.unreadRooms(ME.id);unreadAnn=DB.unreadAnnouncements(ME.id);unreadShit=DB.unreadShitposts(ME.id)}catch(_){}
-    const items=[
-      {id:'dms',t:'Direct Messages',ic:LOGO,active:dm,badge:unreadDM,cls:'dl-rail-home'},
-      {sep:1},
-      // While the event is on it sits above Global — it is the thing we want people to open first.
-      ...((typeof totVisible==='function'&&totVisible())?[{id:'tot',t:'Trick or Treat',ic:'🎃',cls:'dl-rail-tot'},{sep:1}]:[]),
-      {id:'global',t:'Global Chat',ic:'🌍',active:g&&!sec},
-      {id:'rooms',t:'Rooms',ic:'🚪',active:g&&sec==='rooms',badge:unreadRooms},
-      {id:'ann',t:'Announcements',ic:'📢',active:g&&sec==='announcements',badge:unreadAnn},
-      {id:'shit',t:'Shitpost',ic:'🗿',active:g&&sec==='shitpost',badge:unreadShit},
-      {id:'vip',t:'VIP Lounge',ic:'💎',active:g&&sec==='vip'},
-      ...(hasMvpPerks(ME.id)?[{id:'mvp',t:'MVP Lounge',ic:'🏆',active:g&&sec==='mvp',cls:'dl-rail-mvp'}]:[]),
-      {sep:1},
-      {id:'hubs',t:'Games',ic:'🎮'},
-      {id:'extras',t:'Extras',ic:EXTRAS_IC},
-      {id:'gift',t:'Gift Nitro perks',ic:'🎁'},
-      {sep:1},
-      {id:'discord',t:'Join our Discord',ic:DISCORD_IC,cls:'dl-rail-discord'}
-    ];
-    r.innerHTML=items.map(railItem).join('')+`<div class="dl-rail-grow"></div>`+railItem({id:'settings',t:'User Settings',ic:GEAR});
+    const dm=view.mode==='dms';
+    let unreadDM=0;try{unreadDM=DB.unreadDMs(ME.id)}catch(_){}
+    let html=railWrap({id:'dms',t:'Direct Messages',ic:LOGO,active:dm,badge:unreadDM,cls:'dl-rail-home'});
+    html+='<div class="dl-rail-sep"></div>';
+    if(typeof totVisible==='function'&&totVisible()){
+      html+=railWrap({id:'tot',t:'Trick or Treat',ic:'\u{1F383}',cls:'dl-rail-tot'});
+      html+='<div class="dl-rail-sep"></div>';
+    }
+    let servers=[];try{servers=DModel.myServers()}catch(_){servers=[{...DModel.ICH}]}
+    servers.forEach(srv=>{
+      html+=railWrap({
+        id:'srv:'+srv.id,sid:srv.id,t:srv.name,ic:serverIconHTML(srv),
+        active:!dm&&sid()===srv.id,badge:serverUnread(srv.id),
+        cls:'srv'+(srv.id===DModel.ICH_ID?' ich':'')
+      });
+    });
+    html+=railWrap({id:'addsrv',t:'Add a Server',ic:'+',cls:'dashed'});
+    html+=railWrap({id:'discover',t:'Discover Servers',ic:'\u{1F9ED}',cls:'dashed discover'});
+    html+=railWrap({id:'shop',t:'Shop',ic:'\u{1F48E}',cls:'dashed shop'});
+    html+='<div class="dl-rail-grow"></div>';
+    html+=railWrap({id:'hubs',t:'Games',ic:'\u{1F3AE}'});
+    html+=railWrap({id:'extras',t:'Extras',ic:EXTRAS_IC});
+    html+=railWrap({id:'discord',t:'Join our Discord',ic:DISCORD_IC,cls:'dl-rail-discord'});
+    html+=railWrap({id:'settings',t:'User Settings',ic:GEAR});
+    r.innerHTML=html;
+    wireRailDrag(r);
   }
+  /* ---------- drag to reorder servers (ICH stays pinned first) ---------- */
+  let dragSid=null;
+  function wireRailDrag(r){
+    r.querySelectorAll('.dl-rail-item[data-sid]').forEach(el=>{
+      const s=el.dataset.sid;
+      if(s===DModel.ICH_ID){el.removeAttribute('draggable');return}
+      el.addEventListener('dragstart',e=>{dragSid=s;el.classList.add('dragging');try{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',s)}catch(_){}});
+      el.addEventListener('dragend',()=>{dragSid=null;el.classList.remove('dragging');r.querySelectorAll('.drop-before,.drop-after').forEach(n=>n.classList.remove('drop-before','drop-after'))});
+      el.addEventListener('dragover',e=>{
+        if(!dragSid||dragSid===s||s===DModel.ICH_ID)return;
+        e.preventDefault();
+        const b=el.getBoundingClientRect(),after=e.clientY>b.top+b.height/2;
+        el.classList.toggle('drop-after',after);el.classList.toggle('drop-before',!after);
+      });
+      el.addEventListener('dragleave',()=>el.classList.remove('drop-before','drop-after'));
+      el.addEventListener('drop',async e=>{
+        e.preventDefault();
+        if(!dragSid||dragSid===s)return;
+        const after=el.classList.contains('drop-after');
+        el.classList.remove('drop-before','drop-after');
+        const ids=DModel.myServers().map(x=>x.id).filter(x=>x!==dragSid);
+        const at=ids.indexOf(s);
+        ids.splice(after?at+1:at,0,dragSid);
+        try{await DModel.setServerOrder(ids)}catch(_){}
+        renderRail();
+      });
+    });
+  }
+
   /* ---------- Extras pop-out (the home page's Extras menu, as a Discord-style popover next to the rail) ---------- */
   let exPop=null;
   function closeExtras(){if(exPop){exPop.remove();exPop=null}const b=document.querySelector('#dlRail [data-rail=extras]');if(b)b.classList.remove('open')}
@@ -114,23 +179,38 @@ const DiscordShell=(function(){
 
   function railClick(e){
     const b=e.target.closest('[data-rail]');if(!b||!ME)return;
+    const id=b.dataset.rail;
+    if(id.indexOf('srv:')===0){
+      const s=id.slice(4);
+      closeExtras();
+      view.mode='global';view.sid=s;view.section=null;
+      try{localStorage.setItem('ich.sid',s)}catch(_){}
+      const c=lastChannelOf(s);
+      if(c)openChannel(s,c);
+      else{view.roomKey=null;DB.watchMessages(null);renderChat()}
+      return;
+    }
     const go={
       dms:()=>{closeExtras();openChat('dms')},
-      global:()=>openChat('global'),
-      rooms:()=>openChat('global','rooms'),
-      ann:()=>openChat('global','announcements'),
-      shit:()=>openChat('global','shitpost'),
-      vip:()=>openChat('global','vip'),
-      mvp:()=>openChat('global','mvp'),
+      addsrv:()=>{closeExtras();openAddServer()},
+      discover:()=>{closeExtras();openDiscover()},
+      shop:()=>{closeExtras();openShop()},
       hubs:()=>modalGameHubs(),
       extras:()=>toggleExtras(b),
-      gift:()=>{closeExtras();if(typeof showGiftPromo==='function')showGiftPromo()},
       tot:()=>{closeExtras();if(typeof totOpen==='function')totOpen()},
       discord:()=>{closeExtras();openDiscord()},
       settings:()=>openSettings(false)
-    }[b.dataset.rail];
+    }[id];
     if(go)go();
   }
+  // right-click a server on the rail
+  document.addEventListener('contextmenu',e=>{
+    const it=e.target.closest&&e.target.closest('#dlRail .dl-rail-item[data-sid]');
+    if(!it||!ME)return;
+    e.preventDefault();
+    openServerMenu(it,it.dataset.sid,e);
+  });
+
 
   /* ---------- user panel (bottom of the sidebar) ---------- */
   /* The user panel floats across the bottom-left corner (under the rail AND the sidebar) on desktop, so it lives
@@ -221,43 +301,139 @@ const DiscordShell=(function(){
 
   /* ---------- server view: Global Chat / Rooms get a channel list on the left and a member list on the right ---------- */
   function desktop(){return !!(window.matchMedia&&window.matchMedia('(min-width:821px)').matches)}
-  function serverMode(){return on()&&desktop()&&!!ME&&view.mode==='global'}
-  function renderChannels(list,foot){
-    let online=0;try{online=DB.onlineCount()}catch(_){}
-    addHTML(list,`<div class="dl-server-head"><b>Itsukis Chat</b><span class="dl-server-on"><i></i>${online} online</span><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>`);
-    const cur=view.roomKey;
-    const open=sec=>()=>openChat('global',sec);
-    let annN=0,shitN=0;try{annN=DB.unreadAnnouncements(ME.id);shitN=DB.unreadShitposts(ME.id)}catch(_){}
-    const vip=!!DB.vipInfo(ME.id);
-    addHTML(list,`<div class="sb-section">Text Channels</div>`);
-    list.appendChild(sbItem('#','global-chat',cur===CFG.GLOBAL_ROOM,open(null)));
-    list.appendChild(sbItem('#','announcements',cur===CFG.ANNOUNCEMENTS_ROOM,open('announcements'),annN));
-    list.appendChild(sbItem('#','shitpost',cur===CFG.SHITPOST_ROOM,open('shitpost'),shitN));
-    list.appendChild(sbItem(vip?'#':'🔒','vip-lounge',cur===CFG.VIP_ROOM,open('vip')));
-    if(hasMvpPerks(ME.id)){const mi=sbItem('#','mvp-lounge',cur===CFG.MVP_ROOM,open('mvp'));mi.classList.add('dl-sb-mvp');list.appendChild(mi)}    // MVP Chat only shows up for MVPs (and owners)
-    addHTML(list,`<div class="sb-section">Rooms<button type="button" class="sb-plus" id="sbNewRoom" title="Create a room" aria-label="Create a room">+</button></div>`);
-    const np=document.getElementById('sbNewRoom');if(np)np.onclick=e=>{e.stopPropagation();modalCreateRoom()};
-    const rooms=DB.myRooms(ME.id);
-    rooms.forEach(r=>{
-      const unread=DB.unreadIn(r.id,ME.id);
-      list.appendChild(sbItem('#',r.name,cur===r.id,()=>{view.mode='global';view.section='rooms';selectRoom(r.id)},unread,null,()=>{
-        modalLeaveRoomConfirm(r,async()=>{
-          await DB.leaveRoom(ME.id,r.id);
-          if(view.roomKey===r.id){view.roomKey=CFG.GLOBAL_ROOM;view.section=null;DB.watchMessages(view.roomKey)}
-          render();renderChat();
-        });
-      }));
-    });
-    list.appendChild(sbItem('🔑','Join a room',false,modalJoinRoom));
-    // Community: the things that aren't channels but belong in the channel list.
-    addHTML(list,`<div class="sb-section">Community</div>`);
-    const dcItem=sbItem('🔗','Our Discord',false,openDiscord);
-    dcItem.classList.add('dl-sb-discord');
-    list.appendChild(dcItem);
-    const hubItem=sbItem('🎮','Games',false,()=>modalGameHubs());
-    list.appendChild(hubItem);
-    foot.innerHTML='';
+  // Phones get the channel list as a drawer now, so this no longer requires a desktop width.
+  function serverMode(){return !!ME&&view.mode==='global'}
+  const CH_HASH='<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10.99 3.16a1 1 0 1 0-1.98-.32L8.34 7H4a1 1 0 0 0 0 2h4.01l-.67 4H3a1 1 0 1 0 0 2h4.01l-.66 3.84a1 1 0 0 0 1.97.32L9.04 15h3.97l-.66 3.84a1 1 0 0 0 1.97.32L15.04 15H20a1 1 0 0 0 0-2h-4.63l.67-4H21a1 1 0 0 0 0-2h-4.63l.65-3.84a1 1 0 1 0-1.97-.32L14.34 7h-3.97l.62-3.84ZM13.34 13l.67-4h-3.97l-.67 4h3.97Z" clip-rule="evenodd"/></svg>';
+  const CH_LOCK='<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M17 11V8a5 5 0 0 0-10 0v3H5v11h14V11h-2Zm-8-3a3 3 0 0 1 6 0v3H9V8Z"/></svg>';
+  const CH_VOICE='<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M12 3a1 1 0 0 0-1.7-.7L5.6 7H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2.6l4.7 4.7A1 1 0 0 0 12 21V3Zm4.2 2.4a1 1 0 0 0-.4 1.9 6 6 0 0 1 0 9.4 1 1 0 0 0 .4 1.9 8 8 0 0 0 0-13.2Z"/></svg>';
+  const CHEV='<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+  const GEAR_SM='<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7Zm7.4-2.5a7.6 7.6 0 0 0 0-2l2-1.6a.5.5 0 0 0 .1-.6l-1.9-3.3a.5.5 0 0 0-.6-.2l-2.4 1a7.4 7.4 0 0 0-1.7-1l-.4-2.5a.5.5 0 0 0-.5-.4h-3.8a.5.5 0 0 0-.5.4l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1a.5.5 0 0 0-.6.2L2.6 8.8a.5.5 0 0 0 .1.6l2 1.6a7.6 7.6 0 0 0 0 2l-2 1.6a.5.5 0 0 0-.1.6l1.9 3.3a.5.5 0 0 0 .6.2l2.4-1a7.4 7.4 0 0 0 1.7 1l.4 2.5a.5.5 0 0 0 .5.4h3.8a.5.5 0 0 0 .5-.4l.4-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1a.5.5 0 0 0 .6-.2l1.9-3.3a.5.5 0 0 0-.1-.6l-2-1.6Z"/></svg>';
+
+  /* Which categories the viewer has collapsed. Per server, remembered locally like Discord. */
+  function collapsedSet(s){
+    try{return new Set(JSON.parse(localStorage.getItem('ich.cats.'+s)||'[]'))}catch(_){return new Set()}
   }
+  function toggleCat(s,catId){
+    const set=collapsedSet(s);
+    if(set.has(catId))set.delete(catId);else set.add(catId);
+    try{localStorage.setItem('ich.cats.'+s,JSON.stringify([...set]))}catch(_){}
+    if(typeof renderChat==='function')renderChat();
+  }
+  // Switch to a channel. Keeps view.sid and view.roomKey in step, and remembers the last channel
+  // per server so coming back to a server lands where you left it (Discord does the same).
+  function openChannel(s,c){
+    if(!c)return;
+    if(c.type==='voice'){
+      view.sid=s;
+      try{localStorage.setItem('ich.sid',s)}catch(_){}
+      // js/features/voice-channel.js owns the whole voice experience; just open its panel.
+      if(typeof window.voiceOpen==='function'){window.voiceOpen();closeNav();return}
+      const ex=document.getElementById('exVoice');     // fallback: the Extras menu entry
+      if(ex){ex.click();closeNav();return}
+      toast('Voice is unavailable right now.','bad');
+      return;
+    }
+    view.mode='global';view.sid=s;view.section=null;view.dmView='chat';
+    try{localStorage.setItem('ich.sid',s);localStorage.setItem('ich.ch.'+s,c.id)}catch(_){}
+    selectRoom(c.key);
+    closeNav();
+  }
+  function lastChannelOf(s){
+    const list=DModel.channels(s).filter(c=>c.type!=='voice'&&DModel.canIn(s,c,'view',ME.id));
+    if(!list.length)return null;
+    let want=null;try{want=localStorage.getItem('ich.ch.'+s)}catch(_){}
+    return list.find(c=>c.id===want)||list[0];
+  }
+  function renderChannels(list,foot){
+    const s=sid();
+    const srv=DModel.server(s)||{...DModel.ICH};
+    let online=0;try{online=DB.onlineCount()}catch(_){}
+    const canManage=DModel.can(s,'manageCh',ME.id);
+    const isIch=s===DModel.ICH_ID;
+
+    // ---- server header (click = server menu) ----
+    const head=document.createElement('div');
+    head.className='dl-server-head';
+    head.innerHTML='<b>'+esc(srv.name)+'</b>'+(isIch?'<span class="dl-server-on"><i></i>'+online+' online</span>':'')+CHEV;
+    head.onclick=e=>{e.stopPropagation();openServerMenu(head,s)};
+    list.appendChild(head);
+
+    // ---- categories + channels ----
+    const cats=DModel.cats(s);
+    const chans=DModel.channels(s).filter(c=>DModel.canIn(s,c,'view',ME.id));
+    const collapsed=collapsedSet(s);
+    const cur=view.roomKey;
+    const seen=new Set();
+
+    const drawChannel=c=>{
+      seen.add(c.id);
+      const row=document.createElement('div');
+      const active=cur===c.key;
+      let unread=0;try{unread=c.type==='voice'?0:(DB.unreadIn(c.key,ME.id)||0)}catch(_){}
+      const canSend=DModel.canIn(s,c,'send',ME.id);
+      row.className='dch'+(active?' active':'')+(unread&&!active?' unread':'')+(canSend?'':' locked');
+      const ic=c.type==='voice'?CH_VOICE:(canSend?CH_HASH:CH_LOCK);
+      row.innerHTML='<span class="dch-ic">'+ic+'</span><span class="dch-nm">'+esc(c.name)+'</span>'+
+        (unread&&!active?'<span class="dch-badge">'+(unread>99?'99+':unread)+'</span>':'')+
+        (canManage?'<span class="dch-tools"><button type="button" data-chset title="Edit channel" aria-label="Edit channel">'+GEAR_SM+'</button></span>':'');
+      row.onclick=()=>openChannel(s,c);
+      row.oncontextmenu=e=>{e.preventDefault();openChannelMenu(e,s,c)};
+      const g=row.querySelector('[data-chset]');
+      if(g)g.onclick=e=>{e.stopPropagation();openChannelSettings(s,c)};
+      list.appendChild(row);
+      // who is sitting in this voice channel
+      if(c.type==='voice'){
+        let ids=[];try{ids=(typeof window.voiceMemberIds==='function')?window.voiceMemberIds():[]}catch(_){}
+        if(ids.length){
+          const wrap=document.createElement('div');wrap.className='dvc-list';
+          ids.forEach(id=>{
+            const u=DB.getUser(id);if(!u)return;
+            const m=document.createElement('div');m.className='dvc-m';
+            m.innerHTML=avatarHtml(u,u.username,'width:22px;height:22px;font-size:9px')+'<span>'+esc(displayUsername(u.username))+'</span>';
+            m.onclick=()=>openUserProfile(id);
+            wrap.appendChild(m);
+          });
+          list.appendChild(wrap);
+        }
+      }
+    };
+
+    cats.forEach(cat=>{
+      const inCat=chans.filter(c=>c.cat===cat.id);
+      if(!inCat.length&&!canManage)return;
+      const isCollapsed=collapsed.has(cat.id);
+      const h=document.createElement('div');
+      h.className='dcat'+(isCollapsed?' collapsed':'');
+      h.innerHTML='<span class="dcat-chev">'+CHEV+'</span><span class="dcat-name">'+esc(cat.name)+'</span>'+
+        (canManage?'<button type="button" class="dcat-add" title="Create channel" aria-label="Create channel">+</button>':'');
+      h.onclick=e=>{if(e.target.closest('.dcat-add'))return;toggleCat(s,cat.id)};
+      const add=h.querySelector('.dcat-add');
+      if(add)add.onclick=e=>{e.stopPropagation();openCreateChannel(s,cat.id)};
+      h.oncontextmenu=e=>{e.preventDefault();openCategoryMenu(e,s,cat)};
+      list.appendChild(h);
+      // a collapsed category still shows unread channels and the open one, like Discord
+      inCat.forEach(c=>{
+        if(!isCollapsed)return drawChannel(c);
+        let unread=0;try{unread=DB.unreadIn(c.key,ME.id)||0}catch(_){}
+        if(unread||cur===c.key)drawChannel(c);
+      });
+    });
+    // anything whose category was deleted still has to be reachable
+    const orphans=chans.filter(c=>!seen.has(c.id));
+    if(orphans.length){
+      const h=document.createElement('div');h.className='dcat';
+      h.innerHTML='<span class="dcat-chev">'+CHEV+'</span><span class="dcat-name">Other</span>';
+      list.appendChild(h);
+      orphans.forEach(drawChannel);
+    }
+    if(!chans.length){
+      const e=document.createElement('div');e.className='dch-empty';
+      e.textContent=canManage?'No channels yet. Use the + next to a category to make one.':'No channels you can see yet.';
+      list.appendChild(e);
+    }
+    if(foot)foot.innerHTML='';
+  }
+
   /* ---------- DM view: the other person's profile in a right-hand panel (like Discord) ---------- */
   function dmPeerId(){
     if(!(on()&&desktop()&&ME&&view.mode==='dms'))return null;
@@ -314,6 +490,12 @@ const DiscordShell=(function(){
   const SPIN_RANK=['vipperm','vip1','fire','ice','lucky','neon','crown','rainbow','gold','confetti'];
   const MEM_SHOW_OFF=60;let offAll=false;
   function memGroupOf(id){
+    // A hoisted role created in the role manager outranks the legacy cosmetic groups below,
+    // because it is the one the server's own staff chose to show.
+    try{
+      const dr=DModel.rolesOf(sid(),id).find(r=>r.hoist&&!r.everyone&&!r.virtual);
+      if(dr)return 'dr:'+dr.id;
+    }catch(_){}
     if(isShownOwner(id))return'owner';
     let v=null;try{v=DB.vipInfo(id,true,true)}catch(_){}
     if(v&&v.kind==='owner')return'owner';
@@ -330,7 +512,13 @@ const DiscordShell=(function(){
     return'online';
   }
   function memGroupDefs(){
-    const d=[['owner','Owner','#faa81a'],['mvp','MVPs','#ff2fa0'],['admin','Admins','#ed4245'],['mod','Moderators','#3ba55d']];
+    const d=[];
+    // roles from the role manager first, highest position first
+    try{
+      DModel.roles(sid()).filter(r=>r.hoist&&!r.everyone&&!r.virtual)
+        .forEach(r=>d.push(['dr:'+r.id,r.name,r.color||'#99aab5']));
+    }catch(_){}
+    [['owner','Owner','#faa81a'],['mvp','MVPs','#ff2fa0'],['admin','Admins','#ed4245'],['mod','Moderators','#3ba55d']].forEach(x=>d.push(x));
     try{customRoleList().forEach(r=>d.push(['cr:'+r.id,r.name,r.color]))}catch(_){}
     SPIN_RANK.forEach(k=>{const pz=SPIN_PRIZES.find(x=>x.id===k);d.push([k,pz?pz.name.replace(/\s*—\s*/,' · '):k,pz?pz.color:'#99aab5'])});
     d.push(['online','Online','#23a559']);
@@ -363,9 +551,16 @@ const DiscordShell=(function(){
     const isRoom=key&&key!==CFG.GLOBAL_ROOM&&key!==CFG.ANNOUNCEMENTS_ROOM&&key!==CFG.SHITPOST_ROOM&&key!==CFG.VIP_ROOM&&key!==CFG.MVP_ROOM;
     let onIds=[],everyone=[];
     try{
-      onIds=(isRoom?DB.presenceIds():DB.onlineIds()).slice();
-      if(isRoom){const r=DB.getRoom(key);everyone=r&&r.members?r.members.slice():[]}
-      else everyone=DB.allUsers().map(u=>u.id);
+      const s=sid();
+      if(s!==DModel.ICH_ID){
+        // a server someone made: its member list is exactly its members
+        everyone=DModel.memberIds(s);
+        const on=new Set(DB.onlineIds());
+        onIds=everyone.filter(id=>on.has(id));
+      }else{
+        onIds=(isRoom?DB.presenceIds():DB.onlineIds()).slice();
+        everyone=DB.allUsers().map(u=>u.id);
+      }
     }catch(_){}
     if(ME&&onIds.indexOf(ME.id)<0)onIds.push(ME.id);
     const onSet=new Set(onIds);
@@ -392,6 +587,28 @@ const DiscordShell=(function(){
     const more=document.getElementById('dlMemMore');if(more)more.onclick=()=>{offAll=true;renderMembers()};
   }
   document.addEventListener('click',e=>{const r=e.target.closest&&e.target.closest('#dlMembers [data-open-profile]');if(r)openUserProfile(Number(r.dataset.openProfile),e.target.closest('.dlp-full')?{full:true}:undefined)});
+  /* Right-click a member: Discord's moderation menu, scoped to the open server. */
+  document.addEventListener('contextmenu',e=>{
+    const r=e.target.closest&&e.target.closest('#dlMembers [data-open-profile]');
+    if(!r||!ME)return;
+    e.preventDefault();
+    const uid=Number(r.dataset.openProfile),s=sid();
+    const items=[{label:'Profile',onClick:()=>openUserProfile(uid)}];
+    if(uid!==ME.id){
+      items.push({label:'Message',onClick:()=>{view.dmView='chat';selectRoom(DB.dmKey(ME.id,uid));openChat('dms')}});
+    }
+    const can=p=>DModel.can(s,p,ME.id)&&DModel.canManageMember(s,uid);
+    if(!DModel.isSystem(s)&&(can('timeout')||can('kick')||can('ban')||DModel.can(s,'manageRoles',ME.id))){
+      items.push({sep:true});
+      if(DModel.can(s,'manageRoles',ME.id))items.push({label:'Manage Member',onClick:()=>openMemberManager(s,uid)});
+      if(can('timeout'))items.push({label:DModel.muteUntil(s,uid)?'Edit Timeout':'Timeout',onClick:()=>openTimeoutDialog(s,uid,()=>renderChat())});
+      if(can('kick'))items.push({label:'Kick',danger:true,onClick:()=>{
+        DModel.kickMember(s,uid).then(()=>{toast('Member kicked.');renderChat()}).catch(err=>toast(err.message,'bad'));
+      }});
+      if(can('ban'))items.push({label:'Ban',danger:true,onClick:()=>openBanDialog(s,uid,()=>renderChat())});
+    }
+    openCtx(e,items);
+  });
 
   /* ---------- refresh (called from renderChat, and when Discord look is switched) ---------- */
   function refresh(switched){
@@ -408,5 +625,38 @@ const DiscordShell=(function(){
     if(switched&&view.page==='chatPage'&&typeof renderChat==='function'){renderedKey=null;renderChat()}
   }
   document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#dlRail'))railClick(e)});
+
+  /* Repaint when the server model changes.
+     Without this the shell only redrew when something ELSE happened to call renderChat (a new
+     message, a presence tick), so a new channel, a renamed role, a changed icon or someone
+     joining could sit invisible for a while. Coalesced on a frame so a burst of listener
+     callbacks - which is what arriving at a server looks like - is one repaint, not twenty. */
+  let _pending=false;
+  try{
+    DModel.onChange(()=>{
+      if(_pending||!ME)return;
+      _pending=true;
+      requestAnimationFrame(()=>{
+        _pending=false;
+        if(!ME)return;
+        try{
+          /* The open server can vanish while you are looking at it - you were banned, it was
+             deleted, or you left it on another device. Fall back to ICH rather than rendering
+             an empty shell. */
+          const mine=DModel.myServers().map(s=>s.id);
+          if(view.mode==='global'&&view.sid&&mine.indexOf(view.sid)<0){
+            const was=view.sid;
+            view.sid=DModel.ICH_ID;
+            try{localStorage.setItem('ich.sid',DModel.ICH_ID)}catch(_){}
+            if(view.roomKey&&DModel.channels(DModel.ICH_ID).every(c=>c.key!==view.roomKey))selectRoom(CFG.GLOBAL_ROOM);
+            if(was)toast('You are no longer in that server.');
+          }
+          if(view.page==='chatPage'&&typeof renderChat==='function')renderChat();
+          else refresh();
+        }catch(e){console.warn('[shell] repaint failed',e)}
+      });
+    });
+  }catch(e){console.warn('[shell] could not subscribe to the server model',e)}
+
   return{refresh,renderFriends,on,serverMode,renderChannels};
 })();

@@ -23,9 +23,18 @@ function goHome(forceMenu){
   $('#homeAv').outerHTML=avatarHtml(ME,ME.username,'width:34px;height:34px;font-size:14px').replace('class="avatar"','class="avatar" id="homeAv"');
   applyStyle(document.documentElement,ME.settings);
   refreshBadge();
-  // Discord look: land in DMs instead of the main-menu grid (the rail's "Main menu" button / Home passes forceMenu).
-  if(!forceMenu&&typeof DiscordLook!=='undefined'&&DiscordLook.on()){openChat('dms');return}
-  show('homePage');
+  /* There is no home page any more - Discord drops you straight into a channel. Land in the
+     server that was last open (ICH the first time), on its last-read channel. */
+  try{
+    // Every sign-in path lands here, including the one that never reloads the page, so this is
+    // where the server model is guaranteed to be running for the right account.
+    DModel.ensureStarted(ME.id);
+    if(!view.sid)view.sid=localStorage.getItem('ich.sid')||DModel.ICH_ID;
+    // Don't try to open a server that was left, deleted, or that this account was banned from.
+    const mine=DModel.myServers().map(s=>s.id);
+    if(mine.indexOf(view.sid)<0)view.sid=DModel.ICH_ID;
+  }catch(e){console.warn('[goHome] server model',e);view.sid=DModel.ICH_ID}
+  openChat('global');
 }
 function refreshBadge(){
   if(!ME)return;const n=DB.unreadDMs(ME.id);

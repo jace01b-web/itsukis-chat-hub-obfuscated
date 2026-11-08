@@ -3,16 +3,26 @@
 (function(){
   if(window.__mobileSidebar)return;window.__mobileSidebar=true;
   var mq=window.matchMedia('(max-width:820px)');
-  var body=document.body;
+  /* Read <body> lazily. Captured at load time it is null whenever this script runs before the
+     document is parsed - which is exactly what a launcher that document.write()s the page into an
+     about:blank window does - and every body.classList call below then throws. */
+  function body(){return document.body||document.documentElement}
 
   var backdrop=document.createElement('div');
   backdrop.className='ms-backdrop';
-  document.body.appendChild(backdrop);
+  /* A launcher can inject this page while <body> does not exist yet (about:blank + document.write
+     puts the scripts in <head>). Appending then throws and takes the whole app down, so wait. */
+  function attachBackdrop(){
+    if(backdrop.parentElement)return;
+    if(document.body)document.body.appendChild(backdrop);
+    else document.addEventListener('DOMContentLoaded',attachBackdrop,{once:true});
+  }
+  attachBackdrop();
 
   function isMobile(){return mq.matches}
-  function isOpen(){return body.classList.contains('ms-open')}
-  function open(){if(isMobile())body.classList.add('ms-open')}
-  function close(){body.classList.remove('ms-open')}
+  function isOpen(){return body().classList.contains('ms-open')}
+  function open(){if(isMobile())body().classList.add('ms-open')}
+  function close(){body().classList.remove('ms-open')}
   function toggle(){isOpen()?close():open()}
   window.msSidebar={open:open,close:close,toggle:toggle};
 
@@ -78,7 +88,7 @@
   function syncBack(){
     syncPending=0;
     var b=isBackIcon();
-    body.classList.toggle('ms-back',b);
+    body().classList.toggle('ms-back',b);
     if(b)close();
   }
   function queueSync(){if(!syncPending)syncPending=requestAnimationFrame(syncBack)}
@@ -103,10 +113,17 @@
     }
   }
   styleMarkAll();
-  var sbRoot=document.getElementById('sidebar')||document.body;
-  var pending=0;
-  new MutationObserver(function(){
-    if(pending)return;
-    pending=requestAnimationFrame(function(){pending=0;styleMarkAll(sbRoot)});
-  }).observe(sbRoot,{childList:true,subtree:true});
+  /* Same story as the backdrop: when a launcher writes this page into an about:blank window the
+     scripts run before <body> exists, so there is nothing to observe yet and observe(null)
+     throws. Wait for the document, then attach. */
+  function watchMarkAll(){
+    var sbRoot=document.getElementById('sidebar')||document.body;
+    if(!sbRoot){document.addEventListener('DOMContentLoaded',watchMarkAll,{once:true});return}
+    var pending=0;
+    new MutationObserver(function(){
+      if(pending)return;
+      pending=requestAnimationFrame(function(){pending=0;styleMarkAll(sbRoot)});
+    }).observe(sbRoot,{childList:true,subtree:true});
+  }
+  watchMarkAll();
 })();
