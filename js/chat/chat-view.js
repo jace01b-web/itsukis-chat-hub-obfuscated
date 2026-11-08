@@ -36,13 +36,27 @@ function updateMuteLock(){
   if(shitBanner)shitBanner.classList.toggle('hidden',!shitLocked);
   const tosReason=(typeof chatBlockReason==='function')?chatBlockReason():null;
   if(typeof tosBannerSync==='function')tosBannerSync(tosReason);
-  const locked=muted||announceLocked||shitLocked||!!tosReason||(view.roomKey===CFG.VIP_ROOM&&!DB.vipInfo(ME.id))||(view.roomKey===CFG.MVP_ROOM&&!hasMvpPerks(ME.id));
+  /* A timeout or ban issued in a server applies to that server's channels only, so it is checked
+     here per channel rather than globally. serverLockReason() returns null on ICH, whose
+     punishments are the site-wide ones handled above. */
+  let srvReason=null;
+  try{
+    const ch=DModel.channelByKey(view.roomKey);
+    if(ch)srvReason=serverLockReason(ch.sid);
+  }catch(_){}
+  if(srvReason&&mutedBanner){mutedBanner.classList.remove('hidden');mutedBanner.textContent='\u23F1\uFE0F '+srvReason}
+  const locked=muted||!!srvReason||announceLocked||shitLocked||!!tosReason||(view.roomKey===CFG.VIP_ROOM&&!DB.vipInfo(ME.id))||(view.roomKey===CFG.MVP_ROOM&&!hasMvpPerks(ME.id));
   [input,sendBtn,attachBtn,emojiBtn].forEach(el=>{if(el)el.disabled=locked});
-  if(input)input.placeholder=muted?'You are muted — you can\'t send messages right now':(announceLocked?'Only the owner can post announcements':(shitLocked?'Only mods, admins and owners can post here':(tosReason&&tosReason!=='Checking your account…'?'Chat is locked. See the notice above.':'Message... use @ to ping')));
+  if(input)input.placeholder=srvReason?srvReason:(muted?'You are muted — you can\'t send messages right now':(announceLocked?'Only the owner can post announcements':(shitLocked?'Only mods, admins and owners can post here':(tosReason&&tosReason!=='Checking your account…'?'Chat is locked. See the notice above.':'Message... use @ to ping'))));
   // Announcements have no message length limit (owner-only, so no spam risk) —
   // every other channel keeps the normal 2000-char cap (MVPs get double: see maxMsgFor()).
   if(input){if(inAnnouncements)input.removeAttribute('maxlength');else input.maxLength=maxMsgFor(ME.id)}
   if(ccMax)ccMax.textContent=inAnnouncements?'':'/'+maxMsgFor(ME.id);
+  if(srvReason&&!muted){
+    // re-check every second so the lock lifts by itself the moment the timeout runs out
+    _muteLockTimer=setTimeout(updateMuteLock,1000);
+    return;
+  }
   if(!muted)return;
   const remaining=DB.muteRemainingMs(ME.id);
   if(mutedBanner)mutedBanner.textContent='🔇 You are muted for '+fmtMuteRemaining(remaining)+'. You can still view chat, but you can\'t send messages until the timeout ends.';
@@ -86,7 +100,7 @@ function renderChat(){
     menuBtn.onclick=()=>{view.roomKey=null;view.section=null;DB.watchMessages(null);goHome(true)};
     // No sidebar visible here to show unread DMs/rooms — so the only way to
     // know is a badge riding the back arrow itself.
-    const totalUnread=DB.unreadDMs(ME.id)+DB.unreadRooms(ME.id)+(view.roomKey===CFG.ANNOUNCEMENTS_ROOM?0:DB.unreadAnnouncements(ME.id))+(view.roomKey===CFG.SHITPOST_ROOM?0:DB.unreadShitposts(ME.id));
+    const totalUnread=DB.unreadDMs(ME.id)+(view.roomKey===CFG.ANNOUNCEMENTS_ROOM?0:DB.unreadAnnouncements(ME.id))+(view.roomKey===CFG.SHITPOST_ROOM?0:DB.unreadShitposts(ME.id));
     menuBtnBadge.textContent=totalUnread>99?'99+':totalUnread;
     menuBtnBadge.classList.toggle('show',totalUnread>0);
     if(typeof refreshMarkRead==='function')refreshMarkRead();
@@ -100,24 +114,6 @@ function renderChat(){
 
   if(dlSrv){
     DiscordShell.renderChannels(list,foot);
-  }else if(g&&view.section==='rooms'){
-    // Entered via "Rooms": just the room switcher, no Global Chat entry —
-    // the back arrow is the only way out, straight to the main menu.
-    addHTML(list,`<div class="sb-section">My Rooms</div>`);
-    const rooms=DB.myRooms(ME.id);
-    if(!rooms.length)addHTML(list,`<div class="hint" style="padding:6px 10px">No rooms yet.</div>`);
-    rooms.forEach(r=>{
-      const unread=DB.unreadIn(r.id,ME.id);
-      list.appendChild(sbItem('🔒',r.name,view.roomKey===r.id,()=>selectRoom(r.id),unread,null,()=>{
-      modalLeaveRoomConfirm(r,async()=>{
-        await DB.leaveRoom(ME.id,r.id);
-        if(view.roomKey===r.id){view.roomKey=null}
-        render();renderChat();
-      });
-    }));
-    });
-    foot.innerHTML=`<button class="btn small" id="newRoom">+ Create</button><button class="btn sec small" id="joinRoom">Join</button>`;
-    $('#newRoom').onclick=modalCreateRoom;$('#joinRoom').onclick=modalJoinRoom;
   }else if(g){
     // Entered via "Global Chat": no room switcher at all — the back arrow
     // just exits straight to the main menu.

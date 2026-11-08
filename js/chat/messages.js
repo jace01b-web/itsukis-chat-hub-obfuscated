@@ -56,9 +56,19 @@ function senderSig(m){
   const ri=replyTargetInfo(m);
   return resolved+'|'+name+'|'+avatar+'|'+(m.text||'')+'|'+(m.editedAt||0)+'|'+rx+'|'+(ri?(ri.gone?'\u0001gone':ri.text):'');
 }
+// Discord labels day dividers "Today" / "Yesterday" / "November 7, 2026", not "Sat Nov 07 2026".
+function fmtDaySep(at){
+  const d=new Date(at),now=new Date();
+  const same=(a,b)=>a.toDateString()===b.toDateString();
+  if(same(d,now))return 'Today';
+  const y=new Date(now);y.setDate(y.getDate()-1);
+  if(same(d,y))return 'Yesterday';
+  try{return d.toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'})}
+  catch(_){return d.toDateString()}
+}
 function appendMsgRow(box,m,lastDay,live){
   const day=new Date(m.at).toDateString();
-  if(day!==lastDay){const d=document.createElement('div');d.className='date-sep';d.textContent=day;box.appendChild(d)}
+  if(day!==lastDay){const d=document.createElement('div');d.className='date-sep';d.textContent=fmtDaySep(m.at);box.appendChild(d)}
   const el=msgEl(m);
   // `live` marks a message that's genuinely just arriving (sent or received
   // in real time) rather than one being painted as part of loading history —

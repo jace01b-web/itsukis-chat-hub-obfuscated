@@ -34,7 +34,14 @@ function mentionCandidates(){
   const key=view.roomKey;let ids=[];
   if(key===CFG.GLOBAL_ROOM||key===CFG.ANNOUNCEMENTS_ROOM||key===CFG.SHITPOST_ROOM)ids=DB.allUsers().map(u=>u.id);
   else if(key?.startsWith('dm_'))ids=key.split('_').slice(1).map(Number);
-  else ids=DB.getRoom(key)?.members||[];
+  else{
+    // A server channel: you can only @ the people who are actually in that server.
+    try{
+      const ch=DModel.channelByKey(key);
+      ids=ch?DModel.memberIds(ch.sid):[];
+    }catch(_){ids=[]}
+    if(!ids.length)ids=DB.allUsers().map(u=>u.id);
+  }
   return ids.map(i=>DB.getUser(i)).filter(Boolean);
 }
 // :emoji_name autocomplete (type ":" + 2 letters -> first 10 matches) and instant ":name:" -> emoji.

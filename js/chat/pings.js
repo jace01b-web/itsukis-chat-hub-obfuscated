@@ -82,9 +82,18 @@ function _viewingRoom(key){
 function checkPingNotifications(){
   if(!ME||!ME.settings.pings||!ME.settings.pings.desktop)return;
   if(typeof Notification==='undefined'||Notification.permission!=='granted')return;
-  const keys=[CFG.GLOBAL_ROOM,CFG.ANNOUNCEMENTS_ROOM,CFG.SHITPOST_ROOM,
-    ...DB.myRooms(ME.id).map(r=>r.id),
-    ...DB.friends(ME.id).map(f=>DB.dmKey(ME.id,f))];
+  // every text channel of every server you are in, plus your DMs
+  let chanKeys=[];
+  try{
+    DModel.myServers().forEach(s=>{
+      DModel.channels(s.id).forEach(c=>{
+        if(c.type!=='voice'&&c.key)chanKeys.push(c.key);
+      });
+    });
+  }catch(_){}
+  const keys=[...new Set([CFG.GLOBAL_ROOM,CFG.ANNOUNCEMENTS_ROOM,CFG.SHITPOST_ROOM,
+    ...chanKeys,
+    ...DB.friends(ME.id).map(f=>DB.dmKey(ME.id,f))])];
   keys.forEach(key=>{
     const isDM=String(key).startsWith('dm_');
     (DB.messages(key)||[]).forEach(m=>{

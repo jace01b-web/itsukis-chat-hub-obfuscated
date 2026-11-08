@@ -19,20 +19,25 @@ function renderMain(){
   if(!key){renderedKey=null;msgs.innerHTML='<div class="empty">Select a conversation.</div>';composer.classList.add('hidden');return}
   DB.markRead(ME.id,key);refreshBadge();
   let title='';let headerAv='';
-  if(key===CFG.GLOBAL_ROOM)title='🌍 Global Chat';
-  else if(key===CFG.ANNOUNCEMENTS_ROOM)title='📢 Announcements';
-  else if(key===CFG.SHITPOST_ROOM)title='💩 Shitpost';
-  else if(key===CFG.VIP_ROOM)title='💎 VIP Lounge';
-  else if(key===CFG.MVP_ROOM)title='🏆 MVP Lounge';
+  // Discord shows "# name", so the five original rooms use their channel names.
+  const _ich={[CFG.GLOBAL_ROOM]:'general',[CFG.ANNOUNCEMENTS_ROOM]:'announcements',
+              [CFG.SHITPOST_ROOM]:'shitpost',[CFG.VIP_ROOM]:'vip-lounge',[CFG.MVP_ROOM]:'mvp-lounge'};
+  if(_ich[key]){
+    title='# '+_ich[key];
+    let ch=null;try{ch=DModel.channelByKey(key)}catch(_){}
+    if(ch&&ch.topic)title+=`<span class="tb-div-x"></span><span class="tb-topic-x">${esc(ch.topic)}</span>`;
+  }
   else if(key.startsWith('dm_')){
     const [,a,b]=key.split('_').map(Number);const other=a===ME.id?b:a;
     const ou=DB.getUser(other);
     title=esc(ou?.username||'Unknown');
     if(ou)headerAv=`<span data-open-profile="${other}" style="cursor:pointer;display:inline-flex;vertical-align:middle;margin-right:8px">${avatarHtml(ou,ou.username,'width:26px;height:26px;font-size:11px')}</span>`;
   }else{
-    const r=DB.getRoom(key);
-    title=r?`🔒 ${esc(r.name)}`:'Room';
-    if(r)title+=`  (code: ${esc(r.code)})`;   // goes into innerHTML below
+    // A channel of a server. Look it up by its message key so the title, the # prefix and the
+    // topic all come from the server model rather than the old room record.
+    let ch=null;try{ch=DModel.channelByKey(key)}catch(_){}
+    title=ch?`# ${esc(ch.name)}`:'Channel';
+    if(ch&&ch.topic)title+=`<span class="tb-div-x"></span><span class="tb-topic-x">${esc(ch.topic)}</span>`;
   }
   $('#chatTitle').innerHTML=headerAv+title;
   const hAv=$('#chatTitle').querySelector('[data-open-profile]');
