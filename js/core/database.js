@@ -73,6 +73,12 @@ const DB=(()=>{
   // a Reconnect button that re-claims the session — which in turn kicks
   // whichever client is currently active.
   function genSessionToken(){return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)}
+  /* One id for the lifetime of this page. Every session claim carries it.
+     Without it the takeover check compared tokens alone, and this client's own earlier claim —
+     a second startListeners() pass, a re-fired auth state, a slow write landing after a newer
+     one — came back as "somebody else took the account" and froze the tab behind the
+     Disconnected overlay. A takeover is only a takeover when it comes from a DIFFERENT client. */
+  const MY_CLIENT_ID=genSessionToken();
   /* Self-heal: onlineUsers/$id is one shared boolean per account and only got written on (re)connect. If anything cleared it
      while this client was still live (another tab/device closing, a network blip, a re-login race) the person showed as
      "Offline" everywhere until they refreshed. Now a live client notices its own marker is missing and puts it back. */
@@ -151,16 +157,26 @@ const DB=(()=>{
         if(kicked){sessLog('reconnect confirmed, un-kicking');kicked=false;hideKickOverlay();armPresence();rejoinScopedPresence()}
         return;
       }
+      // A different TOKEN but the same CLIENT is just an older claim of ours catching up
+      // (overlapping startListeners passes, or two writes landing out of order). That is this
+      // same tab, so it must never kick us — re-assert instead, and undo a kick we caused.
+      if(val.client&&val.client===MY_CLIENT_ID){
+        sessLog('stale claim from this same client — ignoring, re-claiming');
+        if(kicked){kicked=false;hideKickOverlay();armPresence();rejoinScopedPresence()}
+        claimSession();
+        return;
+      }
       // Only act once we've actually confirmed OUR claim landed — otherwise the
       // very first snapshot (still holding a stale value from a previous
       // session) would wrongly look like an instant takeover on every login.
-      if(sessionConfirmed&&!kicked){sessLog('token mismatch after confirmation -> KICKING this client');takeoverKick()}
+      // Older clients wrote no `client` field; for those fall back to the token-only rule.
+      if(sessionConfirmed&&!kicked){sessLog('takeover by another client -> KICKING this client');takeoverKick()}
     },e=>sessLog('LISTEN DENIED on sessions/'+myId,e.code||e.message));
   }
   function claimSession(){
     mySessionToken=genSessionToken();sessionConfirmed=false;
     sessLog('claiming id=',myId,'token=',mySessionToken);
-    return set(R('sessions/'+myId),{token:mySessionToken,at:serverTimestamp()})
+    return set(R('sessions/'+myId),{token:mySessionToken,client:MY_CLIENT_ID,at:serverTimestamp()})
       .then(()=>sessLog('claim write acknowledged by server'))
       .catch(e=>sessLog('CLAIM WRITE FAILED:',e.code||e.message));
   }

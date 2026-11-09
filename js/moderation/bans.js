@@ -84,10 +84,20 @@ function checkBanLock(currentId,bannedMap){
    so we stop competing for onlineUsers/myId and let the person explicitly choose
    which client should be the live one. */
 let KICK_OVERLAY=null;
+const KICK_FROZEN='.sidebar,.app-shell,#settingsBtn,.composer,.tabs';
+/* Undo the freeze unconditionally. This used to live only inside hideKickOverlay(), so if the
+   overlay element ever left the DOM another way the shell stayed at pointer-events:none and 35%
+   opacity with nothing on screen to explain it — the app looked up, but no click did anything. */
+function unfreezeShell(){
+  document.querySelectorAll(KICK_FROZEN).forEach(el=>el&&(el.style.pointerEvents='',el.style.opacity=''));
+}
 function showKickOverlay(){
+  /* If the node was torn out from under us, drop the stale handle and rebuild rather than
+     returning early — returning early is what left the shell frozen behind no overlay. */
+  if(KICK_OVERLAY&&!document.body.contains(KICK_OVERLAY))KICK_OVERLAY=null;
   if(KICK_OVERLAY)return;
   try{$('#modalRoot').innerHTML='';}catch(_){}
-  document.querySelectorAll('.sidebar,.app-shell,#settingsBtn,.composer,.tabs').forEach(el=>el&&(el.style.pointerEvents='none',el.style.opacity='.35'));
+  document.querySelectorAll(KICK_FROZEN).forEach(el=>el&&(el.style.pointerEvents='none',el.style.opacity='.35'));
   const bg=document.createElement('div');
   bg.className='modal-bg gc-overlay';
   bg.style.zIndex='99999';
@@ -106,9 +116,9 @@ function showKickOverlay(){
   });
 }
 function hideKickOverlay(){
-  if(!KICK_OVERLAY)return;
   const el=KICK_OVERLAY;KICK_OVERLAY=null;
-  document.querySelectorAll('.sidebar,.app-shell,#settingsBtn,.composer,.tabs').forEach(el2=>el2&&(el2.style.pointerEvents='',el2.style.opacity=''));
+  unfreezeShell();                       // always, even if the overlay was already gone
+  if(!el)return;
   el.classList.add('closing');
   setTimeout(()=>{try{el.remove()}catch(_){}},260);
 }
