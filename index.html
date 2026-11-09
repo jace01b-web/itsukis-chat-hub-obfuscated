@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-11-08.01">
+<meta name="build-version" content="2026-11-09.01">
 
 
 <title>Itsukis Chat Hub</title>
@@ -50,6 +50,35 @@ html.discord-look #loadingPage{background:var(--dl-body,#313338);color:#f2f3f5}
 html.discord-look #loadingPage .ld-mark{background:#5865f2;border-radius:50%}
 html.discord-look #loadingPage .ld-bar i{background:#5865f2}
 html.discord-look #loadingPage .ld-phase{color:#949ba4}
+</style>
+<!-- ============================================================================
+     SAFETY NET (inlined on purpose, and deliberately low-priority)
+     Stylesheets are fetched at runtime from the raw repo. When one of them fails
+     to arrive (GitHub rate-limits raw, or a push is still propagating) the old
+     loader simply skipped it, and the app rendered with that layer missing - the
+     visible symptom being images and videos painting at their natural pixel size
+     and blowing the whole layout apart.
+     These rules ship with the page, so the worst case is now "slightly plain"
+     instead of "unusable". They sit ABOVE the injected <style data-css> blocks in
+     the document, so the moment the real stylesheet loads it wins on equal
+     specificity and nothing here has any effect.
+     ============================================================================ -->
+<style id="boot-safety">
+/* nothing may paint wider than its column */
+#app img,#app video,#app canvas,.msg img,.msg video,.bubble img,.bubble video{max-width:100%;height:auto}
+/* chat attachments + inline images */
+.imgs{max-width:340px}
+.imgs img{max-width:100%;max-height:320px;height:auto;display:block}
+.fa-wrap{max-width:360px}
+.fa-gif,.fa-media img{max-width:100%;max-height:340px;width:auto;height:auto;display:block}
+.fa-video,.fa-media video{max-width:100%;max-height:360px;display:block}
+.fa-chip-ic img{width:100%;height:100%;object-fit:cover}
+/* avatars must never inherit a natural size */
+.av,.av img,.pv-av,.dl-rail-btn img,.vc-av img,.dicon-prev img,.dvic img{max-width:100%;max-height:100%}
+/* a lightbox with no stylesheet must not become an infinite page */
+.lightbox img{max-width:92vw;max-height:88vh}
+/* embedded/pasted media anywhere in a message */
+.msg-body img,.msg-body video,.fa-card img{max-width:100%;height:auto}
 </style>
 <!-- LOADING SCREEN DRIVER: runs in both builds (the raw-link one below and the single-file
      one from build-single.js), so the loading screen behaves the same either way. -->
@@ -101,6 +130,12 @@ html.discord-look #loadingPage .ld-phase{color:#949ba4}
 <script>
 (function(){
   var RAW="https://raw.githubusercontent.com/jace01b-web/itsukis-chat-hub-obfuscated/main/";
+  /* Mirrors of the same repo, tried in order. raw.githubusercontent is the freshest but it is
+     also the one that rate-limits and that lags for a minute or two after a push, so a miss
+     there falls through to the CDNs instead of dropping the file on the floor. */
+  var JSD="https://cdn.jsdelivr.net/gh/jace01b-web/itsukis-chat-hub-obfuscated@main/";
+  var STC="https://cdn.statically.io/gh/jace01b-web/itsukis-chat-hub-obfuscated/main/";
+  function mirrors(rel){return [RAW+rel,JSD+rel,STC+rel];}
   var m=document.querySelector('meta[name="build-version"]');
   var Q=m&&m.content?"?v="+encodeURIComponent(m.content):"";
   var BOOT=window.ICHBoot;
@@ -128,9 +163,26 @@ html.discord-look #loadingPage .ld-phase{color:#949ba4}
     return null;
   }
   var texts={},blobs={};
+  /* Fetch one repo file, walking the mirror list and then backing off and starting over.
+     This used to be a single un-retried request: one hiccup on raw.githubusercontent and that
+     script never loaded, which is how the app ended up half-wired - some features present,
+     others silently missing, with nothing on screen to say so. */
+  function fetchRel(rel,label){
+    var urls=mirrors(rel);
+    function at(i,round){
+      return origFetch.call(window,urls[i]+Q,round?{cache:"reload"}:undefined).then(function(r){
+        if(!r.ok)throw new Error(label+" HTTP "+r.status);return r.text();
+      }).catch(function(e){
+        if(i+1<urls.length)return at(i+1,round);
+        if(round<2)return new Promise(function(ok){setTimeout(ok,400*(round+1))}).then(function(){return at(0,round+1)});
+        throw e;
+      });
+    }
+    return at(0,0);
+  }
+  function relOf(key){return key.indexOf(RAW)===0?key.slice(RAW.length):key;}
   function text(key){
-    return texts[key]||(texts[key]=origFetch.call(window,key+Q).then(function(r){
-      if(!r.ok)throw new Error(key+" HTTP "+r.status);return r.text();}));
+    return texts[key]||(texts[key]=fetchRel(relOf(key),relOf(key)));
   }
   function blob(key){
     return blobs[key]||(blobs[key]=text(key).then(function(t){
@@ -164,36 +216,63 @@ html.discord-look #loadingPage .ld-phase{color:#949ba4}
   function paintProg(){BOOT.prog(4+Math.round(86*(cssGot/CSS.length*.45+jsGot/JS.length*.55)));}
   JS.forEach(function(p){blob(RAW+p).then(tickJs,tickJs);});
   function tickJs(){jsGot++;paintProg();}
-  var JSD="https://cdn.jsdelivr.net/gh/jace01b-web/itsukis-chat-hub-obfuscated@main/";
-  function cssText(f){
-    var urls=[RAW+"css/"+f+".css",JSD+"css/"+f+".css"];
-    function at(i,round){
-      return origFetch.call(window,urls[i]+Q,{cache:round?"reload":"default"}).then(function(r){
-        if(!r.ok)throw new Error(f+" HTTP "+r.status);return r.text();
-      }).catch(function(e){
-        if(i+1<urls.length)return at(i+1,round);
-        if(round<2)return new Promise(function(ok){setTimeout(ok,500*(round+1))}).then(function(){return at(0,round+1)});
-        throw e;
-      });
-    }
-    return at(0,0);
-  }
+  function cssText(f){return fetchRel("css/"+f+".css",f);}
   BOOT.step("css");BOOT.phase("Loading styles — 0 of "+CSS.length);
   function tickCss(){
     cssGot++;
     BOOT.phase("Loading styles — "+cssGot+" of "+CSS.length);
     paintProg();
   }
+  /* Every stylesheet gets its <style> slot up front, in manifest order, whether or not its text
+     arrived. Order is load-bearing here - 27-discord-exact has to stay last so it can correct the
+     layers above it - so a stylesheet that shows up late is poured into the slot it already owns
+     rather than appended to the end of <head>, where it would override everything after it. */
+  var cssSlots={};
+  function cssSlot(f){
+    var el=cssSlots[f];
+    if(!el){
+      el=document.createElement("style");
+      el.setAttribute("data-css",f+".css");
+      document.head.appendChild(el);
+      cssSlots[f]=el;
+    }
+    return el;
+  }
+  var cssFailed=[];
   var cssDone=Promise.all(CSS.map(function(f){
     return cssText(f).then(function(t){tickCss();return {f:f,t:t};},
       function(e){console.error("[css]",e);tickCss();return {f:f,t:""};});
   })).then(function(res){
     res.forEach(function(x){
-      if(!x.t)return;
-      var s=document.createElement("style");
-      s.setAttribute("data-css",x.f+".css");s.textContent=x.t;document.head.appendChild(s);
+      cssSlot(x.f);                       /* reserve the slot even when empty */
+      if(x.t)cssSlots[x.f].textContent=x.t;
+      else cssFailed.push(x.f);
     });
     window.__cssReady=true;
+    window.__cssMissing=cssFailed.slice();
+    /* Keep trying in the background. The app is already usable by now (the safety net in
+       <head> keeps the layout sane), so this just quietly restores the missing layer when the
+       mirror catches up, instead of leaving everyone on a broken-looking page until they reload. */
+    if(cssFailed.length){
+      console.warn("[css] missing after first pass:",cssFailed.join(", "));
+      var tries=0;
+      (function repair(){
+        if(!cssFailed.length||tries>=5)return;
+        tries++;
+        var batch=cssFailed.slice();
+        Promise.all(batch.map(function(f){
+          return cssText(f).then(function(t){
+            if(!t)return;
+            cssSlot(f).textContent=t;
+            cssFailed.splice(cssFailed.indexOf(f),1);
+            console.info("[css] recovered",f);
+          },function(){});
+        })).then(function(){
+          window.__cssMissing=cssFailed.slice();
+          if(cssFailed.length)setTimeout(repair,2000*tries);
+        });
+      })();
+    }
   });
 
   function run(path){

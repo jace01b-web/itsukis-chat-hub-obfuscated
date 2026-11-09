@@ -46,7 +46,13 @@ const inlined=
      The app's top-level `const`s are scoped to this module, same as in the real build, so the
      driver is handed explicit references. */
   '<script type="module">\n'+
-  'window.__APP_START=function(){\n'+safe(appCode)+'\n'+
+  /* Guard: starting the app twice builds a SECOND set of module closures over the same fake
+     database, and the two then fight over sessions/$myId and kick each other off with the
+     "signed in somewhere else" overlay. A page that is written into about:blank auto-starts
+     (no ?manual in the query) and the test then calls __APP_START again, which is exactly how
+     that happened. One boot per page, always. */
+  'window.__APP_START=function(){\n'+
+  'if(window.__APP_STARTED)return;window.__APP_STARTED=true;\n'+safe(appCode)+'\n'+
   'window.__T={DModel,DB,CFG,openShop,openServerSettings,openAddServer,openCreateServer,'+
   'openJoinServer,openInvite,openCreateChannel,openChannelSettings,openMemberManager,'+
   'openNav,closeNav,openMembersDrawer,closeMembersDrawer,toggleNav,dmodal,openCtx,'+
@@ -56,7 +62,10 @@ const inlined=
   'serverIconFromFile,serverIconPicker,openBanDialog,openTimeoutDialog,handleInviteLink,'+
   'DiscordShell,show,modalTos,pageIsAddressable,'+
   'get view(){return view},get ME(){return ME}};\n};\n'+
-  "if(!location.search.includes('manual'))window.__APP_START();\n"+
+  /* about:blank has no query string, so ?manual cannot be expressed there. A page written into
+     about:blank is always driven by the test (seed -> sign in -> start), so it must not boot
+     itself first against an empty database. */
+  "if(!location.search.includes('manual')&&location.href.indexOf('about:blank')!==0)window.__APP_START();\n"+
   '</script>';
 
 html=html.slice(0,a)+'<!-- TEST HARNESS: fake Firebase + inlined app -->\n'+inlined+html.slice(b+END.length);
