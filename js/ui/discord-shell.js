@@ -185,6 +185,10 @@ const DiscordShell=(function(){
       closeExtras();
       view.mode='global';view.sid=s;view.section=null;
       try{localStorage.setItem('ich.sid',s)}catch(_){}
+      /* Re-assert that I can actually read and write in this server's channels. It is a no-op
+         unless the channel list changed, and it is what repairs a join (or a channel creation)
+         whose second write didn't land - the "I'm in the server but can't talk" complaint. */
+      try{DModel.grantAccess(s).catch(()=>{})}catch(_){}
       const c=lastChannelOf(s);
       if(c)openChannel(s,c);
       else{view.roomKey=null;DB.watchMessages(null);renderChat()}
@@ -213,21 +217,79 @@ const DiscordShell=(function(){
 
 
   /* ---------- user panel (bottom of the sidebar) ---------- */
-  /* The user panel floats across the bottom-left corner (under the rail AND the sidebar) on desktop, so it lives
-     directly in .chat-layout there; on phones it goes back to the bottom of the slide-out sidebar. */
+  /* The user panel sits at the foot of the CHANNEL SIDEBAR, 240px wide - it does not run under the
+     server rail. (It used to be appended to .chat-layout on desktop, which stretched it across both
+     columns; Discord has never done that.) One home at every width also means the voice panel,
+     which docks directly above it, never has to move either. */
   function placeUser(){
-    const p=document.getElementById('dlUser'),lay=document.querySelector('#chatPage .chat-layout'),sb=document.getElementById('sidebar');
-    if(!p||!lay||!sb)return;
-    const want=desktop()?lay:sb;
-    if(p.parentElement!==want)want.appendChild(p);
+    const p=document.getElementById('dlUser'),sb=document.getElementById('sidebar');
+    if(!p||!sb)return;
+    if(p.parentElement!==sb)sb.appendChild(p);
   }
   window.addEventListener('resize',()=>{try{placeUser()}catch(_){}});
   function renderUser(){
     placeUser();
     const p=document.getElementById('dlUser');if(!p||!ME)return;
-    p.innerHTML=`<button type="button" class="dl-user-me" id="dlUserMe" title="Profile settings"><span class="dl-user-av">${avatarHtml(ME,ME.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot"></i></span><span class="dl-user-txt"><b>${esc(displayUsername(ME.username))}</b><small>Online</small></span></button><button type="button" class="dl-user-gear" id="dlUserGear" data-tip="User Settings" aria-label="User Settings">${GEAR}</button>`;
-    document.getElementById('dlUserMe').onclick=()=>openAccount();
+    const st=myStatus(),custom=myCustomStatus();
+    p.innerHTML=`<button type="button" class="dl-user-me" id="dlUserMe" title="Set status"><span class="dl-user-av">${avatarHtml(ME,ME.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot st-${st}"></i></span><span class="dl-user-txt"><b>${esc(displayUsername(ME.username))}</b><small>${esc(custom||STATUS_LABEL[st]||'Online')}</small></span></button><button type="button" class="dl-user-gear" id="dlUserGear" data-tip="User Settings" aria-label="User Settings">${GEAR}</button>`;
+    // Discord: clicking yourself opens the status menu, the cog opens settings.
+    document.getElementById('dlUserMe').onclick=e=>{e.stopPropagation();openStatusMenu(document.getElementById('dlUserMe'))};
     document.getElementById('dlUserGear').onclick=()=>openSettings(false);
+  }
+  function myStatus(){try{return normStatus(ME&&ME.style&&ME.style.status)}catch(_){return 'online'}}
+  function myCustomStatus(){try{return String((ME&&ME.style&&ME.style.customStatus)||'')}catch(_){return ''}}
+
+  /* ---------- status menu (Discord's user-panel popout) ---------- */
+  let stPop=null;
+  function closeStatusMenu(){if(stPop){stPop.remove();stPop=null}}
+  document.addEventListener('click',e=>{if(stPop&&!e.target.closest('.dl-stpop')&&!e.target.closest('#dlUserMe'))closeStatusMenu()});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeStatusMenu()});
+  function openStatusMenu(anchor){
+    if(stPop){closeStatusMenu();return}
+    const cur=myStatus(),custom=myCustomStatus();
+    const row=(id)=>`<button type="button" class="dl-stitem${cur===id?' on':''}" data-st="${id}">
+        <i class="dl-dot st-${id}"></i>
+        <span class="dl-stitem-t"><b>${esc(STATUS_LABEL[id])}</b>${STATUS_SUB[id]?`<small>${esc(STATUS_SUB[id])}</small>`:''}</span>
+      </button>`;
+    stPop=document.createElement('div');
+    stPop.className='dl-stpop';
+    stPop.innerHTML=`
+      <div class="dl-stpop-head">
+        <span class="dl-user-av">${avatarHtml(ME,ME.username,'width:40px;height:40px;font-size:16px')}<i class="dl-dot st-${cur}"></i></span>
+        <b>${esc(displayUsername(ME.username))}</b>
+      </div>
+      <div class="dl-stpop-sep"></div>
+      ${['online','idle','dnd','invisible'].map(row).join('')}
+      <div class="dl-stpop-sep"></div>
+      <div class="dl-stcustom">
+        <label for="dlStCustom">Custom status</label>
+        <input id="dlStCustom" type="text" maxlength="128" placeholder="What's on your mind?" value="${esc(custom)}" autocomplete="off">
+      </div>
+      <div class="dl-stpop-sep"></div>
+      <button type="button" class="dl-stitem plain" data-go="profile"><span class="dl-stitem-t"><b>Edit Profile</b></span></button>
+      <button type="button" class="dl-stitem plain" data-go="settings"><span class="dl-stitem-t"><b>User Settings</b></span></button>`;
+    document.body.appendChild(stPop);
+    // sits directly above the user panel, like Discord's
+    const r=anchor.getBoundingClientRect();
+    stPop.style.left=Math.max(8,Math.min(r.left,window.innerWidth-stPop.offsetWidth-8))+'px';
+    stPop.style.bottom=Math.max(8,window.innerHeight-r.top+8)+'px';
+
+    stPop.querySelectorAll('[data-st]').forEach(b=>b.onclick=async()=>{
+      const v=b.dataset.st;closeStatusMenu();
+      try{await DB.setStatus(ME.id,v);ME=DB.currentUser();renderUser();renderMembers()}
+      catch(e){toast('Could not save your status'+(/PERMISSION/i.test(e.code||e.message||'')?' — the database rules need republishing.':'.'),'bad')}
+    });
+    const ci=stPop.querySelector('#dlStCustom');
+    const saveCustom=async()=>{
+      const v=ci.value;
+      if(v===custom)return;
+      try{await DB.setCustomStatus(ME.id,v);ME=DB.currentUser();renderUser()}
+      catch(e){toast('Could not save your custom status.','bad')}
+    };
+    ci.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();saveCustom();closeStatusMenu()}});
+    ci.addEventListener('blur',saveCustom);
+    stPop.querySelector('[data-go="profile"]').onclick=()=>{closeStatusMenu();openSettings(false,'profile')};
+    stPop.querySelector('[data-go="settings"]').onclick=()=>{closeStatusMenu();openSettings(false)};
   }
 
   /* ---------- Friends page ---------- */
@@ -240,7 +302,13 @@ const DiscordShell=(function(){
       <div class="dl-fr-tabs">
         <span class="dl-fr-title"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="currentColor"><path d="M13 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM3 21v-1c0-3.3 4-5 10-5s10 1.7 10 5v1z" transform="translate(-1 1)"/></svg>Friends</span>
         <i class="dl-fr-dot"></i>
-        ${tabs.map(([k,l])=>`<button type="button" class="dl-fr-tab${tab===k?' active':''}" data-dltab="${k}">${l}</button>`).join('')}
+        <!-- The four tabs are wrapped so the row can become its own scrolling strip on a phone.
+             Unwrapped, they were siblings in one nowrap flex row with the title and the button,
+             which needs ~520px - on a 390px screen that pushed Add Friend right off the edge of
+             the display, where it could not be reached at all. -->
+        <div class="dl-fr-tabrow">
+          ${tabs.map(([k,l])=>`<button type="button" class="dl-fr-tab${tab===k?' active':''}" data-dltab="${k}">${l}</button>`).join('')}
+        </div>
         <button type="button" class="dl-fr-add" id="frAdd">Add Friend</button>
       </div>
       <div class="dl-fr-search"><input id="dlFrQ" type="text" placeholder="Search" autocomplete="off" spellcheck="false" value="${esc(q)}"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4-4"/></svg></div>
@@ -253,7 +321,12 @@ const DiscordShell=(function(){
 
     function paint(){
       const body=$('#dlFrBody');if(!body)return;
-      const t=q.trim().toLowerCase(),onl=new Set(DB.onlineIds());
+      // same rule as the member list: Invisible reads as offline to everybody else
+      const t=q.trim().toLowerCase();
+      const onl=new Set(DB.onlineIds().filter(id=>{
+        if(ME&&id===ME.id)return true;
+        try{return DB.statusOf?DB.statusOf(id)!=='offline':true}catch(_){return true}
+      }));
       const match=id=>{if(!t)return true;const u=DB.getUser(id);return !!u&&String(u.username).toLowerCase().includes(t)};
       body.innerHTML='';
       const head=txt=>{const h=document.createElement('div');h.className='dl-fr-h';h.textContent=txt;body.appendChild(h)};
@@ -266,7 +339,7 @@ const DiscordShell=(function(){
         const u=DB.getUser(uid)||{id:uid,username:'User '+uid};
         const d=document.createElement('div');d.className='dl-fr-row';
         const isOn=onl.has(uid);
-        d.innerHTML=`<span class="dl-fr-av" data-open-profile="${uid}">${avatarHtml(u,u.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot${isOn?'':' off'}"></i></span><div class="dl-fr-who"><b>${esc(displayUsername(u.username))}</b><small>${esc(sub||(isOn?'Online':'Offline'))}</small></div><div class="dl-fr-acts"></div>`;
+        d.innerHTML=`<span class="dl-fr-av" data-open-profile="${uid}">${avatarHtml(u,u.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot ${dotClass(uid,!isOn)}"></i></span><div class="dl-fr-who"><b>${esc(displayUsername(u.username))}</b><small>${esc(sub||(isOn?'Online':'Offline'))}</small></div><div class="dl-fr-acts"></div>`;
         d.querySelector('[data-open-profile]').onclick=e=>{e.stopPropagation();openUserProfile(uid)};
         const a=d.querySelector('.dl-fr-acts');acts.forEach(x=>a.appendChild(x));
         d.onclick=()=>{if(tab==='online'||tab==='all'){view.dmView='chat';selectRoom(DB.dmKey(ME.id,uid))}else openUserProfile(uid)};
@@ -307,6 +380,9 @@ const DiscordShell=(function(){
   const CH_LOCK='<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M17 11V8a5 5 0 0 0-10 0v3H5v11h14V11h-2Zm-8-3a3 3 0 0 1 6 0v3H9V8Z"/></svg>';
   const CH_VOICE='<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M12 3a1 1 0 0 0-1.7-.7L5.6 7H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2.6l4.7 4.7A1 1 0 0 0 12 21V3Zm4.2 2.4a1 1 0 0 0-.4 1.9 6 6 0 0 1 0 9.4 1 1 0 0 0 .4 1.9 8 8 0 0 0 0-13.2Z"/></svg>';
   const CHEV='<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+  // the little mic/headphone crossed-out marks Discord puts next to someone in a voice channel
+  const MUTE_IC='<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/><path d="M3.5 3.5l17 17" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>';
+  const DEAF_IC='<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M12 3a9 9 0 0 0-9 9v6a3 3 0 0 0 3 3h1v-8H5v-1a7 7 0 0 1 14 0v1h-2v8h1a3 3 0 0 0 3-3v-6a9 9 0 0 0-9-9z"/><path d="M3.5 3.5l17 17" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>';
   const GEAR_SM='<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7Zm7.4-2.5a7.6 7.6 0 0 0 0-2l2-1.6a.5.5 0 0 0 .1-.6l-1.9-3.3a.5.5 0 0 0-.6-.2l-2.4 1a7.4 7.4 0 0 0-1.7-1l-.4-2.5a.5.5 0 0 0-.5-.4h-3.8a.5.5 0 0 0-.5.4l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1a.5.5 0 0 0-.6.2L2.6 8.8a.5.5 0 0 0 .1.6l2 1.6a7.6 7.6 0 0 0 0 2l-2 1.6a.5.5 0 0 0-.1.6l1.9 3.3a.5.5 0 0 0 .6.2l2.4-1a7.4 7.4 0 0 0 1.7 1l.4 2.5a.5.5 0 0 0 .5.4h3.8a.5.5 0 0 0 .5-.4l.4-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1a.5.5 0 0 0 .6-.2l1.9-3.3a.5.5 0 0 0-.1-.6l-2-1.6Z"/></svg>';
 
   /* Which categories the viewer has collapsed. Per server, remembered locally like Discord. */
@@ -326,13 +402,32 @@ const DiscordShell=(function(){
     if(c.type==='voice'){
       view.sid=s;
       try{localStorage.setItem('ich.sid',s)}catch(_){}
-      // js/features/voice-channel.js owns the whole voice experience; just open its panel.
-      if(typeof window.voiceOpen==='function'){window.voiceOpen();closeNav();return}
+      /* Discord joins a voice channel the moment you click it, and shows the call in the main
+         area. js/features/voice-channel.js owns all of that; it just needs to be told WHICH
+         channel, because every voice channel on every server is now its own call. */
+      if(typeof window.voiceOpen==='function'){
+        const srv=DModel.server(s)||{...DModel.ICH};
+        const cur=typeof window.voiceCurrent==='function'?window.voiceCurrent():null;
+        const meta={name:c.name,server:srv.name,sid:s};
+        if(!DModel.canIn(s,c,'voiceJoin',ME.id)){
+          // you can look at who's in there, you just can't connect
+          window.voiceOpen(c.key,meta,false);
+          toast('You don’t have permission to join that voice channel.','bad');
+        }else if(cur&&cur.ch===c.key){
+          window.voiceOpen(c.key,meta,false);          // already in it: just show the call
+        }else{
+          window.voiceOpen(c.key,meta,true);           // join on click, like Discord
+        }
+        closeNav();renderChat();
+        return;
+      }
       const ex=document.getElementById('exVoice');     // fallback: the Extras menu entry
       if(ex){ex.click();closeNav();return}
       toast('Voice is unavailable right now.','bad');
       return;
     }
+    // leaving a voice view for a text channel just hides the call; it does not disconnect you
+    if(typeof window.voiceCloseStage==='function')window.voiceCloseStage();
     view.mode='global';view.sid=s;view.section=null;view.dmView='chat';
     try{localStorage.setItem('ich.sid',s);localStorage.setItem('ich.ch.'+s,c.id)}catch(_){}
     selectRoom(c.key);
@@ -371,7 +466,13 @@ const DiscordShell=(function(){
       const active=cur===c.key;
       let unread=0;try{unread=c.type==='voice'?0:(DB.unreadIn(c.key,ME.id)||0)}catch(_){}
       const canSend=DModel.canIn(s,c,'send',ME.id);
-      row.className='dch'+(active?' active':'')+(unread&&!active?' unread':'')+(canSend?'':' locked');
+      // a voice channel is "active" when you are connected to it, not when it's selected
+      let vcHere=false;
+      if(c.type==='voice'){
+        try{const cur2=(typeof window.voiceCurrent==='function')?window.voiceCurrent():null;vcHere=!!(cur2&&cur2.ch===c.key)}catch(_){}
+      }
+      row.className='dch'+(c.type==='voice'?' voice':'')+((active||vcHere)?' active':'')+(vcHere?' connected':'')+
+        (unread&&!active?' unread':'')+(canSend?'':' locked');
       const ic=c.type==='voice'?CH_VOICE:(canSend?CH_HASH:CH_LOCK);
       row.innerHTML='<span class="dch-ic">'+ic+'</span><span class="dch-nm">'+esc(c.name)+'</span>'+
         (unread&&!active?'<span class="dch-badge">'+(unread>99?'99+':unread)+'</span>':'')+
@@ -381,15 +482,27 @@ const DiscordShell=(function(){
       const g=row.querySelector('[data-chset]');
       if(g)g.onclick=e=>{e.stopPropagation();openChannelSettings(s,c)};
       list.appendChild(row);
-      // who is sitting in this voice channel
+      // who is sitting in THIS voice channel (each channel is its own call now)
       if(c.type==='voice'){
-        let ids=[];try{ids=(typeof window.voiceMemberIds==='function')?window.voiceMemberIds():[]}catch(_){}
+        let ids=[],st={};
+        try{ids=(typeof window.voiceMemberIdsFor==='function')?window.voiceMemberIdsFor(c.key):[]}catch(_){}
+        try{st=(typeof window.voiceMemberState==='function')?window.voiceMemberState(c.key):{}}catch(_){}
+        // Discord puts the live count on the row itself
+        const cnt=row.querySelector('.dch-count');
+        if(ids.length&&!cnt){
+          const b=document.createElement('span');b.className='dch-count';b.textContent=ids.length;
+          row.appendChild(b);
+        }
         if(ids.length){
           const wrap=document.createElement('div');wrap.className='dvc-list';
           ids.forEach(id=>{
             const u=DB.getUser(id);if(!u)return;
-            const m=document.createElement('div');m.className='dvc-m';
-            m.innerHTML=avatarHtml(u,u.username,'width:22px;height:22px;font-size:9px')+'<span>'+esc(displayUsername(u.username))+'</span>';
+            const s2=st[String(id)]||{};
+            const m=document.createElement('div');m.className='dvc-m';m.dataset.id=String(id);
+            m.innerHTML='<span class="dvc-av">'+avatarHtml(u,u.username,'width:24px;height:24px;font-size:9px')+'</span>'+
+              '<span class="dvc-nm">'+esc(displayUsername(u.username))+'</span>'+
+              (s2.deaf?'<span class="dvc-st" title="Deafened">'+DEAF_IC+'</span>':
+               (s2.muted?'<span class="dvc-st" title="'+(s2.forced?'Muted by a moderator':'Muted')+'">'+MUTE_IC+'</span>':''));
             m.onclick=()=>openUserProfile(id);
             wrap.appendChild(m);
           });
@@ -524,6 +637,15 @@ const DiscordShell=(function(){
     d.push(['online','Online','#23a559']);
     return d;
   }
+  /* The dot colour is presence AND chosen status together: offline wins, then Invisible (which
+     reads as offline to everyone but you), then whatever they picked. */
+  function dotClass(id,off){
+    if(off)return 'off';
+    let s='online';
+    try{s=DB.statusOf?DB.statusOf(id):'online'}catch(_){}
+    if(s==='offline'||s==='invisible')return 'off';
+    return 'st-'+s;
+  }
   function memRow(id,off){
     const u=DB.getUser(id)||{id,username:'User '+id};
     const nm=esc(displayUsername(u.username));
@@ -533,7 +655,8 @@ const DiscordShell=(function(){
     let cr=null;try{if(!off&&!p)cr=topCustomRole(id)}catch(_){}
     const crS=cr?' style="color:'+esc(cr.color)+'"':'';
     const nameH=p?'<span class="nm-user flair-name flair-'+p+'">'+nm+'</span>':'<span class="nm-user'+(mv?' mvp-nm':'')+(cr?' cr-nm':'')+'"'+crS+'>'+nm+(mv?' <span class="mvp-mark" title="MVP">🏆</span>':'')+'</span>';
-    return `<div class="dl-mem${off?' off':''}" data-open-profile="${id}"${cr?` title="${esc(cr.name)}"`:''}><span class="dl-fr-av">${avatarHtml(u,u.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot${off?' off':''}"></i></span><span class="dl-mem-nm">${nameH}</span></div>`;
+    let cs='';try{cs=DB.customStatusOf?DB.customStatusOf(id):''}catch(_){}
+    return `<div class="dl-mem${off?' off':''}" data-open-profile="${id}"${cr?` title="${esc(cr.name)}"`:''}><span class="dl-fr-av">${avatarHtml(u,u.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot ${dotClass(id,off)}"></i></span><span class="dl-mem-nm">${nameH}${(!off&&cs)?`<small class="dl-mem-cs">${esc(cs)}</small>`:''}</span></div>`;
   }
   function renderMembers(){
     const m=document.getElementById('dlMembers'),btn=ensureMembersBtn();
@@ -563,6 +686,14 @@ const DiscordShell=(function(){
       }
     }catch(_){}
     if(ME&&onIds.indexOf(ME.id)<0)onIds.push(ME.id);
+    /* Invisible has to move you out of the online list, not just grey your dot. Presence is a
+       separate thing from the status you picked, so without this an invisible member stayed in
+       their role group under "Online", counted in the header, and only their dot gave them
+       away - which is the opposite of what Invisible is for. You still see yourself. */
+    onIds=onIds.filter(id=>{
+      if(ME&&id===ME.id)return true;
+      try{return DB.statusOf?DB.statusOf(id)!=='offline':true}catch(_){return true}
+    });
     const onSet=new Set(onIds);
     if(key===CFG.VIP_ROOM)everyone=everyone.filter(id=>{try{return !!DB.vipInfo(id,true)}catch(_){return false}});
     if(key===CFG.MVP_ROOM)everyone=everyone.filter(id=>{try{return hasMvpPerks(id)}catch(_){return false}});
@@ -657,6 +788,37 @@ const DiscordShell=(function(){
       });
     });
   }catch(e){console.warn('[shell] could not subscribe to the server model',e)}
+
+  /* ---------- hooks js/features/voice-channel.js calls ----------
+     Voice owns its own state and has no idea about servers or the sidebar, so these two are the
+     whole contract: "the roster moved, repaint" and "take me to the channel I'm connected to". */
+  let _vcPending=false;
+  window.voiceRosterChanged=function(){
+    if(_vcPending||!ME)return;
+    _vcPending=true;
+    requestAnimationFrame(()=>{
+      _vcPending=false;
+      try{if(view.page==='chatPage'&&typeof renderChat==='function')renderChat()}catch(_){}
+    });
+  };
+  window.voiceGoToChannel=function(key){
+    if(!key||!ME)return;
+    try{
+      // find which server that voice channel belongs to and open it there
+      const servers=DModel.myServers();
+      for(const srv of servers){
+        const c=DModel.channels(srv.id).find(x=>x.key===key);
+        if(c){
+          view.mode='global';view.sid=srv.id;view.section=null;
+          try{localStorage.setItem('ich.sid',srv.id)}catch(_){}
+          if(typeof window.voiceOpen==='function')window.voiceOpen(key,{name:c.name,server:srv.name,sid:srv.id},false);
+          renderChat();
+          return;
+        }
+      }
+      if(typeof window.voiceOpen==='function')window.voiceOpen(key,null,false);
+    }catch(e){console.warn('[shell] voiceGoToChannel failed',e)}
+  };
 
   return{refresh,renderFriends,on,serverMode,renderChannels};
 })();

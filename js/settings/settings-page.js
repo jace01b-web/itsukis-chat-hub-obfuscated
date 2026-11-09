@@ -6,7 +6,10 @@
  * ========================================================================== */
 'use strict';
 
-function openSettings(fromChat){
+/* `startTab` opens settings straight on one pane - the user panel uses it for Profiles, the
+   voice panel for Voice & Video, and the panes that rebuild their own markup use it to come
+   back to where you were. */
+function openSettings(fromChat,startTab){
   ME=DB.currentUser();
   const orig={...ME.settings,pings:{...ME.settings.pings}};
   const s={...orig,pings:{...orig.pings}};
@@ -25,19 +28,10 @@ function openSettings(fromChat){
     <div class="modal-tabs" id="sTabs">
       <div class="dl-set-user" id="sProfile" role="button" tabindex="0" title="Edit your profile"><span class="dl-set-av">${avatarHtml(ME,ME.username,'width:40px;height:40px;font-size:16px')}</span><span class="dl-set-nm"><b>${esc(displayUsername(ME.username))}</b><small>Edit Profiles <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" fill="currentColor"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z"/></svg></small></span></div>
       <div class="dl-set-search"><input id="sSearch" type="text" placeholder="Search" autocomplete="off" spellcheck="false" aria-label="Search settings"></div>
-      <div class="dl-set-h">User Settings</div>
-      <button data-t="msg" class="active"><svg class="dl-si" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-9l-5 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg><i class="dl-e">💬 </i>Messages</button>
-      <button data-t="bg" class="dl-hide"><svg class="dl-si" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-9 9"/></svg><i class="dl-e">🖼️ </i>Background</button>
-      <button data-t="ui"><svg class="dl-si" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg><i class="dl-e">🎨 </i>Theme</button>
-      <button data-t="ping"><svg class="dl-si" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></svg><i class="dl-e">🔔 </i>Pings</button>
-      <button data-t="music"><svg class="dl-si" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l11-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg><i class="dl-e">🎵 </i>Music</button>
-      <button data-t="filter"><svg class="dl-si" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m5.7 5.7 12.6 12.6"/></svg><i class="dl-e">🚫 </i>Filter</button>
-      <div class="dl-set-sep"></div><div class="dl-set-h">App</div>
-      <button data-t="about"><svg class="dl-si" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></svg><i class="dl-e">ℹ️ </i>About</button>
-      ${isStaff(ME.id)?'<div class="dl-set-sep"></div><div class="dl-set-h">Staff</div><button data-t="mod"><svg class="dl-si" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6z"/></svg><i class="dl-e">🛡️ </i>Moderation</button>':''}
+      ${SET_NAV(ME)}
     </div>
 
-    <div data-p="msg">
+    <div data-p="msg" class="hidden">
       <div class="set-card dl-hide">
         <div class="section-h" style="margin-top:0">Your message color (public)</div>
         <div class="set-grid">
@@ -413,6 +407,8 @@ function openSettings(fromChat){
       </div>`:''}
     </div>`:''}
 
+    ${SET_PANES(ME,s)}
+
     <div class="err" id="sErr"></div>
     <div class="actions">
       <button class="btn sec" id="sReset">Reset</button>
@@ -573,6 +569,18 @@ function openSettings(fromChat){
     if(b.dataset.t==='about')renderAboutTab();
     if(b.dataset.t==='mod'&&isOwner(ME.id)&&typeof renderVerHistory==='function')renderVerHistory();
   });
+
+  /* The Discord panes (My Account, Profiles, Privacy & Safety, Friend Requests, Perks,
+     Accessibility, Voice & Video, Keybinds, Language) live in js/settings/discord-settings.js.
+     Several of them change their own markup when you save - a new avatar, a removed banner - so
+     they get a `reopen` that rebuilds the modal and lands back on the same pane. */
+  try{wireDiscordSettings(root,ME,s,t=>openSettings(fromChat,t))}
+  catch(e){console.warn('[settings] Discord panes failed to wire',e)}
+
+  if(startTab){
+    const b=root.querySelector('#sTabs button[data-t="'+startTab+'"]');
+    if(b)b.click();
+  }
   function renderAboutTab(){
     const rb=$$('#aboutRulesBtn');
     if(rb)rb.onclick=()=>modalRules({back:()=>openSettings(true)});

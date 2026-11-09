@@ -70,6 +70,21 @@
     const t=e.target;
     const tag=(t.tagName||'').toLowerCase();
     if(tag==='input'||tag==='textarea'||tag==='img'||tag==='a'||t.isContentEditable)return; // keep the native menu where it's actually useful
+    /* Something more specific may already have handled this right-click. The Discord shell opens
+       its own menus for channels, categories, servers and members (js/ui/discord-shell.js).
+       Without this check BOTH menus opened, stacked on the same pixel: the channel menu
+       underneath and this generic one on top of it, so right-clicking a channel appeared to
+       offer "Settings / Fullscreen / Sign Out" instead of "Mark As Read / Copy Channel Name /
+       Edit Channel".
+       The test is "did the shell just open a menu", not e.defaultPrevented: js/core/diagnostics.js
+       cancels EVERY contextmenu event in the capture phase to suppress the native menu, so
+       defaultPrevented is always true and using it would disable this menu everywhere. The shell
+       inserts its .dctx element synchronously, and its handlers all run before this one (element
+       handlers in the target phase; its two document handlers were registered first), so by now
+       the menu is already in the DOM. */
+    if(document.querySelector('.dctx'))return;
+    // never open on top of a surface that owns its own right-click behaviour
+    if(t.closest&&t.closest('.dctx,.dmodal,.dset,.ducard,.ctx-menu'))return;
     e.preventDefault();
     open(e.clientX,e.clientY);
   });

@@ -29,8 +29,23 @@ function mvpBannerFromFile(file){
   });
 }
 
-/* ---------- Account (username change) ---------- */
-function openAccount(){
+/* ---------- Account ----------
+ * Your profile now lives INSIDE settings, under "Profiles", which is where Discord keeps it and
+ * where people were looking for it. Every entry point that used to open this modal (the user
+ * panel, the home chip, "Edit profile" links) lands there instead.
+ *
+ * The old modal is kept below as openAccountLegacy for the one case the settings page can't
+ * cover: being called before the settings page has loaded. Nothing routine reaches it.
+ */
+function openAccount(tab){
+  if(typeof openSettings==='function'&&typeof SET_PANES==='function'){
+    openSettings(false,tab||'profile');
+    return;
+  }
+  openAccountLegacy();
+}
+
+function openAccountLegacy(){
   ME=DB.currentUser();
   const wait=ME.lastNameChange+CFG.NAME_CHANGE_MS-Date.now();
   const can=wait<=0;
@@ -112,7 +127,7 @@ function openAccount(){
     try{
       await DB.updateSettings(ME.id,{avatar:''});
       ME=DB.currentUser();
-      openAccount();
+      openAccountLegacy();
     }catch(e){$('#acAvErr').textContent='Could not remove: '+(e.code||e.message)}
   };
   const acBanner=$('#acBanner'),acCustom=$('#acBannerCustom');
@@ -143,11 +158,11 @@ function openAccount(){
     try{
       const out=await mvpBannerFromFile(f);
       await DB.updateSettings(ME.id,{banner:out});
-      ME=DB.currentUser();toast('Image banner saved!');openAccount();
+      ME=DB.currentUser();toast('Image banner saved!');openAccountLegacy();
     }catch(e){err.textContent=e.message||('Could not save: '+(e.code||e))+(/PERMISSION/i.test(e.code||e.message||'')?' \u2014 publish the MVP database rules (SETUP-MVP.md).':'')}
   };
   if($('#acBnRemove'))$('#acBnRemove').onclick=async()=>{
-    try{await DB.updateSettings(ME.id,{banner:''});ME=DB.currentUser();toast('Image banner removed.');openAccount()}
+    try{await DB.updateSettings(ME.id,{banner:''});ME=DB.currentUser();toast('Image banner removed.');openAccountLegacy()}
     catch(e){$('#acBnErr').textContent='Could not remove: '+(e.code||e.message)}
   };
   // TAG-VISIBILITY: equip / unequip
@@ -161,7 +176,7 @@ function openAccount(){
       ME=DB.currentUser();
       toast(hid.includes(t)?'Tag hidden.':'Tag equipped.');
       if(typeof renderChat==='function')renderChat();
-      openAccount();
+      openAccountLegacy();
     }catch(err){
       b.disabled=false;
       $('#acTagErr').textContent='Could not save: '+(err.code||err.message)+(/PERMISSION/i.test(err.code||err.message)?' \u2014 publish the updated database rules (hiddenTags).':'');

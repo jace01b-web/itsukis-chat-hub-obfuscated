@@ -866,6 +866,39 @@ const DB=(()=>{
       try{await set(R('users/'+id+'/settings/'+key),val)}
       catch(e){console.error('setting save failed',key,e);throw e}
     },
+    /* ---- Presence status (Discord's Online / Idle / Do Not Disturb / Invisible) ----
+       Written straight to the one field rather than through updateSettings, so changing your
+       status never re-uploads the whole style node (which can carry a banner). */
+    statusOf(id){
+      const u=C.users[Number(id)];
+      const s=normStatus(u&&u.style&&u.style.status);
+      // Invisible reads as offline to everyone except the person who chose it
+      if(s==='invisible'&&Number(id)!==myId)return 'offline';
+      return s;
+    },
+    customStatusOf(id){
+      const u=C.users[Number(id)];
+      return String((u&&u.style&&u.style.customStatus)||'');
+    },
+    async setStatus(id,status){
+      id=Number(id);status=normStatus(status);
+      const cur=C.users[id]||{};
+      C.users[id]={...cur,style:{...(cur.style||{}),status}};emit();
+      try{await set(R('users/'+id+'/style/status'),status)}
+      catch(e){console.error('status save failed',e);throw e}
+    },
+    async setCustomStatus(id,text){
+      id=Number(id);
+      text=String(text||'').replace(/[\u0000-\u001f\u007f<>]/g,'').trim().slice(0,128);
+      const cur=C.users[id]||{};
+      const style={...(cur.style||{})};
+      if(text)style.customStatus=text;else delete style.customStatus;
+      C.users[id]={...cur,style};emit();
+      try{
+        if(text)await set(R('users/'+id+'/style/customStatus'),text);
+        else await remove(R('users/'+id+'/style/customStatus'));
+      }catch(e){console.error('custom status save failed',e);throw e}
+    },
     async updateSettings(id,patch){
       const cur=C.users[id]||{};
       patch={...patch};delete patch.hwTheme;   // hwTheme is only written by setSettingKey (Halloween toggle); a stale snapshot must not overwrite it
@@ -891,10 +924,22 @@ const DB=(()=>{
       // TAG-VISIBILITY: hidden tags are public too (everyone's client needs them), so they live in `style` like pronouns.
       const hiddenTags=('hiddenTags' in patch)?String(patch.hiddenTags||'').split(',').filter((t,i,a)=>HIDEABLE_TAGS.indexOf(t)!==-1&&a.indexOf(t)===i).join(','):String((cur.style&&cur.style.hiddenTags)||'');
       delete merged.hiddenTags;
+      /* Presence status is public, so it lives in `style` with the avatar and pronouns. This
+         write replaces the whole style node, so it MUST be carried forward - otherwise saving
+         any unrelated setting would silently reset you to Online and wipe your custom status,
+         which is the same trap the avatar fell into above. */
+      const status=('status' in patch)?normStatus(patch.status):normStatus(cur.style&&cur.style.status);
+      delete merged.status;
+      const customStatus=('customStatus' in patch)
+        ?String(patch.customStatus||'').replace(/[\u0000-\u001f\u007f<>]/g,'').trim().slice(0,128)
+        :String((cur.style&&cur.style.customStatus)||'');
+      delete merged.customStatus;
       const style={bubble:merged.meBubble||'#7c6cff',text:merged.meText||'#ffffff',radius:Number(merged.radius)||16,avatar};
       if(pronouns)style.pronouns=pronouns;
       if(description)style.description=description;
       if(banner)style.banner=banner;
+      if(status&&status!=='online')style.status=status;   // online is the default; no need to store it
+      if(customStatus)style.customStatus=customStatus;
       if(hiddenTags)style.hiddenTags=hiddenTags;       // empty = field omitted, so nothing changes for people who don't use it
       C.users[id]={...cur,settings:merged,style};emit();
       // avatar lives in the public `style` node (above), not `settings` (which is

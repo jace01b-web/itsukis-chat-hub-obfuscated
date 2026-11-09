@@ -23,6 +23,14 @@ let SECRET_OWNER_ID=null;
 let SECRET_LOADED=false;
 /* TAG-VISIBILITY:START — people can hide their own Owner / Mod / VIP / Flair / Confetti tags (stored publicly in users/$id/style/hiddenTags) */
 const HIDEABLE_TAGS=['owner','mod','vip','mvp','flair','confetti'];
+
+/* ---------- presence status ----------
+   Discord's four. Anything unrecognised (an old record, a hand-edited value) reads as online,
+   which is the safe default: it never hides somebody who meant to be visible. */
+const STATUSES=['online','idle','dnd','invisible'];
+const STATUS_LABEL={online:'Online',idle:'Idle',dnd:'Do Not Disturb',invisible:'Invisible',offline:'Offline'};
+const STATUS_SUB={online:'',idle:'',dnd:'You will not receive any notifications.',invisible:'You will not appear online, but will have full access to Itsukis Chat Hub.'};
+function normStatus(v){v=String(v||'').toLowerCase();return STATUSES.indexOf(v)>=0?v:'online'}
 function hiddenTagsOf(id){try{return DB.hiddenTagsOf(id)}catch(_){return[]}}
 function tagHidden(id,t){return hiddenTagsOf(id).indexOf(t)!==-1}
 /* TAG-VISIBILITY:END */

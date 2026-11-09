@@ -18,7 +18,15 @@ const ROLE_COLORS=[
 
 let _dset=null;
 function closeServerSettings(){if(_dset){_dset.remove();_dset=null;document.removeEventListener('keydown',_dsetKey)}}
-function _dsetKey(e){if(e.key==='Escape'){closeServerSettings()}}
+function _dsetKey(e){
+  if(e.key!=='Escape')return;
+  // on a phone, Escape backs out of a section to the list before it closes the whole panel
+  if(_dset&&_dset.classList.contains('dset-paned')&&
+     window.matchMedia&&window.matchMedia('(max-width:820px)').matches){
+    _dset.classList.remove('dset-paned');return;
+  }
+  closeServerSettings();
+}
 
 function openServerSettings(sid,section){
   closeServerSettings();
@@ -32,12 +40,17 @@ function openServerSettings(sid,section){
     '<div class="dset-main"><div class="dset-main-inner" id="svMain"></div></div>'+
     '<div class="dset-close-col"><button type="button" class="dset-close" id="svX" aria-label="Close">'+DI.x+
       '</button><div class="dset-close-lbl">ESC</div></div>'+
-    '<button type="button" class="dset-x-mobile" id="svXm" aria-label="Close">'+DI.x+'</button>';
+    '<button type="button" class="dset-x-mobile" id="svXm" aria-label="Close">'+DI.x+'</button>'+
+    // phone only (CSS hides it elsewhere): back to the section list
+    '<button type="button" class="dset-back-mobile" id="svBack" aria-label="Back to server settings">'+
+      '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>'+
+      '<span id="svBackLbl"></span></button>';
   document.body.appendChild(el);
   _dset=el;
   document.addEventListener('keydown',_dsetKey);
   el.querySelector('#svX').onclick=closeServerSettings;
   el.querySelector('#svXm').onclick=closeServerSettings;
+  el.querySelector('#svBack').onclick=()=>el.classList.remove('dset-paned');
 
   const nav=el.querySelector('#svNav'),main=el.querySelector('#svMain');
 
@@ -56,7 +69,17 @@ function openServerSettings(sid,section){
       ?'<div class="dset-cat">'+esc(it.cat)+'</div>'
       :'<div class="dset-item'+(sec===it.k?' active':'')+'" data-k="'+it.k+'">'+esc(it.n)+'</div>'
     ).join('');
-    nav.querySelectorAll('[data-k]').forEach(n=>n.onclick=()=>{sec=n.dataset.k;draw()});
+    nav.querySelectorAll('[data-k]').forEach(n=>n.onclick=()=>{
+      sec=n.dataset.k;
+      /* On a phone this panel shows the list, then the section, the way User Settings and
+         Discord's own app do. Side by side there isn't room for a 218px nav and the content,
+         so both ended up cramped and half-scrolled. The class is all the CSS needs; `back`
+         below returns to the list. */
+      el.classList.add('dset-paned');
+      const lbl=el.querySelector('#svBackLbl');if(lbl)lbl.textContent=n.textContent;
+      draw();
+      const m=el.querySelector('#svMain');if(m)m.scrollTop=0;
+    });
   }
 
   function draw(){

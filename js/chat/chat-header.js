@@ -8,7 +8,14 @@
 
 function renderMain(){
   const composer=document.querySelector('.composer'),msgs=$('#messages');
+  /* applyVipLock() is what clears the lounge chrome — the VIP/MVP banner, the vip-mode and
+     mvp-mode classes on the page, and the members-only lock screen. It used to be called only
+     at the very bottom of this function, after two early returns, so leaving a lounge for the
+     Friends list (or for an empty view) left the "MVP Lounge · MVPs only" banner sitting across
+     the top of a page it has nothing to do with, until you opened a real channel again.
+     With no room key it hides everything, which is exactly what both of those paths want. */
   if(view.mode==='dms'&&view.dmView==='friends'){
+    applyVipLock();
     composer.classList.add('hidden');
     $('#chatTitle').textContent='Friends';
     $('#settingsBtn').classList.add('hidden');$('#dmFriendBtn').classList.add('hidden');
@@ -16,7 +23,7 @@ function renderMain(){
   }
   composer.classList.remove('hidden');$('#settingsBtn').classList.remove('hidden');
   const key=view.roomKey;
-  if(!key){renderedKey=null;msgs.innerHTML='<div class="empty">Select a conversation.</div>';composer.classList.add('hidden');return}
+  if(!key){applyVipLock();renderedKey=null;msgs.innerHTML='<div class="empty">Select a conversation.</div>';composer.classList.add('hidden');return}
   DB.markRead(ME.id,key);refreshBadge();
   let title='';let headerAv='';
   // Discord shows "# name", so the five original rooms use their channel names.

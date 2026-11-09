@@ -39,7 +39,10 @@ window.APP_MANIFEST={
     "24-file-attachments.css",
     "25-custom-roles.css",
     "26-trick-or-treat.css",
-    "99-discord-shell.css"
+    "99-discord-shell.css",
+    /* Loaded LAST on purpose: it owns the layout geometry (sizes, spacing, type scale, radii,
+       breakpoints) and has to be able to correct the older Discord-look layer above it. */
+    "27-discord-exact.css"
   ],
   /* Not loaded on purpose: 23-lockdown.css belongs to js/features/lockdown.js, which is kept in the
      repo but left out of the load list (its master switch is ON, so loading it would lock the site). */
@@ -84,8 +87,9 @@ window.APP_MANIFEST={
     "chat/attachments.js",
     "settings/appearance.js",
     "settings/rules.js",
-    "settings/settings-page.js",
     "settings/account.js",
+    "settings/discord-settings.js",
+    "settings/settings-page.js",
     "features/halloween.js",
     "features/trick-or-treat-games.js",
     "features/trick-or-treat.js",

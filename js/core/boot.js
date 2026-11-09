@@ -6,6 +6,18 @@
  * ========================================================================== */
 'use strict';
 
+/* ---------- Bridge to the self-contained modules ----------
+ * js/features/voice-channel.js is a standalone IIFE - it is deliberately isolated from the rest
+ * of the app and can only reach it through `window`. In the single-file build everything else
+ * lives inside one module scope, so these functions are NOT on window unless we put them there.
+ * Without this, the voice panel's settings button and its "View Profile" item do nothing in
+ * production while working perfectly in the test harness. */
+try{
+  window.openSettings=openSettings;
+  window.openUserProfile=openUserProfile;
+  window.openAccount=openAccount;
+}catch(e){console.warn('[boot] could not export UI entry points',e)}
+
 /* ---------- Boot ---------- */
 const BOOTUI=window.ICHBoot||{prog(){},phase(){},step(){},done(){},fail(){},reveal(){}};
 (async function init(){

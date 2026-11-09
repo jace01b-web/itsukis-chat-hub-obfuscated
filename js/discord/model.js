@@ -163,6 +163,14 @@ const DModel=(()=>{
     watch('serverOrder/'+myId,v=>{S.order=v||{};emitSoon()});
     watch('serverDiscovery',v=>{S.discovery=v||{};emitSoon()});
     emitSoon();
+    /* Housekeeping, once the first round of listeners has had time to deliver: drop servers
+       that were deleted while I was away, and re-assert my channel access everywhere in case a
+       join or a channel creation only got half-way. Deliberately late and deliberately quiet. */
+    setTimeout(()=>{
+      if(myId!==Number(id))return;
+      pruneDeadServers().catch(()=>{});
+      Object.keys(S.myServers||{}).forEach(sid=>{grantAccess(sid).catch(()=>{})});
+    },6000);
   }
   function stop(){
     unsubs.splice(0).forEach(u=>{try{u()}catch(_){}});
@@ -258,32 +266,51 @@ const DModel=(()=>{
        servers/$sid?", and inside that same write servers/$sid does not exist yet. Each stage below
        therefore only writes things the PREVIOUS stage has already made true. */
 
-    // 1. the server itself — the only write allowed purely on "ownerId is me"
-    await set(R('servers/'+sid),{name,icon:String(icon||'').slice(0,8),ownerId:myId,createdAt:now});
+    /* If a later stage fails we tear the earlier ones back down, so a failed create leaves
+       nothing behind rather than a server with no channels sitting on the rail forever. */
+    const undo=async()=>{
+      try{
+        await update(ref(rtdb),{
+          ['servers/'+sid]:null,['serverMembers/'+sid]:null,['userServers/'+myId+'/'+sid]:null,
+          ['serverCats/'+sid]:null,['serverChannels/'+sid]:null,['serverRoles/'+sid]:null,
+          ['channelServer/'+gen]:null,['channelServer/'+genv]:null
+        });
+      }catch(e){console.warn('[DModel] could not roll back a failed create',e&&e.code)}
+    };
 
-    // 2. my membership (self-write) — must exist before roomMembers will accept me
-    await update(ref(rtdb),{
-      ['serverMembers/'+sid+'/'+myId]:{at:now,roles:{}},
-      ['userServers/'+myId+'/'+sid]:true
-    });
+    try{
+      // 1. the server itself — the only write allowed purely on "ownerId is me"
+      await dWrite('create server',()=>set(R('servers/'+sid),{name,icon:String(icon||'').slice(0,8),ownerId:myId,createdAt:now}));
 
-    // 3. structure — now permitted, because I am the stored owner of an existing server
-    await update(ref(rtdb),{
-      ['serverCats/'+sid+'/text']:{name:'Text Channels',pos:0},
-      ['serverCats/'+sid+'/voice']:{name:'Voice Channels',pos:1},
-      ['serverChannels/'+sid+'/general']:{name:'general',key:gen,cat:'text',type:'text',pos:0,topic:''},
-      ['serverChannels/'+sid+'/voice']:{name:'General',key:genv,cat:'voice',type:'voice',pos:0,topic:''},
-      ['serverRoles/'+sid+'/everyone']:{name:'@everyone',color:'',pos:0,perms:{...EVERYONE_DEFAULT},hoist:false,mentionable:false},
-      ['channelServer/'+gen]:sid,
-      ['channelServer/'+genv]:sid
-    });
+      // 2. my membership (self-write) — must exist before roomMembers will accept me
+      await dWrite('join my own server',()=>update(ref(rtdb),{
+        ['serverMembers/'+sid+'/'+myId]:{at:now,roles:{}},
+        ['userServers/'+myId+'/'+sid]:true
+      }));
 
-    // 4. channel access for the existing message/presence/typing/reaction rules, which gate every
-    //    non-reserved key on roomMembers/$key/$uid. Needs channelServer from stage 3.
-    await update(ref(rtdb),{
-      ['roomMembers/'+gen+'/'+myId]:true,
-      ['roomMembers/'+genv+'/'+myId]:true
-    });
+      // 3. structure — now permitted, because I am the stored owner of an existing server
+      await dWrite('create channels',()=>update(ref(rtdb),{
+        ['serverCats/'+sid+'/text']:{name:'Text Channels',pos:0},
+        ['serverCats/'+sid+'/voice']:{name:'Voice Channels',pos:1},
+        ['serverChannels/'+sid+'/general']:{name:'general',key:gen,cat:'text',type:'text',pos:0,topic:''},
+        ['serverChannels/'+sid+'/voice']:{name:'General',key:genv,cat:'voice',type:'voice',pos:0,topic:''},
+        ['serverRoles/'+sid+'/everyone']:{name:'@everyone',color:'',pos:0,perms:{...EVERYONE_DEFAULT},hoist:false,mentionable:false},
+        ['channelServer/'+gen]:sid,
+        ['channelServer/'+genv]:sid
+      }));
+
+      // 4. channel access for the existing message/presence/typing/reaction rules, which gate every
+      //    non-reserved key on roomMembers/$key/$uid. Needs channelServer from stage 3.
+      await dWrite('open the channels',()=>update(ref(rtdb),{
+        ['roomMembers/'+gen+'/'+myId]:true,
+        ['roomMembers/'+genv+'/'+myId]:true
+      }));
+    }catch(e){
+      await undo();
+      throw new Error(isDenied(e)
+        ? 'The database refused to create that server. The rules that are published are older than this build — an owner needs to paste the current firebase-rules.json into Firebase Console → Realtime Database → Rules and press Publish.'
+        : 'Creating the server failed partway, so nothing was kept. Check your connection and try again.');
+    }
 
     await syncPerms(sid,myId);
     return sid;
@@ -415,16 +442,25 @@ const DModel=(()=>{
     try{chans=(await get(R('serverChannels/'+sid))).val()||{}}catch(_){chans={}}
     // Staged for the same reason as createServer: roomMembers only accepts me once my
     // serverMembers record already exists in the committed data.
-    await update(ref(rtdb),{
-      ['serverMembers/'+sid+'/'+myId]:{at:Date.now()+SKEW,roles:{}},
-      ['userServers/'+myId+'/'+sid]:true
-    });
+    try{
+      await dWrite('join server',()=>update(ref(rtdb),{
+        ['serverMembers/'+sid+'/'+myId]:{at:Date.now()+SKEW,roles:{}},
+        ['userServers/'+myId+'/'+sid]:true
+      }));
+    }catch(e){
+      throw new Error(isDenied(e)
+        ? 'The database refused to add you to that server. The published rules are out of date — tell an owner to publish the current firebase-rules.json.'
+        : 'Joining failed. Check your connection and try again.');
+    }
     const access={};
     Object.keys(chans).forEach(cid=>{const k=chans[cid]&&chans[cid].key;if(k)access['roomMembers/'+k+'/'+myId]=true});
     if(Object.keys(access).length){
-      try{await update(ref(rtdb),access)}
+      /* Not fatal if it fails: you are in the server, you just can't post yet. grantAccess()
+         re-asserts this every time the server is opened, so it heals itself. */
+      try{await dWrite('open the channels',()=>update(ref(rtdb),access))}
       catch(e){console.warn('[DModel] channel access write failed',e&&e.code)}
     }
+    delete _accessDone[sid];
     // count the use; a failure here must not undo a successful join
     try{await set(R('invites/'+sid+'/'+code+'/uses'),(rec.uses||0)+1)}catch(_){}
     return sid;
@@ -478,6 +514,19 @@ const DModel=(()=>{
     return channels(sid).filter(c=>canIn(sid,c,'view',uid));
   }
 
+  /* STAGED, and it has to be.
+   *
+   * This used to be one atomic update() that wrote serverChannels, channelServer AND roomMembers
+   * together, and it could never have worked against the real database. The roomMembers rule
+   * opens with `root.child('channelServer').child($room).exists()`, and `root` in a rule is the
+   * data BEFORE the write - so inside the very update that creates channelServer/$key, that test
+   * is false. A multi-path update is all-or-nothing, so the single denied path took the whole
+   * write down with it and creating a channel on a server failed outright with PERMISSION_DENIED.
+   * (The fake database the tests run against doesn't evaluate rules, which is why this passed
+   * every test while being broken for everyone using the site.)
+   *
+   * Stage 1 makes channelServer true. Stage 2 then grants access, which the rules now allow.
+   */
   async function createChannel(sid,{name,type,cat,topic}){
     assertPerm(sid,'manageCh');
     name=normChannelName(name,type);
@@ -485,15 +534,114 @@ const DModel=(()=>{
     const key=makeChannelKey(sid,name);
     const sib=channels(sid).filter(c=>c.cat===(cat||'text'));
     const pos=sib.length?Math.max(...sib.map(c=>c.pos))+1:0;
-    const patch={};
-    patch['serverChannels/'+sid+'/'+cid]={name,key,cat:cat||'text',type:type==='voice'?'voice':'text',pos,topic:String(topic||'').slice(0,300)};
-    patch['channelServer/'+key]=sid;
-    // everyone already in the server gets read/write access at the rules level
+
+    // 1. the channel, and the lookup the access rules read
+    await dWrite('create channel',()=>update(ref(rtdb),{
+      ['serverChannels/'+sid+'/'+cid]:{name,key,cat:cat||'text',type:type==='voice'?'voice':'text',pos,topic:String(topic||'').slice(0,300)},
+      ['channelServer/'+key]:sid
+    }));
+
+    // 2. access for everyone already in the server. If this half fails the channel still exists
+    //    but nobody can post in it, so it is repairable rather than fatal: grantAccess() runs
+    //    again whenever the server is opened.
+    const access={};
     const members=sid===ICH_ID?null:Object.keys(S.members[sid]||{});
-    if(members)members.forEach(uid=>{patch['roomMembers/'+key+'/'+uid]=true});
-    else patch['roomMembers/'+key+'/'+myId]=true;
-    await update(ref(rtdb),patch);
+    if(members&&members.length)members.forEach(uid=>{access['roomMembers/'+key+'/'+uid]=true});
+    else access['roomMembers/'+key+'/'+myId]=true;
+    try{await dWrite('grant channel access',()=>update(ref(rtdb),access))}
+    catch(e){
+      console.warn('[DModel] channel created but access write failed',e&&e.code);
+      throw new Error('The channel was created, but granting access to it failed'+
+        (isDenied(e)?' because the database rules refused it. Publish the current firebase-rules.json and reopen the server.':'. Reopen the server and it will retry.'));
+    }
     return cid;
+  }
+
+  /* ======================================================================
+   *  RELIABILITY
+   *
+   *  Everything on a server is written in stages (see createServer / createChannel /
+   *  joinByInvite), because the rules evaluate `root` as the data before the write. Stages mean
+   *  a half-finished state is possible: a channel with no access, a membership with no room
+   *  access, a server on your rail that no longer exists. These three functions are what stop
+   *  those turning into "the servers don't work".
+   * ====================================================================== */
+  function isDenied(e){
+    const c=String((e&&(e.code||e.message))||'');
+    return /PERMISSION_DENIED|permission_denied|PERMISSION DENIED/i.test(c);
+  }
+  /* One write, with a couple of retries for the transient failures (a dropped connection, a
+     slow handshake) and none at all for a refusal, which retrying cannot fix. */
+  async function dWrite(label,fn,tries){
+    tries=tries||3;
+    let last=null;
+    for(let i=0;i<tries;i++){
+      try{return await fn()}
+      catch(e){
+        last=e;
+        if(isDenied(e)){noteDenied(label,e);throw e}
+        if(i<tries-1)await new Promise(r=>setTimeout(r,250*Math.pow(2,i)));
+      }
+    }
+    throw last;
+  }
+  /* A refusal almost always means one thing: the deployed database rules are older than this
+     build. Say so once, plainly, instead of letting a raw PERMISSION_DENIED reach the user. */
+  let _deniedShown=false;
+  function noteDenied(label,e){
+    console.warn('[DModel] denied:',label,e&&e.code);
+    if(_deniedShown)return;
+    _deniedShown=true;
+    try{
+      const owner=typeof isOwner==='function'&&isOwner(myId);
+      const msg=owner
+        ? 'The database refused that ("'+label+'"). The rules currently published are older than this build — open Firebase Console → Realtime Database → Rules, paste firebase-rules.json and press Publish.'
+        : 'The server refused that. This is a setup problem on our side, not yours — please tell an owner.';
+      if(typeof toast==='function')toast(msg,'bad');
+    }catch(_){}
+  }
+
+  /* Make sure I can actually read and write in every channel of a server I'm in.
+     Cheap and idempotent: it only runs when the server's channel list has changed since the
+     last time this browser asserted it. This is what repairs a join whose access stage failed,
+     and a channel created while my membership hadn't propagated yet. */
+  const _accessDone={};
+  async function grantAccess(sid){
+    if(myId==null||sid===ICH_ID)return;             // ICH's channels are gated by the old rules
+    if(!inServer(sid,myId))return;
+    const keys=channels(sid).map(c=>c.key).filter(Boolean).sort();
+    if(!keys.length)return;
+    const sig=keys.join(',');
+    if(_accessDone[sid]===sig)return;
+    _accessDone[sid]=sig;
+    const patch={};
+    keys.forEach(k=>{patch['roomMembers/'+k+'/'+myId]=true});
+    try{await update(ref(rtdb),patch)}
+    catch(e){
+      delete _accessDone[sid];                      // let it try again next time
+      console.warn('[DModel] could not assert channel access for',sid,e&&e.code);
+    }
+  }
+
+  /* Drop servers from my rail that no longer exist. `myServers()` already hides them, so
+     without this they stay in userServers forever, silently counting against the join limit. */
+  async function pruneDeadServers(){
+    if(myId==null)return;
+    const mine=Object.keys(S.myServers||{}).filter(sid=>sid!==ICH_ID);
+    if(!mine.length)return;
+    const dead=[];
+    for(const sid of mine){
+      if(S.servers[sid])continue;                   // it is there
+      let v=null;
+      try{v=(await get(R('servers/'+sid))).val()}
+      catch(e){continue}                            // a read error is not proof it's gone
+      if(!v)dead.push(sid);
+    }
+    if(!dead.length)return;
+    const patch={};
+    dead.forEach(sid=>{patch['userServers/'+myId+'/'+sid]=null});
+    try{await update(ref(rtdb),patch);console.info('[DModel] removed',dead.length,'deleted server(s) from your list')}
+    catch(e){console.warn('[DModel] prune failed',e&&e.code)}
   }
   function normChannelName(name,type){
     let n=String(name||'').trim().slice(0,40);
@@ -1062,6 +1210,7 @@ const DModel=(()=>{
     myIpHash,ipBannedHere,ipBanHash,ipUnbanHash,ipBanList,
     discoveryList,isPublic,setPublic,joinPublic,
     joinLimit,ownLimit,joinedCount,ownedCount,limitInfo,
+    grantAccess,pruneDeadServers,isDenied,
     _state:S
   };
 })();
