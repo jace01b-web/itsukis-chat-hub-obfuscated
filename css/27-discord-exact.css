@@ -427,6 +427,9 @@ html.discord-look .messages .msg{
 html.discord-look .messages .msg:hover{background:var(--dl-msg-hover)!important}
 html.discord-look .messages .msg:first-child{margin-top:0}
 /* a continuation line in the same group: no avatar, no name, tight */
+/* min-height here replaces the automatic minimum size, which is what allows this row to be
+   shrunk below its content by the flex column - so it has to come with flex:0 0 auto. */
+html.discord-look .messages .msg{flex:0 0 auto}
 html.discord-look .messages .msg.dl-cont{margin-top:0;min-height:22px}
 html.discord-look .messages .msg .msg-row{display:flex;align-items:flex-start;gap:0}
 html.discord-look .messages .msg .avatar{
