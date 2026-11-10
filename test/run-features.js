@@ -49,10 +49,19 @@ const ok=(n,v)=>{if(!v)fails++;console.log((v?'  PASS  ':'  FAIL  ')+n)};
   ok('rail has DMs',      rail.includes('dms'));
   ok('rail has ICH',      rail.includes('srv:ich'));
   ok('rail has add',      rail.includes('addsrv'));
-  ok('rail has shop',     rail.includes('shop'));
-  ok('rail has games',    rail.includes('hubs'));
-  ok('rail has extras',   rail.includes('extras'));
   ok('rail has settings', rail.includes('settings'));
+  /* v53: Games, Extras, the Discord link and the Shop are no longer rail buttons. The rail holds
+     servers and the two things that find you more of them, like Discord's does. They moved into
+     ICH's own channel list (and the Shop is also in the DM sidebar), so that is where they are
+     asserted now - these three lines failing again would mean the move was undone. */
+  ok('rail has no shop button',  !rail.includes('shop'));
+  ok('rail has no games button', !rail.includes('hubs'));
+  ok('rail has no extras button',!rail.includes('extras'));
+  const siteRows=await p.$$eval('#sbList .dch-site .dch-nm',els=>els.map(e=>e.textContent.trim()));
+  ok('ICH lists Games',   siteRows.some(t=>/games/i.test(t)));
+  ok('ICH lists Extras',  siteRows.some(t=>/extras/i.test(t)));
+  ok('ICH lists Shop',    siteRows.some(t=>/shop/i.test(t)));
+  ok('ICH lists Discord', siteRows.some(t=>/discord/i.test(t)));
 
   console.log('\npage errors:',errs.length);
   [...new Set(errs)].slice(0,8).forEach(e=>console.log('  !! '+e.split('\n')[0]));

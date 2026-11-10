@@ -623,3 +623,319 @@ has, with a back arrow and Escape backing out one level.
 New dev-only scripts, not referenced by the site: `test/run-visual.js` (11 viewports against
 Discord's measurements). The sweep, dialog, theme and interaction harnesses were throwaway.
 
+
+---
+
+## 12. Round six (v53): display names, boosts, and the bugs behind the complaints
+
+### Deploy first — the rules changed again
+
+`firebase-rules.json` has new fields in it, and **nothing added in this round works until you
+publish them**: display names, the status picker's new home, join messages, boosts and the extra
+server settings all write to nodes the old rules reject. Same routine as before — Firebase Console
+→ Realtime Database → Rules → paste → Publish, or `firebase deploy --only database`, or open
+`rules-copy.html` for the one-tap copy (that page has been regenerated, so it holds the new rules).
+
+What was added, and nothing else was touched:
+
+| Node / field | For |
+|---|---|
+| `users/$id/style/displayName` | display names |
+| `servers/$sid/desc` | the server description in Overview |
+| `servers/$sid/sys` | which channel join messages go to |
+| `servers/$sid/welcome`, `…/wjoin` | join messages on/off, random wording on/off |
+| `servers/$sid/banner` | server banner (Boost Level 1 perk) |
+| `messages/$key/$msg/sys` | marks a message as a system line (a join, a boost) |
+| `serverBoosts/$sid/$uid/$slot` | who boosts a server |
+| `userBoosts/$uid/$slot` | where each of your own boost slots points |
+
+Plus **one surgical edit** to an existing rule, described under "the staff ladder" below.
+
+`scripts/add_rules_v53.py` makes all of it, additively, asserting the shape of everything it
+touches first. (`scripts/build_rules.py` can't be re-run — it needs the original pre-Discord
+ruleset as input and that file isn't in the repo any more; `firebase-rules.json` is its output.)
+Both the full and minified files compile clean against targaryen.
+
+### A. The images bug — why they were enormous with grey bars either side
+
+`css/27-discord-exact.css` ends with an anti-overflow guard:
+
+```css
+html.discord-look .messages, html.discord-look .messages * { max-width:100% }
+```
+
+That `*` out-specifies `.imgs{max-width:340px}` in `06-chat.css`, so **every** image in chat grew
+to the full width of the message column. Combined with `.imgs img{width:100%}`, a 320px-tall grid
+row and `object-fit:contain`, a small image was blown up into a 784×320 box and the leftover space
+filled with `background:var(--bg2)` — the grey slabs on either side.
+
+Measured before: a 120×90 image rendered at **784×320**. After: **120×90**, no box around it.
+
+Images are now sized the way Discord sizes them — by their own aspect ratio, capped at 550×350,
+**never upscaled** — in `css/28-discord-plus.css`. Uploaded GIFs and video (`.fa-*`) had the same
+flattening and got the same treatment.
+
+### B. The staff ladder — admins could delete admins, mods could delete mods
+
+The delete check tested only the ranks **above** the actor and never the actor's own:
+
+```js
+isOwner(me) || (isAdmin(me) && !isOwner(them)) || (isMod(me) && !isOwner(them) && !isAdmin(them))
+```
+
+so an admin could delete another admin's message and a mod another mod's. The database rules had
+the identical gap, so it wasn't only a UI slip — it was enforced wrongly on the server too.
+
+There is now one rule, in one place (`outranks()` in `js/moderation/roles.js`):
+
+> **owner 4 > admin 3 > mod 2 > everyone 1.** You may act on someone strictly below you, and on
+> nobody else. Your own messages are always yours to delete.
+
+MVP is deliberately **not** on the ladder: it is a perks tier with no moderation powers, so it
+neither protects its holder from a mod nor lets them act on anyone.
+
+Both delete branches of `messages/$key/$msg/.write` gained the one missing test, and
+`test/run-rules.js` drives 13 cases through **targaryen** — a real implementation of the rules
+language — so the server-side half is proven, not assumed.
+
+### C. Removing someone from `owners/` didn't change anything on screen
+
+`customroles/` repainted the UI when it changed. `owners/`, `mods/`, `admin/` and `mvp/` did not.
+So taking Owner off someone in the Firebase console left them still rendered as Owner — in their
+member-list group, in their name chip, on the `#id` tag beside their messages — until something
+unrelated happened to trigger a render. Everything reads rank live; one repaint was all that was
+ever missing. All four listeners now call it.
+
+### D. ICH's channels and roles are code, and now say so
+
+ICH is defined in `js/discord/model.js` (`ICH_CHANNELS`, `ICH_CATS`, `virtualRoles()`), not stored
+as a server. Adding a channel or a role to it wrote into `serverChannels/ich` / `serverRoles/ich`,
+which the rules evaluate against `servers/ich` — a node that does not exist. The write was refused,
+and when it wasn't you got a channel nobody could read. That is the "it's also broken" part.
+
+Both are now refused in the **model** (`assertNotICH`), so the context menu, the server menu, the
+role manager, the `+` on a category and anything added later all agree; and the UI entries are
+left out rather than offered and then failing.
+
+### E. Site ranks were showing up in other people's servers
+
+A brand new server opened with `MVPS — 1` and `ICE FLAIR — 2` headers that nobody there had
+created. `memGroupDefs()` / `memGroupOf()` appended Owner / Admin / Mod / MVP / VIP / customroles /
+Daily-Spin flairs to **every** member list regardless of which server was open.
+
+Those are *site* ranks — granted from `owners/`, `mods/`, `mvp/`, `vip/`, `flair/`, `customroles/`
+— and they mean nothing inside a server someone else made, exactly as a Discord badge is not a
+role in your server. They are now scoped to ICH. A user's server shows what its own role manager
+defines: its hoisted roles, then Online, then Offline, with names tinted by that server's top role
+colour. The same scoping applies to message author names (`msgNameHTML`), the MVP trophy and flair
+styling. **Profiles still show them**, because a profile is site-wide.
+
+### F. Display names
+
+Discord's display name, on top of the `@username`. Stored in `users/$id/style/displayName` (the
+public half of a profile, like the avatar and the status), capped at 32 characters, with **no
+cooldown** — the username keeps its 7-day limit, because that is the identity.
+
+`dispName(user)` is what every piece of UI that shows a person now calls. The username still does
+every job that needs to *match* an account: mentions, friend requests, sign-in, the moderation
+tools and the ban lists. Two people can share a display name, which is the point.
+
+Editable in **Settings → My Account → Display Name** and in **Settings → Profiles**. The `@username`
+appears under the display name on a profile only when the two differ.
+
+### G. Status moved into profile settings
+
+The user-panel popout is still there; the same four options plus the custom status line are now in
+**Settings → Profiles**, which is where people were looking. Both write the same two fields.
+
+### H. Settings is a window again, not the whole browser
+
+`css/22-discord-look.css` already made settings a centred window with margins ("v15: settings
+window at Discord's size"). `css/27-discord-exact.css` then set
+`.modal-bg:has(#sTabs){padding:0!important}` and stretched it back to every edge of the screen, and
+laid the inside out as `minmax(218px,1fr) minmax(0,2.6fr)` — which lets the **nav** grow with the
+display, so on a wide screen the nav ended up hundreds of pixels wide with the content pushed off
+to the right. Nothing like Discord.
+
+It is a floating panel again — dimmed backdrop, rounded corners, the app visible behind it — with
+Discord's real proportions inside: a fixed **218px** nav and a **740px** content column, and the
+close button in the panel's corner rather than the browser's.
+
+### I. The rail holds servers, like Discord's
+
+Games, Extras, the Discord link and the Shop were rail buttons. They are site features, not
+servers. They now live:
+
+* **Games / Extras / Shop / Join our Discord** → rows in ICH's own channel list, under an
+  "Itsukis Chat Hub" category, shown in ICH and nowhere else.
+* **Shop** → also in the direct-messages sidebar, under Friends, where Discord keeps its own.
+
+What is left on the rail is DMs, your servers, **+** and the compass — plus User Settings.
+
+### J. Server Boosts
+
+**MVP grants two boost slots.** Nobody else has any, there is nothing to buy, and owners get them
+too (owners get every MVP perk). ICH cannot be boosted — it is the site, not a server.
+
+* A slot remembers **when** it was placed. It can be **moved** to another server after **7 days**.
+* **Giving a boost up is always allowed** — the cooldown stops a boost being shuffled between
+  servers to farm a perk, not changing your mind about boosting at all.
+* **When MVP is taken away, the boosts stop counting immediately, everywhere**, because every
+  count re-tests the booster through `hasMvpPerks()` at read time rather than trusting the stored
+  row. There is no cleanup job and no window where a revoked MVP is still propping a server up.
+  The dangling rows are tidied by that person's own client on next sign-in — the rules only let
+  them write their own.
+
+Levels use Discord's own thresholds: **2 / 7 / 14**. Level 1 unlocks a server banner (gated in
+`updateServer`, so it is refused below the level rather than quietly ignored), Level 2 a longer
+description and Discover priority, Level 3 the gold rail glow.
+
+The boost bar sits under the server name, like Discord's; the dialog is on the bar and on the
+server menu.
+
+### K. Join messages, and more server settings
+
+A join notice is an ordinary message carrying `sys:'join'`, written **by the person who joined** —
+which needs no special permission, because they are a member of the channel by the time it is sent.
+It renders as a grey system line with an icon: no avatar, no bubble, no hover tools, no reactions,
+and it never groups with the message above it. `text` still carries a plain-words fallback so a
+client that doesn't know `sys` shows something sensible rather than nothing.
+
+Which of Discord's welcome lines is used is derived from the message's own timestamp, so every
+client picks the same one and it doesn't change on re-render.
+
+**Server Settings → Overview** gained: a server description, a system-messages channel picker,
+join messages on/off, and random-welcome-wording on/off.
+
+### L. Message formatting
+
+`js/discord/markdown.js`: `||spoilers||`, `**bold**`, `*italic*`, `***both***`, `__underline__`,
+`~~strike~~`, `` `code` ``, ```` ```fenced blocks``` ````, `> quotes`, `>>> block quotes`,
+`# ## ###` headings, `-# small text`, `- bullets`, and `[label](https://…)` links.
+
+The ordering in that file is the thing that keeps the output safe, and it is fixed on purpose:
+
+1. **Code is lifted out first**, before anything else looks at the text — markdown inside a code
+   block is not markdown.
+2. Every piece of text that reaches the output goes through `esc()` before any tag is put around
+   it. There is no path where raw input reaches the DOM.
+3. Finished HTML (code, links, mentions) is parked behind a NUL-delimited token and put back at
+   the very end, so the formatting passes can never see or mangle a tag they produced. NUL is
+   stripped from the input on the first line, so a message cannot forge a token.
+4. Link hrefs are only ever written by `mdLink()`, which accepts http(s) and nothing else.
+   `[click me](javascript:…)` renders as plain text.
+
+`test/run-markdown.js` drives every construct and nine XSS shapes through the real app and asserts
+both that formatting works and that none of the attacks survive.
+
+### M. Invite links say "coming soon"
+
+Invite **codes** are the product and are unchanged. The **link** is marked coming soon, on purpose:
+the site is normally opened from an about:blank or blob launcher window where the page has no
+address of its own, so a link either points at nothing or at whichever deployment `CFG.SITE_URL`
+names — which is not necessarily the one the person is using. A feature that works for some people
+and silently fails for others is worse than one that says it isn't ready. The code works everywhere.
+
+### N. Delete Server sits under Leave Server
+
+An owner now sees **both**, Delete underneath Leave. Leaving a server you own is still refused —
+it would strand the place with nobody able to administer it — and the error says so and points at
+Delete, rather than the entry simply not being there.
+
+Deleting a server releases your own boost slot immediately. Other boosters' rows die on their own
+next sign-in, because `serverBoosts/$sid/$uid` is writable only by `$uid` — folding them into the
+owner's delete would make the whole multi-path update fail and take the delete down with it.
+
+### O. The old theme is gone, not hidden
+
+The glass look was already unreachable, but the pieces were still there: a `apply(false)` path
+that could switch it off (including from a `storage` event fired by an older build in another
+tab), the first-run **"Choose your look"** dialog that still offered **Normal**, the bubble-colour,
+roundness and UI-glass controls sitting in settings behind `.dl-hide`, and `css/11-glass-theme.css`
+on disk.
+
+All removed. `apply()` ignores its argument — there is one look, and turning `discord-look` off
+would not reveal another one, it would leave the site unstyled. The removed controls' **values are
+preserved**, not reset: `meBubble` is still the colour of a person's own messages, so `read()`
+simply stops reading inputs that no longer exist rather than overwriting the stored values.
+
+### P. Reply quotes: an overlapping avatar, a sprawling name, and a leaked spoiler
+
+Three bugs that only showed up once somebody actually replied to something.
+
+**The mini avatar was drawn 16px wide and 40px TALL**, hanging out of its 22px row and landing on
+top of the message avatar underneath - visible on every replied-to message. Two rules style it:
+
+| file | selector | result |
+|---|---|---|
+| `22-discord-look.css` | `html.discord-look .reply-ref .rr-avatar .avatar` | 16x16 `!important` |
+| `27-discord-exact.css` | `html.discord-look .messages .msg .avatar` | 40x40 `!important` |
+
+Four classes and one element each - **equal specificity**, so the later file simply won and the
+quote's avatar inherited the message avatar's size and its 16px right margin.
+
+**A long display name ate the quote.** `.rr-name{max-width:40%}` was written when a name was a
+username; a 32-character display name took 250px of a 700px quote and squeezed the message you
+were trying to read into what was left. The name is now capped and shrinks first, and the quoted
+text gets the room.
+
+**And the one that actually mattered: a spoiler was revealed by someone replying to it.** The
+quote showed the replied-to message's raw text, so a spoiler's hidden words appeared in plain
+sight above everyone's reply - the whole point of a spoiler, defeated by somebody else's action
+rather than your own. Quotes now run through `mdPlain()`, which strips the formatting markers
+**and replaces spoiler content rather than unwrapping it**. Raw markup is gone from previews too:
+a reply to a code block used to show the fences and the code inline; it now reads `Heading [code]
+bold`. The composer's "Replying to..." bar uses the same function.
+
+### Q. The server banner is drawn now
+
+Section 12-J shipped the banner field, the Level 1 gate and the validation, and said plainly that
+nothing rendered it. It does now: across the top of the channel list, fading into the sidebar with
+the server name over it, exactly where Discord puts it. Upload lives in **Server Settings ->
+Overview**, cropped to 16:9 and compressed under the same budget server icons use.
+
+The level is **re-checked at render time**, not only at upload: if a server drops below Level 1
+because a booster lost MVP or moved their boost, the banner stops showing immediately. It is not
+deleted, so it comes straight back if the server is boosted again.
+
+### Testing
+
+```
+node test/build-harness.js     # the real app + a fake database
+node test/run.js               # renders, screenshots, exercises servers/roles/invites
+node test/run-visual.js        # the layout at 11 viewports against Discord's measurements
+node test/run-perms.js         # permissions, hierarchy, channel overrides, DMs, mobile drawer
+node test/run-features.js      # every dialog, the rail, and ICH's site rows
+node test/run-moderation.js    # per-server bans/timeouts/IP bans, discovery, invites, icons, XSS
+node test/run-signin.js        # signing in through the real form, switching accounts
+node test/run-chat.js          # sending, editing, deleting, reactions, the rate limiter
+node test/run-layout.js        # layout at the documented breakpoints
+node test/run-overflow.js      # no horizontal overflow anywhere
+node test/run-markdown.js      # NEW: every formatting construct + 9 XSS shapes
+node test/run-boosts.js        # NEW: boost slots, levels, the 7-day move, MVP revocation, joins
+node test/run-v53.js           # NEW: display names, ICH locking, rank scoping, the ladder,
+                               #      images, reply quotes, the server banner, and one check per
+                               #      item on the original list (invite wording, Leave/Delete
+                               #      order, status in Profiles, Shop in DMs, forced theme,
+                               #      rank-change repaint)
+node test/run-rules.js         # NEW: the delete ladder against targaryen (npm i --no-save targaryen)
+```
+
+All pass with **zero page errors**. The only console errors are network calls to the real internet
+(music, the attest API, the TOS endpoint) that can't resolve in a test container.
+
+One pre-existing failure is **not** mine and fails identically on the v52 build: `test/run.js`
+logs `server menu failed: page.click timeout` — the TOS modal intercepts that click in the
+harness. Everything it actually asserts passes.
+
+### Known limits, still
+
+Unchanged from sections 7 and 11, plus:
+
+* **Boost counts and the 7-day move are enforced in the browser**, like the server caps are, and
+  for the same reason: database rules cannot compare against a node the same write is deleting, and
+  a server-side counter whose drift locks people out is a worse failure than someone bypassing this
+  from a console. The things that *matter* are enforced by rules — only you can write your own
+  boost rows, and only an MVP can create one.
+* Threads, forum and stage channels, screen share, custom emoji, slash commands, webhooks, bots
+  and AutoMod are still not built.

@@ -233,6 +233,10 @@
     seed(tree){DATA=JSON.parse(JSON.stringify(tree||{}));fire('')},
     dump(){return JSON.parse(JSON.stringify(DATA))},
     at(p){return getAt(p)},
+    /* Write straight into the fake database, bypassing the app. Used by tests that need to
+       simulate ANOTHER account doing something (a second person boosting a server) or an
+       out-of-band backend change (an owner removing someone's MVP in the console). */
+    set(p,v){setAt(p,v);fire(p);return Promise.resolve()},
     // register an account without going through the UI
     account(email,password,uid){accounts[String(email).toLowerCase()]={uid:uid||('uid'+(++uidN)),password};return accounts[String(email).toLowerCase()].uid},
     signIn(email){

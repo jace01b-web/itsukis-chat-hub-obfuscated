@@ -61,6 +61,7 @@ const inlined=
   'serverLockReason,openDiscover,inviteUrl,readInviteFromUrl,clearInviteFromUrl,'+
   'serverIconFromFile,serverIconPicker,openBanDialog,openTimeoutDialog,handleInviteLink,'+
   'DiscordShell,show,modalTos,pageIsAddressable,'+
+  'DBoost,openBoostDialog,mdRender,dispName,outranks,siteRank,'+
   'get view(){return view},get ME(){return ME}};\n};\n'+
   /* about:blank has no query string, so ?manual cannot be expressed there. A page written into
      about:blank is always driven by the test (seed -> sign in -> start), so it must not boot

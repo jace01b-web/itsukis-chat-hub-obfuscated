@@ -3838,60 +3838,8 @@ html.discord-look .msg .meta .nm-wrap,html.discord-look .msg .meta .hw-name{disp
 html.discord-look .msg .meta .nm-wrap,html.discord-look .msg .meta .hw-name{margin-right:6px}
 
 /* ===== v12: "Choose your look" dialog (shown in both looks, so not scoped to .discord-look) ===== */
-.lk-modal{max-width:680px!important;width:calc(100vw - 32px)!important;text-align:center;padding:30px 28px 26px!important;border-radius:28px!important;position:relative;overflow-x:hidden;overflow-y:auto;max-height:calc(100vh - 24px);animation:lkIn .32s cubic-bezier(.2,.9,.3,1.2) both}
-.lk-modal::before{content:"";position:absolute;inset:-40% -20% auto -20%;height:70%;background:radial-gradient(60% 60% at 30% 40%,rgba(124,108,255,.35),transparent 70%),radial-gradient(50% 60% at 75% 30%,rgba(88,101,242,.3),transparent 70%);pointer-events:none;filter:blur(10px)}
-.lk-modal>*{position:relative}
-@keyframes lkIn{from{opacity:0;transform:translateY(16px) scale(.96)}to{opacity:1;transform:none}}
-.lk-head h2{margin:6px 0 6px;font-size:26px;letter-spacing:-.3px}
-.lk-head .hint{font-size:14px;opacity:.75;max-width:420px;margin:0 auto}
-.lk-spark{display:inline-grid;place-items:center;width:46px;height:46px;border-radius:16px;background:linear-gradient(135deg,#7c6cff,#5865f2);font-size:22px;box-shadow:0 8px 22px rgba(88,101,242,.45)}
-.lk-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:24px}
-@media(max-width:560px){.lk-grid{grid-template-columns:1fr}.lk-modal{padding:24px 16px 18px!important}}
-.lk-card{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:14px;padding:12px 12px 14px;border-radius:22px;background:rgba(255,255,255,.05);border:2px solid rgba(255,255,255,.08);color:inherit;text-align:left;cursor:pointer;transition:transform .2s cubic-bezier(.2,.9,.3,1.3),border-color .2s,background-color .2s,box-shadow .2s;font:inherit}
-.lk-card:hover,.lk-card:focus-visible{transform:translateY(-4px);border-color:#7c8cff;background:rgba(88,101,242,.12);box-shadow:0 14px 34px rgba(0,0,0,.35),0 0 0 4px rgba(88,101,242,.15);outline:none}
-.lk-card:active{transform:translateY(-1px) scale(.99)}
-.lk-card.cur{border-color:#5865f2;background:rgba(88,101,242,.14)}
-.lk-badge{position:absolute;top:20px;right:20px;z-index:2;display:none;align-items:center;gap:5px;padding:4px 10px 4px 7px;border-radius:99px;background:#5865f2;color:#fff;font-size:11.5px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.35)}
-.lk-badge em{font-style:normal}
-.lk-card.cur .lk-badge{display:inline-flex}
-.lk-info{display:flex;flex-direction:column;gap:6px;padding:0 4px}
-.lk-info b{font-size:18px}
-.lk-info small{font-size:13px;opacity:.75;line-height:1.4}
-.lk-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
-.lk-tags u{text-decoration:none;font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;background:rgba(255,255,255,.09);opacity:.9}
-.lk-pick{margin:0 4px;text-align:center;padding:10px;border-radius:12px;font-weight:700;font-size:14px;background:rgba(255,255,255,.08);transition:background-color .2s,color .2s}
-.lk-card:hover .lk-pick,.lk-card:focus-visible .lk-pick,.lk-card.cur .lk-pick{background:#5865f2;color:#fff}
-/* mini previews */
-.lk-prev{position:relative;display:block;height:150px;border-radius:14px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
-.lk-prev i{display:block;flex:none}
-.lk-prev .av{width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,#9aa4ff,#ff8fc8)}
-.lk-prev .ln{height:8px;border-radius:6px;background:rgba(255,255,255,.55)}
-.lk-prev .w1{width:70px}.lk-prev .w2{width:96px}.lk-prev .w3{width:54px}
-.lk-prev-normal{background:radial-gradient(90% 80% at 15% 0%,#3a2a78,transparent 60%),radial-gradient(80% 80% at 100% 100%,#6b2a63,transparent 60%),#15122b}
-.lk-prev-normal .pv-top{position:absolute;left:10px;right:10px;top:10px;height:22px;border-radius:12px;background:rgba(255,255,255,.12);backdrop-filter:blur(6px);display:flex;align-items:center;gap:6px;padding:0 8px}
-.lk-prev-normal .pv-top i{width:30px;height:7px;border-radius:5px;background:rgba(255,255,255,.55)}
-.lk-prev-normal .pv-top i+i{width:18px;opacity:.5}
-.lk-prev-normal .pv-b{position:absolute;display:flex;align-items:center;gap:7px;padding:7px 12px 7px 8px;border-radius:16px}
-.lk-prev-normal .pv-b.l{left:12px;background:rgba(124,108,255,.55)}
-.lk-prev-normal .pv-b.r{right:12px;top:68px;background:rgba(255,108,180,.55);padding:9px 14px;border-bottom-right-radius:5px}
-.lk-prev-normal .pv-b.l:nth-of-type(2){top:40px;border-bottom-left-radius:5px}
-.lk-prev-normal .pv-b.l:nth-of-type(4){top:98px;border-bottom-left-radius:5px}
-.lk-prev-normal .pv-in{position:absolute;left:12px;right:12px;bottom:8px;height:20px;border-radius:12px;background:rgba(255,255,255,.14)}
-.lk-prev-discord{background:#313338;display:flex}
-.lk-prev-discord .pv-rail{width:30px;background:#1e1f22;display:flex;flex-direction:column;align-items:center;gap:7px;padding-top:9px}
-.lk-prev-discord .pv-rail i{width:20px;height:20px;border-radius:50%;background:#383a40}
-.lk-prev-discord .pv-rail i:first-child{background:#5865f2;border-radius:7px}
-.lk-prev-discord .pv-side{width:58px;background:#2b2d31;display:flex;flex-direction:column;gap:6px;padding:9px 7px}
-.lk-prev-discord .pv-side i{height:7px;border-radius:4px;background:#404249}
-.lk-prev-discord .pv-side i.h{height:9px;background:#5d6068;margin-bottom:4px}
-.lk-prev-discord .pv-side i:nth-child(3){background:#5865f2;opacity:.8}
-.lk-prev-discord .pv-main{flex:1;position:relative;display:flex;flex-direction:column;gap:9px;padding:10px 8px}
-.lk-prev-discord .pv-m{display:flex;align-items:center;gap:7px}
-.lk-prev-discord .pv-m:nth-child(2) .av{background:linear-gradient(135deg,#f6c177,#eb6f92)}
-.lk-prev-discord .pv-m:nth-child(3) .av{background:linear-gradient(135deg,#7ee8c0,#5865f2)}
-.lk-prev-discord .pv-in{position:absolute;left:8px;right:8px;bottom:8px;height:16px;border-radius:9px;background:#383a40}
-.lk-prev-discord .pv-mem{width:34px;background:#2b2d31;display:flex;flex-direction:column;gap:7px;padding:10px 7px}
-.lk-prev-discord .pv-mem i{height:7px;border-radius:4px;background:#404249}
+/* The "Choose your look" dialog was removed in v53 along with the Normal look it offered;
+   its styles went with it. See js/settings/anti-lag.js. */
 
 /* ==========================================================================
  * v13: closer to the real Discord - settings window, message hover toolbar, "+" upload menu, "User Settings" tooltip
@@ -6896,6 +6844,473 @@ html.discord-look .messages,html.discord-look .messages *{max-width:100%}
 html.discord-look .messages pre,html.discord-look .messages code{overflow-x:auto;max-width:100%}
 html,body{overflow-x:hidden}
 
+/* ==========================================================================
+ * css/28-discord-plus.css
+ *
+ * Loaded LAST, after 27-discord-exact.css. Everything in here either fixes something that
+ * stylesheet got wrong or styles markup that did not exist before it:
+ *
+ *   1. Attachments & images   images were stretched to the full message width with grey bars
+ *   2. Settings               Discord's real two-column alignment instead of a stretched grid
+ *   3. Display names          the @username line under a display name
+ *   4. Message formatting     spoilers, code, quotes, headers, masked links
+ *   5. System messages        join messages and other server events
+ *   6. Boosts                 the boost bar, badges and the boost dialog
+ *   7. Server settings        the new Overview controls
+ * ========================================================================== */
+
+/* ======================================================================
+ * 1. ATTACHMENTS & IMAGES
+ *
+ * The bug: css/27-discord-exact.css ends with an anti-overflow guard,
+ *
+ *     html.discord-look .messages, html.discord-look .messages * { max-width:100% }
+ *
+ * whose `*` out-specifies `.imgs{max-width:340px}` and `.imgs.n1{max-width:300px}` in
+ * 06-chat.css. Every image in chat therefore grew to the full width of the message column,
+ * and because `.imgs img` is `width:100%` with a 320px row and `object-fit:contain`, a small
+ * image was blown up into a 784x320 box and padded out with `background:var(--bg2)` - the grey
+ * space on either side.
+ *
+ * The guard is still wanted for text, tables and <pre>; it just must not apply to media. So the
+ * rules below re-assert real sizes for images with enough specificity to win, and size them the
+ * way Discord does: by the image's OWN aspect ratio, capped at 550x350, never upscaled.
+ * ====================================================================== */
+
+/* Let the image grid size itself again. `width:max-content` + `max-width` is what stops a
+   narrow image being stretched: the grid is as wide as its contents, not its container. */
+html.discord-look .messages .bubble .imgs,
+html.discord-look .bubble .imgs,
+.bubble .imgs{
+  display:grid;gap:4px;margin-top:8px;
+  width:max-content;max-width:min(550px,100%);
+  border-radius:8px;overflow:hidden;
+}
+
+/* --- one image: Discord's exact behaviour ---
+   width/height auto means the <img> lays out at its natural size; the two maximums then scale
+   it down proportionally (max-width/max-height preserve aspect ratio on replaced elements).
+   A 120x90 image stays 120x90. A 1920x1080 one lands at 550x309. Nothing is ever enlarged, so
+   there is no empty space to fill and no background needed behind it. */
+html.discord-look .messages .bubble .imgs.n1,
+html.discord-look .bubble .imgs.n1,
+.bubble .imgs.n1{grid-template-columns:auto;width:max-content;max-width:min(550px,100%)}
+html.discord-look .messages .bubble .imgs.n1 img,
+html.discord-look .bubble .imgs.n1 img,
+.bubble .imgs.n1 img{
+  width:auto!important;height:auto!important;
+  max-width:min(550px,100%)!important;max-height:350px!important;
+  object-fit:contain;background:none!important;
+  border-radius:8px;cursor:zoom-in;display:block;
+}
+
+/* --- several images: a fixed mosaic, like Discord's --- */
+html.discord-look .messages .bubble .imgs:not(.n1),
+html.discord-look .bubble .imgs:not(.n1),
+.bubble .imgs:not(.n1){width:min(500px,100%);max-width:min(500px,100%)}
+html.discord-look .messages .bubble .imgs:not(.n1) img,
+html.discord-look .bubble .imgs:not(.n1) img,
+.bubble .imgs:not(.n1) img{
+  width:100%!important;height:100%!important;
+  max-width:none!important;max-height:none!important;
+  object-fit:cover;background:var(--dl-bg3,rgba(0,0,0,.2));
+  border-radius:4px;cursor:zoom-in;display:block;
+}
+.bubble .imgs.n2{grid-template-columns:1fr 1fr}
+.bubble .imgs.n2 img{aspect-ratio:1/1}
+.bubble .imgs.n3{grid-template-columns:1fr 1fr}
+.bubble .imgs.n3 img:first-child{grid-column:span 2;aspect-ratio:16/9}
+.bubble .imgs.n3 img:not(:first-child){aspect-ratio:1/1}
+.bubble .imgs.n4{grid-template-columns:1fr 1fr}
+.bubble .imgs.n4 img{aspect-ratio:1/1}
+.bubble .imgs.multi{grid-template-columns:repeat(3,1fr)}
+.bubble .imgs.multi img{aspect-ratio:1/1}
+
+/* Uploaded GIFs/videos/files go through .fa-* instead of .imgs, and the same guard flattened
+   them in the same way. Same treatment: natural size, capped, no filler behind. */
+html.discord-look .messages .fa-wrap,
+.fa-wrap{width:max-content;max-width:min(550px,100%)}
+html.discord-look .messages .fa-media,
+.fa-media{width:max-content;max-width:100%;background:none;border-radius:8px}
+html.discord-look .messages .fa-gif,
+.fa-gif{
+  width:auto!important;height:auto!important;
+  max-width:min(550px,100%)!important;max-height:350px!important;
+  background:none!important;margin:0;border-radius:8px;
+}
+html.discord-look .messages .fa-video,
+.fa-video{
+  width:auto!important;height:auto!important;
+  max-width:min(550px,100%)!important;max-height:350px!important;
+  background:#000;border-radius:8px;
+}
+/* Cards (generic files, text snippets) do want the full column, so they keep stretching. */
+html.discord-look .messages .fa-card,.fa-card{width:min(432px,100%);box-sizing:border-box}
+
+@media(max-width:520px){
+  .bubble .imgs,.bubble .imgs.n1,.fa-wrap,.fa-media{max-width:100%}
+  .bubble .imgs:not(.n1){width:100%}
+}
+
+/* ======================================================================
+ * 2. SETTINGS - Discord's real alignment
+ *
+ * 27-discord-exact.css laid the page out as `grid-template-columns:minmax(218px,1fr) minmax(0,2.6fr)`,
+ * which pins the nav to the LEFT EDGE of the window and lets it grow with the screen. Discord
+ * does the opposite: both halves are flexible, but the nav is pushed to the RIGHT of its half
+ * and the content to the LEFT of its own, so the two meet in the middle of the window at a
+ * fixed 218px / 740px pair no matter how wide the display is.
+ * ====================================================================== */
+/* NOT edge-to-edge. css/22-discord-look.css already made settings a centred window with
+   margins ("v15: settings window at Discord's size"); css/27-discord-exact.css then set
+   `.modal-bg:has(#sTabs){padding:0!important}` and stretched it back to every edge of the
+   browser. This restores the window - a dimmed backdrop with the panel floating on it, rounded
+   and shadowed - and keeps Discord's two-column layout inside it. */
+@media(min-width:821px){
+  html.discord-look .modal-bg:has(#sTabs){
+    padding:64px 10vw!important;
+    align-items:stretch!important;justify-content:stretch!important;
+    background:rgba(0,0,0,.55)!important;
+  }
+  html.discord-look .modal.wide:has(#sTabs){
+    border-radius:12px!important;
+    overflow:hidden!important;
+    box-shadow:0 16px 48px rgba(0,0,0,.45)!important;
+  }
+}
+@media(min-width:821px) and (max-width:1200px){
+  html.discord-look .modal-bg:has(#sTabs){padding:40px 4vw!important}
+}
+
+html.discord-look .modal.wide:has(#sTabs){
+  display:grid!important;
+  /* Discord's own proportions: a 218px nav and the content beside it. The old rule was
+     `minmax(218px,1fr) minmax(0,2.6fr)`, which let the NAV grow with the window - on a wide
+     screen it ended up hundreds of pixels wide with the content pushed off to the right. */
+  grid-template-columns:218px minmax(0,1fr)!important;
+  grid-template-rows:100%!important;
+  position:relative;
+  align-items:stretch;
+}
+html.discord-look .modal.wide:has(#sTabs) #sTabs{
+  grid-row:1;grid-column:1;
+  display:flex!important;flex-direction:column;gap:2px;
+  box-sizing:border-box;width:auto;min-width:0;
+  padding:48px 8px 48px 12px!important;
+  align-items:stretch;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--dl-bg2)!important;
+}
+html.discord-look .modal.wide:has(#sTabs) [data-p]{
+  grid-row:1;grid-column:2;
+  box-sizing:border-box;
+  min-width:0;min-height:0;
+  max-width:740px;
+  padding:48px 40px 90px 40px!important;
+  overflow-y:auto;
+}
+html.discord-look .modal.wide:has(#sTabs) [data-p].hidden{display:none!important}
+/* Inside the window, so it is pinned to the PANEL's corner rather than the browser's. */
+html.discord-look .modal.wide:has(#sTabs) .dl-set-x,
+html.discord-look .dl-set-x{
+  position:absolute!important;
+  top:16px!important;right:16px!important;left:auto!important;bottom:auto!important;
+  z-index:6;
+}
+html.discord-look .modal.wide:has(#sTabs) .dl-set-x::after{display:none}
+/* the unsaved-changes bar sits inside the window too */
+html.discord-look .modal.wide:has(#sTabs)>.actions{right:24px!important;bottom:20px!important}
+html.discord-look .modal.wide:has(#sTabs)>.err{right:24px!important;bottom:72px!important}
+
+/* Discord's settings scale in rather than appearing. */
+@keyframes dsetIn{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:none}}
+html.discord-look .modal.wide:has(#sTabs){animation:dsetIn .16s ease-out}
+@media (prefers-reduced-motion:reduce){html.discord-look .modal.wide:has(#sTabs){animation:none}}
+
+/* Phone: the nav is a full-screen list, and picking an item slides in the section (the
+   `dset-paned` behaviour js/settings/discord-settings.js already drives). */
+@media(max-width:820px){
+  html.discord-look .modal-bg:has(#sTabs){padding:0!important;background:var(--dl-bg)!important}
+  html.discord-look .modal.wide:has(#sTabs){
+    display:flex!important;flex-direction:column!important;border-radius:0!important;box-shadow:none!important;
+  }
+  html.discord-look .modal.wide:has(#sTabs) #sTabs{flex:1 1 auto;padding:16px 10px 24px!important}
+  html.discord-look .modal.wide:has(#sTabs) [data-p]{flex:1 1 auto;max-width:none;padding:16px 14px 90px!important}
+  html.discord-look .modal.wide:has(#sTabs) .dl-set-x,
+  html.discord-look .dl-set-x{top:12px!important;right:12px!important}
+}
+
+/* status picker inside Settings -> Profiles */
+.dl-stgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:620px){.dl-stgrid{grid-template-columns:1fr}}
+.dl-stopt{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:10px 12px;border:1px solid var(--dl-line,rgba(255,255,255,.08));border-radius:8px;
+  background:var(--dl-bg3,rgba(0,0,0,.15));color:var(--dl-text,inherit);
+  text-align:left;cursor:pointer;font:inherit;
+}
+.dl-stopt:hover{background:var(--dl-hover,rgba(255,255,255,.06))}
+.dl-stopt.on{border-color:var(--dl-accent,#5865f2);background:var(--dl-active,rgba(88,101,242,.16))}
+.dl-stopt .dl-dot{flex:none;margin-top:3px;position:static}
+.dl-stopt span{display:flex;flex-direction:column;min-width:0}
+.dl-stopt b{font-size:14px;font-weight:600;color:var(--dl-head,inherit)}
+.dl-stopt small{font-size:12px;color:var(--dl-muted,#949ba4);line-height:1.3;margin-top:2px}
+
+/* ======================================================================
+ * 3. DISPLAY NAMES
+ * ====================================================================== */
+.dlpo-uname,.pf-uname{
+  margin:-2px 0 6px;font-size:14px;line-height:1.25;
+  color:var(--dl-muted,#949ba4);font-weight:500;
+}
+.pf-uname{margin:2px 0 0}
+/* the member list and user panel show the display name; the username is on the profile */
+.dl-mem-nm .nm-user{min-width:0;overflow:hidden;text-overflow:ellipsis}
+
+/* ======================================================================
+ * 4. MESSAGE FORMATTING  (js/discord/markdown.js)
+ * ====================================================================== */
+.md-spoiler{
+  background:var(--dl-spoiler,#1e1f22);color:transparent;
+  border-radius:4px;padding:0 2px;cursor:pointer;
+  -webkit-user-select:none;user-select:none;
+  transition:background .1s ease;
+}
+.md-spoiler *{visibility:hidden}
+.md-spoiler:hover{background:#26272b}
+.md-spoiler.shown{
+  background:rgba(255,255,255,.06);color:inherit;cursor:text;
+  -webkit-user-select:text;user-select:text;
+}
+.md-spoiler.shown *{visibility:visible}
+.md-spoiler:focus-visible{outline:2px solid var(--dl-accent,#5865f2);outline-offset:1px}
+
+.md-code{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  font-size:.875em;line-height:1.125rem;
+  background:var(--dl-bg3,#1e1f22);border:1px solid rgba(0,0,0,.2);
+  border-radius:4px;padding:.2em .3em;white-space:pre-wrap;
+}
+.md-pre{
+  display:block;margin:6px 0;padding:.5em;max-width:100%;
+  background:var(--dl-bg3,#1e1f22);border:1px solid rgba(0,0,0,.25);border-radius:4px;
+  white-space:pre-wrap;overflow-x:auto;
+}
+.md-pre code{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  font-size:.875em;line-height:1.125rem;color:var(--dl-text,#dbdee1);
+  background:none;border:0;padding:0;white-space:pre-wrap;
+}
+.md-quote{
+  display:block;margin:4px 0;padding:0 0 0 12px;
+  border-left:4px solid var(--dl-line,#4e5058);border-radius:4px;
+  white-space:pre-wrap;
+}
+.md-h{display:block;font-weight:700;color:var(--dl-head,#f2f3f5);line-height:1.25;margin:8px 0 4px}
+.md-h1{font-size:1.5em}
+.md-h2{font-size:1.25em}
+.md-h3{font-size:1.1em}
+.md-sub{display:block;font-size:.8em;color:var(--dl-muted,#949ba4);line-height:1.3}
+.md-ul{display:block;margin:4px 0;padding-left:20px;list-style:disc}
+.md-ul li{display:list-item;white-space:pre-wrap;margin:2px 0}
+.bubble s{text-decoration:line-through}
+.bubble u{text-decoration:underline}
+
+/* ======================================================================
+ * 5. SYSTEM MESSAGES  (joins, boosts, server events)
+ * ====================================================================== */
+.msg.sys .bubble,.msg.sys .msg-body{background:none!important;box-shadow:none!important;padding-left:0}
+.sysmsg{
+  display:flex;align-items:center;gap:8px;
+  color:var(--dl-muted,#949ba4);font-size:15px;line-height:1.375;
+  white-space:normal;
+}
+.sysmsg .sysic{flex:none;display:grid;place-items:center;width:18px;height:18px;opacity:.9}
+.sysmsg .sysic svg{width:18px;height:18px}
+.sysmsg.join .sysic{color:#23a559}
+.sysmsg.boost .sysic{color:#ff73fa}
+.sysmsg b{color:var(--dl-head,#f2f3f5);font-weight:600;cursor:pointer}
+.sysmsg b:hover{text-decoration:underline}
+.sysmsg .systime{font-size:12px;color:var(--dl-muted,#949ba4);opacity:.7}
+
+/* ======================================================================
+ * 6. BOOSTS
+ * ====================================================================== */
+.dl-boost-chip{
+  display:inline-flex;align-items:center;gap:2px;margin-left:6px;
+  padding:1px 5px;border-radius:4px;
+  background:rgba(255,115,250,.16);color:#ff73fa;
+  font-size:11px;font-weight:700;line-height:1.4;
+}
+.dl-boost-chip .bic{width:11px;height:11px}
+.dl-boostbar{
+  margin:0 8px 8px;padding:8px 10px;border-radius:6px;
+  background:var(--dl-bg3,rgba(0,0,0,.18));cursor:pointer;
+}
+.dl-boostbar:hover{background:var(--dl-hover,rgba(255,255,255,.06))}
+.dl-bb-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.dl-bb-lv{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:#ff73fa}
+.dl-bb-n{font-size:11px;color:var(--dl-muted,#949ba4)}
+.dl-bb-track{height:4px;margin:6px 0 4px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden}
+.dl-bb-track i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#ff73fa,#b377ff)}
+.dl-bb-sub{font-size:11px;color:var(--dl-muted,#949ba4)}
+
+.dbst-head{padding:14px;border-radius:8px;background:var(--dl-bg3,rgba(0,0,0,.18));margin-bottom:14px}
+.dbst-lv{font-size:16px;font-weight:700;color:#ff73fa}
+.dbst-track{height:6px;margin:8px 0 6px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden}
+.dbst-track i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#ff73fa,#b377ff)}
+.dbst-sub{font-size:12px;color:var(--dl-muted,#949ba4)}
+.dbst-perks{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+@media(max-width:620px){.dbst-perks{grid-template-columns:1fr}}
+.dbst-perk{padding:10px;border:1px solid var(--dl-line,rgba(255,255,255,.08));border-radius:6px;opacity:.55}
+.dbst-perk.on{opacity:1;border-color:#ff73fa;background:rgba(255,115,250,.07)}
+.dbst-perk b{display:block;font-size:13px;color:var(--dl-head,#f2f3f5);margin-bottom:4px}
+.dbst-perk b span{font-weight:500;color:var(--dl-muted,#949ba4);font-size:11px}
+.dbst-perk ul{margin:0;padding-left:16px;list-style:disc}
+.dbst-perk li{font-size:12px;color:var(--dl-muted,#949ba4);margin:2px 0}
+.dbst-acts{display:flex;flex-direction:column;gap:8px}
+.dbst-you{font-size:14px;font-weight:600;color:#ff73fa}
+.dhint-inline{font-weight:400;opacity:.75;font-size:12px}
+.dbst-row{display:flex;align-items:center;gap:8px;padding:6px 0}
+.dbst-nm{font-size:14px;color:var(--dl-text,#dbdee1);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dbst-since{font-size:11px;color:var(--dl-muted,#949ba4)}
+/* a boosted server's rail icon gets Discord's pink ring */
+.dl-rail-item.boosted .dl-rail-btn{box-shadow:0 0 0 2px #ff73fa}
+.dl-rail-item.boosted.lv3 .dl-rail-btn{box-shadow:0 0 0 2px #ffcc4d,0 0 10px rgba(255,204,77,.5)}
+
+/* invite link "coming soon" row */
+.dcode.soon{opacity:.6}
+.dcode.soon span{font-style:italic}
+
+/* ======================================================================
+ * 7. PROFILES - Discord's role pills, banner and name block
+ * ====================================================================== */
+/* Server roles: a coloured dot and the name in a bordered pill, the way Discord shows them. */
+.pf-srvroles{margin-top:12px}
+.pf-srvroles-h{
+  margin-bottom:6px;
+  font-size:12px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;
+  color:var(--dl-muted,#949ba4);
+}
+.pf-srvroles-list{display:flex;flex-wrap:wrap;gap:4px}
+.pf-srvrole{
+  display:inline-flex;align-items:center;gap:4px;
+  max-width:100%;padding:2px 8px 2px 4px;
+  border:1px solid var(--dl-line,rgba(255,255,255,.1));border-radius:4px;
+  background:var(--dl-bg3,rgba(0,0,0,.14));
+  font-size:12px;line-height:18px;color:var(--dl-text,#dbdee1);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.pf-srvrole i{flex:none;width:12px;height:12px;border-radius:50%;display:block}
+
+/* The popout: Discord's 60px banner with the avatar hanging over it, then a tight name block. */
+html.discord-look .dlpo-banner{height:60px}
+html.discord-look .dlpo-name{font-size:20px;line-height:1.2;font-weight:700;margin-bottom:0}
+html.discord-look .dlpo-sub{margin-top:6px}
+html.discord-look .dlpo-body{padding-top:4px}
+/* a boosted-server owner's banner gets the boost tint behind it */
+html.discord-look .dlpo-banner.boosted::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,rgba(255,115,250,.35),transparent 60%);
+  pointer-events:none;
+}
+/* The full card: the same name/username stack as the popout. */
+html.discord-look .pf-namerow h2{font-size:20px;line-height:1.2}
+html.discord-look .pf-uname{margin-top:2px}
+
+/* ICH's site-feature rows in the channel list read as channels, but are visibly not channels. */
+.dch.dch-site .dch-ic{font-size:17px;line-height:1;display:grid;place-items:center;width:20px;height:20px}
+.dch.dch-site .dch-ic svg{width:18px;height:18px}
+.dch.dch-site{cursor:pointer}
+
+/* ======================================================================
+ * 8. REPLY QUOTES
+ *
+ * Two bugs lived here, both only visible once someone actually replied to something.
+ *
+ * THE OVERLAPPING AVATAR. The mini avatar in a reply quote is styled by
+ *   22-discord-look.css  html.discord-look .reply-ref .rr-avatar .avatar   -> 16x16
+ * and by
+ *   27-discord-exact.css html.discord-look .messages .msg .avatar          -> 40x40 !important
+ * Both are four classes and one element, so they have EQUAL specificity and the later file
+ * simply wins. The quote's 16px avatar was therefore drawn 16px wide and **40px tall**, hanging
+ * 24px out of a 22px row and landing on top of the message avatar underneath it - which is the
+ * overlap you could see on every replied-to message. It also inherited `margin-right:16px`.
+ *
+ * THE NAME EATING THE LINE. `.rr-name{max-width:40%}` was fine when a name was a username;
+ * with a 32-character display name it took 250px of a 700px quote and squeezed the quoted text
+ * into what was left. Discord caps the name and gives the rest to the message, which is the
+ * part you are actually trying to read.
+ * ====================================================================== */
+html.discord-look .messages .msg .reply-ref .rr-avatar .avatar,
+html.discord-look .reply-ref .rr-avatar .avatar{
+  width:16px!important;height:16px!important;
+  min-width:16px;min-height:16px;
+  margin:0!important;
+  font-size:8px!important;line-height:16px!important;
+  flex:none;
+}
+html.discord-look .messages .msg .reply-ref .rr-avatar,
+html.discord-look .reply-ref .rr-avatar{
+  flex:none;width:16px;height:16px;margin:0!important;overflow:hidden;border-radius:50%;
+}
+/* the quote is one line, and it is the message that gets the room */
+html.discord-look .messages .msg .reply-ref,
+html.discord-look .reply-ref{
+  align-items:center;
+  overflow:hidden;
+}
+html.discord-look .messages .msg .reply-ref .rr-name,
+html.discord-look .reply-ref .rr-name{
+  flex:0 1 auto;
+  max-width:180px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+html.discord-look .messages .msg .reply-ref .rr-text,
+html.discord-look .reply-ref .rr-text{
+  flex:1 1 auto;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+@media(max-width:640px){
+  html.discord-look .messages .msg .reply-ref .rr-name,
+  html.discord-look .reply-ref .rr-name{max-width:120px}
+}
+/* the composer's "Replying to …" bar truncates for the same reason */
+#composeContext #ccLabel{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+#composeContext #ccText{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;display:block}
+
+/* ======================================================================
+ * 9. SERVER BANNER  (Boost Level 1)
+ * ====================================================================== */
+.dl-srvbanner{
+  height:135px;margin:0 0 -4px;
+  background-size:cover;background-position:center;
+  border-radius:0;
+  position:relative;flex:none;
+}
+/* Discord fades the bottom of the banner into the sidebar so the server name stays readable. */
+.dl-srvbanner::after{
+  content:'';position:absolute;inset:auto 0 0 0;height:60%;
+  background:linear-gradient(transparent,var(--dl-bg2,#2b2d31));
+  pointer-events:none;
+}
+html.discord-look .dl-srvbanner+.dl-server-head{
+  position:relative;margin-top:-34px;z-index:1;
+  text-shadow:0 1px 3px rgba(0,0,0,.6);
+}
+/* the banner preview inside Server Settings */
+.svbn-prev{
+  height:150px;border-radius:8px;
+  background-size:cover;background-position:center;
+  background-color:var(--dl-bg3,rgba(0,0,0,.2));
+  border:1px solid var(--dl-line,rgba(255,255,255,.08));
+}
+.svbn-prev.empty{
+  display:grid;place-items:center;
+  color:var(--dl-muted,#949ba4);font-size:13px;
+  border-style:dashed;
+}
+
 </style>
 <script>
 /* ==========================================================================
@@ -8747,6 +9162,34 @@ function customNamesOn(){return MODSET.customNames!==false}
 function displayUsername(name){return(filterNamesOn()&&containsProfanity(name))?censorText(name):name}
 function usernameAllowed(name){return!filterNamesOn()||!containsProfanity(name)}
 
+/* ---- Display names (Discord's "display name", on top of the @username) ----
+   dispName() is what every piece of UI that shows a person uses. It returns their display name
+   if they set one and their username if they didn't, with the same profanity filtering applied
+   either way.
+
+   The username is still the identity: @mentions, friend requests, the moderation tools, sign-in
+   and anything that has to MATCH an account all keep using u.username. Display names are
+   presentation only, which is exactly how Discord treats them - two people can share one. */
+function dispName(u,fallback){
+  if(u==null||u==='')return fallback||'Deleted User';
+  // Accept an id as happily as a user object, so callers don't all have to look the user up.
+  if(typeof u==='number'||typeof u==='string'){
+    let got=null;try{got=DB.getUser(Number(u))}catch(_){}
+    if(!got)return fallback||('User '+u);
+    u=got;
+  }
+  if(u.deleted)return 'Deleted User';
+  const d=(u.style&&u.style.displayName)||'';
+  return displayUsername(d||u.username||fallback||'User');
+}
+/* True when this person's display name differs from their username, i.e. there is a point in
+   showing "@username" underneath it on their profile. */
+function hasDispName(u){
+  if(!u||typeof u!=='object')return false;
+  const d=(u.style&&u.style.displayName)||'';
+  return !!d&&d!==u.username;
+}
+
 /* ==========================================================================
  * js/core/name-styles.js
  * Decorative name styles (rainbow, gold, ...) and message-text display helpers
@@ -8776,6 +9219,24 @@ function nameStylePreset(id){
 function styledNameHTML(id,escapedName){
   const p=nameStylePreset(id);
   return p?'<span class="flair-name flair-'+p+'">'+escapedName+'</span>':escapedName;
+}
+/* ---- The name on a message, scoped to where the message is ----
+   fullNameHTML() paints the site ranks: the MVP/VIP title chip and the Daily-Spin flair styling.
+   Those belong to ICH and to DMs, which are site-level. Inside a server somebody else made they
+   are noise - that server never granted them - so there the name takes that server's own top
+   role colour instead, exactly like Discord.
+
+   Profiles deliberately keep using fullNameHTML(): a profile card is site-wide, and the ranks on
+   it are the equivalent of Discord's global badges. */
+function msgNameHTML(id,escapedName){
+  let srv=null;
+  try{srv=(typeof view!=='undefined'&&view.sid)||null}catch(_){}
+  let scoped=false;
+  try{scoped=!!srv&&typeof DModel!=='undefined'&&!DModel.isSystem(srv)&&(typeof view==='undefined'||view.mode!=='dms')}catch(_){}
+  if(!scoped)return fullNameHTML(id,escapedName);
+  let col='';
+  try{col=DModel.colorOf(srv,id)||''}catch(_){}
+  return '<span class="nm-user"'+(col?' style="color:'+esc(col)+'"':'')+'>'+escapedName+'</span>';
 }
 function checkMessageText_(text){return text}       // no longer pre-censors at send time — see displayMsgText()
 // Personal, per-viewer filter: ON by default, editable in Settings > Filter, client-side
@@ -9296,6 +9757,34 @@ let ADMINS_LOADED=false;
 function isAdmin(id){return ADMINS_CACHE[Number(id)]===1}
 // Anyone with moderation powers (owner, admin or mod) — used for showing the Moderation tools.
 function isStaff(id){return isOwner(id)||isAdmin(id)||isMod(id)}
+
+/* ---- The staff ladder ----
+   One place that says how the site ranks compare, so every moderation check agrees.
+
+   This used to be written out by hand at each call site, and each one got it slightly wrong in
+   the same direction: an admin could act on another admin, and a mod on another mod, because the
+   tests only excluded the ranks ABOVE the actor and never the actor's own. The rule everywhere
+   is now the same one: you may act on someone strictly below you, and on nobody else.
+
+     owner 4  >  admin 3  >  mod 2  >  everyone 1
+
+   MVP is deliberately not on this ladder. It is a perks tier with no moderation powers, so it
+   neither protects its holder from a mod nor lets them act on anyone. */
+function siteRank(id){
+  id=Number(id);
+  if(isOwner(id))return 4;
+  if(isAdmin(id))return 3;
+  if(isMod(id))return 2;
+  return 1;
+}
+/* Can `actor` use a staff power on `target`? Strictly-higher rank, and never on yourself through
+   a staff power (acting on your OWN content is a separate, always-allowed case the callers
+   handle before they get here). */
+function outranks(actor,target){
+  actor=Number(actor);target=Number(target);
+  if(actor===target)return false;
+  return siteRank(actor)>siteRank(target);
+}
 /* MVP: permanent role (mvp/$id), won from the Daily Spin (0.1%) or given by an owner. It has NO moderation powers —
    only perks (longer messages/descriptions, image banner, 3 daily spins, MVP chat, free permanent VIP) and it ranks
    above Admin/Mod in member lists. Hiding the tag only changes how the NAME looks; the perks stay. */
@@ -9529,6 +10018,9 @@ const DModel=(()=>{
       if(myId!==Number(id))return;
       pruneDeadServers().catch(()=>{});
       Object.keys(S.myServers||{}).forEach(sid=>{grantAccess(sid).catch(()=>{})});
+      // Same idea for boosts: drop slots pointed at servers that no longer exist, and every
+      // slot at all if MVP has been taken away since last time.
+      try{DBoost.prune().catch(()=>{})}catch(_){}
     },6000);
   }
   function stop(){
@@ -9540,13 +10032,33 @@ const DModel=(()=>{
   /* ======================================================================
    *  SERVERS
    * ====================================================================== */
+  /* One place that turns a raw servers/$sid record into the object the rest of the app uses.
+     It was written out twice - in myServers() and in server() - which is how the v53 fields
+     (desc, sys, welcome, banner) would have been visible from one and undefined from the other
+     depending on which call site you happened to come through. */
+  function srvShape(sid,v){
+    if(!v)return null;
+    return{
+      id:sid,
+      name:String(v.name||'Server'),
+      icon:v.icon||'',
+      img:typeof v.img==='string'?v.img:'',
+      ownerId:Number(v.ownerId),
+      createdAt:v.createdAt,
+      desc:typeof v.desc==='string'?v.desc:'',
+      sys:typeof v.sys==='string'?v.sys:'',
+      welcome:v.welcome!==false,     // on unless explicitly turned off
+      wjoin:v.wjoin!==false,
+      banner:typeof v.banner==='string'?v.banner:''
+    };
+  }
   // Every server I'm in, ICH always pinned first, then my saved order, then by name.
   function myServers(){
     const out=[{...ICH}];
     const ord=S.order||{};
     Object.keys(S.myServers||{}).filter(sid=>sid!==ICH_ID).map(sid=>{
       const v=S.servers[sid];
-      return v?{id:sid,name:String(v.name||'Server'),icon:v.icon||'',img:typeof v.img==='string'?v.img:'',ownerId:Number(v.ownerId),createdAt:v.createdAt}:null;
+      return srvShape(sid,v);
     }).filter(s=>s&&!isServerBanned(s.id,myId))
       .sort((a,b)=>{
         const oa=ord[a.id],ob=ord[b.id];
@@ -9561,7 +10073,7 @@ const DModel=(()=>{
   function server(sid){
     if(sid===ICH_ID)return{...ICH};
     const v=S.servers[sid];
-    return v?{id:sid,name:String(v.name||'Server'),icon:v.icon||'',img:typeof v.img==='string'?v.img:'',ownerId:Number(v.ownerId),createdAt:v.createdAt}:null;
+    return srvShape(sid,v);
   }
   function isSystem(sid){return sid===ICH_ID}
   function isServerOwner(sid,uid){
@@ -9695,6 +10207,32 @@ const DModel=(()=>{
         patch['servers/'+sid+'/img']=fields.img;
       }
     }
+    /* ---- v53 fields. All of these are refused on ICH: its description, its channels and its
+       join behaviour are code, not stored settings, and nobody joins it to be welcomed. ---- */
+    if(!isSystem(sid)){
+      if(fields.desc!==undefined){
+        const d=String(fields.desc||'').replace(/[\u0000-\u0009\u000b-\u001f\u007f<>]/g,'').replace(/\n{3,}/g,'\n\n').trim().slice(0,300);
+        patch['servers/'+sid+'/desc']=d||null;
+      }
+      if(fields.sys!==undefined){
+        const want=String(fields.sys||'');
+        // only ever a channel that actually exists on this server, and never a voice one
+        const ok=channels(sid).some(c=>c.id===want&&c.type!=='voice');
+        patch['servers/'+sid+'/sys']=ok?want:null;
+      }
+      if(fields.welcome!==undefined)patch['servers/'+sid+'/welcome']=!!fields.welcome;
+      if(fields.wjoin!==undefined)patch['servers/'+sid+'/wjoin']=!!fields.wjoin;
+      if(fields.banner!==undefined){
+        if(!fields.banner)patch['servers/'+sid+'/banner']=null;
+        else{
+          // Banners are a Boost Level 1 perk, so the level is checked before the image is.
+          let lv=0;try{lv=DBoost.levelFor(sid)}catch(_){}
+          if(lv<1)throw new Error('A server banner unlocks at Boost Level 1 (2 boosts).');
+          if(!isSafeServerImg(fields.banner))throw new Error('That image could not be used.');
+          patch['servers/'+sid+'/banner']=fields.banner;
+        }
+      }
+    }
     if(Object.keys(patch).length)await update(ref(rtdb),patch);
     // keep the public listing in step with the name/icon it advertises
     if(isPublic(sid)){try{await setPublic(sid,true,(S.discovery[sid]||{}).desc)}catch(_){}}
@@ -9718,11 +10256,20 @@ const DModel=(()=>{
     patch['serverMembers/'+sid]=null;
     chans.forEach(c=>{patch['channelServer/'+c.key]=null;patch['roomMembers/'+c.key]=null});
     await update(ref(rtdb),patch);
+    /* Boosts are released separately and AFTER the server is gone, not in the patch above:
+       serverBoosts/$sid/$uid is writable only by $uid, so an owner deleting a server they do not
+       boost cannot clear other people's records inside their own write - the whole multi-path
+       update would be refused and take the delete down with it. Each booster's own client drops
+       its dangling slot instead; DBoost.prune() does that on sign-in, and this just clears mine
+       immediately so the slot is free again the moment I delete my own server. */
+    try{if(typeof DBoost!=='undefined')await DBoost.releaseAllFor(sid)}catch(_){}
   }
 
   async function leaveServer(sid){
     if(isSystem(sid))throw new Error('You cannot leave the ICH server.');
-    if(isServerOwner(sid,myId))throw new Error('You own this server — delete it or transfer it first.');
+    // An owner leaving would strand the server with nobody able to administer it, so this is
+    // refused and the message names the way out - the Delete Server entry directly below Leave.
+    if(isServerOwner(sid,myId))throw new Error('You own this server, so you can\u2019t leave it. Use Delete Server below to remove it for everyone.');
     const patch={};
     patch['serverMembers/'+sid+'/'+myId]=null;
     patch['userServers/'+myId+'/'+sid]=null;
@@ -9822,6 +10369,7 @@ const DModel=(()=>{
     delete _accessDone[sid];
     // count the use; a failure here must not undo a successful join
     try{await set(R('invites/'+sid+'/'+code+'/uses'),(rec.uses||0)+1)}catch(_){}
+    await postJoinMessage(sid);
     return sid;
   }
 
@@ -9886,7 +10434,27 @@ const DModel=(()=>{
    *
    * Stage 1 makes channelServer true. Stage 2 then grants access, which the rules now allow.
    */
+  /* ---------- ICH is defined in code, not in the database ----------
+     Its channels, categories and roles are the ICH_CHANNELS / ICH_CATS / virtualRoles() constants
+     at the top of this file, and every one of them is wired to something else: a message key that
+     holds years of history, a gate the database rules enforce, a site rank granted from owners/,
+     mods/, mvp/ or customroles/.
+
+     A channel or role ADDED to ICH from the browser has none of that. It writes into
+     serverChannels/ich and serverRoles/ich, which the rules evaluate against servers/ich - a node
+     that does not exist, because ICH is not a stored server. So the write was refused, and when it
+     wasn't the result was a channel nobody could read. That is the "it's also broken" part.
+
+     Both are refused here rather than only hidden in the UI, so the context menu, the server menu,
+     the role manager, the "+" on a category and anything added later all agree. */
+  function assertNotICH(sid,what){
+    if(sid===ICH_ID)throw new Error(
+      'ICH’s '+what+' are built into the site, so they can’t be added or changed here. '+
+      'Make a server of your own for that — it gets its own channels and roles.');
+  }
+
   async function createChannel(sid,{name,type,cat,topic}){
+    assertNotICH(sid,'channels');
     assertPerm(sid,'manageCh');
     name=normChannelName(name,type);
     const cid=push(R('serverChannels/'+sid)).key;
@@ -9984,6 +10552,63 @@ const DModel=(()=>{
 
   /* Drop servers from my rail that no longer exist. `myServers()` already hides them, so
      without this they stay in userServers forever, silently counting against the join limit. */
+  /* ---------- system messages ----------
+     A join notice is an ordinary message carrying sys:'join', written by the person who just
+     joined. It needs no special permission for that reason: they are a member of the channel by
+     the time it is sent, which is exactly what the existing message rule asks for.
+
+     Where it goes: servers/$sid/sys if the server picked a system channel, otherwise the first
+     text channel. Turning join messages off (servers/$sid/welcome === false) skips it entirely.
+     Never fatal - a join that worked must not be reported as failed because its notice did not
+     land, so every failure here is swallowed. */
+  function systemChannel(sid){
+    const chans=channels(sid).filter(c=>c.type!=='voice');
+    if(!chans.length)return null;
+    const srv=S.servers[sid];
+    const want=srv&&typeof srv.sys==='string'?srv.sys:'';
+    return (want&&chans.find(c=>c.id===want))||chans.sort((a,b)=>a.pos-b.pos)[0]||null;
+  }
+  function joinMessagesOn(sid){
+    if(sid===ICH_ID)return false;              // everyone is already in ICH; nobody ever joins it
+    const srv=S.servers[sid];
+    return !srv||srv.welcome!==false;          // on unless the server turned it off
+  }
+  /* Discord picks from a set of welcome lines rather than saying the same thing every time.
+     Which one is used is derived from the message's own timestamp, so every client that renders
+     it picks the SAME line - it is not stored, and it does not change on re-render. */
+  const JOIN_LINES=[
+    '{u} joined the party.',
+    'Welcome, {u}. We hope you brought pizza.',
+    '{u} just landed.',
+    '{u} just slid into the server.',
+    '{u} just showed up. Hold my beer.',
+    'Welcome {u}. Say hi!',
+    '{u} hopped into the server.',
+    'Everyone welcome {u}!',
+    'Glad you are here, {u}.',
+    'Good to see you, {u}.',
+    '{u} is here.',
+    'A wild {u} appeared.'
+  ];
+  function joinLineFor(name,at,random){
+    if(random===false)return name+' joined the server.';
+    const i=Math.abs(Math.floor(Number(at)||0)/1000|0)%JOIN_LINES.length;
+    return JOIN_LINES[i].replace('{u}',name);
+  }
+  async function postJoinMessage(sid){
+    try{
+      if(!joinMessagesOn(sid))return;
+      const c=systemChannel(sid);
+      if(!c||!c.key)return;
+      let name='Someone';
+      try{const u=DB.getUser(myId);name=(u&&u.username)||name}catch(_){}
+      const srv=S.servers[sid];
+      const at=Date.now()+SKEW;
+      const rec={senderId:myId,at,sys:'join',text:joinLineFor(name,at,!srv||srv.wjoin!==false)};
+      await set(push(R('messages/'+c.key)),rec);
+    }catch(e){console.warn('[DModel] join message not posted',e&&e.code||e)}
+  }
+
   async function pruneDeadServers(){
     if(myId==null)return;
     const mine=Object.keys(S.myServers||{}).filter(sid=>sid!==ICH_ID);
@@ -10039,6 +10664,7 @@ const DModel=(()=>{
     });
   }
   async function createCategory(sid,name){
+    assertNotICH(sid,'categories');
     assertPerm(sid,'manageCh');
     const id=push(R('serverCats/'+sid)).key;
     const pos=cats(sid).length;
@@ -10249,6 +10875,7 @@ const DModel=(()=>{
   }
 
   async function createRole(sid,name){
+    assertNotICH(sid,'roles');
     assertPerm(sid,'manageRoles');
     const rid=push(R('serverRoles/'+sid)).key;
     const top=storedRoles(sid).filter(r=>!r.everyone);
@@ -10520,6 +11147,7 @@ const DModel=(()=>{
     const access={};
     Object.keys(chans).forEach(cid=>{const k=chans[cid]&&chans[cid].key;if(k)access['roomMembers/'+k+'/'+myId]=true});
     if(Object.keys(access).length){try{await update(ref(rtdb),access)}catch(e){console.warn('[DModel] access write failed',e&&e.code)}}
+    await postJoinMessage(sid);
     return sid;
   }
 
@@ -10564,6 +11192,7 @@ const DModel=(()=>{
     can,canIn,canManageRole,canManageMember,basePerms,
     createRole,updateRole,deleteRole,reorderRoles,setMemberRole,setChannelOverride,
     memberIds,member,memberCount,setNick,kickMember,groupedMembers,syncPerms,
+    systemChannel,joinMessagesOn,
     isServerBanned,serverBanInfo,serverBanList,banMember,unbanMember,isSafeServerImg,
     muteUntil,isServerMuted,timeoutMember,
     myIpHash,ipBannedHere,ipBanHash,ipUnbanHash,ipBanList,
@@ -11017,12 +11646,23 @@ const DB=(()=>{
       checkBanLock(myId,C.banned);
     });
     listen('muted',v=>{C.muted=v||{};if(typeof updateMuteLock==='function')updateMuteLock();});
-    listen('owners',v=>{OWNERS_CACHE=v||{};OWNERS_LOADED=true;checkBanLock(myId,C.banned);if(typeof checkForcedVersion==="function")checkForcedVersion();if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
+    /* A rank changing in the backend has to repaint the UI that draws it.
+       customroles/ already did this; owners/, mods/, admin/ and mvp/ did not, which is why
+       removing someone from owners/ in the Firebase console left them still showing as Owner -
+       in the member-list group, in their name chip and on the #id tag beside their messages -
+       until something unrelated happened to trigger a render. Everything that reads a rank
+       reads it live, so one repaint is all that was ever missing. */
+    const rankUIChanged=()=>{
+      if(ready)emit();
+      if(typeof DiscordShell!=='undefined'){try{DiscordShell.refresh()}catch(_){}}
+      try{if(typeof renderChat==='function'&&typeof view!=='undefined'&&view.page==='chatPage'){renderedKey=null;renderChat()}}catch(_){}
+    };
+    listen('owners',v=>{OWNERS_CACHE=v||{};OWNERS_LOADED=true;checkBanLock(myId,C.banned);if(typeof checkForcedVersion==="function")checkForcedVersion();if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}rankUIChanged();});
     {const sid=myId;   // own entry only; a denied/missing read just means "not a secret owner"
       const done=on=>{SECRET_OWNER_ID=on?sid:null;SECRET_LOADED=true;checkBanLock(myId,C.banned);if(typeof checkForcedVersion==="function")checkForcedVersion();if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}if(ready)emit()};
       unsubs.push(onValue(R('secretowner/'+sid),sn=>done(sn.val()===1),()=>done(false)));}
-    listen('mods',v=>{MODS_CACHE=v||{};MODS_LOADED=true;});
-    listen('admin',v=>{ADMINS_CACHE=v||{};ADMINS_LOADED=true;});
+    listen('mods',v=>{MODS_CACHE=v||{};MODS_LOADED=true;rankUIChanged();});
+    listen('admin',v=>{ADMINS_CACHE=v||{};ADMINS_LOADED=true;rankUIChanged();});
     // Custom roles: decorative only, written from the backend, never by the client (see js/moderation/roles.js).
     listen('customroles',v=>{
       CUSTOM_ROLES_CACHE=(v&&typeof v==='object')?v:{};CUSTOM_ROLES_LOADED=true;
@@ -11032,7 +11672,10 @@ const DB=(()=>{
     listen('appVersion',v=>{APP_VERSION_CACHE=v||null;APP_VERSION_LOADED=true;if(typeof checkForcedVersion==="function")checkForcedVersion();});
     listen('dmMembers',v=>C.dmMembers=v||{});
     listen('vip',v=>{C.vip=v||{};if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
-    listen('mvp',v=>{C.mvp=(v&&typeof v==='object')?v:{};if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
+    /* MVP repaints too: it owns a member-list group, the trophy next to a name, the image-banner
+       perk and - new in v53 - two server boost slots, all of which must disappear the moment the
+       rank is taken away. */
+    listen('mvp',v=>{C.mvp=(v&&typeof v==='object')?v:{};if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}rankUIChanged();});
     listen('flair',v=>{C.flair=v||{}});
     listen('roles',v=>{C.roles=v||{};if(typeof refreshSpinUI==='function'){try{refreshSpinUI()}catch(_){}}});
     /* HALLOWEEN:START */ listen('halloween/claimed',v=>{window.HW_CLAIMED=v||{};if(typeof hwRefresh==='function'){try{hwRefresh()}catch(_){}}});listen('halloween/progress/'+myId,v=>{window.HW_PROG=v||{};window.HW_LOADED=true;if(typeof hwRefresh==='function'){try{hwRefresh()}catch(_){}}});listen('halloween/equipped',v=>{window.HW_EQ=v||{};if(typeof hwRefresh==='function'){try{hwRefresh()}catch(_){}}});listen('halloween/intro/'+myId,v=>{window.HW_INTRO=Number(v)||0;window.HW_INTRO_LOADED=true;if(typeof hwMaybeIntro==='function'){try{hwMaybeIntro()}catch(_){}}}); /* HALLOWEEN:END */
@@ -11713,6 +12356,33 @@ const DB=(()=>{
       const u=C.users[Number(id)];
       return String((u&&u.style&&u.style.customStatus)||'');
     },
+    /* ---- Display name (Discord's "display name", separate from the @username) ----
+       Public, so it lives in `style` with the avatar and the status. An empty value means
+       "no display name" and everything falls back to the username, which is why clearing one
+       is always allowed and why nothing stores an empty string. */
+    displayNameOf(id){
+      const u=C.users[Number(id)];
+      return String((u&&u.style&&u.style.displayName)||'');
+    },
+    normDisplayName(v){
+      return String(v||'')
+        .replace(/[\u0000-\u001f\u007f<>]/g,'')   // control chars and angle brackets never reach the DOM
+        .replace(/\s+/g,' ').trim().slice(0,32);
+    },
+    async setDisplayName(id,name){
+      id=Number(id);
+      name=this.normDisplayName(name);
+      const cur=C.users[id]||{};
+      const style={...(cur.style||{})};
+      if(name)style.displayName=name;else delete style.displayName;
+      C.users[id]={...cur,style};emit();
+      try{
+        // One field, written on its own - the whole-style write in updateSettings can carry a
+        // banner worth hundreds of KB, and renaming yourself should not re-upload that.
+        if(name)await set(R('users/'+id+'/style/displayName'),name);
+        else await remove(R('users/'+id+'/style/displayName'));
+      }catch(e){console.error('display name save failed',e);throw e}
+    },
     async setStatus(id,status){
       id=Number(id);status=normStatus(status);
       const cur=C.users[id]||{};
@@ -11767,7 +12437,15 @@ const DB=(()=>{
         ?String(patch.customStatus||'').replace(/[\u0000-\u001f\u007f<>]/g,'').trim().slice(0,128)
         :String((cur.style&&cur.style.customStatus)||'');
       delete merged.customStatus;
+      /* Display name is public and lives in `style` too, so it has to be carried forward for
+         exactly the same reason the avatar and the status do: this write replaces the whole
+         node, and without this line saving any unrelated setting would wipe it. */
+      const displayName=('displayName' in patch)
+        ?this.normDisplayName(patch.displayName)
+        :String((cur.style&&cur.style.displayName)||'');
+      delete merged.displayName;
       const style={bubble:merged.meBubble||'#7c6cff',text:merged.meText||'#ffffff',radius:Number(merged.radius)||16,avatar};
+      if(displayName)style.displayName=displayName;
       if(pronouns)style.pronouns=pronouns;
       if(description)style.description=description;
       if(banner)style.banner=banner;
@@ -12965,7 +13643,7 @@ function pingToast(m,key,sender){
   if(host.querySelector('.ping-rich[data-mid="'+m.id+'"]'))return;
   const live=host.querySelectorAll('.ping-rich');
   for(let i=0;i<=live.length-3;i++)live[i].remove();
-  const name=sender&&!sender.deleted?displayUsername(sender.username):'Someone';
+  const name=sender&&!sender.deleted?dispName(sender):'Someone';
   const where=key===CFG.GLOBAL_ROOM?'in Global chat':(String(key).startsWith('dm_')?'in a DM':'in a room');
   const raw=(m.text||'').replace(/\s+/g,' ').trim();
   const prev=raw?(raw.length>90?raw.slice(0,90)+'…':raw):((m.images&&m.images.length)?'[sent an image]':((m.files&&m.files.length)?'[sent '+filesLabel(m.files)+']':''));
@@ -13025,7 +13703,7 @@ function checkPingNotifications(){
       if(_viewingRoom(key))return;               // already looking right at it — the in-app toast/sound covers this
       if(pinged&&pingSeen(m.id))return;          // already seen in its chat
       const sender=DB.getUser(m.senderId);
-      const name=sender&&!sender.deleted?displayUsername(sender.username):'Someone';
+      const name=sender&&!sender.deleted?dispName(sender):'Someone';
       try{
         const n=new Notification(name,{
           icon:'https://aniitsukicoded.github.io/backups/icon.png',
@@ -14048,6 +14726,8 @@ function goHome(forceMenu){
     // Every sign-in path lands here, including the one that never reloads the page, so this is
     // where the server model is guaranteed to be running for the right account.
     DModel.ensureStarted(ME.id);
+    // Boosts follow the same path for the same reason: every sign-in comes through here.
+    try{DBoost.ensureStarted(ME.id)}catch(e){console.warn('[goHome] boost model',e)}
     if(!view.sid)view.sid=localStorage.getItem('ich.sid')||DModel.ICH_ID;
     // Don't try to open a server that was left, deleted, or that this account was banned from.
     const mine=DModel.myServers().map(s=>s.id);
@@ -14579,6 +15259,32 @@ function profileRolesHTML(id){
   }catch(_){}
   return out?'<div class="pf-roles">'+out+'</div>':'';
 }
+
+/* ---- the roles this person holds in the server you are looking at ----
+   Discord shows two different things on a profile and it is worth keeping them apart:
+
+     the SITE ranks above (Owner, MVP, VIP, flairs) are global - they follow the account
+     everywhere, the way Discord's badges do, so they show on every profile; and
+
+     the SERVER roles below belong to one server only. They are shown when you open a profile
+     inside a server someone made, with that role's own colour, and they are deliberately NOT
+     shown in ICH or in DMs, where there is no such thing as a server role.
+
+   @everyone is left out for the same reason Discord leaves it out: everybody has it. */
+function serverRolesHTML(id){
+  try{
+    const sid=(typeof view!=='undefined'&&view.sid)||null;
+    if(!sid||typeof DModel==='undefined'||DModel.isSystem(sid))return '';
+    if(typeof view!=='undefined'&&view.mode==='dms')return '';
+    if(!DModel.inServer(sid,id))return '';
+    const roles=DModel.rolesOf(sid,id).filter(r=>!r.everyone&&!r.virtual);
+    if(!roles.length)return '';
+    return '<div class="pf-srvroles"><div class="pf-srvroles-h">Roles</div><div class="pf-srvroles-list">'+
+      roles.map(r=>'<span class="pf-srvrole" title="'+esc(r.name)+'">'+
+        '<i style="background:'+esc(r.color||'#99aab5')+'"></i>'+esc(r.name)+'</span>').join('')+
+      '</div></div>';
+  }catch(_){return ''}
+}
 function fmtDur(ms){
   ms=Math.max(0,ms);const h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),s=Math.floor(ms%60000/1000);
   if(h>0)return h+'h '+String(m).padStart(2,'0')+'m';
@@ -14717,7 +15423,7 @@ function mvpHallHTML(){
   const head='<div class="mh-head">🏆 Hall of MVPs <span>'+ids.length+'</span></div>';
   if(!ids.length)return head+'<div class="mh-empty">Nobody yet. It is a 0.1% prize, so the first one gets the glory.</div>';
   return head+'<div class="mh-grid">'+ids.slice(0,40).map(id=>{
-    const u=DB.getUser(id),nm=u?displayUsername(u.username):'User '+id,since=DB.mvpSince(id);
+    const u=DB.getUser(id),nm=u?dispName(u):'User '+id,since=DB.mvpSince(id);
     return '<span class="mh-chip'+(id===ME.id?' me':'')+'" title="'+(since?'MVP since '+esc(new Date(since).toLocaleDateString()):'MVP')+'">'+esc(nm)+'</span>';
   }).join('')+(ids.length>40?'<span class="mh-chip more">+'+(ids.length-40)+' more</span>':'')+'</div>';
 }
@@ -15033,6 +15739,14 @@ function renderChat(){
   }else{
     const inc=DB.incoming(ME.id);
     list.appendChild(sbItem('👥',(typeof DiscordLook!=='undefined'&&DiscordLook.on())?'Friends':'Friends & Requests',view.dmView==='friends',()=>{view.dmView='friends';view.roomKey=null;renderChat()},inc.length));
+    /* The Shop sits here, under Friends, which is where Discord puts its own - it is a site
+       feature rather than a server, so it has no business on the server rail. It is also listed
+       inside ICH, for anyone who looks there first. */
+    {
+      const shop=sbItem('💎','Shop',false,()=>{if(typeof closeExtras==='function')closeExtras();openShop()});
+      shop.classList.add('sb-shop');
+      list.appendChild(shop);
+    }
     addHTML(list,`<div class="sb-section">Direct Messages<button type="button" class="sb-plus" id="sbPlus" title="Add a friend" aria-label="Add a friend">+</button></div>`);
     {const pl=document.getElementById('sbPlus');if(pl)pl.onclick=e=>{e.stopPropagation();modalAddFriend()}}
     if(!ME.friends.length)addHTML(list,`<div class="hint" style="padding:6px 10px">Add friends to start chatting.</div>`);
@@ -15130,7 +15844,7 @@ function openOnlineModal(label,ids){
   const root=$('#modalRoot');
   const rows=ids.map(id=>{
     const u=DB.getUser(id);
-    const nm=u?displayUsername(u.username):'Loading…';
+    const nm=u?dispName(u):'Loading…';
     const nmHTML=u?fullNameHTML(id,esc(nm)):esc(nm);
     return`<div class="online-row" data-open-profile="${id}"><span class="dot"></span><span class="nm">${nmHTML}</span><span class="idv">#${id}</span></div>`;
   }).join('')||`<div class="hint" style="padding:10px">No one is online right now.</div>`;
@@ -15284,15 +15998,18 @@ function openProfilePopout(id){
   const anchor=(src.closest('[data-open-profile]')||src);
   const rc=anchor.getBoundingClientRect();
   const isMe=id===ME.id,deleted=!!u.deleted;
-  const name=deleted?'Deleted User':displayUsername(u.username);
+  const name=deleted?'Deleted User':dispName(u);
   const online=isMe||DB.onlineIds().includes(id);
   const accent=safeColor(u.settings&&u.settings.meBubble,'#5865f2');
   const banner=safeColor(u.settings&&u.settings.bannerColor,accent);
   const av=avatarHtml(u,name,'width:80px;height:80px;font-size:30px');
   const canAdd=!isMe&&!deleted&&!DB.isFriend(ME.id,id)&&!DB.hasIncoming(id)&&!DB.hasOutgoing(ME.id,id)&&!DB.isBlocked(ME.id,id)&&!DB.isBlockedBy(ME.id,id);
   const canRemove=!isMe&&!deleted&&DB.isFriend(ME.id,id);
+  /* Discord shows the @username on its own line under the display name, and only when the two
+     differ \u2014 repeating "suki / @suki" for everyone who never set one is just noise. */
+  const uname=(!deleted&&hasDispName(u))?`<div class="dlpo-uname">@${esc(displayUsername(u.username))}</div>`:'';
   const sub=deleted?'Account deleted':[online?'Online':'Offline',u.pronouns?esc(u.pronouns):''].filter(Boolean).join(' <b>\u2022</b> ');
-  const roles=deleted?'':profileRolesHTML(id);
+  const roles=deleted?'':profileRolesHTML(id)+serverRolesHTML(id);
   root.innerHTML=`<div class="modal-bg dlpo-bg"><div class="dlpo" role="dialog" aria-label="Profile of ${esc(name)}">
     <div class="dlpo-banner${bannerImgOf(u)?' banner-img':''}" style="background:${bannerBg(u,banner)}"><div class="dlpo-btns">
       ${canAdd?'<button type="button" class="dlpo-ib" id="poAdd" title="Add Friend" aria-label="Add Friend"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 20c0-3.3 3.6-5 8-5s8 1.7 8 5v1H2zM19 8h-2v2h-2v2h2v2h2v-2h2v-2h-2z"/></svg></button>':''}
@@ -15302,6 +16019,7 @@ function openProfilePopout(id){
     <div class="dlpo-av">${av}<span class="dlpo-st"><i class="${online&&!deleted?'on':''}"></i></span></div>
     <div class="dlpo-body">
       <div class="dlpo-name">${deleted?esc(name):fullNameHTML(id,esc(name))}</div>
+      ${uname}
       <div class="dlpo-sub">${sub}</div>
       ${(!deleted&&u.description)?`<div class="dlpo-bio">${esc(u.description)}</div>`:''}
       ${deleted?'':'<button type="button" class="dlpo-full" id="poFull">View Full Profile</button>'}
@@ -15368,7 +16086,7 @@ function openUserProfile(id,opts){
     if(!u)return;
     const isMe=id===ME.id;
     const deleted=!!u.deleted;
-    const name=deleted?'Deleted User':displayUsername(u.username);
+    const name=deleted?'Deleted User':dispName(u);
     const online=isMe||DB.onlineIds().includes(id);   // you're obviously online while looking at your own card
     const owner=isOwner(id);
     const mod=isMod(id),admin=isAdmin(id);
@@ -15452,11 +16170,12 @@ function openUserProfile(id,opts){
           ${admin&&!owner?'<span class="tag" style="background:#e8503a">Admin</span>':(mod&&!owner?'<span class="tag" style="background:var(--accent)">Mod</span>':'')}
           ${banned?'<span class="tag" style="background:var(--danger)">Banned</span>':''}
         </div>
+        ${(!deleted&&hasDispName(u))?`<div class="pf-uname">@${esc(displayUsername(u.username))}</div>`:''}
         <div class="pf-sub">${(!deleted&&u.pronouns)?`<div class="pf-pron">${esc(u.pronouns)}</div>`:''}
         <div class="pf-status" style="display:flex;align-items:center;gap:6px;margin-top:6px;color:var(--muted);font-size:13px">
           ${statusDot}<span>${statusText}</span>
         </div></div>
-        ${deleted?'':profileRolesHTML(id)}
+        ${deleted?'':profileRolesHTML(id)+serverRolesHTML(id)}
         ${vipTimerHTML}
         ${(!deleted&&u.description)?`<div class="pf-desc">${esc(u.description)}</div>`:''}
         ${muted?`<div class="hint" style="color:var(--danger);margin-top:4px">Muted for ${Math.ceil(muteMs/60000)} more min</div>`:''}
@@ -15655,19 +16374,26 @@ function replyTargetInfo(m){
   const rt=m&&m.replyTo;if(!rt||!rt.id)return null;
   let list=[];try{list=DB.messages(view.roomKey)||[]}catch(_){}
   const src=list.find(x=>x.id===rt.id);
+  /* The quote is a PLAIN one-line preview, not rendered markup: mdPlain() strips the formatting
+     markers and - the part that matters - replaces spoiler content instead of unwrapping it, so
+     replying to a spoiler can never reveal it to everyone. */
+  const flat=v=>{
+    const t=(typeof mdPlain==='function')?mdPlain(v):String(v||'');
+    return t.replace(/\s+/g,' ').trim().slice(0,200);
+  };
   if(src){
     const t=src.text?displayMsgText(src.text):(typeof replyPreviewText==='function'?replyPreviewText(src):'');
-    return{gone:false,text:String(t||'').replace(/\s+/g,' ').trim().slice(0,200)};
+    return{gone:false,text:flat(t)};
   }
-  if(!list.length)return{gone:false,text:rt.preview||''};          // nothing loaded yet: can't tell
+  if(!list.length)return{gone:false,text:flat(rt.preview||'')};          // nothing loaded yet: can't tell
   let more=true;try{more=DB.canLoadOlder(view.roomKey)}catch(_){}
   // everything is loaded, or the target would sit inside the loaded window -> it really was deleted
   if(!more||rt.id>=list[0].id)return{gone:true,text:''};
-  return{gone:false,text:String(rt.preview||'').replace(/\s+/g,' ').trim().slice(0,200)};   // older than what's loaded
+  return{gone:false,text:flat(rt.preview||'')};   // older than what's loaded
 }
 function senderSig(m){
   const sender=DB.getUser(m.senderId);
-  const name=(sender&&!sender.deleted)?displayUsername(sender.username):'Deleted User';
+  const name=(sender&&!sender.deleted)?dispName(sender):'Deleted User';
   const avatar=(sender&&sender.settings&&sender.settings.avatar)||'';
   // Include whether we've resolved the sender at all (not just name/avatar) so a
   // message rendered before a sender's record loaded gets rebuilt — with a clickable
@@ -15710,7 +16436,10 @@ function appendMsgRow(box,m,lastDay,live){
   el._sid=m.senderId;el._at=m.at;
   if(typeof DiscordLook!=='undefined'&&DiscordLook.on()){
     const prev=box.lastElementChild;
-    if(prev&&prev.classList.contains('msg')&&prev._sid===m.senderId&&m.at-prev._at<420000&&!(m.replyTo&&m.replyTo.id))el.classList.add('dl-cont');
+    // A system line never collapses into the message above it, and never has one collapse into
+    // it - it is not a message from that person, it is an event about them.
+    if(prev&&prev.classList.contains('msg')&&!prev.classList.contains('sys')&&!el.classList.contains('sys')&&
+       prev._sid===m.senderId&&m.at-prev._at<420000&&!(m.replyTo&&m.replyTo.id))el.classList.add('dl-cont');
   }
   box.appendChild(el);
   fitAvatarToRow(el);
@@ -15884,7 +16613,7 @@ function reactionRowHTML(msgId){
   const pills=list.map(r=>{
     const names=r.ids.map(id=>{
       const u=DB.getUser(id);
-      return(u&&!u.deleted)?displayUsername(u.username):'Deleted User';
+      return(u&&!u.deleted)?dispName(u):'Deleted User';
     });
     const who=names.length<=6?names.join(', '):names.slice(0,6).join(', ')+' and '+(names.length-6)+' more';
     return`<button class="reaction-pill${r.mine?' mine':''}" data-emoji="${esc(r.emoji)}" title="${esc(who)}">
@@ -15909,10 +16638,40 @@ function wireReactions(el,m){
     });
   };
 }
+/* ---- system messages (joins, boosts) ----
+   Discord renders these as a single grey line with a small icon, not as a message from a person:
+   no avatar, no bubble, no hover tools, no reactions. They arrive as an ordinary message with a
+   `sys` field naming what happened (see postJoinMessage in js/discord/model.js), so a client that
+   does not understand `sys` still shows the plain-words `text` as a normal message rather than
+   showing nothing at all. */
+const SYS_IC={
+  join:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 13h-2v-2a1 1 0 1 0-2 0v2h-2a1 1 0 1 0 0 2h2v2a1 1 0 1 0 2 0v-2h2a1 1 0 1 0 0-2ZM9 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.4 0-8 1.8-8 5v1h11.3A5.9 5.9 0 0 1 11 16c0-.7.1-1.4.3-2H9Z"/></svg>',
+  boost:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 2 12l10 10 10-10L12 2Zm0 4.2 5.8 5.8-5.8 5.8L6.2 12 12 6.2Z"/></svg>'
+};
+function sysMsgEl(m){
+  const sender=DB.getUser(m.senderId);
+  const name=(sender&&!sender.deleted)?esc(dispName(sender)):'Someone';
+  const el=document.createElement('div');
+  el.className='msg sys';el.dataset.msgId=m.id;
+  const time=new Date(m.at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  const kind=(m.sys==='boost')?'boost':'join';
+  /* The stored `text` is the fallback for clients that don't know `sys`. Here the line is rebuilt
+     so the name is a live, clickable profile link and follows display-name changes. */
+  const raw=String(m.text||'');
+  const who='<b data-open-profile="'+m.senderId+'">'+name+'</b>';
+  const body=(sender&&raw.indexOf(sender.username)>=0)
+    ? esc(raw).replace(esc(sender.username),who)
+    : who+(kind==='boost'?' just boosted the server!':' joined the server.');
+  el.innerHTML='<div class="sysmsg '+kind+'"><span class="sysic">'+SYS_IC[kind]+'</span>'+
+    '<span>'+body+' <span class="systime">'+esc(time)+'</span></span></div>';
+  return el;
+}
+
 function msgEl(m){
+  if(m&&m.sys)return sysMsgEl(m);
   const mine=m.senderId===ME.id;
   const sender=DB.getUser(m.senderId);           // username resolved via ID at render time
-  const name=(sender&&!sender.deleted)?displayUsername(sender.username):'Deleted User';
+  const name=(sender&&!sender.deleted)?dispName(sender):'Deleted User';
   const pinged=m.pings.includes(ME.id)||m.pings.includes('everyone');
   const el=document.createElement('div');el.className='msg'+(mine?' me':'')+(pinged?' ping-row':'')+(m.pings.includes('everyone')?' ping-all':'');el.dataset.msgId=m.id;
   const time=new Date(m.at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
@@ -15926,9 +16685,21 @@ function msgEl(m){
     const bg=safeColor(ss&&ss.meBubble,'#7c6cff'),fg=safeColor(ss&&ss.meText,'#ffffff');
     bStyle=` style="background:${hexToRgba(bg,.5)};color:${fg}"`;
   }
-  // You can delete your own messages. Owners can delete anyone's; mods can delete anyone's
-  // except an owner's (the database rules enforce the same thing).
-  const canDelete=mine||isOwner(ME.id)||(isAdmin(ME.id)&&!isOwner(m.senderId))||(isMod(ME.id)&&!isOwner(m.senderId)&&!isAdmin(m.senderId));
+  /* You can always delete your own. Otherwise it takes a staff rank strictly above the sender's
+     (see outranks() in js/moderation/roles.js), so an admin cannot delete another admin's message
+     and a mod cannot delete another mod's - which is what this used to allow.
+
+     In a server somebody else made, the ladder that matters is that server's own: Manage Messages
+     plus being above them in ITS role hierarchy. A site owner still overrides everything, which is
+     how every other site-wide power already behaves. */
+  let canDelete=mine||outranks(ME.id,m.senderId);
+  if(!canDelete){
+    try{
+      const s=(typeof view!=='undefined'&&view.sid)||null;
+      if(s&&typeof DModel!=='undefined'&&!DModel.isSystem(s)&&view.mode!=='dms')
+        canDelete=DModel.can(s,'manageMsg',ME.id)&&DModel.canManageMember(s,m.senderId);
+    }catch(_){}
+  }
   const canEdit=mine&&!!m.text;
   // Discord-style hover bar: a reply arrow starts a reply, edit (own
   // messages only) is a pencil. Deleting stays inline in the meta line
@@ -15963,7 +16734,7 @@ function msgEl(m){
     </div>`;
     }else{
       const rs=DB.getUser(m.replyTo.senderId);
-      const rname=(rs&&!rs.deleted)?displayUsername(rs.username):'Deleted User';
+      const rname=(rs&&!rs.deleted)?dispName(rs):'Deleted User';
       const rtext=ri&&ri.text?esc(ri.text):'';
       const rav=avatarHtml(rs,rname,'width:15px;height:15px;font-size:8px');
       replyRefHTML=`<div class="reply-ref" data-reply-jump="${m.replyTo.id}">
@@ -15976,7 +16747,7 @@ function msgEl(m){
   // Everyone's name is shown, including your own. Others: "Name · time" (left side). Yours: "time · Name"
   // so the name sits next to your avatar on the right, and the hover/edit controls don't move.
   const nameSpan=(sender&&!sender.deleted)
-    ?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${fullNameHTML(m.senderId,esc(name))}</span>`
+    ?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${msgNameHTML(m.senderId,esc(name))}</span>`
     :esc(name);
   const nameHTML=mine?'':nameSpan+'<span class="nm-sep">·</span>';
   const nameAfter=mine?'<span class="nm-sep">·</span>'+nameSpan:'';
@@ -16105,6 +16876,264 @@ function openEmojiPicker(anchorEl,onPick){
 }
 
 /* ==========================================================================
+ * js/discord/markdown.js - Discord's message formatting
+ * Loaded by js/loader.js (load order lives in js/manifest.js).
+ * All js files share one global scope, so functions/consts here are visible to the others.
+ *
+ * What is supported, and what it looks like typed:
+ *
+ *   ||spoiler||          hidden until clicked
+ *   **bold**             *italic*          ***bold italic***
+ *   __underline__        _italic_          ___underline italic___
+ *   ~~strikethrough~~
+ *   `inline code`        ```fenced blocks```   (with an optional language on the first line)
+ *   > quote              >>> everything after this is quoted
+ *   # Heading   ## Heading   ### Heading   -# small text
+ *   - bullet             * bullet
+ *   [label](https://…)   a link with its own text
+ *
+ * SAFETY - the one thing to get right in this file.
+ *
+ * Everything here runs on text somebody else typed, and the output goes straight into innerHTML.
+ * So the order is fixed and deliberate:
+ *
+ *   1. Code is lifted out FIRST, before anything else looks at the text. Markdown inside a code
+ *      block is not markdown, which is the whole point of a code block.
+ *   2. Every piece of text that survives to the output is passed through esc() before any tag is
+ *      put around it. There is no path where raw input reaches the output.
+ *   3. Finished HTML (code, links, mentions) is parked behind a placeholder token and put back at
+ *      the very end, so the formatting passes can never see - or mangle - a tag they produced.
+ *      The token uses NUL, which is stripped from the input on the first line, so a message
+ *      cannot forge one.
+ *   4. Link hrefs are only ever written by mdLink(), which accepts http(s) and nothing else. A
+ *      [click me](javascript:…) is rendered as plain text, not as a link.
+ * ========================================================================== */
+'use strict';
+
+const MD_MAX_CODE=4000;          // a fenced block longer than this is shown as plain text
+
+/* Only ever called with a URL that has already been validated as http(s). */
+function mdLink(url,label){
+  return '<a href="'+esc(url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(label)+'</a>';
+}
+function mdIsHttp(u){return /^https?:\/\/[^\s<>"']+$/i.test(String(u||''))}
+
+function mdRender(raw){
+  if(raw==null)return '';
+  // NUL is the parking token's delimiter, so it must not survive from the input.
+  let t=String(raw).replace(/\u0000/g,'');
+
+  const parked=[];
+  const park=html=>{parked.push(html);return '\u0000'+(parked.length-1)+'\u0000'};
+
+  /* ---- 1. code, before anything else ---- */
+  // ```lang\ncode``` or ```code```
+  t=t.replace(/```(?:([a-zA-Z0-9+#_-]{1,20})\n)?([\s\S]*?)```/g,(m,lang,code)=>{
+    if(code.length>MD_MAX_CODE)return m;
+    return park('<pre class="md-pre"><code>'+esc(code.replace(/^\n+|\n+$/g,''))+'</code></pre>');
+  });
+  // ``code`` then `code` - the double form lets a backtick appear inside
+  t=t.replace(/``([^`\n]+)``/g,(m,code)=>park('<code class="md-code">'+esc(code)+'</code>'));
+  t=t.replace(/`([^`\n]+)`/g,(m,code)=>park('<code class="md-code">'+esc(code)+'</code>'));
+
+  /* ---- 2. escape everything that is left ---- */
+  t=esc(t);
+
+  /* ---- 3. links and mentions, parked as finished HTML ---- */
+  // [label](url) - the label may itself be formatted later, so it is NOT parked with the anchor;
+  // instead the anchor is built now and the label escaped, which is the safe half of the trade.
+  t=t.replace(/\[([^\]\n]{1,200})\]\((https?:\/\/[^\s)]+)\)/gi,(m,label,url)=>{
+    // `url` came out of already-escaped text, so &amp; is back to & before it is used as an href
+    const real=url.replace(/&amp;/g,'&');
+    if(!mdIsHttp(real))return m;
+    return park(mdLink(real,label.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'")));
+  });
+  t=mdLinkifyBare(t,park);
+  t=mdMentions(t,park);
+
+  /* ---- 4. block level, line by line ---- */
+  t=mdBlocks(t);
+
+  /* ---- 5. inline formatting ---- */
+  t=mdInline(t);
+
+  /* ---- 6. put the finished HTML back ---- */
+  // Repeated until stable: a parked anchor's label can itself contain a parked mention.
+  for(let i=0;i<4&&t.indexOf('\u0000')>=0;i++)
+    t=t.replace(/\u0000(\d+)\u0000/g,(m,n)=>parked[Number(n)]!==undefined?parked[Number(n)]:m);
+  return t;
+}
+
+/* Bare https:// URLs, same peeling of trailing punctuation the old linkify() did so a URL at the
+   end of a sentence does not swallow the full stop or a closing quote. */
+function mdLinkifyBare(escapedText,park){
+  return escapedText.replace(/\bhttps?:\/\/[^\s<\u0000]+/gi,raw=>{
+    let url=raw,trail='';
+    for(;;){
+      let m=url.match(/(&quot;|&#39;|&amp;)$/);
+      if(m){url=url.slice(0,-m[0].length);trail=m[0]+trail;continue}
+      m=url.match(/[.,!?:;'"]$/);
+      if(m){url=url.slice(0,-1);trail=m[0]+trail;continue}
+      if(/\)$/.test(url)&&!url.includes('(')){url=url.slice(0,-1);trail=')'+trail;continue}
+      if(/\]$/.test(url)&&!url.includes('[')){url=url.slice(0,-1);trail=']'+trail;continue}
+      break;
+    }
+    if(!url)return raw;
+    const real=url.replace(/&amp;/g,'&');
+    if(!mdIsHttp(real))return raw;
+    return park(mdLink(real,real))+trail;
+  });
+}
+
+/* @everyone / @here and @username, exactly as they worked before - this is a move, not a change. */
+function mdMentions(s,park){
+  s=s.replace(/@(everyone|here)\b/g,(m,w)=>park('<span class="mention everyone">@'+w+'</span>'));
+  return s.replace(/@([0-9a-zA-Z._-]{1,20})/g,(full,n)=>{
+    if(n==='everyone'||n==='here')return full;
+    let id;
+    try{id=DB.get().usernameIndex[n.toLowerCase()]}catch(_){id=undefined}
+    if(id===undefined)return full;
+    let u=null;try{u=DB.getUser(id)}catch(_){}
+    if(!u)return full;
+    const me=(typeof ME!=='undefined'&&ME&&id===ME.id)?' me':'';
+    // The mention shows the DISPLAY name, like Discord, but still matches on the username -
+    // that is what people type and what identifies the account.
+    return park('<span class="mention'+me+'" data-open-profile="'+id+'" title="View profile">@'+esc(dispName(u))+'</span>');
+  });
+}
+
+/* Block constructs are line-based. Each one that becomes a block element consumes its own
+   newline, because .bubble is white-space:pre-wrap - leaving the newline in would put a blank
+   line under every heading and every quote. */
+function mdBlocks(s,depth){
+  depth=depth||0;
+  // >>> turns the rest of the message into one quote
+  const tri=s.match(/(^|\n)&gt;&gt;&gt; ?([\s\S]*)$/);
+  if(tri&&depth===0){
+    const before=s.slice(0,tri.index+(tri[1]?tri[1].length:0));
+    return mdBlocks(before,1)+'<blockquote class="md-quote">'+mdBlocks(tri[2],1)+'</blockquote>';
+  }
+  const lines=s.split('\n');
+  const out=[];
+  let i=0;
+  while(i<lines.length){
+    const ln=lines[i];
+    // > quote, merging consecutive quoted lines into one block
+    if(/^&gt; ?/.test(ln)){
+      const buf=[];
+      while(i<lines.length&&/^&gt; ?/.test(lines[i])){buf.push(lines[i].replace(/^&gt; ?/,''));i++}
+      // Headings and bullets still format inside a quote, like Discord. depth stops a quote
+      // inside a quote from recursing - Discord does not nest them either.
+      const inner=depth?buf.join('\n'):mdBlocks(buf.join('\n'),1);
+      out.push({block:true,html:'<blockquote class="md-quote">'+inner+'</blockquote>'});
+      continue;
+    }
+    // -# small text
+    let m=ln.match(/^-# (.*)$/);
+    if(m){out.push({block:true,html:'<small class="md-sub">'+m[1]+'</small>'});i++;continue}
+    // # / ## / ### headings
+    m=ln.match(/^(#{1,3}) (.*)$/);
+    if(m){
+      const lv=m[1].length;
+      out.push({block:true,html:'<div class="md-h md-h'+lv+'">'+m[2]+'</div>'});
+      i++;continue;
+    }
+    // - / * bullets, merged into one list
+    if(/^ *[-*] +\S/.test(ln)){
+      const buf=[];
+      while(i<lines.length&&/^ *[-*] +\S/.test(lines[i])){buf.push(lines[i].replace(/^ *[-*] +/,''));i++}
+      out.push({block:true,html:'<ul class="md-ul">'+buf.map(x=>'<li>'+x+'</li>').join('')+'</ul>'});
+      continue;
+    }
+    out.push({block:false,html:ln});i++;
+  }
+  // Join plain lines with newlines (pre-wrap renders them), but never put a newline next to a
+  // block element - the element already breaks the line.
+  let res='';
+  out.forEach((p,idx)=>{
+    if(idx>0){
+      const prev=out[idx-1];
+      if(!prev.block&&!p.block)res+='\n';
+    }
+    res+=p.html;
+  });
+  return res;
+}
+
+/* Inline formatting. Runs on escaped text whose finished HTML is parked, so there are no tags
+   here to collide with - only the NUL tokens, which none of these patterns can match across
+   because they all reject newlines and NUL inside the delimiters. */
+function mdInline(s){
+  // spoilers first, so ||**x**|| formats the inside too
+  s=s.replace(/\|\|([\s\S]+?)\|\|/g,(m,x)=>'<span class="md-spoiler" role="button" tabindex="0">'+x+'</span>');
+  s=s.replace(/~~([^\n]+?)~~/g,'<s>$1</s>');
+  // longest delimiters first, or **x** would be eaten by *x*
+  s=s.replace(/\*\*\*([^\n]+?)\*\*\*/g,'<strong><em>$1</em></strong>');
+  s=s.replace(/___([^\n]+?)___/g,'<u><em>$1</em></u>');
+  s=s.replace(/\*\*([^\n]+?)\*\*/g,'<strong>$1</strong>');
+  s=s.replace(/__([^\n]+?)__/g,'<u>$1</u>');
+  s=s.replace(/\*([^\s*][^\n*]*?)\*/g,'<em>$1</em>');
+  // _italic_ only between word boundaries, so snake_case_names are left alone
+  s=s.replace(/(^|[^\w])_([^\s_][^\n_]*?)_(?![\w])/g,'$1<em>$2</em>');
+  return s;
+}
+
+/* Reveal a spoiler. Delegated once, here, rather than per message. */
+document.addEventListener('click',e=>{
+  const sp=e.target.closest&&e.target.closest('.md-spoiler:not(.shown)');
+  if(!sp)return;
+  e.preventDefault();e.stopPropagation();
+  sp.classList.add('shown');
+});
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter'&&e.key!==' ')return;
+  const sp=document.activeElement;
+  if(sp&&sp.classList&&sp.classList.contains('md-spoiler')&&!sp.classList.contains('shown')){
+    e.preventDefault();sp.classList.add('shown');
+  }
+});
+
+/* ======================================================================
+ *  PLAIN PREVIEWS
+ *  Reply quotes, the composer's "Replying to" bar and anywhere else a message is shown as one
+ *  short line. Discord strips the formatting there rather than rendering it, for two reasons:
+ *
+ *    1. Raw markup reads as noise - a reply to a code block showed up as
+ *       "# Heading ```js const a=1; ``` **bold**" across the quote line.
+ *    2. A SPOILER MUST NOT BE REVEALED BY SOMEBODY REPLYING TO IT. Rendering the raw text put
+ *       the hidden words straight into the quote, in plain sight, above everyone's reply. That
+ *       is the whole point of a spoiler, defeated by someone else's action rather than your own.
+ *
+ *  So this returns readable plain text with the markers removed, and spoiler CONTENT replaced
+ *  rather than unwrapped.
+ * ====================================================================== */
+function mdPlain(raw){
+  if(raw==null)return '';
+  let t=String(raw);
+  // spoilers first, and their content never survives
+  t=t.replace(/\|\|[\s\S]+?\|\|/g,'████');
+  // fenced blocks collapse to a label; a preview is not the place for code
+  t=t.replace(/```(?:[a-zA-Z0-9+#_-]{1,20}\n)?[\s\S]*?```/g,'[code]');
+  t=t.replace(/``([^`\n]+)``/g,'$1').replace(/`([^`\n]+)`/g,'$1');
+  // masked links read as their label
+  t=t.replace(/\[([^\]\n]{1,200})\]\((https?:\/\/[^\s)]+)\)/gi,'$1');
+  // block markers at the start of a line
+  t=t.replace(/^\s*&gt;&gt;&gt;\s?/gm,'').replace(/^\s*>>>\s?/gm,'');
+  t=t.replace(/^\s*>\s?/gm,'');
+  t=t.replace(/^\s*-#\s/gm,'');
+  t=t.replace(/^\s*#{1,3}\s/gm,'');
+  t=t.replace(/^\s*[-*]\s+/gm,'• ');
+  // inline emphasis markers, longest first
+  t=t.replace(/\*\*\*([^\n]+?)\*\*\*/g,'$1')
+     .replace(/___([^\n]+?)___/g,'$1')
+     .replace(/\*\*([^\n]+?)\*\*/g,'$1')
+     .replace(/__([^\n]+?)__/g,'$1')
+     .replace(/~~([^\n]+?)~~/g,'$1')
+     .replace(/\*([^\s*][^\n*]*?)\*/g,'$1');
+  return t.replace(/\s+/g,' ').trim();
+}
+
+/* ==========================================================================
  * js/chat/text-and-media.js
  * Message text formatting, links, images and lightbox
  * Loaded by js/loader.js (load order lives in js/manifest.js).
@@ -16133,19 +17162,18 @@ function isEmojiOnly(t){
   if(!_EMOJI_ONLY_RE.test(t))return false;
   return(t.match(_EMOJI_UNIT_RE)||[]).length<=27;
 }
+/* Message text -> HTML. The escaping, mentions, links and all of Discord's markdown now live
+   together in js/discord/markdown.js, because the order those passes run in is the thing that
+   keeps the output safe and they cannot be reasoned about separately. mdRender() takes the RAW
+   text and does its own escaping.
+
+   linkify() below is kept because other callers still use it on already-escaped text. */
 function fmtText(t){
   if(!t)return'';
-  let s=esc(t);
-  s=s.replace(/@(everyone|here)\b/g,'<span class="mention everyone">@$1</span>');
-  s=s.replace(/@([0-9a-zA-Z._-]{1,20})/g,(full,n)=>{
-    if(n==='everyone'||n==='here')return full;
-    const id=DB.get().usernameIndex[n.toLowerCase()];
-    if(id===undefined)return full;
-    const u=DB.getUser(id);
-    return `<span class="mention${id===ME.id?' me':''}" data-open-profile="${id}" title="View profile">@${esc(u.username)}</span>`;
-  });
-  s=linkify(s);
-  return s;
+  if(typeof mdRender==='function')return mdRender(t);
+  // Fallback for the (impossible in the shipped build) case where markdown.js did not load:
+  // escape and linkify, so a message is never rendered as raw HTML.
+  return linkify(esc(t));
 }
 // Turns bare "https://..." / "http://..." URLs into clickable links, Discord-style —
 // the scheme is required, so plain "example.com" is left as plain text. Runs on
@@ -16428,12 +17456,14 @@ function renderComposeContext(){
     $('#ccText').textContent='';
   }else if(view.replyingTo){
     const s=DB.getUser(view.replyingTo.senderId);
-    const name=(s&&!s.deleted)?displayUsername(s.username):'Deleted User';
+    const name=(s&&!s.deleted)?dispName(s):'Deleted User';
     box.classList.add('active');
     $('#ccLabel').textContent='Replying to '+name;
     const arr=DB.messages(view.roomKey);
     const src=arr.find(x=>x.id===view.replyingTo.id);
-    $('#ccText').textContent=src?replyPreviewText(src):'';
+    // Same plain, spoiler-safe preview the reply quote uses - see mdPlain() in js/discord/markdown.js.
+    const pv=src?replyPreviewText(src):'';
+    $('#ccText').textContent=(typeof mdPlain==='function')?mdPlain(pv):pv;
   }else{
     box.classList.remove('active');
   }
@@ -17251,15 +18281,26 @@ function SET_PANES(me,s){
       <div class="dl-acct-body">
         <div class="dl-acct-top">
           <span class="dl-acct-av">${avatarHtml(me,me.username,'width:80px;height:80px;font-size:30px')}</span>
-          <div class="dl-acct-name"><b>${esc(displayUsername(me.username))}</b><small>#${me.id}</small></div>
+          <div class="dl-acct-name"><b>${esc(dispName(me))}</b><small>#${me.id}</small></div>
           <button type="button" class="btn dl-acct-edit" id="saGoProfile">Edit User Profile</button>
         </div>
         <div class="dl-acct-fields">
+          <div class="dl-acct-f"><span>Display Name</span><b>${esc(DB.displayNameOf(me.id)||me.username)}</b><button type="button" class="btn sec small" id="saDispOpen">Edit</button></div>
           <div class="dl-acct-f"><span>Username</span><b>${esc(me.username)}</b><button type="button" class="btn sec small" id="saRenameOpen">Edit</button></div>
           <div class="dl-acct-f"><span>User ID</span><b>#${me.id}</b><button type="button" class="btn sec small" id="saCopyId">Copy</button></div>
           <div class="dl-acct-f"><span>Sign-in</span><b>${esc(me.provider||'password')}${me.email?' · '+esc(me.email):''}</b></div>
         </div>
       </div>
+    </div>
+
+    <div class="set-card" id="saDispCard" style="display:none">
+      <div class="section-h" style="margin-top:0">Change display name</div>
+      <div class="field"><label>Display Name</label><input id="saDisp" maxlength="32" placeholder="${esc(me.username)}" value="${esc(DB.displayNameOf(me.id))}"></div>
+      <div class="hint">This is the name people see in chat and in member lists. Your username
+        (<b>@${esc(me.username)}</b>) never changes with it, and mentions still use the username.
+        Leave it empty to go back to showing your username. No cooldown — change it as often as you like.</div>
+      <div class="err" id="saDispErr"></div>
+      <div class="actions" style="justify-content:flex-start"><button class="btn" id="saDispSave">Save</button><button class="btn sec" id="saDispClear">Reset to username</button></div>
     </div>
 
     <div class="set-card" id="saRenameCard" style="display:none">
@@ -17302,7 +18343,37 @@ function SET_PANES(me,s){
     </div>`;
   })();
 
+  /* ---------- Status, inside the profile editor ----------
+     The user-panel popout is still there; this is the same four options in the place people
+     actually go looking for them. Both write the same two fields, so they stay in step. */
+  const curStatus=(()=>{try{return normStatus(me.style&&me.style.status)}catch(_){return 'online'}})();
+  const curCustom=(()=>{try{return String((me.style&&me.style.customStatus)||'')}catch(_){return ''}})();
+  const statusCard=`<div class="set-card">
+    <div class="section-h" style="margin-top:0">Status</div>
+    <div class="dl-stgrid" id="spStatus">
+      ${STATUSES.map(id=>`<button type="button" class="dl-stopt${curStatus===id?' on':''}" data-sst="${id}">
+        <i class="dl-dot st-${id}"></i>
+        <span><b>${esc(STATUS_LABEL[id])}</b>${STATUS_SUB[id]?`<small>${esc(STATUS_SUB[id])}</small>`:''}</span>
+      </button>`).join('')}
+    </div>
+    <div class="field" style="margin:12px 0 0"><label>Custom status</label>
+      <input id="spCustomStatus" type="text" maxlength="128" placeholder="What's on your mind?" value="${esc(curCustom)}" autocomplete="off"></div>
+    <div class="err" id="spStatusErr"></div>
+  </div>`;
+
   const profile=`<div data-p="profile" class="hidden">
+    <div class="set-card">
+      <div class="section-h" style="margin-top:0">Display Name</div>
+      <div class="field" style="margin-bottom:6px"><label>How your name appears to everyone</label>
+        <input id="spDisp" maxlength="32" placeholder="${esc(me.username)}" value="${esc(DB.displayNameOf(me.id))}"></div>
+      <div class="hint">Your username stays <b>@${esc(me.username)}</b> — that's what mentions and
+        friend requests use. Leave this empty to show your username instead.</div>
+      <div class="err" id="spDispErr"></div>
+      <div class="actions" style="justify-content:flex-start"><button class="btn" id="spDispSave">Save</button></div>
+    </div>
+
+    ${statusCard}
+
     <div class="set-card">
       <div class="section-h" style="margin-top:0">Avatar</div>
       <div style="display:flex;align-items:center;gap:14px">
@@ -17510,6 +18581,28 @@ function wireDiscordSettings(root,me,s,reopen){
     c.style.display=c.style.display==='none'?'':'none';
     if(c.style.display==='')q('#saName').focus();
   };
+  if(q('#saDispOpen'))q('#saDispOpen').onclick=()=>{
+    const c=q('#saDispCard');if(!c)return;
+    c.style.display=c.style.display==='none'?'':'none';
+    if(c.style.display==='')q('#saDisp').focus();
+  };
+  /* Saving a display name repaints everything that shows a name rather than reloading the page:
+     unlike a username change there is nothing to re-key, so there is no reason to interrupt. */
+  const saveDisp=async v=>{
+    const b=q('#saDispSave'),e=q('#saDispErr');
+    if(b)b.disabled=true;if(e)e.textContent='';
+    try{
+      await DB.setDisplayName(me.id,v);
+      ME=DB.currentUser();
+      toast(v?'Display name saved.':'Display name cleared.');
+      reopen('account');
+      try{if(typeof DiscordShell!=='undefined'&&DiscordShell.refresh)DiscordShell.refresh()}catch(_){}
+      try{if(typeof renderChat==='function'){renderedKey=null;renderChat()}}catch(_){}
+    }catch(err){if(b)b.disabled=false;if(e)e.textContent='Could not save: '+(err.code||err.message)}
+  };
+  if(q('#saDispSave'))q('#saDispSave').onclick=()=>saveDisp(q('#saDisp').value);
+  if(q('#saDispClear'))q('#saDispClear').onclick=()=>saveDisp('');
+  if(q('#saDisp'))q('#saDisp').onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();saveDisp(q('#saDisp').value)}};
   if(q('#saCopyId'))q('#saCopyId').onclick=()=>{
     const b=q('#saCopyId');
     try{navigator.clipboard.writeText(String(me.id)).then(()=>{b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1400)},()=>toast('Couldn’t copy.','bad'))}
@@ -17533,6 +18626,47 @@ function wireDiscordSettings(root,me,s,reopen){
   if(q('#saSignOut'))q('#saSignOut').onclick=()=>doSignOut();
 
   /* ---------- Profiles ---------- */
+  if(q('#spDispSave'))q('#spDispSave').onclick=async()=>{
+    const b=q('#spDispSave'),e=q('#spDispErr');
+    b.disabled=true;if(e)e.textContent='';
+    try{
+      await DB.setDisplayName(me.id,q('#spDisp').value);
+      ME=DB.currentUser();
+      toast('Display name saved.');
+      reopen('profile');
+      try{if(typeof DiscordShell!=='undefined'&&DiscordShell.refresh)DiscordShell.refresh()}catch(_){}
+      try{if(typeof renderChat==='function'){renderedKey=null;renderChat()}}catch(_){}
+    }catch(err){b.disabled=false;if(e)e.textContent='Could not save: '+(err.code||err.message)}
+  };
+  /* Status, same two writes the user-panel popout makes. Repaints the panel and the member list
+     so the dot and the label move immediately rather than on the next unrelated render. */
+  root.querySelectorAll('#spStatus [data-sst]').forEach(b=>{
+    b.onclick=async()=>{
+      const v=b.dataset.sst,e=q('#spStatusErr');
+      if(e)e.textContent='';
+      root.querySelectorAll('#spStatus [data-sst]').forEach(x=>x.classList.toggle('on',x===b));
+      try{
+        await DB.setStatus(me.id,v);ME=DB.currentUser();
+        try{if(typeof DiscordShell!=='undefined'&&DiscordShell.refresh)DiscordShell.refresh()}catch(_){}
+      }catch(err){
+        if(e)e.textContent='Could not save your status'+(/PERMISSION/i.test(err.code||err.message||'')?' — the database rules need republishing.':'.');
+      }
+    };
+  });
+  if(q('#spCustomStatus')){
+    const ci=q('#spCustomStatus');
+    let was=ci.value;
+    const save=async()=>{
+      if(ci.value===was)return;
+      was=ci.value;
+      try{
+        await DB.setCustomStatus(me.id,ci.value);ME=DB.currentUser();
+        try{if(typeof DiscordShell!=='undefined'&&DiscordShell.refresh)DiscordShell.refresh()}catch(_){}
+      }catch(_){const e=q('#spStatusErr');if(e)e.textContent='Could not save your custom status.'}
+    };
+    ci.addEventListener('blur',save);
+    ci.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();ci.blur()}});
+  }
   if(q('#spAvFile'))q('#spAvFile').onchange=()=>{
     const f=q('#spAvFile').files[0];if(!f)return;
     q('#spAvErr').textContent='';
@@ -17627,7 +18761,7 @@ function wireDiscordSettings(root,me,s,reopen){
     if(!list.length)blk.innerHTML='<div class="hint">You haven’t blocked anyone.</div>';
     else blk.innerHTML=list.map(id=>{
       const u=DB.getUser(id)||{id,username:'User '+id};
-      return `<div class="dl-blk"><span>${esc(displayUsername(u.username))}</span><button type="button" class="btn sec small" data-unblock="${id}">Unblock</button></div>`;
+      return `<div class="dl-blk"><span>${esc(dispName(u))}</span><button type="button" class="btn sec small" data-unblock="${id}">Unblock</button></div>`;
     }).join('');
     blk.onclick=async e=>{
       const b=e.target.closest('[data-unblock]');if(!b)return;
@@ -17820,31 +18954,17 @@ function openSettings(fromChat,startTab){
     <h2 id="sTitle">⚙️ Settings</h2>
     <div class="hint">Everything is private except your bubble &amp; text color — that's how <b>everyone</b> sees your messages.</div>
 
-    <div class="preview-box dl-hide" id="pvBox">
-      <div class="pv-bg" id="pvBg"></div><div class="pv-dim" id="pvDim"></div>
-      <div class="msg"><div class="msg-row"><div class="avatar" style="width:28px;height:28px;font-size:11px">A</div><div class="msg-body"><div class="meta">Alex</div><div class="bubble" style="background:#3b3f7a;color:#fff">Hey! How does this look?</div></div></div></div>
-      <div class="msg me"><div class="msg-row"><div class="avatar" style="width:28px;height:28px;font-size:11px">Y</div><div class="msg-body"><div class="meta">You</div><div class="bubble">Looking great 🔥</div></div></div></div>
-    </div>
-
     <button type="button" class="dl-set-x" id="sX" aria-label="Close settings" title="Close (Esc)">✕</button>
     <div class="modal-tabs" id="sTabs">
-      <div class="dl-set-user" id="sProfile" role="button" tabindex="0" title="Edit your profile"><span class="dl-set-av">${avatarHtml(ME,ME.username,'width:40px;height:40px;font-size:16px')}</span><span class="dl-set-nm"><b>${esc(displayUsername(ME.username))}</b><small>Edit Profiles <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" fill="currentColor"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z"/></svg></small></span></div>
+      <div class="dl-set-user" id="sProfile" role="button" tabindex="0" title="Edit your profile"><span class="dl-set-av">${avatarHtml(ME,ME.username,'width:40px;height:40px;font-size:16px')}</span><span class="dl-set-nm"><b>${esc(dispName(ME))}</b><small>Edit Profiles <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" fill="currentColor"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z"/></svg></small></span></div>
       <div class="dl-set-search"><input id="sSearch" type="text" placeholder="Search" autocomplete="off" spellcheck="false" aria-label="Search settings"></div>
       ${SET_NAV(ME)}
     </div>
 
     <div data-p="msg" class="hidden">
-      <div class="set-card dl-hide">
-        <div class="section-h" style="margin-top:0">Your message color (public)</div>
-        <div class="set-grid">
-          <div class="field"><label>Bubble color</label><input type="color" id="sMe" value="${s.meBubble}"></div>
-          <div class="field"><label>Text color</label><input type="color" id="sMeT" value="${s.meText}"></div>
-        </div>
-      </div>
       <div class="set-card">
         <div class="section-h" style="margin-top:0">Text display</div>
         <div class="set-grid">
-          <div class="field dl-hide"><label>Bubble roundness <span class="val" id="vRad"></span></label><input type="range" id="sRad" min="0" max="28" value="${s.radius}"></div>
           <div class="field" style="grid-column:1/-1"><label>Font</label><div id="sFontChips" style="display:flex;flex-wrap:wrap;gap:6px"></div><select id="sFont" style="display:none">${fontKeys().map(f=>`<option value="${f}" ${s.font===f?'selected':''}>${f==='custom'?'custom (link)':f}</option>`).join('')}</select></div>
           <div class="field" id="sCustomFontWrap" style="grid-column:1/-1;${s.font==='custom'?'':'display:none'}"><label>Custom font link</label><input id="sCustomFont" type="url" maxlength="300" spellcheck="false" autocapitalize="off" placeholder="https://…/MyFont.woff2" value="${esc(s.customFont||'')}"><span class="hint" id="sCustomFontHint">Paste a font link, or upload a font file (.zip, .ttf, .otf, .woff, .woff2) from your device.</span><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn sec small" id="sFontUp" style="width:auto">Upload font file…</button><span class="hint" id="sFontUpName"></span></div><input type="file" id="sFontFile" accept=".zip,.ttf,.otf,.woff,.woff2" hidden></div>
           <div class="field"><label>Text size <span class="val" id="vSize"></span></label><input type="range" id="sSize" min="11" max="24" value="${s.size}"></div>
@@ -17890,12 +19010,6 @@ function openSettings(fromChat,startTab){
         <div class="dl-sub">Color Themes</div>
         <div class="dl-themes" id="dlColorThemes">${DiscordLook.themes().filter(t=>t.group==='color').map(t=>`<button type="button" class="dl-sw${DiscordLook.theme()===t.id?' active':''}" data-dl-theme="${t.id}" title="${esc(t.name)}" aria-label="${esc(t.name)} theme"><span class="dl-sw-c" style="background:${t.sw}"></span><span class="dl-sw-l">${esc(t.name)}</span></button>`).join('')}</div>
         <div class="hint" style="margin-top:6px">Themes apply to the whole site while Discord look is on. Bubble colors, roundness, backgrounds and glass/opacity settings are hidden in Discord look. Saved to your account.</div>
-      </div>
-      <div class="set-card dl-hide">
-        <div class="section-h" style="margin-top:0">Interface glass</div>
-        <div class="field"><label>UI opacity <span class="val" id="vUiO"></span></label><input type="range" id="sUiO" min="10" max="100" value="${s.uiOpacity??50}"></div>
-        <div class="field"><label>UI blur (frosted glass) <span class="val" id="vUiB"></span></label><input type="range" id="sUiB" min="0" max="30" value="${s.uiBlur??18}"></div>
-        <div class="hint">Lower opacity lets your custom background show through panels, the sidebar and the top bar.</div>
       </div>
       <div class="set-card">
         <div class="section-h" style="margin-top:0">Scrolling</div>
@@ -18912,14 +20026,16 @@ function openSettings(fromChat,startTab){
     };
   }
   function read(){
-    s.meBubble=$$('#sMe').value;s.meText=$$('#sMeT').value;
-    s.radius=+$$('#sRad').value;s.font=$$('#sFont').value;s.size=+$$('#sSize').value;
+    /* meBubble / meText / radius / uiOpacity / uiBlur belonged to the old glass look and their
+       controls are gone with it. They are NOT read here any more - `s` already carries whatever
+       the account had, so removing the controls preserves those values rather than resetting
+       them, which matters because meBubble is still the colour of this person's messages. */
+    s.font=$$('#sFont').value;s.size=+$$('#sSize').value;
     s.customFont=(($$('#sCustomFont')||{}).value||'').trim();
     s.bold=$$('#sBold').checked;s.italic=$$('#sItal').checked;
     s.bgType=$$('#sBgT').value;s.bgColor=$$('#sBg1').value;s.bgColor2=$$('#sBg2').value;
     s.bgFit=$$('#sBgFit').value;
     s.bgBlur=+$$('#sBlur').value;s.bgDim=+$$('#sDim').value;
-    s.uiOpacity=+$$('#sUiO').value;s.uiBlur=+$$('#sUiB').value;
     s.autoScrollBottom=$$('#sAutoScroll').checked;
     s.discordLook=true;   // always on
     s.antiLag=AntiLag.on();   // keep the Save payload in step with the toggle (it saves itself instantly)
@@ -18976,18 +20092,22 @@ function openSettings(fromChat,startTab){
     while(l.length>5||l.join('\n').length>1500)l.pop();
     s.customFonts=l.join('\n');
   }
+  /* The readouts and the preview box belonged to controls the Discord look does not have. Each
+     lookup is guarded rather than removed outright, because the same two functions still serve
+     the controls that DID survive (text size, background blur and dim). */
   function readouts(){
-    $$('#vRad').textContent=s.radius+'px';$$('#vSize').textContent=s.size+'px';
-    $$('#vBlur').textContent=s.bgBlur+'px';$$('#vDim').textContent=s.bgDim+'%';
-    $$('#vUiO').textContent=s.uiOpacity+'%';$$('#vUiB').textContent=s.uiBlur+'px';
+    const set=(id,v)=>{const e=$$(id);if(e)e.textContent=v};
+    set('#vSize',s.size+'px');
+    set('#vBlur',s.bgBlur+'px');
+    set('#vDim',s.bgDim+'%');
   }
   function preview(){
     read();readouts();
-    $$('#sCustomFontWrap').style.display=s.font==='custom'?'':'none';
+    const cf=$$('#sCustomFontWrap');if(cf)cf.style.display=s.font==='custom'?'':'none';
     renderFontChips();
-    applyStyle($$('#pvBox'),s);
-    paintBg($$('#pvBg'),$$('#pvDim'),s);
-    // live-preview the real app too, so background/glass changes are visible behind the modal
+    const pv=$$('#pvBox');if(pv)applyStyle(pv,s);
+    const pb=$$('#pvBg');if(pb)paintBg(pb,$$('#pvDim'),s);
+    // live-preview the real app too, so background changes are visible behind the modal
     applyStyle(document.documentElement,s);
     refitAllAvatars();
   }
@@ -19644,7 +20764,7 @@ function csBody(){
 }
 function csRender(){
   const bg=document.getElementById('csBg');if(!bg||!ME)return;
-  const nm=displayUsername(ME.username);
+  const nm=dispName(ME);
   const hasEq=!!((window.HW_EQ||{})[ME.id]);
   bg.querySelector('.cs-prev').innerHTML=avatarHtml(ME,nm,'width:46px;height:46px;font-size:18px;flex:none')+'<div class="cs-pn">'+fullNameHTML(ME.id,esc(nm))+'<small>This is how your name looks to everyone</small></div>';
   bg.querySelector('.cs-secs').innerHTML=CS_SECTIONS.map(s=>'<button type="button" data-s="'+s.id+'" class="'+(s.id===_csSec?'on':'')+'">'+s.emoji+' '+s.name+'</button>').join('');
@@ -20589,7 +21709,7 @@ function totRankOf(id){const b=totBoard();for(let i=0;i<b.length;i++)if(b[i].id=
 // hasn't synced to this client yet, so the board never shows a wall of "User 12".
 const totName=id=>{
   const u=DB.getUser(id);
-  if(u&&u.username)return displayUsername(u.username);
+  if(u&&u.username)return dispName(u);
   const r=TOT_ALL[id];
   return (r&&typeof r.name==='string'&&r.name)?displayUsername(r.name):'User '+id;
 };
@@ -22027,9 +23147,17 @@ const AntiLag=(function(){
 const DiscordLook=(function(){
   const KEY='ich.discordLook',de=document.documentElement;
   function on(){return de.classList.contains('discord-look')}
-  function apply(v){const was=on();de.classList.toggle('discord-look',!!v);
-    if(was!==!!v){try{if(v){de.style.setProperty('--ui-alpha','1');de.style.setProperty('--ui-blur','0px')}else if(typeof ME!=='undefined'&&ME&&ME.settings&&typeof applyStyle==='function')applyStyle(de,ME.settings);else{de.style.removeProperty('--ui-alpha');de.style.removeProperty('--ui-blur')}}catch(_){}}
-    if(was!==!!v&&typeof DiscordShell!=='undefined')DiscordShell.refresh(true)}
+  /* There is ONE look now. apply() ignores its argument on purpose: the old glass theme is gone,
+     its stylesheet is not loaded and its controls no longer exist, so turning `discord-look` off
+     would not reveal another look - it would leave the site unstyled. The argument is kept so the
+     old call sites (and the cross-tab `storage` listener below, which an older build in another
+     tab can still fire with '0') cannot break the page. */
+  function apply(){
+    const was=on();
+    de.classList.add('discord-look');
+    try{de.style.setProperty('--ui-alpha','1');de.style.setProperty('--ui-blur','0px')}catch(_){}
+    if(!was&&typeof DiscordShell!=='undefined')DiscordShell.refresh(true);
+  }
   function cache(v){try{localStorage.setItem(KEY,v?'1':'0')}catch(_){}}
   // Kept so older callers don't throw, but the look can no longer be turned off.
   function set(v){
@@ -22049,44 +23177,12 @@ const DiscordLook=(function(){
     applyTheme(id);
     if(typeof ME!=='undefined'&&ME&&ME.id!=null)DB.setSettingKey(ME.id,'discordTheme',id).catch(()=>{});
   }
-  /* ---- first-run choice: Normal look or Discord look (saved as settings.discordLookChosen so it's only asked once) ---- */
-  let asking=false,askTimer=null;
-  function chosen(){
-    const st=ME&&ME.settings;if(!st)return true;
-    return st.lookChoice==='normal'||st.lookChoice==='discord';   // only this saved answer counts, so everyone is asked exactly once (earlier builds' flags are ignored)
-  }
-  function ask(force){
-    if(force)asking=false;
-    if(asking&&!document.querySelector('.lk-modal'))asking=false;   // something else (e.g. the rules dialog) replaced it: ask again later
-    if(asking||typeof ME==='undefined'||!ME||(!force&&chosen()))return;
-    const root=document.getElementById('modalRoot');
-    if(!root||(!force&&root.innerHTML.trim()!=='')||(typeof view!=='undefined'&&view.page==='authPage')){          // another dialog (rules, etc.) is up: try again shortly
-      clearTimeout(askTimer);askTimer=setTimeout(ask,1500);return;
-    }
-    asking=true;
-    const chk='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
-    const cur=on()?'discord':'normal';
-    const card=(k,name,desc,tags,prev)=>`<button type="button" class="lk-card${cur===k?' cur':''}" data-lk="${k}">
-        <span class="lk-badge">${chk}<em>Current</em></span>
-        <span class="lk-prev lk-prev-${k}">${prev}</span>
-        <span class="lk-info"><b>${name}</b><small>${desc}</small><span class="lk-tags">${tags.map(t=>'<u>'+t+'</u>').join('')}</span></span>
-        <span class="lk-pick">Use ${name}</span></button>`;
-    const pN='<span class="pv-top"><i></i><i></i></span><span class="pv-b l"><i class="av"></i><i class="ln w1"></i></span><span class="pv-b r"><i class="ln w2"></i></span><span class="pv-b l"><i class="av"></i><i class="ln w3"></i></span><span class="pv-in"></span>';
-    const pD='<span class="pv-rail"><i></i><i></i><i></i><i></i></span><span class="pv-side"><i class="h"></i><i></i><i></i><i></i><i></i></span><span class="pv-main"><span class="pv-m"><i class="av"></i><i class="ln w1"></i></span><span class="pv-m"><i class="av"></i><i class="ln w2"></i></span><span class="pv-m"><i class="av"></i><i class="ln w3"></i></span><span class="pv-in"></span></span><span class="pv-mem"><i></i><i></i><i></i></span>';
-    root.innerHTML=`<div class="modal-bg"><div class="modal lk-modal" role="dialog" aria-modal="true" aria-label="Choose your look">
-      <div class="lk-head"><span class="lk-spark">\u2728</span><h2>Choose your look</h2>
-      <div class="hint">Pick how Itsukis Chat looks for you. You can change it any time in Settings &gt; Theme.</div></div>
-      <div class="lk-grid">
-        ${card('normal','Normal','The original look with chat bubbles, glass panels and custom colours.',['Bubbles','Glass','Custom colours'],pN)}
-        ${card('discord','Discord','A familiar server layout with a member list, themes and Discord-style profiles.',['Server view','Member list','Themes'],pD)}
-      </div></div></div>`;
-    root.querySelectorAll('[data-lk]').forEach(b=>b.onclick=()=>{
-      const d=b.dataset.lk==='discord';
-      root.innerHTML='';asking=false;
-      set(d);                                                                         // writes settings.discordLook
-      try{DB.setSettingKey(ME.id,'lookChoice',d?'discord':'normal').catch(()=>{})}catch(_){}   // ...and remembers what they chose
-    });
-  }
+  /* The first-run "Normal look or Discord look" dialog is gone with the look it offered.
+     ask() is kept as a no-op so the callers that still fire it (boot, the rules gate) do not have
+     to be hunted down, and so that nothing can put that choice back on screen. */
+  function chosen(){return true}
+  function ask(){}
+
   function sync(){
     if(typeof ME==='undefined'||!ME||!ME.settings)return;
     /* The Discord look is the site's only look now, so the first-run "pick a look" question is
@@ -22331,7 +23427,7 @@ function renderChatLight(keepFriends){
     const t=now();
     const ids=Object.keys(typers).map(Number).filter(id=>id!==ME.id&&Number(typers[id])&&t-Number(typers[id])<STALE).sort((a,b)=>a-b);
     if(!ids.length){hide();return}
-    const nm=ids.map(id=>{const u=DB.getUser(id);return u&&!u.deleted?displayUsername(u.username):'Someone'});
+    const nm=ids.map(id=>{const u=DB.getUser(id);return u&&!u.deleted?dispName(u):'Someone'});
     const sig=ids.join(',')+'|'+nm.join(',');
     // Same set of typers as last draw: leave the DOM alone so the dot-wave
     // animation (and the CSS entrance transition) keep running smoothly
@@ -22556,11 +23652,12 @@ const DiscordShell=(function(){
     });
     html+=railWrap({id:'addsrv',t:'Add a Server',ic:'+',cls:'dashed'});
     html+=railWrap({id:'discover',t:'Discover Servers',ic:'\u{1F9ED}',cls:'dashed discover'});
-    html+=railWrap({id:'shop',t:'Shop',ic:'\u{1F48E}',cls:'dashed shop'});
     html+='<div class="dl-rail-grow"></div>';
-    html+=railWrap({id:'hubs',t:'Games',ic:'\u{1F3AE}'});
-    html+=railWrap({id:'extras',t:'Extras',ic:EXTRAS_IC});
-    html+=railWrap({id:'discord',t:'Join our Discord',ic:DISCORD_IC,cls:'dl-rail-discord'});
+    /* Games, Extras, the Discord link and the Shop used to sit here as rail buttons. They are
+       site features, not servers, and Discord's rail only ever holds servers and the two things
+       that find you more of them (+ and the compass). They now live where they belong:
+       Games / Extras / Discord are rows in ICH's own channel list, and the Shop is in the direct
+       messages sidebar where Discord keeps its own shop. */
     html+=railWrap({id:'settings',t:'User Settings',ic:GEAR});
     r.innerHTML=html;
     wireRailDrag(r);
@@ -22651,6 +23748,18 @@ const DiscordShell=(function(){
     document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#dlRail'))hideRailTip()});
   }
 
+  /* The site features that now live inside ICH rather than on the rail. One list, so the order
+     and the labels are in one place; `when` hides a row that is not currently available. */
+  const ICH_EXTRA_ROWS=[
+    {name:'Games & Hubs',ic:'\u{1F3AE}',go:()=>modalGameHubs()},
+    {name:'Extras',ic:EXTRAS_IC,go:btn=>toggleExtras(btn)},
+    {name:'Shop',ic:'\u{1F48E}',go:()=>{closeExtras();openShop()}},
+    {name:'Trick or Treat',ic:'\u{1F383}',
+     when:()=>{try{return typeof totVisible==='function'&&totVisible()}catch(_){return false}},
+     go:()=>{closeExtras();if(typeof totOpen==='function')totOpen()}},
+    {name:'Join our Discord',ic:DISCORD_IC,go:()=>{closeExtras();openDiscord()}}
+  ];
+
   function railClick(e){
     const b=e.target.closest('[data-rail]');if(!b||!ME)return;
     const id=b.dataset.rail;
@@ -22705,7 +23814,7 @@ const DiscordShell=(function(){
     placeUser();
     const p=document.getElementById('dlUser');if(!p||!ME)return;
     const st=myStatus(),custom=myCustomStatus();
-    p.innerHTML=`<button type="button" class="dl-user-me" id="dlUserMe" title="Set status"><span class="dl-user-av">${avatarHtml(ME,ME.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot st-${st}"></i></span><span class="dl-user-txt"><b>${esc(displayUsername(ME.username))}</b><small>${esc(custom||STATUS_LABEL[st]||'Online')}</small></span></button><button type="button" class="dl-user-gear" id="dlUserGear" data-tip="User Settings" aria-label="User Settings">${GEAR}</button>`;
+    p.innerHTML=`<button type="button" class="dl-user-me" id="dlUserMe" title="Set status"><span class="dl-user-av">${avatarHtml(ME,ME.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot st-${st}"></i></span><span class="dl-user-txt"><b>${esc(dispName(ME))}</b><small>${esc(custom||STATUS_LABEL[st]||'Online')}</small></span></button><button type="button" class="dl-user-gear" id="dlUserGear" data-tip="User Settings" aria-label="User Settings">${GEAR}</button>`;
     // Discord: clicking yourself opens the status menu, the cog opens settings.
     document.getElementById('dlUserMe').onclick=e=>{e.stopPropagation();openStatusMenu(document.getElementById('dlUserMe'))};
     document.getElementById('dlUserGear').onclick=()=>openSettings(false);
@@ -22730,7 +23839,7 @@ const DiscordShell=(function(){
     stPop.innerHTML=`
       <div class="dl-stpop-head">
         <span class="dl-user-av">${avatarHtml(ME,ME.username,'width:40px;height:40px;font-size:16px')}<i class="dl-dot st-${cur}"></i></span>
-        <b>${esc(displayUsername(ME.username))}</b>
+        <b>${esc(dispName(ME))}</b>
       </div>
       <div class="dl-stpop-sep"></div>
       ${['online','idle','dnd','invisible'].map(row).join('')}
@@ -22813,7 +23922,7 @@ const DiscordShell=(function(){
         const u=DB.getUser(uid)||{id:uid,username:'User '+uid};
         const d=document.createElement('div');d.className='dl-fr-row';
         const isOn=onl.has(uid);
-        d.innerHTML=`<span class="dl-fr-av" data-open-profile="${uid}">${avatarHtml(u,u.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot ${dotClass(uid,!isOn)}"></i></span><div class="dl-fr-who"><b>${esc(displayUsername(u.username))}</b><small>${esc(sub||(isOn?'Online':'Offline'))}</small></div><div class="dl-fr-acts"></div>`;
+        d.innerHTML=`<span class="dl-fr-av" data-open-profile="${uid}">${avatarHtml(u,u.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot ${dotClass(uid,!isOn)}"></i></span><div class="dl-fr-who"><b>${esc(dispName(u))}</b><small>${esc(sub||(isOn?'Online':'Offline'))}</small></div><div class="dl-fr-acts"></div>`;
         d.querySelector('[data-open-profile]').onclick=e=>{e.stopPropagation();openUserProfile(uid)};
         const a=d.querySelector('.dl-fr-acts');acts.forEach(x=>a.appendChild(x));
         d.onclick=()=>{if(tab==='online'||tab==='all'){view.dmView='chat';selectRoom(DB.dmKey(ME.id,uid))}else openUserProfile(uid)};
@@ -22853,6 +23962,8 @@ const DiscordShell=(function(){
   const CH_HASH='<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10.99 3.16a1 1 0 1 0-1.98-.32L8.34 7H4a1 1 0 0 0 0 2h4.01l-.67 4H3a1 1 0 1 0 0 2h4.01l-.66 3.84a1 1 0 0 0 1.97.32L9.04 15h3.97l-.66 3.84a1 1 0 0 0 1.97.32L15.04 15H20a1 1 0 0 0 0-2h-4.63l.67-4H21a1 1 0 0 0 0-2h-4.63l.65-3.84a1 1 0 1 0-1.97-.32L14.34 7h-3.97l.62-3.84ZM13.34 13l.67-4h-3.97l-.67 4h3.97Z" clip-rule="evenodd"/></svg>';
   const CH_LOCK='<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M17 11V8a5 5 0 0 0-10 0v3H5v11h14V11h-2Zm-8-3a3 3 0 0 1 6 0v3H9V8Z"/></svg>';
   const CH_VOICE='<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M12 3a1 1 0 0 0-1.7-.7L5.6 7H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2.6l4.7 4.7A1 1 0 0 0 12 21V3Zm4.2 2.4a1 1 0 0 0-.4 1.9 6 6 0 0 1 0 9.4 1 1 0 0 0 .4 1.9 8 8 0 0 0 0-13.2Z"/></svg>';
+  /* Discord's boost diamond, used on the chip, the bar and the dialog. */
+  const BOOST_IC='<svg class="bic" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M12 2 2 12l10 10 10-10L12 2Zm0 4.2 5.8 5.8-5.8 5.8L6.2 12 12 6.2Z"/></svg>';
   const CHEV='<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
   // the little mic/headphone crossed-out marks Discord puts next to someone in a voice channel
   const MUTE_IC='<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/><path d="M3.5 3.5l17 17" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>';
@@ -22915,6 +24026,7 @@ const DiscordShell=(function(){
   }
   function renderChannels(list,foot){
     const s=sid();
+    syncBoostWatch();   // keep the boost listener pointed at the server actually on screen
     const srv=DModel.server(s)||{...DModel.ICH};
     let online=0;try{online=DB.onlineCount()}catch(_){}
     const canManage=DModel.can(s,'manageCh',ME.id);
@@ -22923,9 +24035,43 @@ const DiscordShell=(function(){
     // ---- server header (click = server menu) ----
     const head=document.createElement('div');
     head.className='dl-server-head';
-    head.innerHTML='<b>'+esc(srv.name)+'</b>'+(isIch?'<span class="dl-server-on"><i></i>'+online+' online</span>':'')+CHEV;
+    const blv=isIch?0:(()=>{try{return DBoost.levelFor(s)}catch(_){return 0}})();
+
+    /* ---- server banner (Boost Level 1) ----
+       Drawn above the server name, the way Discord draws it. The LEVEL is re-checked here, not
+       just at upload time: if a server drops below Level 1 because a booster lost MVP or moved
+       their boost, the banner stops showing straight away rather than lingering as a perk the
+       server no longer has. The image itself is validated the same way avatars are. */
+    if(!isIch&&blv>=1&&srv.banner&&DModel.isSafeServerImg(srv.banner)){
+      const bn=document.createElement('div');
+      bn.className='dl-srvbanner';
+      bn.style.backgroundImage='url("'+String(srv.banner).replace(/"/g,'')+'")';
+      list.appendChild(bn);
+    }
+    head.innerHTML='<b>'+esc(srv.name)+'</b>'+
+      (blv?'<span class="dl-boost-chip" title="Boost Level '+blv+'">'+BOOST_IC+blv+'</span>':'')+
+      (isIch?'<span class="dl-server-on"><i></i>'+online+' online</span>':'')+CHEV;
     head.onclick=e=>{e.stopPropagation();openServerMenu(head,s)};
     list.appendChild(head);
+
+    /* ---- boost bar (Discord's, under the server name) ----
+       ICH cannot be boosted - it is the site, not a server someone made - so it never shows one. */
+    if(!isIch){
+      try{
+        const n=DBoost.countFor(s),nx=DBoost.nextLevel(s);
+        const bar=document.createElement('div');
+        bar.className='dl-boostbar'+(blv?' lv'+blv:'');
+        const pct=nx?Math.max(0,Math.min(100,Math.round((n/nx.need)*100))):100;
+        bar.innerHTML=
+          '<div class="dl-bb-top"><span class="dl-bb-lv">'+BOOST_IC+(blv?'Level '+blv:'No level yet')+'</span>'+
+          '<span class="dl-bb-n">'+n+' boost'+(n===1?'':'s')+'</span></div>'+
+          '<div class="dl-bb-track"><i style="width:'+pct+'%"></i></div>'+
+          '<div class="dl-bb-sub">'+(nx?esc(nx.left+' more to reach Level '+nx.level):'Max level reached')+'</div>';
+        bar.onclick=()=>openBoostDialog(s);
+        bar.title='Server Boosts';
+        list.appendChild(bar);
+      }catch(e){console.warn('[shell] boost bar',e)}
+    }
 
     // ---- categories + channels ----
     const cats=DModel.cats(s);
@@ -22974,7 +24120,7 @@ const DiscordShell=(function(){
             const s2=st[String(id)]||{};
             const m=document.createElement('div');m.className='dvc-m';m.dataset.id=String(id);
             m.innerHTML='<span class="dvc-av">'+avatarHtml(u,u.username,'width:24px;height:24px;font-size:9px')+'</span>'+
-              '<span class="dvc-nm">'+esc(displayUsername(u.username))+'</span>'+
+              '<span class="dvc-nm">'+esc(dispName(u))+'</span>'+
               (s2.deaf?'<span class="dvc-st" title="Deafened">'+DEAF_IC+'</span>':
                (s2.muted?'<span class="dvc-st" title="'+(s2.forced?'Muted by a moderator':'Muted')+'">'+MUTE_IC+'</span>':''));
             m.onclick=()=>openUserProfile(id);
@@ -22992,7 +24138,7 @@ const DiscordShell=(function(){
       const h=document.createElement('div');
       h.className='dcat'+(isCollapsed?' collapsed':'');
       h.innerHTML='<span class="dcat-chev">'+CHEV+'</span><span class="dcat-name">'+esc(cat.name)+'</span>'+
-        (canManage?'<button type="button" class="dcat-add" title="Create channel" aria-label="Create channel">+</button>':'');
+        ((canManage&&!DModel.isSystem(s))?'<button type="button" class="dcat-add" title="Create channel" aria-label="Create channel">+</button>':'');
       h.onclick=e=>{if(e.target.closest('.dcat-add'))return;toggleCat(s,cat.id)};
       const add=h.querySelector('.dcat-add');
       if(add)add.onclick=e=>{e.stopPropagation();openCreateChannel(s,cat.id)};
@@ -23018,6 +24164,32 @@ const DiscordShell=(function(){
       e.textContent=canManage?'No channels yet. Use the + next to a category to make one.':'No channels you can see yet.';
       list.appendChild(e);
     }
+
+    /* ---- ICH's own section ----
+       Games, Extras and the Discord link used to be buttons on the server rail. They are site
+       features, not servers, so they sit here instead: a category in ICH's channel list, styled
+       and behaving like channels. They appear in ICH and nowhere else, because a server someone
+       made has nothing to do with them - which is the whole point of this move. */
+    if(isIch){
+      const sec=document.createElement('div');
+      sec.className='dcat';
+      sec.innerHTML='<span class="dcat-chev">'+CHEV+'</span><span class="dcat-name">Itsukis Chat Hub</span>';
+      sec.onclick=()=>toggleCat(s,'__ich');
+      const open=!collapsedSet(s).has('__ich');
+      sec.classList.toggle('collapsed',!open);
+      list.appendChild(sec);
+      if(open){
+        ICH_EXTRA_ROWS.forEach(row=>{
+          if(row.when&&!row.when())return;
+          const el=document.createElement('div');
+          el.className='dch dch-site';
+          el.innerHTML='<span class="dch-ic">'+row.ic+'</span><span class="dch-nm">'+esc(row.name)+'</span>';
+          el.onclick=ev=>{ev.stopPropagation();row.go(el)};
+          el.title=row.name;
+          list.appendChild(el);
+        });
+      }
+    }
     if(foot)foot.innerHTML='';
   }
 
@@ -23033,7 +24205,7 @@ const DiscordShell=(function(){
     const u=DB.getUser(id);
     if(!u){m._dlpSig=null;m.innerHTML='<div class="dl-mem-h">Loading…</div>';return}
     const deleted=!!u.deleted;
-    const name=deleted?'Deleted User':displayUsername(u.username);
+    const name=deleted?'Deleted User':dispName(u);
     const online=id===ME.id||DB.onlineIds().indexOf(id)>-1;
     const accent=safeColor(u.settings&&u.settings.meBubble,'#5865f2');
     const banner=safeColor(u.settings&&u.settings.bannerColor,accent);
@@ -23076,13 +24248,25 @@ const DiscordShell=(function(){
      A person is listed once, under the highest group they qualify for. No role = just "Online". */
   const SPIN_RANK=['vipperm','vip1','fire','ice','lucky','neon','crown','rainbow','gold','confetti'];
   const MEM_SHOW_OFF=60;let offAll=false;
+  /* ---- Which groups the member list shows ----
+     Owner / Admin / Mod / MVP / VIP / the custom roles in customroles/ / the Daily Spin flairs
+     are SITE ranks. They are granted from owners/, mods/, mvp/, vip/, flair/ and customroles/,
+     they carry site-wide powers and perks, and they mean nothing inside a server somebody else
+     made - a visitor's MVP badge is not a role in your server any more than it is in Discord.
+
+     They used to be appended to every member list unconditionally, which is why a brand new
+     server opened with "MVPS - 1" and "ICE FLAIR - 2" headers nobody there had created. They are
+     now scoped to ICH, and a user-made server shows exactly what its own role manager defines:
+     its hoisted roles, then Online, then Offline. */
+  function ichScope(){try{return DModel.isSystem(sid())}catch(_){return true}}
   function memGroupOf(id){
-    // A hoisted role created in the role manager outranks the legacy cosmetic groups below,
-    // because it is the one the server's own staff chose to show.
+    // A hoisted role created in the role manager outranks everything below, because it is the
+    // one this server's own staff chose to show.
     try{
       const dr=DModel.rolesOf(sid(),id).find(r=>r.hoist&&!r.everyone&&!r.virtual);
       if(dr)return 'dr:'+dr.id;
     }catch(_){}
+    if(!ichScope())return'online';          // a server someone made: no site ranks in its list
     if(isShownOwner(id))return'owner';
     let v=null;try{v=DB.vipInfo(id,true,true)}catch(_){}
     if(v&&v.kind==='owner')return'owner';
@@ -23105,9 +24289,11 @@ const DiscordShell=(function(){
       DModel.roles(sid()).filter(r=>r.hoist&&!r.everyone&&!r.virtual)
         .forEach(r=>d.push(['dr:'+r.id,r.name,r.color||'#99aab5']));
     }catch(_){}
-    [['owner','Owner','#faa81a'],['mvp','MVPs','#ff2fa0'],['admin','Admins','#ed4245'],['mod','Moderators','#3ba55d']].forEach(x=>d.push(x));
-    try{customRoleList().forEach(r=>d.push(['cr:'+r.id,r.name,r.color]))}catch(_){}
-    SPIN_RANK.forEach(k=>{const pz=SPIN_PRIZES.find(x=>x.id===k);d.push([k,pz?pz.name.replace(/\s*—\s*/,' · '):k,pz?pz.color:'#99aab5'])});
+    if(ichScope()){
+      [['owner','Owner','#faa81a'],['mvp','MVPs','#ff2fa0'],['admin','Admins','#ed4245'],['mod','Moderators','#3ba55d']].forEach(x=>d.push(x));
+      try{customRoleList().forEach(r=>d.push(['cr:'+r.id,r.name,r.color]))}catch(_){}
+      SPIN_RANK.forEach(k=>{const pz=SPIN_PRIZES.find(x=>x.id===k);d.push([k,pz?pz.name.replace(/\s*—\s*/,' · '):k,pz?pz.color:'#99aab5'])});
+    }
     d.push(['online','Online','#23a559']);
     return d;
   }
@@ -23122,12 +24308,17 @@ const DiscordShell=(function(){
   }
   function memRow(id,off){
     const u=DB.getUser(id)||{id,username:'User '+id};
-    const nm=esc(displayUsername(u.username));
-    const p=off?null:nameStylePreset(id);
-    const mv=!off&&isMvp(id)&&!tagHidden(id,'mvp');
-    // Discord tints a member's name with their top role colour. A won flair still wins (it's their own choice).
-    let cr=null;try{if(!off&&!p)cr=topCustomRole(id)}catch(_){}
-    const crS=cr?' style="color:'+esc(cr.color)+'"':'';
+    const nm=esc(dispName(u));
+    const ich=ichScope();
+    // Flair styling, the MVP trophy and customroles/ tints are site cosmetics: ICH only, for the
+    // same reason the group headers are. In a user's server the name takes that server's own
+    // top role colour instead, which is what Discord does.
+    const p=(off||!ich)?null:nameStylePreset(id);
+    const mv=!off&&ich&&isMvp(id)&&!tagHidden(id,'mvp');
+    let cr=null;try{if(!off&&!p&&ich)cr=topCustomRole(id)}catch(_){}
+    let srvCol='';
+    if(!off&&!ich){try{srvCol=DModel.colorOf(sid(),id)||''}catch(_){}}
+    const crS=cr?' style="color:'+esc(cr.color)+'"':(srvCol?' style="color:'+esc(srvCol)+'"':'');
     const nameH=p?'<span class="nm-user flair-name flair-'+p+'">'+nm+'</span>':'<span class="nm-user'+(mv?' mvp-nm':'')+(cr?' cr-nm':'')+'"'+crS+'>'+nm+(mv?' <span class="mvp-mark" title="MVP">🏆</span>':'')+'</span>';
     let cs='';try{cs=DB.customStatusOf?DB.customStatusOf(id):''}catch(_){}
     return `<div class="dl-mem${off?' off':''}" data-open-profile="${id}"${cr?` title="${esc(cr.name)}"`:''}><span class="dl-fr-av">${avatarHtml(u,u.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot ${dotClass(id,off)}"></i></span><span class="dl-mem-nm">${nameH}${(!off&&cs)?`<small class="dl-mem-cs">${esc(cs)}</small>`:''}</span></div>`;
@@ -23172,7 +24363,7 @@ const DiscordShell=(function(){
     if(key===CFG.VIP_ROOM)everyone=everyone.filter(id=>{try{return !!DB.vipInfo(id,true)}catch(_){return false}});
     if(key===CFG.MVP_ROOM)everyone=everyone.filter(id=>{try{return hasMvpPerks(id)}catch(_){return false}});
     const offIds=everyone.filter(id=>!onSet.has(id)&&DB.getUser(id));
-    const nameOf=id=>{const u=DB.getUser(id);return u?displayUsername(u.username):'Loading…'};
+    const nameOf=id=>{const u=DB.getUser(id);return u?dispName(u):'Loading…'};
     const cmp=(a,b)=>nameOf(a).toLowerCase().localeCompare(nameOf(b).toLowerCase());
     const defs=memGroupDefs(),buckets={};defs.forEach(d=>buckets[d[0]]=[]);
     // A group key always exists in defs, but customroles/ can change between the two calls — never throw over it.
@@ -23236,6 +24427,34 @@ const DiscordShell=(function(){
      message, a presence tick), so a new channel, a renamed role, a changed icon or someone
      joining could sit invisible for a while. Coalesced on a frame so a burst of listener
      callbacks - which is what arriving at a server looks like - is one repaint, not twenty. */
+  /* Boosts are watched one server at a time - the one you are looking at - so opening the app
+     does not subscribe to serverBoosts for every server you have ever joined. */
+  let _boostSid=null;
+  function syncBoostWatch(){
+    let s=null;try{s=sid()}catch(_){}
+    if(s===_boostSid)return;
+    try{if(_boostSid)DBoost.detach(_boostSid)}catch(_){}
+    _boostSid=s;
+    try{if(s&&s!==DModel.ICH_ID)DBoost.attach(s)}catch(_){}
+  }
+  /* A boost landing or leaving changes the sidebar bar, the level chip and the rail glow, so
+     redraw the sidebar the same way everything else does. Coalesced on a frame for the same
+     reason the model subscription below is. */
+  let _bPend=false;
+  try{
+    DBoost.onChange(()=>{
+      if(_bPend||!ME)return;
+      _bPend=true;
+      requestAnimationFrame(()=>{
+        _bPend=false;
+        if(!ME||view.page!=='chatPage')return;
+        try{renderRail()}catch(_){}
+        try{const l=document.getElementById('sbList'),f=document.getElementById('sbFoot');
+          if(l&&f&&serverMode()){l.innerHTML='';f.innerHTML='';renderChannels(l,f)}}catch(_){}
+      });
+    });
+  }catch(_){}
+
   let _pending=false;
   try{
     DModel.onChange(()=>{
@@ -23313,6 +24532,7 @@ const DiscordShell=(function(){
 const DI={
   plus:'<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M13 5a1 1 0 1 0-2 0v6H5a1 1 0 1 0 0 2h6v6a1 1 0 1 0 2 0v-6h6a1 1 0 1 0 0-2h-6V5Z"/></svg>',
   gear:'<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7Zm7.4-2.5a7.6 7.6 0 0 0 0-2l2-1.6a.5.5 0 0 0 .1-.6l-1.9-3.3a.5.5 0 0 0-.6-.2l-2.4 1a7.4 7.4 0 0 0-1.7-1l-.4-2.5a.5.5 0 0 0-.5-.4h-3.8a.5.5 0 0 0-.5.4l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1a.5.5 0 0 0-.6.2L2.6 8.8a.5.5 0 0 0 .1.6l2 1.6a7.6 7.6 0 0 0 0 2l-2 1.6a.5.5 0 0 0-.1.6l1.9 3.3a.5.5 0 0 0 .6.2l2.4-1a7.4 7.4 0 0 0 1.7 1l.4 2.5a.5.5 0 0 0 .5.4h3.8a.5.5 0 0 0 .5-.4l.4-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1a.5.5 0 0 0 .6-.2l1.9-3.3a.5.5 0 0 0-.1-.6l-2-1.6Z"/></svg>',
+  boost:'<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2 2 12l10 10 10-10L12 2Zm0 4.2 5.8 5.8-5.8 5.8L6.2 12 12 6.2Z"/></svg>',
   invite:'<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 14a1 1 0 0 1 1 1v2h2a1 1 0 1 1 0 2h-2v2a1 1 0 1 1-2 0v-2h-2a1 1 0 1 1 0-2h2v-2a1 1 0 0 1 1-1ZM9.5 4a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 11c2.2 0 4.2.6 5.6 1.6A3 3 0 0 0 16 21H3a1 1 0 0 1-1-1c0-2.8 3.4-5 7.5-5Z"/></svg>',
   people:'<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="9" cy="8" r="3.6"/><path d="M2 19.5C2 16.1 5.1 14 9 14s7 2.1 7 5.5v.5H2v-.5Z"/><circle cx="17.2" cy="9" r="2.8"/><path d="M17.4 14c2.8.1 4.6 1.8 4.6 4.5V20h-4v-1.2c0-1.7-.6-3.2-1.7-4.3.3-.4.7-.5 1.1-.5Z"/></svg>',
   pencil:'<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Zm17.71-10.21a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z"/></svg>',
@@ -23601,45 +24821,57 @@ function openServerMenu(anchor,sid,ev){
   if(DModel.can(sid,'invite',ME.id))items.push({label:'Invite People',icon:DI.invite,onClick:()=>openInvite(sid)});
   if(DModel.can(sid,'manageSrv',ME.id)||DModel.can(sid,'manageRoles',ME.id)||DModel.can(sid,'manageCh',ME.id))
     items.push({label:'Server Settings',icon:DI.gear,onClick:()=>openServerSettings(sid)});
-  if(DModel.can(sid,'manageCh',ME.id)){
+  /* ICH's channels and categories are code, not data (see assertNotICH in model.js), so these
+     entries are not offered there - they could only ever fail. */
+  if(!sys&&DModel.can(sid,'manageCh',ME.id)){
     items.push({label:'Create Channel',icon:DI.plus,onClick:()=>openCreateChannel(sid,null)});
     items.push({label:'Create Category',icon:DI.plus,onClick:()=>openCreateCategory(sid)});
   }
+  if(!sys)items.push({label:'Server Boost',icon:DI.boost,onClick:()=>openBoostDialog(sid)});
   items.push({label:'Notification Settings',icon:DI.people,onClick:()=>openSettings(false)});
   if(items.length)items.push({sep:true});
+  const goHomeAfter=()=>{
+    view.sid=DModel.ICH_ID;
+    try{localStorage.setItem('ich.sid',DModel.ICH_ID)}catch(_){}
+    selectRoom('global');
+  };
+  const leaveItem=()=>({label:'Leave Server',icon:DI.leave,danger:true,onClick:()=>{
+    dconfirm({
+      title:'Leave ‘'+srv.name+'’',
+      sub:'Are you sure you want to leave <b>'+esc(srv.name)+'</b>? You won’t be able to rejoin unless you are re-invited.',
+      confirm:'Leave Server',danger:true,
+      onConfirm:async()=>{
+        await DModel.leaveServer(sid);
+        goHomeAfter();
+        toast('You left the server.');
+      }
+    });
+  }});
+  const deleteItem=()=>({label:'Delete Server',icon:DI.trash,danger:true,onClick:()=>{
+    dconfirm({
+      title:'Delete ‘'+srv.name+'’',
+      sub:'Are you sure you want to delete <b>'+esc(srv.name)+'</b>? This cannot be undone, and every '+
+          'channel, role, message and member in it goes with it.',
+      confirm:'Delete Server',danger:true,
+      onConfirm:async()=>{
+        await DModel.deleteServer(sid);
+        goHomeAfter();
+        toast('Server deleted.');
+      }
+    });
+  }});
   if(sys){
     // ICH is the site itself - there is deliberately no way out of it.
     items.push({label:'Home server — can’t be left',disabled:true});
   }else if(DModel.isServerOwner(sid,ME.id)){
-    items.push({label:'Delete Server',icon:DI.trash,danger:true,onClick:()=>{
-      dconfirm({
-        title:'Delete ‘'+srv.name+'’',
-        sub:'Are you sure you want to delete <b>'+esc(srv.name)+'</b>? This cannot be undone and every channel in it goes with it.',
-        confirm:'Delete Server',danger:true,
-        onConfirm:async()=>{
-          await DModel.deleteServer(sid);
-          view.sid=DModel.ICH_ID;
-          try{localStorage.setItem('ich.sid',DModel.ICH_ID)}catch(_){}
-          selectRoom('global');
-          toast('Server deleted.');
-        }
-      });
-    }});
+    /* The owner gets BOTH, with Delete underneath Leave, which is where it was asked for.
+       Leaving your own server is still refused in the model (it would orphan the place), and
+       the entry says so rather than disappearing - otherwise an owner who wants out has no idea
+       that deleting is the way to do it. */
+    items.push(leaveItem());
+    items.push(deleteItem());
   }else{
-    items.push({label:'Leave Server',icon:DI.leave,danger:true,onClick:()=>{
-      dconfirm({
-        title:'Leave ‘'+srv.name+'’',
-        sub:'Are you sure you want to leave <b>'+esc(srv.name)+'</b>? You won’t be able to rejoin unless you are re-invited.',
-        confirm:'Leave Server',danger:true,
-        onConfirm:async()=>{
-          await DModel.leaveServer(sid);
-          view.sid=DModel.ICH_ID;
-          try{localStorage.setItem('ich.sid',DModel.ICH_ID)}catch(_){}
-          selectRoom('global');
-          toast('You left the server.');
-        }
-      });
-    }});
+    items.push(leaveItem());
   }
   openCtx(ev||anchor,items);
 }
@@ -23701,28 +24933,24 @@ function openInvite(sid){
          blob launcher window, where a link to "this page" is meaningless - the code is the thing
          that always works, pasted into Add a Server -> Join a Server. The link is offered second,
          and only when there is a real address to point at. */
-      const link=inviteUrl(code);
+      /* Invite CODES are the product. Invite LINKS are marked coming soon on purpose: the site
+         is normally opened from an about:blank or blob launcher window, where the page has no
+         address of its own and a "link to this page" is either meaningless or points at whichever
+         deployment CFG.SITE_URL happens to name - which is not necessarily the one the person is
+         using. Until there is one address that is always right, the link would be a feature that
+         works for some people and silently fails for others. The code works everywhere. */
       m.body.querySelector('#ivOut').innerHTML=
         '<div class="dlabel" style="margin-top:4px">Invite code</div>'+
         '<div class="dcode"><span style="font-size:20px;letter-spacing:2px">'+esc(code)+'</span>'+
         '<button type="button" class="dbtn sm grey cp" data-cp>Copy code</button></div>'+
         '<div class="dhint">They join with <b>+</b> on the left → <b>Join a Server</b> → paste this. '+
         'This works everywhere, including launcher windows.</div>'+
-        (link
-          ?'<div class="dlabel" style="margin-top:16px">Or send a link</div>'+
-           '<div class="dcode"><span style="font-size:13px">'+esc(link)+'</span>'+
-           '<button type="button" class="dbtn sm grey cp" data-cp2>Copy link</button></div>'+
-           '<div class="dhint">Opening it joins them straight away.'+
-           (pageIsAddressable()?'':' Built from <b>CFG.SITE_URL</b>, because this window has no address of its own.')+
-           '</div>'
-          :'<div class="dhint" style="margin-top:14px">No invite link can be made from this window, '+
-           'and <b>CFG.SITE_URL</b> in js/core/config.js is not set to an http(s) address. The code above still works.</div>');
+        '<div class="dlabel" style="margin-top:16px">Or send a link</div>'+
+        '<div class="dcode soon"><span>Invite links — <b>coming soon</b></span>'+
+        '<button type="button" class="dbtn sm grey" disabled>Copy link</button></div>'+
+        '<div class="dhint">Share the code above for now.</div>';
       m.body.querySelector('[data-cp]').onclick=async()=>{
         const ok=await copyText(code);toast(ok?'Invite code copied':'Could not copy',ok?'good':'bad');
-      };
-      const cp2=m.body.querySelector('[data-cp2]');
-      if(cp2)cp2.onclick=async()=>{
-        const ok=await copyText(link);toast(ok?'Invite link copied':'Could not copy',ok?'good':'bad');
       };
       go.textContent='Generate Another';
     }catch(e){err.textContent=e.message||'Could not create an invite.'}
@@ -23913,7 +25141,7 @@ function openCategoryMenu(ev,sid,cat){
   if(!DModel.can(sid,'manageCh',ME.id)){
     items.push({label:'Collapse Category',onClick:()=>{}});
   }else{
-    items.push({label:'Create Channel',icon:DI.plus,onClick:()=>openCreateChannel(sid,cat.id)});
+    if(!DModel.isSystem(sid))items.push({label:'Create Channel',icon:DI.plus,onClick:()=>openCreateChannel(sid,cat.id)});
     items.push({label:'Rename Category',icon:DI.pencil,onClick:()=>{
       const m=dmodal({
         title:'Rename Category',
@@ -23937,6 +25165,103 @@ function openCategoryMenu(ev,sid,cat){
     }});
   }
   openCtx(ev,items);
+}
+
+/* ======================================================================
+ * 12. SERVER BOOSTS
+ *     The dialog behind the boost bar in the channel sidebar and the "Server Boost" entry on
+ *     the server menu. The rules the user sees here are the ones js/discord/boosts.js enforces:
+ *     MVP grants two slots, a boost has to sit somewhere for 7 days before it can be moved, and
+ *     giving one up is always allowed.
+ * ====================================================================== */
+function boostRowHTML(b){
+  const u=DB.getUser(b.uid);
+  const nm=u?esc(dispName(u)):('User '+b.uid);
+  const since=b.at?new Date(b.at).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'';
+  return '<div class="dbst-row"><span class="dbst-av">'+avatarHtml(u||{id:b.uid,username:'?'},(u&&u.username)||'?','width:24px;height:24px;font-size:11px')+'</span>'+
+    '<span class="dbst-nm">'+nm+'</span>'+(since?'<span class="dbst-since">since '+esc(since)+'</span>':'')+'</div>';
+}
+
+function openBoostDialog(sid){
+  const srv=DModel.server(sid);if(!srv)return;
+  if(DModel.isSystem(sid)){
+    toast('ICH is the site itself, so it can’t be boosted.','bad');
+    return;
+  }
+  try{DBoost.attach(sid)}catch(_){}   // the dialog reads live counts, so make sure they are live
+  const m=dmodal({title:'Boost '+srv.name,sub:'',body:'<div id="bstBody"></div>',footer:'<button type="button" class="dbtn sec" data-x>Close</button>'});
+  m.foot.querySelector('[data-x]').onclick=m.close;
+
+  function draw(){
+    const body=m.body.querySelector('#bstBody');if(!body)return;
+    const n=DBoost.countFor(sid),lv=DBoost.levelFor(sid),nx=DBoost.nextLevel(sid);
+    const slots=DBoost.mySlots();
+    const mineHere=DBoost.myBoostOn(sid);
+    const have=slots.length;
+    const pct=nx?Math.max(0,Math.min(100,Math.round((n/nx.need)*100))):100;
+    const boosters=DBoost.boostersOf(sid);
+
+    let actions='';
+    if(!have){
+      actions='<div class="dhint">Server Boosts are an <b>MVP</b> perk — MVP gives you '+DBoost.SLOTS+
+        ' of them. MVP is a 0.1% prize on the Daily Spin, or available in the Shop.</div>';
+    }else if(mineHere){
+      const left=mineHere.movableAt-Date.now();
+      actions='<div class="dbst-you">You’re boosting this server.</div>'+
+        '<div class="dhint">'+(left>0
+          ?'This boost can be moved to another server in <b>'+esc(DBoost.describeWait(left))+'</b>. You can take it back at any time.'
+          :'This boost is free to move — open another server and boost it from there.')+'</div>'+
+        '<button type="button" class="dbtn danger" id="bstOff">Remove Boost</button>';
+    }else{
+      const free=DBoost.freeSlot();
+      const movable=slots.filter(x=>x.sid&&x.movableAt<=Date.now());
+      if(free>=0){
+        actions='<button type="button" class="dbtn" id="bstOn">'+
+          'Boost this server <span class="dhint-inline">('+slots.filter(x=>!x.sid).length+' of '+have+' free)</span></button>';
+      }else if(movable.length){
+        actions='<div class="dhint">Both of your boosts are on other servers, but '+
+          (movable.length===1?'one of them has':movable.length+' of them have')+' been there long enough to move.</div>'+
+          movable.map(x=>{
+            const other=DModel.server(x.sid);
+            return '<button type="button" class="dbtn grey" data-move="'+esc(x.sid)+'">Move the boost from '+
+              esc(other?other.name:'a deleted server')+'</button>';
+          }).join('');
+      }else{
+        const soonest=slots.filter(x=>x.sid).sort((a,b)=>a.movableAt-b.movableAt)[0];
+        actions='<div class="dhint">Both of your boosts are on other servers. A boost has to sit on a '+
+          'server for 7 days before it can move'+(soonest?'; the next one is free in <b>'+
+          esc(DBoost.describeWait(soonest.movableAt-Date.now()))+'</b>':'')+'.</div>';
+      }
+    }
+
+    body.innerHTML=
+      '<div class="dbst-head '+(lv?'lv'+lv:'')+'">'+
+        '<div class="dbst-lv">'+(lv?'Level '+lv:'No level yet')+'</div>'+
+        '<div class="dbst-track"><i style="width:'+pct+'%"></i></div>'+
+        '<div class="dbst-sub">'+n+' boost'+(n===1?'':'s')+(nx?' · '+nx.left+' more to reach Level '+nx.level:' · max level')+
+      '</div></div>'+
+      '<div class="dbst-perks">'+DBoost.LEVELS.map(l=>
+        '<div class="dbst-perk'+(lv>=l.level?' on':'')+'"><b>Level '+l.level+' <span>'+l.need+' boosts</span></b>'+
+        '<ul>'+l.perks.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>').join('')+'</div>'+
+      '<div class="dbst-acts">'+actions+'</div>'+
+      (boosters.length?'<div class="dlabel" style="margin-top:14px">Boosters</div>'+boosters.map(boostRowHTML).join(''):'');
+
+    const run=(fn,msg)=>async()=>{
+      try{await fn();toast(msg,'good');draw();renderChat()}
+      catch(e){toast(e.message||'That didn’t work.','bad')}
+    };
+    const on=body.querySelector('#bstOn');
+    if(on)on.onclick=run(()=>DBoost.boost(sid),'Server boosted!');
+    const off=body.querySelector('#bstOff');
+    if(off)off.onclick=run(()=>DBoost.unboost(sid),'Boost removed.');
+    body.querySelectorAll('[data-move]').forEach(b=>{
+      b.onclick=run(()=>DBoost.move(b.dataset.move,sid),'Boost moved.');
+    });
+  }
+  draw();
+  const un=DBoost.onChange(draw);
+  const oldClose=m.close;
+  m.close=()=>{try{un()}catch(_){}oldClose()};
 }
 
 /* ==========================================================================
@@ -24037,6 +25362,12 @@ function openServerSettings(sid,section){
   /* ---------------- Overview ---------------- */
   function drawOverview(){
     const sys=DModel.isSystem(sid);
+    const textChans=DModel.channels(sid).filter(c=>c.type!=='voice').sort((a,b)=>a.pos-b.pos);
+    let bLevel=0,bCount=0;
+    try{bLevel=DBoost.levelFor(sid);bCount=DBoost.countFor(sid)}catch(_){}
+    const bCountTxt=bCount+' boost'+(bCount===1?'':'s');
+    const curSys=(typeof srv.sys==='string'&&textChans.some(c=>c.id===srv.sys))
+      ? srv.sys : (textChans[0]?textChans[0].id:'');
     main.innerHTML=
       '<div class="dset-h1">Server Overview</div>'+
       (sys?'<div class="dnote">This is the home server. Its name and icon are fixed, and nobody can leave it.</div>':'')+
@@ -24058,6 +25389,42 @@ function openServerSettings(sid,section){
         '<div class="dfield" style="margin-top:12px"><label class="dlabel">Short description</label>'+
         '<input class="dinput" id="svDesc" maxlength="200" value="'+esc((DModel._state.discovery[sid]||{}).desc||'')+'" placeholder="What is this server about?"></div>'+
         '<button type="button" class="dbtn grey" id="svPubSave">Save listing</button>')+
+      /* ---- v53: the things Discord calls System Messages, plus a server description ---- */
+      (sys?'':'<div class="dsep"></div>'+
+        '<div class="dset-h2">Server Banner</div>'+
+        (bLevel>=1
+          ?'<div class="dhint" style="margin-bottom:8px">Shown across the top of the channel list. '+
+            'Wide images work best — it is cropped to 16:9.</div>'+
+            '<div class="svbn-prev'+(srv.banner?'':' empty')+'" id="svBnPrev"'+
+              (srv.banner?' style="background-image:url(\''+esc(srv.banner)+'\')"':'')+'>'+
+              (srv.banner?'':'No banner yet')+'</div>'+
+            '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">'+
+              '<label class="dbtn" style="cursor:pointer">Upload banner<input type="file" id="svBnFile" accept="image/*" hidden></label>'+
+              (srv.banner?'<button type="button" class="dbtn grey" id="svBnClear">Remove</button>':'')+
+            '</div>'
+          :'<div class="dnote">A server banner unlocks at <b>Boost Level 1</b> (2 boosts). '+
+            'This server has '+bCountTxt+'.</div>')+
+        '<div class="derr" id="svBnErr"></div>'+
+        '<div class="dsep"></div>'+
+        '<div class="dset-h2">About</div>'+
+        '<div class="dfield"><label class="dlabel">Server description</label>'+
+        '<textarea class="dinput" id="svAbout" rows="3" maxlength="300" placeholder="What goes on in here?">'+esc(srv.desc||'')+'</textarea>'+
+        '<div class="dhint">Shown to people before they join. Up to 300 characters.</div></div>'+
+        '<div class="dsep"></div>'+
+        '<div class="dset-h2">System Messages</div>'+
+        '<div class="dfield"><label class="dlabel">System messages channel</label>'+
+        '<select class="dinput" id="svSys">'+
+          textChans.map(c=>'<option value="'+esc(c.id)+'"'+(c.id===curSys?' selected':'')+'>#'+esc(c.name)+'</option>').join('')+
+        '</select>'+
+        '<div class="dhint">Where join messages are posted.</div></div>'+
+        '<div class="drow"><div class="drow-txt"><div class="drow-nm">Send a message when someone joins</div>'+
+        '<div class="drow-d">A short line in the channel above, the way Discord announces a new member.</div></div>'+
+        dtoggleHTML(srv.welcome!==false,'id="svWelcome"')+'</div>'+
+        '<div class="drow"><div class="drow-txt"><div class="drow-nm">Use a random welcome line</div>'+
+        '<div class="drow-d">Picks from a set of greetings instead of saying the same thing every time. '+
+        'Off means a plain “<i>name</i> joined the server.”</div></div>'+
+        dtoggleHTML(srv.wjoin!==false,'id="svWJoin"')+'</div>'+
+        '<button type="button" class="dbtn grey" id="svSysSave">Save system messages</button>')+
       '<div class="dsep"></div>'+
       '<div class="dset-h2">Server Info</div>'+
       '<div class="drow"><div class="drow-txt"><div class="drow-nm">Members</div>'+
@@ -24082,6 +25449,43 @@ function openServerSettings(sid,section){
         if(typeof DiscordShell!=='undefined')DiscordShell.refresh();
       }catch(e){err.textContent=e.message||'Could not save.'}
       finally{b.disabled=false}
+    };
+    const bnFile=main.querySelector('#svBnFile');
+    if(bnFile)bnFile.onchange=async()=>{
+      const f=bnFile.files&&bnFile.files[0];if(!f)return;
+      const err=main.querySelector('#svBnErr');err.textContent='';
+      try{
+        const data=await serverBannerFromFile(f);
+        await DModel.updateServer(sid,{banner:data});
+        toast('Banner saved.','good');
+        if(typeof DiscordShell!=='undefined')DiscordShell.refresh();
+        drawOverview();
+      }catch(e){err.textContent=e.message||'Could not use that image.'}
+      finally{bnFile.value=''}
+    };
+    const bnClear=main.querySelector('#svBnClear');
+    if(bnClear)bnClear.onclick=async()=>{
+      const err=main.querySelector('#svBnErr');err.textContent='';
+      try{
+        await DModel.updateServer(sid,{banner:''});
+        toast('Banner removed.','good');
+        if(typeof DiscordShell!=='undefined')DiscordShell.refresh();
+        drawOverview();
+      }catch(e){err.textContent=e.message||'Could not remove the banner.'}
+    };
+    const sb=main.querySelector('#svSysSave');
+    if(sb)sb.onclick=async()=>{
+      sb.disabled=true;const err=main.querySelector('#svErr');err.textContent='';
+      try{
+        await DModel.updateServer(sid,{
+          desc:main.querySelector('#svAbout').value,
+          sys:main.querySelector('#svSys').value,
+          welcome:main.querySelector('#svWelcome').checked,
+          wjoin:main.querySelector('#svWJoin').checked
+        });
+        toast('Saved.','good');
+      }catch(e){err.textContent=e.message||'Could not save.'}
+      finally{sb.disabled=false}
     };
     const pb=main.querySelector('#svPubSave');
     if(pb)pb.onclick=async()=>{
@@ -24114,10 +25518,16 @@ function openServerSettings(sid,section){
   function drawRoleList(){
     const host=main.querySelector('#rmList');if(!host)return;
     const roles=DModel.roles(sid);
+    /* ICH's roles ARE the site ranks - Owner, Admin, Mod, MVP, VIP and anything in customroles/.
+       They are granted from those nodes and the database rules forbid the browser writing them,
+       so a role created here could never be given to anyone. The + is left out rather than
+       offered and then refused. */
+    const sysRoles=DModel.isSystem(sid);
     host.innerHTML='<div class="drm-list-head"><h3>Roles — '+roles.length+'</h3>'+
-      '<button type="button" class="dbtn sm" id="rmNew">'+DI.plus+'</button></div>'+
+      (sysRoles?'':'<button type="button" class="dbtn sm" id="rmNew">'+DI.plus+'</button>')+'</div>'+
+      (sysRoles?'<div class="dhint" style="padding:0 10px 8px">ICH\u2019s roles are the site ranks. They\u2019re granted from the owner tools, not created here.</div>':'')+
       '<div id="rmRoles"></div>';
-    host.querySelector('#rmNew').onclick=async()=>{
+    if(host.querySelector('#rmNew'))host.querySelector('#rmNew').onclick=async()=>{
       try{const rid=await DModel.createRole(sid,'new role');selRole=rid;roleTab='display';setTimeout(drawRoles,250)}
       catch(e){toast(e.message||'Could not create a role','bad')}
     };
@@ -24280,7 +25690,7 @@ function openServerSettings(sid,section){
   function paneMembers(pane,r){
     const all=DModel.memberIds(sid);
     const has=uid=>DModel.rolesOf(sid,uid).some(x=>x.id===r.id);
-    const nameOf=uid=>{const u=DB.getUser(uid);return u?displayUsername(u.username):'User '+uid};
+    const nameOf=uid=>{const u=DB.getUser(uid);return u?dispName(u):'User '+uid};
     const q=memQ.trim().toLowerCase();
     const list=all.filter(uid=>!q||nameOf(uid).toLowerCase().includes(q))
                   .sort((a,b)=>(has(b)?1:0)-(has(a)?1:0)||nameOf(a).localeCompare(nameOf(b)))
@@ -24314,10 +25724,15 @@ function openServerSettings(sid,section){
   /* ---------------- Channels ---------------- */
   function drawChannels(){
     const cats=DModel.cats(sid),chans=DModel.channels(sid);
+    /* ICH's channel list is the ICH_CHANNELS constant in model.js, so there is nothing to add
+       to here - the buttons are replaced by the reason they are missing. */
+    const sys=DModel.isSystem(sid);
     main.innerHTML='<div class="dset-h1">Channels</div>'+
-      '<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">'+
-      '<button type="button" class="dbtn" id="chNew">Create Channel</button>'+
-      '<button type="button" class="dbtn grey" id="catNew">Create Category</button></div>'+
+      (sys
+        ?'<div class="dhint" style="margin-bottom:16px">ICH\u2019s channels are built into the site and hold its existing history, so they can\u2019t be added to or removed. You can still edit a topic below.</div>'
+        :'<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">'+
+          '<button type="button" class="dbtn" id="chNew">Create Channel</button>'+
+          '<button type="button" class="dbtn grey" id="catNew">Create Category</button></div>')+
       cats.map(cat=>{
         const inCat=chans.filter(c=>c.cat===cat.id);
         return '<div class="dset-h2">'+esc(cat.name)+'</div>'+
@@ -24327,8 +25742,8 @@ function openServerSettings(sid,section){
             '<button type="button" class="dbtn sm grey" data-edit="'+esc(c.id)+'">Edit</button></div>'
           ).join(''):'<div class="dhint">No channels in this category.</div>');
       }).join('');
-    main.querySelector('#chNew').onclick=()=>openCreateChannel(sid,null);
-    main.querySelector('#catNew').onclick=()=>openCreateCategory(sid);
+    if(main.querySelector('#chNew'))main.querySelector('#chNew').onclick=()=>openCreateChannel(sid,null);
+    if(main.querySelector('#catNew'))main.querySelector('#catNew').onclick=()=>openCreateCategory(sid);
     main.querySelectorAll('[data-edit]').forEach(b=>{
       b.onclick=()=>{const c=DModel.channel(sid,b.dataset.edit);if(c)openChannelSettings(sid,c)};
     });
@@ -24382,7 +25797,7 @@ function openServerSettings(sid,section){
     }
     const list=DModel.serverBanList(sid);
     const ips=DModel.ipBanList(sid);
-    const nameOf=uid=>{const u=DB.getUser(uid);return u?displayUsername(u.username):'User '+uid};
+    const nameOf=uid=>{const u=DB.getUser(uid);return u?dispName(u):'User '+uid};
     main.innerHTML='<div class="dset-h1">Bans — '+list.length+'</div>'+
       '<div class="dnote info">A ban here removes someone from <b>'+esc((DModel.server(sid)||{}).name||'')+
       '</b> and stops them rejoining. It does not touch their account anywhere else — they can still use '+
@@ -24416,7 +25831,7 @@ function openServerSettings(sid,section){
   /* ---------------- Members ---------------- */
   let mq2='';
   function drawMembers(){
-    const nameOf=uid=>{const u=DB.getUser(uid);return u?displayUsername(u.username):'User '+uid};
+    const nameOf=uid=>{const u=DB.getUser(uid);return u?dispName(u):'User '+uid};
     const q=mq2.trim().toLowerCase();
     const ids=DModel.memberIds(sid).filter(uid=>!q||nameOf(uid).toLowerCase().includes(q))
       .sort((a,b)=>DModel.highestPos(sid,b)-DModel.highestPos(sid,a)||nameOf(a).localeCompare(nameOf(b)))
@@ -24449,7 +25864,7 @@ function openServerSettings(sid,section){
  * ====================================================================== */
 function openMemberManager(sid,uid,after){
   const u=DB.getUser(uid)||{id:uid,username:'User '+uid};
-  const nameOf=()=>displayUsername(u.username||('User '+uid));
+  const nameOf=()=>dispName(u,'User '+uid);
   const mem=DModel.member(sid,uid);
   const canRoles=DModel.can(sid,'manageRoles',ME.id)&&DModel.canManageMember(sid,uid);
 
@@ -24530,6 +25945,240 @@ function openMemberManager(sid,uid,after){
   }
   draw();
 }
+
+/* ==========================================================================
+ * js/discord/boosts.js - Server Boosts
+ * Loaded by js/loader.js (load order lives in js/manifest.js).
+ * All js files share one global scope, so functions/consts here are visible to the others.
+ *
+ * WHO GETS BOOSTS
+ *   MVP, and only MVP: two slots each. Owners get them too, because owners get every MVP perk
+ *   (hasMvpPerks). Nobody else has any, and there is nothing to buy - this mirrors how every
+ *   other perk on the site is granted.
+ *
+ * WHAT A SLOT IS
+ *   A slot points at one server, and remembers WHEN it was pointed there. Moving it somewhere
+ *   else is allowed once the boost has sat on a server for 7 days. Giving it up entirely is
+ *   always allowed - what the cooldown stops is hopping a boost between servers to farm a
+ *   perk, not changing your mind about boosting at all.
+ *
+ * WHEN MVP IS TAKEN AWAY
+ *   The slots stop counting immediately, everywhere, because every count filters the boosters
+ *   through hasMvpPerks() at read time rather than trusting the stored record. There is no
+ *   cleanup job to run and no window where a revoked MVP is still propping a server up. The
+ *   dangling rows are tidied by that person's own client on next sign-in (prune), since the
+ *   database rules only let them write their own.
+ *
+ * STORAGE  (two mirrored nodes, both written only by the booster - see scripts/add_rules_v53.py)
+ *   userBoosts/$uid/$slot    = {sid, at}   - where my slots point; read to render MY state
+ *   serverBoosts/$sid/$uid/$slot = {at}    - who boosts a server; one read to count a server
+ * ========================================================================== */
+'use strict';
+
+const BOOST_SLOTS_MVP=2;              // how many slots MVP grants
+const BOOST_MOVE_MS=7*86400000;       // 7 days before a boost can be moved to another server
+/* Discord's own thresholds, kept so the levels mean the same thing to anyone who knows them. */
+const BOOST_LEVELS=[
+  {level:1,need:2, perks:['Server banner image','Boost badge on the server']},
+  {level:2,need:7, perks:['Everything in Level 1','Longer server description','Priority in Discover']},
+  {level:3,need:14,perks:['Everything in Level 2','Gold server glow','Boosters listed on the server']}
+];
+
+const DBoost=(()=>{
+  const S={byServer:{},mine:{}};   // sid -> uid -> slot -> {at}   |   slot -> {sid,at}
+  let myId=null;
+  const subs=new Set();
+  const unsubs=[];
+  const perServer={};
+  function emit(){subs.forEach(f=>{try{f()}catch(e){console.warn('[DBoost] subscriber failed',e)}})}
+  let _p=false;
+  function emitSoon(){if(_p)return;_p=true;Promise.resolve().then(()=>{_p=false;emit()})}
+
+  function start(id){
+    stop();
+    myId=Number(id);
+    if(!Number.isFinite(myId))return;
+    unsubs.push(onValue(R('userBoosts/'+myId),s=>{
+      S.mine=s.val()||{};emitSoon();
+    },e=>console.warn('[DBoost] denied userBoosts',e&&e.code)));
+  }
+  function stop(){
+    unsubs.splice(0).forEach(u=>{try{u()}catch(_){}});
+    Object.keys(perServer).forEach(detach);
+    S.byServer={};S.mine={};myId=null;
+  }
+  function ensureStarted(id){if(Number(id)!==myId)start(id)}
+
+  /* A server's boost list is only watched while you can actually see that server, so opening
+     the app does not subscribe to every server you have ever joined. */
+  function attach(sid){
+    if(!sid||perServer[sid])return;
+    perServer[sid]=onValue(R('serverBoosts/'+sid),s=>{
+      S.byServer[sid]=s.val()||{};emitSoon();
+    },e=>console.warn('[DBoost] denied serverBoosts',sid,e&&e.code));
+  }
+  function detach(sid){
+    const u=perServer[sid];if(!u)return;
+    try{u()}catch(_){}
+    delete perServer[sid];delete S.byServer[sid];
+  }
+
+  function slotsFor(uid){
+    uid=Number(uid==null?myId:uid);
+    try{return hasMvpPerks(uid)?BOOST_SLOTS_MVP:0}catch(_){return 0}
+  }
+  /* My slots, always exactly slotsFor(me) of them, each either pointed at a server or free. */
+  function mySlots(){
+    const n=slotsFor(myId);
+    const out=[];
+    for(let i=0;i<n;i++){
+      const v=S.mine[i];
+      const sid=(v&&typeof v.sid==='string')?v.sid:null;
+      const at=(v&&Number(v.at))||0;
+      out.push({slot:i,sid,at,movableAt:sid?at+BOOST_MOVE_MS:0});
+    }
+    return out;
+  }
+  function freeSlot(){const s=mySlots().find(x=>!x.sid);return s?s.slot:-1}
+  function myBoostOn(sid){return mySlots().find(x=>x.sid===sid)||null}
+  function amBoosting(sid){return !!myBoostOn(sid)}
+
+  /* ---- counting ----
+     Every count re-tests the booster against hasMvpPerks, so a revoked MVP stops counting the
+     instant the mvp/ listener fires - the stored rows are not trusted on their own. */
+  function boostersOf(sid){
+    const raw=S.byServer[sid]||{};
+    const out=[];
+    Object.keys(raw).forEach(uid=>{
+      const n=Number(uid);
+      let ok=false;try{ok=hasMvpPerks(n)}catch(_){}
+      if(!ok)return;
+      const slots=raw[uid]||{};
+      Object.keys(slots).forEach(sl=>{
+        const at=Number(slots[sl]&&slots[sl].at)||0;
+        out.push({uid:n,slot:Number(sl),at});
+      });
+    });
+    return out.sort((a,b)=>a.at-b.at);
+  }
+  function countFor(sid){return boostersOf(sid).length}
+  function levelFor(sid){
+    const n=countFor(sid);
+    let lv=0;
+    BOOST_LEVELS.forEach(l=>{if(n>=l.need)lv=l.level});
+    return lv;
+  }
+  function nextLevel(sid){
+    const n=countFor(sid);
+    const nx=BOOST_LEVELS.find(l=>n<l.need);
+    return nx?{level:nx.level,need:nx.need,left:nx.need-n}:null;
+  }
+  function hasPerk(sid,level){return levelFor(sid)>=level}
+
+  /* ---- writing ---- */
+  function assertCanBoost(sid){
+    if(myId==null)throw new Error('Sign in first.');
+    /* Make sure this server's boost list is being watched before we touch it. Normally the shell
+       has already attached it (you can only reach the dialog from the server itself), but doing
+       it here means a boost placed from anywhere still reports the right count straight away
+       rather than reading 0 from a cache nothing is filling. */
+    try{if(sid&&sid!==DModel.ICH_ID)attach(sid)}catch(_){}
+    if(!slotsFor(myId))throw new Error('Server Boosts are an MVP perk. MVP gives you '+BOOST_SLOTS_MVP+' of them.');
+    if(!sid||sid===DModel.ICH_ID)throw new Error('ICH is the site itself, so it can’t be boosted. Boost a server someone made.');
+    try{if(!DModel.server(sid))throw new Error('That server is gone.')}catch(_){}
+  }
+
+  async function boost(sid){
+    assertCanBoost(sid);
+    if(amBoosting(sid))throw new Error('You’re already boosting this server.');
+    const slot=freeSlot();
+    if(slot<0)throw new Error('Both of your boosts are already on other servers. Move one instead.');
+    await writeSlot(slot,sid);
+  }
+
+  /* Moving is a remove + an add, and they cannot be one atomic update: the two nodes are guarded
+     separately and the old server's row and the new one are different paths under different
+     $sid wildcards. The remove goes first, so a failure half way leaves a FREE slot rather than
+     a slot that looks like it is in two places at once. */
+  async function move(fromSid,toSid){
+    assertCanBoost(toSid);
+    const cur=myBoostOn(fromSid);
+    if(!cur)throw new Error('You aren’t boosting that server.');
+    if(amBoosting(toSid))throw new Error('You’re already boosting this server.');
+    const left=cur.movableAt-Date.now();
+    if(left>0)throw new Error('This boost can be moved in '+describeWait(left)+'. A boost has to sit on a server for 7 days before it can move.');
+    await clearSlot(cur.slot,fromSid);
+    await writeSlot(cur.slot,toSid);
+  }
+
+  /* Giving a boost up is always allowed - the 7-day rule exists to stop a boost being shuffled
+     between servers, not to trap it on one. */
+  async function unboost(sid){
+    const cur=myBoostOn(sid);
+    if(!cur)throw new Error('You aren’t boosting that server.');
+    await clearSlot(cur.slot,sid);
+  }
+
+  async function writeSlot(slot,sid){
+    const at=Date.now()+(typeof SKEW==='number'?SKEW:0);
+    await set(R('serverBoosts/'+sid+'/'+myId+'/'+slot),{at});
+    try{
+      await set(R('userBoosts/'+myId+'/'+slot),{sid,at});
+    }catch(e){
+      // keep the two nodes in step: if the second write fails, undo the first
+      try{await remove(R('serverBoosts/'+sid+'/'+myId+'/'+slot))}catch(_){}
+      throw e;
+    }
+  }
+  async function clearSlot(slot,sid){
+    await remove(R('userBoosts/'+myId+'/'+slot));
+    try{await remove(R('serverBoosts/'+sid+'/'+myId+'/'+slot))}catch(_){}
+  }
+
+  /* Tidy up rows that can no longer mean anything: slots pointed at a server that is gone, and
+     every slot at all once MVP has been taken away. Only ever touches my own records, which is
+     all the rules would allow anyway. */
+  async function prune(){
+    if(myId==null)return;
+    const n=slotsFor(myId);
+    const mine=S.mine||{};
+    for(const k of Object.keys(mine)){
+      const slot=Number(k);
+      const v=mine[k]||{};
+      const sid=v.sid;
+      let dead=false;
+      if(!(slot<n))dead=true;                       // MVP gone, or fewer slots than before
+      else if(!sid)dead=true;
+      else{try{dead=!DModel.server(sid)}catch(_){dead=false}}
+      if(!dead)continue;
+      try{await clearSlot(slot,sid||'_')}catch(_){}
+    }
+  }
+  /* Called when a server is deleted: drop MY slot on it straight away so it is usable again
+     without waiting for the next sign-in. Other people's rows die with their own prune(). */
+  async function releaseAllFor(sid){
+    const cur=myBoostOn(sid);
+    if(!cur)return;
+    try{await remove(R('userBoosts/'+myId+'/'+cur.slot))}catch(_){}
+  }
+
+  function describeWait(ms){
+    const d=Math.ceil(ms/86400000);
+    if(d>1)return d+' days';
+    const h=Math.ceil(ms/3600000);
+    if(h>1)return h+' hours';
+    return Math.max(1,Math.ceil(ms/60000))+' minutes';
+  }
+
+  return{
+    LEVELS:BOOST_LEVELS,SLOTS:BOOST_SLOTS_MVP,MOVE_MS:BOOST_MOVE_MS,
+    start,stop,ensureStarted,attach,detach,
+    onChange:f=>{subs.add(f);return()=>subs.delete(f)},
+    slotsFor,mySlots,freeSlot,myBoostOn,amBoosting,
+    boostersOf,countFor,levelFor,nextLevel,hasPerk,
+    boost,move,unboost,prune,releaseAllFor,describeWait
+  };
+})();
 
 /* ==========================================================================
  * js/discord/shop.js
@@ -24826,6 +26475,53 @@ function serverIconFromFile(file){
   });
 }
 
+/* ---- server BANNER ----
+   Same pipeline as the icon above, cropped to a wide 16:9 strip instead of a square, because
+   that is the shape it is displayed in (across the top of the channel list). Compressed under
+   the same character budget the rules allow, so an enormous photo still lands. */
+function serverBannerFromFile(file){
+  return new Promise((resolve,reject)=>{
+    if(!file){reject(new Error('No file chosen.'));return}
+    if(!/^image\//.test(file.type||'')){reject(new Error('That is not an image file.'));return}
+    if(file.size>12*1024*1024){reject(new Error('That image is over 12MB — pick a smaller one.'));return}
+    const r=new FileReader();
+    r.onerror=()=>reject(new Error('Could not read that file.'));
+    r.onload=()=>{
+      const img=new Image();
+      img.onerror=()=>reject(new Error('Could not read that image.'));
+      img.onload=()=>{
+        try{
+          // centre-crop to 16:9, keeping as much of the picture as that shape allows
+          const want=16/9;
+          let sw=img.width,sh=Math.round(img.width/want);
+          if(sh>img.height){sh=img.height;sw=Math.round(img.height*want)}
+          const sx=Math.round((img.width-sw)/2),sy=Math.round((img.height-sh)/2);
+          let w=960;
+          const c=document.createElement('canvas');
+          const draw=px=>{
+            c.width=px;c.height=Math.round(px/want);
+            const g=c.getContext('2d');
+            g.clearRect(0,0,c.width,c.height);
+            g.drawImage(img,sx,sy,sw,sh,0,0,c.width,c.height);
+          };
+          draw(w);
+          let q=.84,out=c.toDataURL('image/jpeg',q),tries=0;
+          while(out.length>SERVER_ICON_MAX_CHARS&&tries<10){
+            tries++;
+            if(q>0.5)q=Math.max(0.5,q-0.1);
+            else{w=Math.max(320,Math.round(w*0.8));draw(w)}
+            out=c.toDataURL('image/jpeg',q);
+          }
+          if(out.length>SERVER_ICON_MAX_CHARS){reject(new Error('That image is too detailed to compress. Try a smaller one.'));return}
+          resolve(out);
+        }catch(e){reject(new Error('Could not process that image.'))}
+      };
+      img.src=r.result;
+    };
+    r.readAsDataURL(file);
+  });
+}
+
 /* A reusable icon picker block: a live preview, Upload, and Remove.
    Returns {el, value()} - value() is the current data URL, '' for none. */
 function serverIconPicker(initial,initialEmoji){
@@ -25043,7 +26739,7 @@ const TIMEOUT_OPTS=[[60,'60 seconds'],[300,'5 minutes'],[600,'10 minutes'],[3600
 
 function openTimeoutDialog(sid,uid,after){
   const u=DB.getUser(uid)||{id:uid,username:'User '+uid};
-  const name=displayUsername(u.username||('User '+uid));
+  const name=dispName(u,'User '+uid);
   const cur=DModel.muteUntil(sid,uid);
   const m=dmodal({
     title:'Time out '+name,
@@ -25076,7 +26772,7 @@ function openTimeoutDialog(sid,uid,after){
 
 function openBanDialog(sid,uid,after){
   const u=DB.getUser(uid)||{id:uid,username:'User '+uid};
-  const name=displayUsername(u.username||('User '+uid));
+  const name=dispName(u,'User '+uid);
   const srvName=(DModel.server(sid)||{}).name||'';
   const ich=DModel.isSystem(sid);
   const m=dmodal({
@@ -25268,6 +26964,7 @@ const BOOTUI=window.ICHBoot||{prog(){},phase(){},step(){},done(){},fail(){},reve
     // servers / channels / roles listeners, and restore the last server that was open
     try{
       DModel.start(ME.id);
+      try{DBoost.start(ME.id)}catch(e){console.warn('[boot] boost model failed to start',e)}
       const last=localStorage.getItem('ich.sid');
       view.sid=last||DModel.ICH_ID;
     }catch(e){console.warn('[boot] server model failed to start',e);view.sid=DModel.ICH_ID}

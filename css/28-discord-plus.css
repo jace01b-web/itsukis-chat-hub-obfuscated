@@ -1,0 +1,466 @@
+/* ==========================================================================
+ * css/28-discord-plus.css
+ *
+ * Loaded LAST, after 27-discord-exact.css. Everything in here either fixes something that
+ * stylesheet got wrong or styles markup that did not exist before it:
+ *
+ *   1. Attachments & images   images were stretched to the full message width with grey bars
+ *   2. Settings               Discord's real two-column alignment instead of a stretched grid
+ *   3. Display names          the @username line under a display name
+ *   4. Message formatting     spoilers, code, quotes, headers, masked links
+ *   5. System messages        join messages and other server events
+ *   6. Boosts                 the boost bar, badges and the boost dialog
+ *   7. Server settings        the new Overview controls
+ * ========================================================================== */
+
+/* ======================================================================
+ * 1. ATTACHMENTS & IMAGES
+ *
+ * The bug: css/27-discord-exact.css ends with an anti-overflow guard,
+ *
+ *     html.discord-look .messages, html.discord-look .messages * { max-width:100% }
+ *
+ * whose `*` out-specifies `.imgs{max-width:340px}` and `.imgs.n1{max-width:300px}` in
+ * 06-chat.css. Every image in chat therefore grew to the full width of the message column,
+ * and because `.imgs img` is `width:100%` with a 320px row and `object-fit:contain`, a small
+ * image was blown up into a 784x320 box and padded out with `background:var(--bg2)` - the grey
+ * space on either side.
+ *
+ * The guard is still wanted for text, tables and <pre>; it just must not apply to media. So the
+ * rules below re-assert real sizes for images with enough specificity to win, and size them the
+ * way Discord does: by the image's OWN aspect ratio, capped at 550x350, never upscaled.
+ * ====================================================================== */
+
+/* Let the image grid size itself again. `width:max-content` + `max-width` is what stops a
+   narrow image being stretched: the grid is as wide as its contents, not its container. */
+html.discord-look .messages .bubble .imgs,
+html.discord-look .bubble .imgs,
+.bubble .imgs{
+  display:grid;gap:4px;margin-top:8px;
+  width:max-content;max-width:min(550px,100%);
+  border-radius:8px;overflow:hidden;
+}
+
+/* --- one image: Discord's exact behaviour ---
+   width/height auto means the <img> lays out at its natural size; the two maximums then scale
+   it down proportionally (max-width/max-height preserve aspect ratio on replaced elements).
+   A 120x90 image stays 120x90. A 1920x1080 one lands at 550x309. Nothing is ever enlarged, so
+   there is no empty space to fill and no background needed behind it. */
+html.discord-look .messages .bubble .imgs.n1,
+html.discord-look .bubble .imgs.n1,
+.bubble .imgs.n1{grid-template-columns:auto;width:max-content;max-width:min(550px,100%)}
+html.discord-look .messages .bubble .imgs.n1 img,
+html.discord-look .bubble .imgs.n1 img,
+.bubble .imgs.n1 img{
+  width:auto!important;height:auto!important;
+  max-width:min(550px,100%)!important;max-height:350px!important;
+  object-fit:contain;background:none!important;
+  border-radius:8px;cursor:zoom-in;display:block;
+}
+
+/* --- several images: a fixed mosaic, like Discord's --- */
+html.discord-look .messages .bubble .imgs:not(.n1),
+html.discord-look .bubble .imgs:not(.n1),
+.bubble .imgs:not(.n1){width:min(500px,100%);max-width:min(500px,100%)}
+html.discord-look .messages .bubble .imgs:not(.n1) img,
+html.discord-look .bubble .imgs:not(.n1) img,
+.bubble .imgs:not(.n1) img{
+  width:100%!important;height:100%!important;
+  max-width:none!important;max-height:none!important;
+  object-fit:cover;background:var(--dl-bg3,rgba(0,0,0,.2));
+  border-radius:4px;cursor:zoom-in;display:block;
+}
+.bubble .imgs.n2{grid-template-columns:1fr 1fr}
+.bubble .imgs.n2 img{aspect-ratio:1/1}
+.bubble .imgs.n3{grid-template-columns:1fr 1fr}
+.bubble .imgs.n3 img:first-child{grid-column:span 2;aspect-ratio:16/9}
+.bubble .imgs.n3 img:not(:first-child){aspect-ratio:1/1}
+.bubble .imgs.n4{grid-template-columns:1fr 1fr}
+.bubble .imgs.n4 img{aspect-ratio:1/1}
+.bubble .imgs.multi{grid-template-columns:repeat(3,1fr)}
+.bubble .imgs.multi img{aspect-ratio:1/1}
+
+/* Uploaded GIFs/videos/files go through .fa-* instead of .imgs, and the same guard flattened
+   them in the same way. Same treatment: natural size, capped, no filler behind. */
+html.discord-look .messages .fa-wrap,
+.fa-wrap{width:max-content;max-width:min(550px,100%)}
+html.discord-look .messages .fa-media,
+.fa-media{width:max-content;max-width:100%;background:none;border-radius:8px}
+html.discord-look .messages .fa-gif,
+.fa-gif{
+  width:auto!important;height:auto!important;
+  max-width:min(550px,100%)!important;max-height:350px!important;
+  background:none!important;margin:0;border-radius:8px;
+}
+html.discord-look .messages .fa-video,
+.fa-video{
+  width:auto!important;height:auto!important;
+  max-width:min(550px,100%)!important;max-height:350px!important;
+  background:#000;border-radius:8px;
+}
+/* Cards (generic files, text snippets) do want the full column, so they keep stretching. */
+html.discord-look .messages .fa-card,.fa-card{width:min(432px,100%);box-sizing:border-box}
+
+@media(max-width:520px){
+  .bubble .imgs,.bubble .imgs.n1,.fa-wrap,.fa-media{max-width:100%}
+  .bubble .imgs:not(.n1){width:100%}
+}
+
+/* ======================================================================
+ * 2. SETTINGS - Discord's real alignment
+ *
+ * 27-discord-exact.css laid the page out as `grid-template-columns:minmax(218px,1fr) minmax(0,2.6fr)`,
+ * which pins the nav to the LEFT EDGE of the window and lets it grow with the screen. Discord
+ * does the opposite: both halves are flexible, but the nav is pushed to the RIGHT of its half
+ * and the content to the LEFT of its own, so the two meet in the middle of the window at a
+ * fixed 218px / 740px pair no matter how wide the display is.
+ * ====================================================================== */
+/* NOT edge-to-edge. css/22-discord-look.css already made settings a centred window with
+   margins ("v15: settings window at Discord's size"); css/27-discord-exact.css then set
+   `.modal-bg:has(#sTabs){padding:0!important}` and stretched it back to every edge of the
+   browser. This restores the window - a dimmed backdrop with the panel floating on it, rounded
+   and shadowed - and keeps Discord's two-column layout inside it. */
+@media(min-width:821px){
+  html.discord-look .modal-bg:has(#sTabs){
+    padding:64px 10vw!important;
+    align-items:stretch!important;justify-content:stretch!important;
+    background:rgba(0,0,0,.55)!important;
+  }
+  html.discord-look .modal.wide:has(#sTabs){
+    border-radius:12px!important;
+    overflow:hidden!important;
+    box-shadow:0 16px 48px rgba(0,0,0,.45)!important;
+  }
+}
+@media(min-width:821px) and (max-width:1200px){
+  html.discord-look .modal-bg:has(#sTabs){padding:40px 4vw!important}
+}
+
+html.discord-look .modal.wide:has(#sTabs){
+  display:grid!important;
+  /* Discord's own proportions: a 218px nav and the content beside it. The old rule was
+     `minmax(218px,1fr) minmax(0,2.6fr)`, which let the NAV grow with the window - on a wide
+     screen it ended up hundreds of pixels wide with the content pushed off to the right. */
+  grid-template-columns:218px minmax(0,1fr)!important;
+  grid-template-rows:100%!important;
+  position:relative;
+  align-items:stretch;
+}
+html.discord-look .modal.wide:has(#sTabs) #sTabs{
+  grid-row:1;grid-column:1;
+  display:flex!important;flex-direction:column;gap:2px;
+  box-sizing:border-box;width:auto;min-width:0;
+  padding:48px 8px 48px 12px!important;
+  align-items:stretch;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--dl-bg2)!important;
+}
+html.discord-look .modal.wide:has(#sTabs) [data-p]{
+  grid-row:1;grid-column:2;
+  box-sizing:border-box;
+  min-width:0;min-height:0;
+  max-width:740px;
+  padding:48px 40px 90px 40px!important;
+  overflow-y:auto;
+}
+html.discord-look .modal.wide:has(#sTabs) [data-p].hidden{display:none!important}
+/* Inside the window, so it is pinned to the PANEL's corner rather than the browser's. */
+html.discord-look .modal.wide:has(#sTabs) .dl-set-x,
+html.discord-look .dl-set-x{
+  position:absolute!important;
+  top:16px!important;right:16px!important;left:auto!important;bottom:auto!important;
+  z-index:6;
+}
+html.discord-look .modal.wide:has(#sTabs) .dl-set-x::after{display:none}
+/* the unsaved-changes bar sits inside the window too */
+html.discord-look .modal.wide:has(#sTabs)>.actions{right:24px!important;bottom:20px!important}
+html.discord-look .modal.wide:has(#sTabs)>.err{right:24px!important;bottom:72px!important}
+
+/* Discord's settings scale in rather than appearing. */
+@keyframes dsetIn{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:none}}
+html.discord-look .modal.wide:has(#sTabs){animation:dsetIn .16s ease-out}
+@media (prefers-reduced-motion:reduce){html.discord-look .modal.wide:has(#sTabs){animation:none}}
+
+/* Phone: the nav is a full-screen list, and picking an item slides in the section (the
+   `dset-paned` behaviour js/settings/discord-settings.js already drives). */
+@media(max-width:820px){
+  html.discord-look .modal-bg:has(#sTabs){padding:0!important;background:var(--dl-bg)!important}
+  html.discord-look .modal.wide:has(#sTabs){
+    display:flex!important;flex-direction:column!important;border-radius:0!important;box-shadow:none!important;
+  }
+  html.discord-look .modal.wide:has(#sTabs) #sTabs{flex:1 1 auto;padding:16px 10px 24px!important}
+  html.discord-look .modal.wide:has(#sTabs) [data-p]{flex:1 1 auto;max-width:none;padding:16px 14px 90px!important}
+  html.discord-look .modal.wide:has(#sTabs) .dl-set-x,
+  html.discord-look .dl-set-x{top:12px!important;right:12px!important}
+}
+
+/* status picker inside Settings -> Profiles */
+.dl-stgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:620px){.dl-stgrid{grid-template-columns:1fr}}
+.dl-stopt{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:10px 12px;border:1px solid var(--dl-line,rgba(255,255,255,.08));border-radius:8px;
+  background:var(--dl-bg3,rgba(0,0,0,.15));color:var(--dl-text,inherit);
+  text-align:left;cursor:pointer;font:inherit;
+}
+.dl-stopt:hover{background:var(--dl-hover,rgba(255,255,255,.06))}
+.dl-stopt.on{border-color:var(--dl-accent,#5865f2);background:var(--dl-active,rgba(88,101,242,.16))}
+.dl-stopt .dl-dot{flex:none;margin-top:3px;position:static}
+.dl-stopt span{display:flex;flex-direction:column;min-width:0}
+.dl-stopt b{font-size:14px;font-weight:600;color:var(--dl-head,inherit)}
+.dl-stopt small{font-size:12px;color:var(--dl-muted,#949ba4);line-height:1.3;margin-top:2px}
+
+/* ======================================================================
+ * 3. DISPLAY NAMES
+ * ====================================================================== */
+.dlpo-uname,.pf-uname{
+  margin:-2px 0 6px;font-size:14px;line-height:1.25;
+  color:var(--dl-muted,#949ba4);font-weight:500;
+}
+.pf-uname{margin:2px 0 0}
+/* the member list and user panel show the display name; the username is on the profile */
+.dl-mem-nm .nm-user{min-width:0;overflow:hidden;text-overflow:ellipsis}
+
+/* ======================================================================
+ * 4. MESSAGE FORMATTING  (js/discord/markdown.js)
+ * ====================================================================== */
+.md-spoiler{
+  background:var(--dl-spoiler,#1e1f22);color:transparent;
+  border-radius:4px;padding:0 2px;cursor:pointer;
+  -webkit-user-select:none;user-select:none;
+  transition:background .1s ease;
+}
+.md-spoiler *{visibility:hidden}
+.md-spoiler:hover{background:#26272b}
+.md-spoiler.shown{
+  background:rgba(255,255,255,.06);color:inherit;cursor:text;
+  -webkit-user-select:text;user-select:text;
+}
+.md-spoiler.shown *{visibility:visible}
+.md-spoiler:focus-visible{outline:2px solid var(--dl-accent,#5865f2);outline-offset:1px}
+
+.md-code{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  font-size:.875em;line-height:1.125rem;
+  background:var(--dl-bg3,#1e1f22);border:1px solid rgba(0,0,0,.2);
+  border-radius:4px;padding:.2em .3em;white-space:pre-wrap;
+}
+.md-pre{
+  display:block;margin:6px 0;padding:.5em;max-width:100%;
+  background:var(--dl-bg3,#1e1f22);border:1px solid rgba(0,0,0,.25);border-radius:4px;
+  white-space:pre-wrap;overflow-x:auto;
+}
+.md-pre code{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  font-size:.875em;line-height:1.125rem;color:var(--dl-text,#dbdee1);
+  background:none;border:0;padding:0;white-space:pre-wrap;
+}
+.md-quote{
+  display:block;margin:4px 0;padding:0 0 0 12px;
+  border-left:4px solid var(--dl-line,#4e5058);border-radius:4px;
+  white-space:pre-wrap;
+}
+.md-h{display:block;font-weight:700;color:var(--dl-head,#f2f3f5);line-height:1.25;margin:8px 0 4px}
+.md-h1{font-size:1.5em}
+.md-h2{font-size:1.25em}
+.md-h3{font-size:1.1em}
+.md-sub{display:block;font-size:.8em;color:var(--dl-muted,#949ba4);line-height:1.3}
+.md-ul{display:block;margin:4px 0;padding-left:20px;list-style:disc}
+.md-ul li{display:list-item;white-space:pre-wrap;margin:2px 0}
+.bubble s{text-decoration:line-through}
+.bubble u{text-decoration:underline}
+
+/* ======================================================================
+ * 5. SYSTEM MESSAGES  (joins, boosts, server events)
+ * ====================================================================== */
+.msg.sys .bubble,.msg.sys .msg-body{background:none!important;box-shadow:none!important;padding-left:0}
+.sysmsg{
+  display:flex;align-items:center;gap:8px;
+  color:var(--dl-muted,#949ba4);font-size:15px;line-height:1.375;
+  white-space:normal;
+}
+.sysmsg .sysic{flex:none;display:grid;place-items:center;width:18px;height:18px;opacity:.9}
+.sysmsg .sysic svg{width:18px;height:18px}
+.sysmsg.join .sysic{color:#23a559}
+.sysmsg.boost .sysic{color:#ff73fa}
+.sysmsg b{color:var(--dl-head,#f2f3f5);font-weight:600;cursor:pointer}
+.sysmsg b:hover{text-decoration:underline}
+.sysmsg .systime{font-size:12px;color:var(--dl-muted,#949ba4);opacity:.7}
+
+/* ======================================================================
+ * 6. BOOSTS
+ * ====================================================================== */
+.dl-boost-chip{
+  display:inline-flex;align-items:center;gap:2px;margin-left:6px;
+  padding:1px 5px;border-radius:4px;
+  background:rgba(255,115,250,.16);color:#ff73fa;
+  font-size:11px;font-weight:700;line-height:1.4;
+}
+.dl-boost-chip .bic{width:11px;height:11px}
+.dl-boostbar{
+  margin:0 8px 8px;padding:8px 10px;border-radius:6px;
+  background:var(--dl-bg3,rgba(0,0,0,.18));cursor:pointer;
+}
+.dl-boostbar:hover{background:var(--dl-hover,rgba(255,255,255,.06))}
+.dl-bb-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.dl-bb-lv{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:#ff73fa}
+.dl-bb-n{font-size:11px;color:var(--dl-muted,#949ba4)}
+.dl-bb-track{height:4px;margin:6px 0 4px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden}
+.dl-bb-track i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#ff73fa,#b377ff)}
+.dl-bb-sub{font-size:11px;color:var(--dl-muted,#949ba4)}
+
+.dbst-head{padding:14px;border-radius:8px;background:var(--dl-bg3,rgba(0,0,0,.18));margin-bottom:14px}
+.dbst-lv{font-size:16px;font-weight:700;color:#ff73fa}
+.dbst-track{height:6px;margin:8px 0 6px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden}
+.dbst-track i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#ff73fa,#b377ff)}
+.dbst-sub{font-size:12px;color:var(--dl-muted,#949ba4)}
+.dbst-perks{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+@media(max-width:620px){.dbst-perks{grid-template-columns:1fr}}
+.dbst-perk{padding:10px;border:1px solid var(--dl-line,rgba(255,255,255,.08));border-radius:6px;opacity:.55}
+.dbst-perk.on{opacity:1;border-color:#ff73fa;background:rgba(255,115,250,.07)}
+.dbst-perk b{display:block;font-size:13px;color:var(--dl-head,#f2f3f5);margin-bottom:4px}
+.dbst-perk b span{font-weight:500;color:var(--dl-muted,#949ba4);font-size:11px}
+.dbst-perk ul{margin:0;padding-left:16px;list-style:disc}
+.dbst-perk li{font-size:12px;color:var(--dl-muted,#949ba4);margin:2px 0}
+.dbst-acts{display:flex;flex-direction:column;gap:8px}
+.dbst-you{font-size:14px;font-weight:600;color:#ff73fa}
+.dhint-inline{font-weight:400;opacity:.75;font-size:12px}
+.dbst-row{display:flex;align-items:center;gap:8px;padding:6px 0}
+.dbst-nm{font-size:14px;color:var(--dl-text,#dbdee1);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dbst-since{font-size:11px;color:var(--dl-muted,#949ba4)}
+/* a boosted server's rail icon gets Discord's pink ring */
+.dl-rail-item.boosted .dl-rail-btn{box-shadow:0 0 0 2px #ff73fa}
+.dl-rail-item.boosted.lv3 .dl-rail-btn{box-shadow:0 0 0 2px #ffcc4d,0 0 10px rgba(255,204,77,.5)}
+
+/* invite link "coming soon" row */
+.dcode.soon{opacity:.6}
+.dcode.soon span{font-style:italic}
+
+/* ======================================================================
+ * 7. PROFILES - Discord's role pills, banner and name block
+ * ====================================================================== */
+/* Server roles: a coloured dot and the name in a bordered pill, the way Discord shows them. */
+.pf-srvroles{margin-top:12px}
+.pf-srvroles-h{
+  margin-bottom:6px;
+  font-size:12px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;
+  color:var(--dl-muted,#949ba4);
+}
+.pf-srvroles-list{display:flex;flex-wrap:wrap;gap:4px}
+.pf-srvrole{
+  display:inline-flex;align-items:center;gap:4px;
+  max-width:100%;padding:2px 8px 2px 4px;
+  border:1px solid var(--dl-line,rgba(255,255,255,.1));border-radius:4px;
+  background:var(--dl-bg3,rgba(0,0,0,.14));
+  font-size:12px;line-height:18px;color:var(--dl-text,#dbdee1);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.pf-srvrole i{flex:none;width:12px;height:12px;border-radius:50%;display:block}
+
+/* The popout: Discord's 60px banner with the avatar hanging over it, then a tight name block. */
+html.discord-look .dlpo-banner{height:60px}
+html.discord-look .dlpo-name{font-size:20px;line-height:1.2;font-weight:700;margin-bottom:0}
+html.discord-look .dlpo-sub{margin-top:6px}
+html.discord-look .dlpo-body{padding-top:4px}
+/* a boosted-server owner's banner gets the boost tint behind it */
+html.discord-look .dlpo-banner.boosted::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,rgba(255,115,250,.35),transparent 60%);
+  pointer-events:none;
+}
+/* The full card: the same name/username stack as the popout. */
+html.discord-look .pf-namerow h2{font-size:20px;line-height:1.2}
+html.discord-look .pf-uname{margin-top:2px}
+
+/* ICH's site-feature rows in the channel list read as channels, but are visibly not channels. */
+.dch.dch-site .dch-ic{font-size:17px;line-height:1;display:grid;place-items:center;width:20px;height:20px}
+.dch.dch-site .dch-ic svg{width:18px;height:18px}
+.dch.dch-site{cursor:pointer}
+
+/* ======================================================================
+ * 8. REPLY QUOTES
+ *
+ * Two bugs lived here, both only visible once someone actually replied to something.
+ *
+ * THE OVERLAPPING AVATAR. The mini avatar in a reply quote is styled by
+ *   22-discord-look.css  html.discord-look .reply-ref .rr-avatar .avatar   -> 16x16
+ * and by
+ *   27-discord-exact.css html.discord-look .messages .msg .avatar          -> 40x40 !important
+ * Both are four classes and one element, so they have EQUAL specificity and the later file
+ * simply wins. The quote's 16px avatar was therefore drawn 16px wide and **40px tall**, hanging
+ * 24px out of a 22px row and landing on top of the message avatar underneath it - which is the
+ * overlap you could see on every replied-to message. It also inherited `margin-right:16px`.
+ *
+ * THE NAME EATING THE LINE. `.rr-name{max-width:40%}` was fine when a name was a username;
+ * with a 32-character display name it took 250px of a 700px quote and squeezed the quoted text
+ * into what was left. Discord caps the name and gives the rest to the message, which is the
+ * part you are actually trying to read.
+ * ====================================================================== */
+html.discord-look .messages .msg .reply-ref .rr-avatar .avatar,
+html.discord-look .reply-ref .rr-avatar .avatar{
+  width:16px!important;height:16px!important;
+  min-width:16px;min-height:16px;
+  margin:0!important;
+  font-size:8px!important;line-height:16px!important;
+  flex:none;
+}
+html.discord-look .messages .msg .reply-ref .rr-avatar,
+html.discord-look .reply-ref .rr-avatar{
+  flex:none;width:16px;height:16px;margin:0!important;overflow:hidden;border-radius:50%;
+}
+/* the quote is one line, and it is the message that gets the room */
+html.discord-look .messages .msg .reply-ref,
+html.discord-look .reply-ref{
+  align-items:center;
+  overflow:hidden;
+}
+html.discord-look .messages .msg .reply-ref .rr-name,
+html.discord-look .reply-ref .rr-name{
+  flex:0 1 auto;
+  max-width:180px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+html.discord-look .messages .msg .reply-ref .rr-text,
+html.discord-look .reply-ref .rr-text{
+  flex:1 1 auto;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+@media(max-width:640px){
+  html.discord-look .messages .msg .reply-ref .rr-name,
+  html.discord-look .reply-ref .rr-name{max-width:120px}
+}
+/* the composer's "Replying to …" bar truncates for the same reason */
+#composeContext #ccLabel{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+#composeContext #ccText{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;display:block}
+
+/* ======================================================================
+ * 9. SERVER BANNER  (Boost Level 1)
+ * ====================================================================== */
+.dl-srvbanner{
+  height:135px;margin:0 0 -4px;
+  background-size:cover;background-position:center;
+  border-radius:0;
+  position:relative;flex:none;
+}
+/* Discord fades the bottom of the banner into the sidebar so the server name stays readable. */
+.dl-srvbanner::after{
+  content:'';position:absolute;inset:auto 0 0 0;height:60%;
+  background:linear-gradient(transparent,var(--dl-bg2,#2b2d31));
+  pointer-events:none;
+}
+html.discord-look .dl-srvbanner+.dl-server-head{
+  position:relative;margin-top:-34px;z-index:1;
+  text-shadow:0 1px 3px rgba(0,0,0,.6);
+}
+/* the banner preview inside Server Settings */
+.svbn-prev{
+  height:150px;border-radius:8px;
+  background-size:cover;background-position:center;
+  background-color:var(--dl-bg3,rgba(0,0,0,.2));
+  border:1px solid var(--dl-line,rgba(255,255,255,.08));
+}
+.svbn-prev.empty{
+  display:grid;place-items:center;
+  color:var(--dl-muted,#949ba4);font-size:13px;
+  border-style:dashed;
+}
