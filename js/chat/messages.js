@@ -98,6 +98,11 @@ function appendMsgRow(box,m,lastDay,live){
 // looking detached/floating from the bubble.
 function refitAllAvatars(){}
 function fitAvatarToRow(el){}
+/* imagesHTML() wires this up as an inline onload="" attribute, and inline handlers are
+   evaluated in GLOBAL scope. The app ships inside a <script type="module">, so everything
+   declared here is module-scoped and invisible to them - every image that loaded was throwing
+   "fitAvatarToRow is not defined". Publish it so the hook resolves. */
+try{window.fitAvatarToRow=fitAvatarToRow}catch(_){}
 function patchResolvedSenders(list){
   list.forEach(m=>{
     const rec=renderedNodes.get(m.id);
