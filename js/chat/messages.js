@@ -27,19 +27,26 @@ function replyTargetInfo(m){
   const rt=m&&m.replyTo;if(!rt||!rt.id)return null;
   let list=[];try{list=DB.messages(view.roomKey)||[]}catch(_){}
   const src=list.find(x=>x.id===rt.id);
+  /* The quote is a PLAIN one-line preview, not rendered markup: mdPlain() strips the formatting
+     markers and - the part that matters - replaces spoiler content instead of unwrapping it, so
+     replying to a spoiler can never reveal it to everyone. */
+  const flat=v=>{
+    const t=(typeof mdPlain==='function')?mdPlain(v):String(v||'');
+    return t.replace(/\s+/g,' ').trim().slice(0,200);
+  };
   if(src){
     const t=src.text?displayMsgText(src.text):(typeof replyPreviewText==='function'?replyPreviewText(src):'');
-    return{gone:false,text:String(t||'').replace(/\s+/g,' ').trim().slice(0,200)};
+    return{gone:false,text:flat(t)};
   }
-  if(!list.length)return{gone:false,text:rt.preview||''};          // nothing loaded yet: can't tell
+  if(!list.length)return{gone:false,text:flat(rt.preview||'')};          // nothing loaded yet: can't tell
   let more=true;try{more=DB.canLoadOlder(view.roomKey)}catch(_){}
   // everything is loaded, or the target would sit inside the loaded window -> it really was deleted
   if(!more||rt.id>=list[0].id)return{gone:true,text:''};
-  return{gone:false,text:String(rt.preview||'').replace(/\s+/g,' ').trim().slice(0,200)};   // older than what's loaded
+  return{gone:false,text:flat(rt.preview||'')};   // older than what's loaded
 }
 function senderSig(m){
   const sender=DB.getUser(m.senderId);
-  const name=(sender&&!sender.deleted)?displayUsername(sender.username):'Deleted User';
+  const name=(sender&&!sender.deleted)?dispName(sender):'Deleted User';
   const avatar=(sender&&sender.settings&&sender.settings.avatar)||'';
   // Include whether we've resolved the sender at all (not just name/avatar) so a
   // message rendered before a sender's record loaded gets rebuilt — with a clickable
@@ -82,7 +89,10 @@ function appendMsgRow(box,m,lastDay,live){
   el._sid=m.senderId;el._at=m.at;
   if(typeof DiscordLook!=='undefined'&&DiscordLook.on()){
     const prev=box.lastElementChild;
-    if(prev&&prev.classList.contains('msg')&&prev._sid===m.senderId&&m.at-prev._at<420000&&!(m.replyTo&&m.replyTo.id))el.classList.add('dl-cont');
+    // A system line never collapses into the message above it, and never has one collapse into
+    // it - it is not a message from that person, it is an event about them.
+    if(prev&&prev.classList.contains('msg')&&!prev.classList.contains('sys')&&!el.classList.contains('sys')&&
+       prev._sid===m.senderId&&m.at-prev._at<420000&&!(m.replyTo&&m.replyTo.id))el.classList.add('dl-cont');
   }
   box.appendChild(el);
   fitAvatarToRow(el);
@@ -256,7 +266,7 @@ function reactionRowHTML(msgId){
   const pills=list.map(r=>{
     const names=r.ids.map(id=>{
       const u=DB.getUser(id);
-      return(u&&!u.deleted)?displayUsername(u.username):'Deleted User';
+      return(u&&!u.deleted)?dispName(u):'Deleted User';
     });
     const who=names.length<=6?names.join(', '):names.slice(0,6).join(', ')+' and '+(names.length-6)+' more';
     return`<button class="reaction-pill${r.mine?' mine':''}" data-emoji="${esc(r.emoji)}" title="${esc(who)}">
@@ -281,10 +291,40 @@ function wireReactions(el,m){
     });
   };
 }
+/* ---- system messages (joins, boosts) ----
+   Discord renders these as a single grey line with a small icon, not as a message from a person:
+   no avatar, no bubble, no hover tools, no reactions. They arrive as an ordinary message with a
+   `sys` field naming what happened (see postJoinMessage in js/discord/model.js), so a client that
+   does not understand `sys` still shows the plain-words `text` as a normal message rather than
+   showing nothing at all. */
+const SYS_IC={
+  join:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 13h-2v-2a1 1 0 1 0-2 0v2h-2a1 1 0 1 0 0 2h2v2a1 1 0 1 0 2 0v-2h2a1 1 0 1 0 0-2ZM9 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.4 0-8 1.8-8 5v1h11.3A5.9 5.9 0 0 1 11 16c0-.7.1-1.4.3-2H9Z"/></svg>',
+  boost:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 2 12l10 10 10-10L12 2Zm0 4.2 5.8 5.8-5.8 5.8L6.2 12 12 6.2Z"/></svg>'
+};
+function sysMsgEl(m){
+  const sender=DB.getUser(m.senderId);
+  const name=(sender&&!sender.deleted)?esc(dispName(sender)):'Someone';
+  const el=document.createElement('div');
+  el.className='msg sys';el.dataset.msgId=m.id;
+  const time=new Date(m.at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  const kind=(m.sys==='boost')?'boost':'join';
+  /* The stored `text` is the fallback for clients that don't know `sys`. Here the line is rebuilt
+     so the name is a live, clickable profile link and follows display-name changes. */
+  const raw=String(m.text||'');
+  const who='<b data-open-profile="'+m.senderId+'">'+name+'</b>';
+  const body=(sender&&raw.indexOf(sender.username)>=0)
+    ? esc(raw).replace(esc(sender.username),who)
+    : who+(kind==='boost'?' just boosted the server!':' joined the server.');
+  el.innerHTML='<div class="sysmsg '+kind+'"><span class="sysic">'+SYS_IC[kind]+'</span>'+
+    '<span>'+body+' <span class="systime">'+esc(time)+'</span></span></div>';
+  return el;
+}
+
 function msgEl(m){
+  if(m&&m.sys)return sysMsgEl(m);
   const mine=m.senderId===ME.id;
   const sender=DB.getUser(m.senderId);           // username resolved via ID at render time
-  const name=(sender&&!sender.deleted)?displayUsername(sender.username):'Deleted User';
+  const name=(sender&&!sender.deleted)?dispName(sender):'Deleted User';
   const pinged=m.pings.includes(ME.id)||m.pings.includes('everyone');
   const el=document.createElement('div');el.className='msg'+(mine?' me':'')+(pinged?' ping-row':'')+(m.pings.includes('everyone')?' ping-all':'');el.dataset.msgId=m.id;
   const time=new Date(m.at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
@@ -298,9 +338,21 @@ function msgEl(m){
     const bg=safeColor(ss&&ss.meBubble,'#7c6cff'),fg=safeColor(ss&&ss.meText,'#ffffff');
     bStyle=` style="background:${hexToRgba(bg,.5)};color:${fg}"`;
   }
-  // You can delete your own messages. Owners can delete anyone's; mods can delete anyone's
-  // except an owner's (the database rules enforce the same thing).
-  const canDelete=mine||isOwner(ME.id)||(isAdmin(ME.id)&&!isOwner(m.senderId))||(isMod(ME.id)&&!isOwner(m.senderId)&&!isAdmin(m.senderId));
+  /* You can always delete your own. Otherwise it takes a staff rank strictly above the sender's
+     (see outranks() in js/moderation/roles.js), so an admin cannot delete another admin's message
+     and a mod cannot delete another mod's - which is what this used to allow.
+
+     In a server somebody else made, the ladder that matters is that server's own: Manage Messages
+     plus being above them in ITS role hierarchy. A site owner still overrides everything, which is
+     how every other site-wide power already behaves. */
+  let canDelete=mine||outranks(ME.id,m.senderId);
+  if(!canDelete){
+    try{
+      const s=(typeof view!=='undefined'&&view.sid)||null;
+      if(s&&typeof DModel!=='undefined'&&!DModel.isSystem(s)&&view.mode!=='dms')
+        canDelete=DModel.can(s,'manageMsg',ME.id)&&DModel.canManageMember(s,m.senderId);
+    }catch(_){}
+  }
   const canEdit=mine&&!!m.text;
   // Discord-style hover bar: a reply arrow starts a reply, edit (own
   // messages only) is a pencil. Deleting stays inline in the meta line
@@ -335,7 +387,7 @@ function msgEl(m){
     </div>`;
     }else{
       const rs=DB.getUser(m.replyTo.senderId);
-      const rname=(rs&&!rs.deleted)?displayUsername(rs.username):'Deleted User';
+      const rname=(rs&&!rs.deleted)?dispName(rs):'Deleted User';
       const rtext=ri&&ri.text?esc(ri.text):'';
       const rav=avatarHtml(rs,rname,'width:15px;height:15px;font-size:8px');
       replyRefHTML=`<div class="reply-ref" data-reply-jump="${m.replyTo.id}">
@@ -348,7 +400,7 @@ function msgEl(m){
   // Everyone's name is shown, including your own. Others: "Name · time" (left side). Yours: "time · Name"
   // so the name sits next to your avatar on the right, and the hover/edit controls don't move.
   const nameSpan=(sender&&!sender.deleted)
-    ?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${fullNameHTML(m.senderId,esc(name))}</span>`
+    ?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${msgNameHTML(m.senderId,esc(name))}</span>`
     :esc(name);
   const nameHTML=mine?'':nameSpan+'<span class="nm-sep">·</span>';
   const nameAfter=mine?'<span class="nm-sep">·</span>'+nameSpan:'';

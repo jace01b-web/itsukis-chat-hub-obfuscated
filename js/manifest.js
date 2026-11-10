@@ -42,7 +42,10 @@ window.APP_MANIFEST={
     "99-discord-shell.css",
     /* Loaded LAST on purpose: it owns the layout geometry (sizes, spacing, type scale, radii,
        breakpoints) and has to be able to correct the older Discord-look layer above it. */
-    "27-discord-exact.css"
+    "27-discord-exact.css",
+    /* Loaded after it: fixes the image sizing that stylesheet broke, and styles the markup
+       added in v53 (display names, spoilers, system messages, boosts). */
+    "28-discord-plus.css"
   ],
   /* Not loaded on purpose: 23-lockdown.css belongs to js/features/lockdown.js, which is kept in the
      repo but left out of the load list (its master switch is ON, so loading it would lock the site). */
@@ -81,6 +84,7 @@ window.APP_MANIFEST={
     "chat/chat-header.js",
     "chat/messages.js",
     "chat/emoji-picker.js",
+    "discord/markdown.js",
     "chat/text-and-media.js",
     "chat/composer.js",
     "ui/keyboard-shortcuts.js",
@@ -104,6 +108,7 @@ window.APP_MANIFEST={
     "ui/discord-shell.js",
     "discord/ui.js",
     "discord/server-settings.js",
+    "discord/boosts.js",
     "discord/shop.js",
     "discord/moderation.js",
     "ui/context-menu.js",

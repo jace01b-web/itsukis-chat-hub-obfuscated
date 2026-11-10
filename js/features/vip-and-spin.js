@@ -100,6 +100,32 @@ function profileRolesHTML(id){
   }catch(_){}
   return out?'<div class="pf-roles">'+out+'</div>':'';
 }
+
+/* ---- the roles this person holds in the server you are looking at ----
+   Discord shows two different things on a profile and it is worth keeping them apart:
+
+     the SITE ranks above (Owner, MVP, VIP, flairs) are global - they follow the account
+     everywhere, the way Discord's badges do, so they show on every profile; and
+
+     the SERVER roles below belong to one server only. They are shown when you open a profile
+     inside a server someone made, with that role's own colour, and they are deliberately NOT
+     shown in ICH or in DMs, where there is no such thing as a server role.
+
+   @everyone is left out for the same reason Discord leaves it out: everybody has it. */
+function serverRolesHTML(id){
+  try{
+    const sid=(typeof view!=='undefined'&&view.sid)||null;
+    if(!sid||typeof DModel==='undefined'||DModel.isSystem(sid))return '';
+    if(typeof view!=='undefined'&&view.mode==='dms')return '';
+    if(!DModel.inServer(sid,id))return '';
+    const roles=DModel.rolesOf(sid,id).filter(r=>!r.everyone&&!r.virtual);
+    if(!roles.length)return '';
+    return '<div class="pf-srvroles"><div class="pf-srvroles-h">Roles</div><div class="pf-srvroles-list">'+
+      roles.map(r=>'<span class="pf-srvrole" title="'+esc(r.name)+'">'+
+        '<i style="background:'+esc(r.color||'#99aab5')+'"></i>'+esc(r.name)+'</span>').join('')+
+      '</div></div>';
+  }catch(_){return ''}
+}
 function fmtDur(ms){
   ms=Math.max(0,ms);const h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),s=Math.floor(ms%60000/1000);
   if(h>0)return h+'h '+String(m).padStart(2,'0')+'m';
@@ -238,7 +264,7 @@ function mvpHallHTML(){
   const head='<div class="mh-head">🏆 Hall of MVPs <span>'+ids.length+'</span></div>';
   if(!ids.length)return head+'<div class="mh-empty">Nobody yet. It is a 0.1% prize, so the first one gets the glory.</div>';
   return head+'<div class="mh-grid">'+ids.slice(0,40).map(id=>{
-    const u=DB.getUser(id),nm=u?displayUsername(u.username):'User '+id,since=DB.mvpSince(id);
+    const u=DB.getUser(id),nm=u?dispName(u):'User '+id,since=DB.mvpSince(id);
     return '<span class="mh-chip'+(id===ME.id?' me':'')+'" title="'+(since?'MVP since '+esc(new Date(since).toLocaleDateString()):'MVP')+'">'+esc(nm)+'</span>';
   }).join('')+(ids.length>40?'<span class="mh-chip more">+'+(ids.length-40)+' more</span>':'')+'</div>';
 }

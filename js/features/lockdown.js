@@ -283,7 +283,7 @@ function lockRenderCtx(c){
     document.getElementById('lkCtxT_'+c).textContent='';
   }else if(rp){
     const s=DB.getUser(rp.senderId);
-    const name=(s&&!s.deleted)?displayUsername(s.username):'Deleted User';
+    const name=(s&&!s.deleted)?dispName(s):'Deleted User';
     const src=(_lk.msgs[key]||[]).find(x=>x.id===rp.id);
     box.classList.add('active');
     document.getElementById('lkCtxL_'+c).textContent='Replying to '+name;
@@ -369,7 +369,9 @@ async function lockSend(c){
 /* ---------- message lists (same look + hover tools as the normal chat) ---------- */
 function lockCanDelete(m){
   if(!ME)return false;
-  return m.senderId===ME.id||isOwner(ME.id)||(isAdmin(ME.id)&&!isOwner(m.senderId))||(isMod(ME.id)&&!isOwner(m.senderId)&&!isAdmin(m.senderId));
+  // Same ladder the main chat uses (outranks() in js/moderation/roles.js): your own always,
+  // otherwise only someone strictly below you - so admin-on-admin and mod-on-mod are refused.
+  return m.senderId===ME.id||outranks(ME.id,m.senderId);
 }
 const _lkFi=(d,eo)=>`<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path${eo?' fill-rule="evenodd" clip-rule="evenodd"':''} d="${d}"/></svg>`;
 const LK_IC={
@@ -426,14 +428,14 @@ function lockReplyRef(key,m){
   else text=rt.preview||'';
   if(gone)return`<div class="reply-ref gone"><svg class="rr-elbow" viewBox="0 0 20 12"><path d="M2 0 v4 a6 6 0 0 0 6 6 h10"/></svg><span class="rr-text">Deleted Message</span></div>`;
   const rs=DB.getUser(rt.senderId);
-  const rname=(rs&&!rs.deleted)?displayUsername(rs.username):'Deleted User';
+  const rname=(rs&&!rs.deleted)?dispName(rs):'Deleted User';
   const rav=avatarHtml(rs,rname,'width:15px;height:15px;font-size:8px');
   return`<div class="reply-ref" data-reply-jump="${esc(rt.id)}"><svg class="rr-elbow" viewBox="0 0 20 12"><path d="M2 0 v4 a6 6 0 0 0 6 6 h10"/></svg><span class="rr-avatar">${rav}</span><span class="rr-name">${esc(rname)}</span><span class="rr-text">${esc(String(text).replace(/\s+/g,' ').trim().slice(0,200))}</span></div>`;
 }
 function lockMsgEl(c,key,m,prev){
   const mine=m.senderId===ME.id;
   const sender=DB.getUser(m.senderId);
-  const name=(sender&&!sender.deleted)?displayUsername(sender.username):'Deleted User';
+  const name=(sender&&!sender.deleted)?dispName(sender):'Deleted User';
   const clickable=!!(sender&&!sender.deleted);
   const pinged=(m.pings||[]).includes(ME.id)||(m.pings||[]).includes('everyone');
   const el=document.createElement('div');

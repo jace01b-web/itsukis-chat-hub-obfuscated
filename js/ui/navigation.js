@@ -29,6 +29,8 @@ function goHome(forceMenu){
     // Every sign-in path lands here, including the one that never reloads the page, so this is
     // where the server model is guaranteed to be running for the right account.
     DModel.ensureStarted(ME.id);
+    // Boosts follow the same path for the same reason: every sign-in comes through here.
+    try{DBoost.ensureStarted(ME.id)}catch(e){console.warn('[goHome] boost model',e)}
     if(!view.sid)view.sid=localStorage.getItem('ich.sid')||DModel.ICH_ID;
     // Don't try to open a server that was left, deleted, or that this account was banned from.
     const mine=DModel.myServers().map(s=>s.id);

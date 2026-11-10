@@ -200,12 +200,23 @@ const DB=(()=>{
       checkBanLock(myId,C.banned);
     });
     listen('muted',v=>{C.muted=v||{};if(typeof updateMuteLock==='function')updateMuteLock();});
-    listen('owners',v=>{OWNERS_CACHE=v||{};OWNERS_LOADED=true;checkBanLock(myId,C.banned);if(typeof checkForcedVersion==="function")checkForcedVersion();if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
+    /* A rank changing in the backend has to repaint the UI that draws it.
+       customroles/ already did this; owners/, mods/, admin/ and mvp/ did not, which is why
+       removing someone from owners/ in the Firebase console left them still showing as Owner -
+       in the member-list group, in their name chip and on the #id tag beside their messages -
+       until something unrelated happened to trigger a render. Everything that reads a rank
+       reads it live, so one repaint is all that was ever missing. */
+    const rankUIChanged=()=>{
+      if(ready)emit();
+      if(typeof DiscordShell!=='undefined'){try{DiscordShell.refresh()}catch(_){}}
+      try{if(typeof renderChat==='function'&&typeof view!=='undefined'&&view.page==='chatPage'){renderedKey=null;renderChat()}}catch(_){}
+    };
+    listen('owners',v=>{OWNERS_CACHE=v||{};OWNERS_LOADED=true;checkBanLock(myId,C.banned);if(typeof checkForcedVersion==="function")checkForcedVersion();if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}rankUIChanged();});
     {const sid=myId;   // own entry only; a denied/missing read just means "not a secret owner"
       const done=on=>{SECRET_OWNER_ID=on?sid:null;SECRET_LOADED=true;checkBanLock(myId,C.banned);if(typeof checkForcedVersion==="function")checkForcedVersion();if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}if(ready)emit()};
       unsubs.push(onValue(R('secretowner/'+sid),sn=>done(sn.val()===1),()=>done(false)));}
-    listen('mods',v=>{MODS_CACHE=v||{};MODS_LOADED=true;});
-    listen('admin',v=>{ADMINS_CACHE=v||{};ADMINS_LOADED=true;});
+    listen('mods',v=>{MODS_CACHE=v||{};MODS_LOADED=true;rankUIChanged();});
+    listen('admin',v=>{ADMINS_CACHE=v||{};ADMINS_LOADED=true;rankUIChanged();});
     // Custom roles: decorative only, written from the backend, never by the client (see js/moderation/roles.js).
     listen('customroles',v=>{
       CUSTOM_ROLES_CACHE=(v&&typeof v==='object')?v:{};CUSTOM_ROLES_LOADED=true;
@@ -215,7 +226,10 @@ const DB=(()=>{
     listen('appVersion',v=>{APP_VERSION_CACHE=v||null;APP_VERSION_LOADED=true;if(typeof checkForcedVersion==="function")checkForcedVersion();});
     listen('dmMembers',v=>C.dmMembers=v||{});
     listen('vip',v=>{C.vip=v||{};if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
-    listen('mvp',v=>{C.mvp=(v&&typeof v==='object')?v:{};if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
+    /* MVP repaints too: it owns a member-list group, the trophy next to a name, the image-banner
+       perk and - new in v53 - two server boost slots, all of which must disappear the moment the
+       rank is taken away. */
+    listen('mvp',v=>{C.mvp=(v&&typeof v==='object')?v:{};if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}rankUIChanged();});
     listen('flair',v=>{C.flair=v||{}});
     listen('roles',v=>{C.roles=v||{};if(typeof refreshSpinUI==='function'){try{refreshSpinUI()}catch(_){}}});
     /* HALLOWEEN:START */ listen('halloween/claimed',v=>{window.HW_CLAIMED=v||{};if(typeof hwRefresh==='function'){try{hwRefresh()}catch(_){}}});listen('halloween/progress/'+myId,v=>{window.HW_PROG=v||{};window.HW_LOADED=true;if(typeof hwRefresh==='function'){try{hwRefresh()}catch(_){}}});listen('halloween/equipped',v=>{window.HW_EQ=v||{};if(typeof hwRefresh==='function'){try{hwRefresh()}catch(_){}}});listen('halloween/intro/'+myId,v=>{window.HW_INTRO=Number(v)||0;window.HW_INTRO_LOADED=true;if(typeof hwMaybeIntro==='function'){try{hwMaybeIntro()}catch(_){}}}); /* HALLOWEEN:END */
@@ -896,6 +910,33 @@ const DB=(()=>{
       const u=C.users[Number(id)];
       return String((u&&u.style&&u.style.customStatus)||'');
     },
+    /* ---- Display name (Discord's "display name", separate from the @username) ----
+       Public, so it lives in `style` with the avatar and the status. An empty value means
+       "no display name" and everything falls back to the username, which is why clearing one
+       is always allowed and why nothing stores an empty string. */
+    displayNameOf(id){
+      const u=C.users[Number(id)];
+      return String((u&&u.style&&u.style.displayName)||'');
+    },
+    normDisplayName(v){
+      return String(v||'')
+        .replace(/[\u0000-\u001f\u007f<>]/g,'')   // control chars and angle brackets never reach the DOM
+        .replace(/\s+/g,' ').trim().slice(0,32);
+    },
+    async setDisplayName(id,name){
+      id=Number(id);
+      name=this.normDisplayName(name);
+      const cur=C.users[id]||{};
+      const style={...(cur.style||{})};
+      if(name)style.displayName=name;else delete style.displayName;
+      C.users[id]={...cur,style};emit();
+      try{
+        // One field, written on its own - the whole-style write in updateSettings can carry a
+        // banner worth hundreds of KB, and renaming yourself should not re-upload that.
+        if(name)await set(R('users/'+id+'/style/displayName'),name);
+        else await remove(R('users/'+id+'/style/displayName'));
+      }catch(e){console.error('display name save failed',e);throw e}
+    },
     async setStatus(id,status){
       id=Number(id);status=normStatus(status);
       const cur=C.users[id]||{};
@@ -950,7 +991,15 @@ const DB=(()=>{
         ?String(patch.customStatus||'').replace(/[\u0000-\u001f\u007f<>]/g,'').trim().slice(0,128)
         :String((cur.style&&cur.style.customStatus)||'');
       delete merged.customStatus;
+      /* Display name is public and lives in `style` too, so it has to be carried forward for
+         exactly the same reason the avatar and the status do: this write replaces the whole
+         node, and without this line saving any unrelated setting would wipe it. */
+      const displayName=('displayName' in patch)
+        ?this.normDisplayName(patch.displayName)
+        :String((cur.style&&cur.style.displayName)||'');
+      delete merged.displayName;
       const style={bubble:merged.meBubble||'#7c6cff',text:merged.meText||'#ffffff',radius:Number(merged.radius)||16,avatar};
+      if(displayName)style.displayName=displayName;
       if(pronouns)style.pronouns=pronouns;
       if(description)style.description=description;
       if(banner)style.banner=banner;

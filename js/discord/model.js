@@ -170,6 +170,9 @@ const DModel=(()=>{
       if(myId!==Number(id))return;
       pruneDeadServers().catch(()=>{});
       Object.keys(S.myServers||{}).forEach(sid=>{grantAccess(sid).catch(()=>{})});
+      // Same idea for boosts: drop slots pointed at servers that no longer exist, and every
+      // slot at all if MVP has been taken away since last time.
+      try{DBoost.prune().catch(()=>{})}catch(_){}
     },6000);
   }
   function stop(){
@@ -181,13 +184,33 @@ const DModel=(()=>{
   /* ======================================================================
    *  SERVERS
    * ====================================================================== */
+  /* One place that turns a raw servers/$sid record into the object the rest of the app uses.
+     It was written out twice - in myServers() and in server() - which is how the v53 fields
+     (desc, sys, welcome, banner) would have been visible from one and undefined from the other
+     depending on which call site you happened to come through. */
+  function srvShape(sid,v){
+    if(!v)return null;
+    return{
+      id:sid,
+      name:String(v.name||'Server'),
+      icon:v.icon||'',
+      img:typeof v.img==='string'?v.img:'',
+      ownerId:Number(v.ownerId),
+      createdAt:v.createdAt,
+      desc:typeof v.desc==='string'?v.desc:'',
+      sys:typeof v.sys==='string'?v.sys:'',
+      welcome:v.welcome!==false,     // on unless explicitly turned off
+      wjoin:v.wjoin!==false,
+      banner:typeof v.banner==='string'?v.banner:''
+    };
+  }
   // Every server I'm in, ICH always pinned first, then my saved order, then by name.
   function myServers(){
     const out=[{...ICH}];
     const ord=S.order||{};
     Object.keys(S.myServers||{}).filter(sid=>sid!==ICH_ID).map(sid=>{
       const v=S.servers[sid];
-      return v?{id:sid,name:String(v.name||'Server'),icon:v.icon||'',img:typeof v.img==='string'?v.img:'',ownerId:Number(v.ownerId),createdAt:v.createdAt}:null;
+      return srvShape(sid,v);
     }).filter(s=>s&&!isServerBanned(s.id,myId))
       .sort((a,b)=>{
         const oa=ord[a.id],ob=ord[b.id];
@@ -202,7 +225,7 @@ const DModel=(()=>{
   function server(sid){
     if(sid===ICH_ID)return{...ICH};
     const v=S.servers[sid];
-    return v?{id:sid,name:String(v.name||'Server'),icon:v.icon||'',img:typeof v.img==='string'?v.img:'',ownerId:Number(v.ownerId),createdAt:v.createdAt}:null;
+    return srvShape(sid,v);
   }
   function isSystem(sid){return sid===ICH_ID}
   function isServerOwner(sid,uid){
@@ -336,6 +359,32 @@ const DModel=(()=>{
         patch['servers/'+sid+'/img']=fields.img;
       }
     }
+    /* ---- v53 fields. All of these are refused on ICH: its description, its channels and its
+       join behaviour are code, not stored settings, and nobody joins it to be welcomed. ---- */
+    if(!isSystem(sid)){
+      if(fields.desc!==undefined){
+        const d=String(fields.desc||'').replace(/[\u0000-\u0009\u000b-\u001f\u007f<>]/g,'').replace(/\n{3,}/g,'\n\n').trim().slice(0,300);
+        patch['servers/'+sid+'/desc']=d||null;
+      }
+      if(fields.sys!==undefined){
+        const want=String(fields.sys||'');
+        // only ever a channel that actually exists on this server, and never a voice one
+        const ok=channels(sid).some(c=>c.id===want&&c.type!=='voice');
+        patch['servers/'+sid+'/sys']=ok?want:null;
+      }
+      if(fields.welcome!==undefined)patch['servers/'+sid+'/welcome']=!!fields.welcome;
+      if(fields.wjoin!==undefined)patch['servers/'+sid+'/wjoin']=!!fields.wjoin;
+      if(fields.banner!==undefined){
+        if(!fields.banner)patch['servers/'+sid+'/banner']=null;
+        else{
+          // Banners are a Boost Level 1 perk, so the level is checked before the image is.
+          let lv=0;try{lv=DBoost.levelFor(sid)}catch(_){}
+          if(lv<1)throw new Error('A server banner unlocks at Boost Level 1 (2 boosts).');
+          if(!isSafeServerImg(fields.banner))throw new Error('That image could not be used.');
+          patch['servers/'+sid+'/banner']=fields.banner;
+        }
+      }
+    }
     if(Object.keys(patch).length)await update(ref(rtdb),patch);
     // keep the public listing in step with the name/icon it advertises
     if(isPublic(sid)){try{await setPublic(sid,true,(S.discovery[sid]||{}).desc)}catch(_){}}
@@ -359,11 +408,20 @@ const DModel=(()=>{
     patch['serverMembers/'+sid]=null;
     chans.forEach(c=>{patch['channelServer/'+c.key]=null;patch['roomMembers/'+c.key]=null});
     await update(ref(rtdb),patch);
+    /* Boosts are released separately and AFTER the server is gone, not in the patch above:
+       serverBoosts/$sid/$uid is writable only by $uid, so an owner deleting a server they do not
+       boost cannot clear other people's records inside their own write - the whole multi-path
+       update would be refused and take the delete down with it. Each booster's own client drops
+       its dangling slot instead; DBoost.prune() does that on sign-in, and this just clears mine
+       immediately so the slot is free again the moment I delete my own server. */
+    try{if(typeof DBoost!=='undefined')await DBoost.releaseAllFor(sid)}catch(_){}
   }
 
   async function leaveServer(sid){
     if(isSystem(sid))throw new Error('You cannot leave the ICH server.');
-    if(isServerOwner(sid,myId))throw new Error('You own this server — delete it or transfer it first.');
+    // An owner leaving would strand the server with nobody able to administer it, so this is
+    // refused and the message names the way out - the Delete Server entry directly below Leave.
+    if(isServerOwner(sid,myId))throw new Error('You own this server, so you can\u2019t leave it. Use Delete Server below to remove it for everyone.');
     const patch={};
     patch['serverMembers/'+sid+'/'+myId]=null;
     patch['userServers/'+myId+'/'+sid]=null;
@@ -463,6 +521,7 @@ const DModel=(()=>{
     delete _accessDone[sid];
     // count the use; a failure here must not undo a successful join
     try{await set(R('invites/'+sid+'/'+code+'/uses'),(rec.uses||0)+1)}catch(_){}
+    await postJoinMessage(sid);
     return sid;
   }
 
@@ -527,7 +586,27 @@ const DModel=(()=>{
    *
    * Stage 1 makes channelServer true. Stage 2 then grants access, which the rules now allow.
    */
+  /* ---------- ICH is defined in code, not in the database ----------
+     Its channels, categories and roles are the ICH_CHANNELS / ICH_CATS / virtualRoles() constants
+     at the top of this file, and every one of them is wired to something else: a message key that
+     holds years of history, a gate the database rules enforce, a site rank granted from owners/,
+     mods/, mvp/ or customroles/.
+
+     A channel or role ADDED to ICH from the browser has none of that. It writes into
+     serverChannels/ich and serverRoles/ich, which the rules evaluate against servers/ich - a node
+     that does not exist, because ICH is not a stored server. So the write was refused, and when it
+     wasn't the result was a channel nobody could read. That is the "it's also broken" part.
+
+     Both are refused here rather than only hidden in the UI, so the context menu, the server menu,
+     the role manager, the "+" on a category and anything added later all agree. */
+  function assertNotICH(sid,what){
+    if(sid===ICH_ID)throw new Error(
+      'ICH’s '+what+' are built into the site, so they can’t be added or changed here. '+
+      'Make a server of your own for that — it gets its own channels and roles.');
+  }
+
   async function createChannel(sid,{name,type,cat,topic}){
+    assertNotICH(sid,'channels');
     assertPerm(sid,'manageCh');
     name=normChannelName(name,type);
     const cid=push(R('serverChannels/'+sid)).key;
@@ -625,6 +704,63 @@ const DModel=(()=>{
 
   /* Drop servers from my rail that no longer exist. `myServers()` already hides them, so
      without this they stay in userServers forever, silently counting against the join limit. */
+  /* ---------- system messages ----------
+     A join notice is an ordinary message carrying sys:'join', written by the person who just
+     joined. It needs no special permission for that reason: they are a member of the channel by
+     the time it is sent, which is exactly what the existing message rule asks for.
+
+     Where it goes: servers/$sid/sys if the server picked a system channel, otherwise the first
+     text channel. Turning join messages off (servers/$sid/welcome === false) skips it entirely.
+     Never fatal - a join that worked must not be reported as failed because its notice did not
+     land, so every failure here is swallowed. */
+  function systemChannel(sid){
+    const chans=channels(sid).filter(c=>c.type!=='voice');
+    if(!chans.length)return null;
+    const srv=S.servers[sid];
+    const want=srv&&typeof srv.sys==='string'?srv.sys:'';
+    return (want&&chans.find(c=>c.id===want))||chans.sort((a,b)=>a.pos-b.pos)[0]||null;
+  }
+  function joinMessagesOn(sid){
+    if(sid===ICH_ID)return false;              // everyone is already in ICH; nobody ever joins it
+    const srv=S.servers[sid];
+    return !srv||srv.welcome!==false;          // on unless the server turned it off
+  }
+  /* Discord picks from a set of welcome lines rather than saying the same thing every time.
+     Which one is used is derived from the message's own timestamp, so every client that renders
+     it picks the SAME line - it is not stored, and it does not change on re-render. */
+  const JOIN_LINES=[
+    '{u} joined the party.',
+    'Welcome, {u}. We hope you brought pizza.',
+    '{u} just landed.',
+    '{u} just slid into the server.',
+    '{u} just showed up. Hold my beer.',
+    'Welcome {u}. Say hi!',
+    '{u} hopped into the server.',
+    'Everyone welcome {u}!',
+    'Glad you are here, {u}.',
+    'Good to see you, {u}.',
+    '{u} is here.',
+    'A wild {u} appeared.'
+  ];
+  function joinLineFor(name,at,random){
+    if(random===false)return name+' joined the server.';
+    const i=Math.abs(Math.floor(Number(at)||0)/1000|0)%JOIN_LINES.length;
+    return JOIN_LINES[i].replace('{u}',name);
+  }
+  async function postJoinMessage(sid){
+    try{
+      if(!joinMessagesOn(sid))return;
+      const c=systemChannel(sid);
+      if(!c||!c.key)return;
+      let name='Someone';
+      try{const u=DB.getUser(myId);name=(u&&u.username)||name}catch(_){}
+      const srv=S.servers[sid];
+      const at=Date.now()+SKEW;
+      const rec={senderId:myId,at,sys:'join',text:joinLineFor(name,at,!srv||srv.wjoin!==false)};
+      await set(push(R('messages/'+c.key)),rec);
+    }catch(e){console.warn('[DModel] join message not posted',e&&e.code||e)}
+  }
+
   async function pruneDeadServers(){
     if(myId==null)return;
     const mine=Object.keys(S.myServers||{}).filter(sid=>sid!==ICH_ID);
@@ -680,6 +816,7 @@ const DModel=(()=>{
     });
   }
   async function createCategory(sid,name){
+    assertNotICH(sid,'categories');
     assertPerm(sid,'manageCh');
     const id=push(R('serverCats/'+sid)).key;
     const pos=cats(sid).length;
@@ -890,6 +1027,7 @@ const DModel=(()=>{
   }
 
   async function createRole(sid,name){
+    assertNotICH(sid,'roles');
     assertPerm(sid,'manageRoles');
     const rid=push(R('serverRoles/'+sid)).key;
     const top=storedRoles(sid).filter(r=>!r.everyone);
@@ -1161,6 +1299,7 @@ const DModel=(()=>{
     const access={};
     Object.keys(chans).forEach(cid=>{const k=chans[cid]&&chans[cid].key;if(k)access['roomMembers/'+k+'/'+myId]=true});
     if(Object.keys(access).length){try{await update(ref(rtdb),access)}catch(e){console.warn('[DModel] access write failed',e&&e.code)}}
+    await postJoinMessage(sid);
     return sid;
   }
 
@@ -1205,6 +1344,7 @@ const DModel=(()=>{
     can,canIn,canManageRole,canManageMember,basePerms,
     createRole,updateRole,deleteRole,reorderRoles,setMemberRole,setChannelOverride,
     memberIds,member,memberCount,setNick,kickMember,groupedMembers,syncPerms,
+    systemChannel,joinMessagesOn,
     isServerBanned,serverBanInfo,serverBanList,banMember,unbanMember,isSafeServerImg,
     muteUntil,isServerMuted,timeoutMember,
     myIpHash,ipBannedHere,ipBanHash,ipUnbanHash,ipBanList,

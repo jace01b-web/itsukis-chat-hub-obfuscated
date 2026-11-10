@@ -82,11 +82,12 @@ const DiscordShell=(function(){
     });
     html+=railWrap({id:'addsrv',t:'Add a Server',ic:'+',cls:'dashed'});
     html+=railWrap({id:'discover',t:'Discover Servers',ic:'\u{1F9ED}',cls:'dashed discover'});
-    html+=railWrap({id:'shop',t:'Shop',ic:'\u{1F48E}',cls:'dashed shop'});
     html+='<div class="dl-rail-grow"></div>';
-    html+=railWrap({id:'hubs',t:'Games',ic:'\u{1F3AE}'});
-    html+=railWrap({id:'extras',t:'Extras',ic:EXTRAS_IC});
-    html+=railWrap({id:'discord',t:'Join our Discord',ic:DISCORD_IC,cls:'dl-rail-discord'});
+    /* Games, Extras, the Discord link and the Shop used to sit here as rail buttons. They are
+       site features, not servers, and Discord's rail only ever holds servers and the two things
+       that find you more of them (+ and the compass). They now live where they belong:
+       Games / Extras / Discord are rows in ICH's own channel list, and the Shop is in the direct
+       messages sidebar where Discord keeps its own shop. */
     html+=railWrap({id:'settings',t:'User Settings',ic:GEAR});
     r.innerHTML=html;
     wireRailDrag(r);
@@ -177,6 +178,18 @@ const DiscordShell=(function(){
     document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#dlRail'))hideRailTip()});
   }
 
+  /* The site features that now live inside ICH rather than on the rail. One list, so the order
+     and the labels are in one place; `when` hides a row that is not currently available. */
+  const ICH_EXTRA_ROWS=[
+    {name:'Games & Hubs',ic:'\u{1F3AE}',go:()=>modalGameHubs()},
+    {name:'Extras',ic:EXTRAS_IC,go:btn=>toggleExtras(btn)},
+    {name:'Shop',ic:'\u{1F48E}',go:()=>{closeExtras();openShop()}},
+    {name:'Trick or Treat',ic:'\u{1F383}',
+     when:()=>{try{return typeof totVisible==='function'&&totVisible()}catch(_){return false}},
+     go:()=>{closeExtras();if(typeof totOpen==='function')totOpen()}},
+    {name:'Join our Discord',ic:DISCORD_IC,go:()=>{closeExtras();openDiscord()}}
+  ];
+
   function railClick(e){
     const b=e.target.closest('[data-rail]');if(!b||!ME)return;
     const id=b.dataset.rail;
@@ -231,7 +244,7 @@ const DiscordShell=(function(){
     placeUser();
     const p=document.getElementById('dlUser');if(!p||!ME)return;
     const st=myStatus(),custom=myCustomStatus();
-    p.innerHTML=`<button type="button" class="dl-user-me" id="dlUserMe" title="Set status"><span class="dl-user-av">${avatarHtml(ME,ME.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot st-${st}"></i></span><span class="dl-user-txt"><b>${esc(displayUsername(ME.username))}</b><small>${esc(custom||STATUS_LABEL[st]||'Online')}</small></span></button><button type="button" class="dl-user-gear" id="dlUserGear" data-tip="User Settings" aria-label="User Settings">${GEAR}</button>`;
+    p.innerHTML=`<button type="button" class="dl-user-me" id="dlUserMe" title="Set status"><span class="dl-user-av">${avatarHtml(ME,ME.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot st-${st}"></i></span><span class="dl-user-txt"><b>${esc(dispName(ME))}</b><small>${esc(custom||STATUS_LABEL[st]||'Online')}</small></span></button><button type="button" class="dl-user-gear" id="dlUserGear" data-tip="User Settings" aria-label="User Settings">${GEAR}</button>`;
     // Discord: clicking yourself opens the status menu, the cog opens settings.
     document.getElementById('dlUserMe').onclick=e=>{e.stopPropagation();openStatusMenu(document.getElementById('dlUserMe'))};
     document.getElementById('dlUserGear').onclick=()=>openSettings(false);
@@ -256,7 +269,7 @@ const DiscordShell=(function(){
     stPop.innerHTML=`
       <div class="dl-stpop-head">
         <span class="dl-user-av">${avatarHtml(ME,ME.username,'width:40px;height:40px;font-size:16px')}<i class="dl-dot st-${cur}"></i></span>
-        <b>${esc(displayUsername(ME.username))}</b>
+        <b>${esc(dispName(ME))}</b>
       </div>
       <div class="dl-stpop-sep"></div>
       ${['online','idle','dnd','invisible'].map(row).join('')}
@@ -339,7 +352,7 @@ const DiscordShell=(function(){
         const u=DB.getUser(uid)||{id:uid,username:'User '+uid};
         const d=document.createElement('div');d.className='dl-fr-row';
         const isOn=onl.has(uid);
-        d.innerHTML=`<span class="dl-fr-av" data-open-profile="${uid}">${avatarHtml(u,u.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot ${dotClass(uid,!isOn)}"></i></span><div class="dl-fr-who"><b>${esc(displayUsername(u.username))}</b><small>${esc(sub||(isOn?'Online':'Offline'))}</small></div><div class="dl-fr-acts"></div>`;
+        d.innerHTML=`<span class="dl-fr-av" data-open-profile="${uid}">${avatarHtml(u,u.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot ${dotClass(uid,!isOn)}"></i></span><div class="dl-fr-who"><b>${esc(dispName(u))}</b><small>${esc(sub||(isOn?'Online':'Offline'))}</small></div><div class="dl-fr-acts"></div>`;
         d.querySelector('[data-open-profile]').onclick=e=>{e.stopPropagation();openUserProfile(uid)};
         const a=d.querySelector('.dl-fr-acts');acts.forEach(x=>a.appendChild(x));
         d.onclick=()=>{if(tab==='online'||tab==='all'){view.dmView='chat';selectRoom(DB.dmKey(ME.id,uid))}else openUserProfile(uid)};
@@ -379,6 +392,8 @@ const DiscordShell=(function(){
   const CH_HASH='<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10.99 3.16a1 1 0 1 0-1.98-.32L8.34 7H4a1 1 0 0 0 0 2h4.01l-.67 4H3a1 1 0 1 0 0 2h4.01l-.66 3.84a1 1 0 0 0 1.97.32L9.04 15h3.97l-.66 3.84a1 1 0 0 0 1.97.32L15.04 15H20a1 1 0 0 0 0-2h-4.63l.67-4H21a1 1 0 0 0 0-2h-4.63l.65-3.84a1 1 0 1 0-1.97-.32L14.34 7h-3.97l.62-3.84ZM13.34 13l.67-4h-3.97l-.67 4h3.97Z" clip-rule="evenodd"/></svg>';
   const CH_LOCK='<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M17 11V8a5 5 0 0 0-10 0v3H5v11h14V11h-2Zm-8-3a3 3 0 0 1 6 0v3H9V8Z"/></svg>';
   const CH_VOICE='<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M12 3a1 1 0 0 0-1.7-.7L5.6 7H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2.6l4.7 4.7A1 1 0 0 0 12 21V3Zm4.2 2.4a1 1 0 0 0-.4 1.9 6 6 0 0 1 0 9.4 1 1 0 0 0 .4 1.9 8 8 0 0 0 0-13.2Z"/></svg>';
+  /* Discord's boost diamond, used on the chip, the bar and the dialog. */
+  const BOOST_IC='<svg class="bic" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M12 2 2 12l10 10 10-10L12 2Zm0 4.2 5.8 5.8-5.8 5.8L6.2 12 12 6.2Z"/></svg>';
   const CHEV='<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
   // the little mic/headphone crossed-out marks Discord puts next to someone in a voice channel
   const MUTE_IC='<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/><path d="M3.5 3.5l17 17" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>';
@@ -441,6 +456,7 @@ const DiscordShell=(function(){
   }
   function renderChannels(list,foot){
     const s=sid();
+    syncBoostWatch();   // keep the boost listener pointed at the server actually on screen
     const srv=DModel.server(s)||{...DModel.ICH};
     let online=0;try{online=DB.onlineCount()}catch(_){}
     const canManage=DModel.can(s,'manageCh',ME.id);
@@ -449,9 +465,43 @@ const DiscordShell=(function(){
     // ---- server header (click = server menu) ----
     const head=document.createElement('div');
     head.className='dl-server-head';
-    head.innerHTML='<b>'+esc(srv.name)+'</b>'+(isIch?'<span class="dl-server-on"><i></i>'+online+' online</span>':'')+CHEV;
+    const blv=isIch?0:(()=>{try{return DBoost.levelFor(s)}catch(_){return 0}})();
+
+    /* ---- server banner (Boost Level 1) ----
+       Drawn above the server name, the way Discord draws it. The LEVEL is re-checked here, not
+       just at upload time: if a server drops below Level 1 because a booster lost MVP or moved
+       their boost, the banner stops showing straight away rather than lingering as a perk the
+       server no longer has. The image itself is validated the same way avatars are. */
+    if(!isIch&&blv>=1&&srv.banner&&DModel.isSafeServerImg(srv.banner)){
+      const bn=document.createElement('div');
+      bn.className='dl-srvbanner';
+      bn.style.backgroundImage='url("'+String(srv.banner).replace(/"/g,'')+'")';
+      list.appendChild(bn);
+    }
+    head.innerHTML='<b>'+esc(srv.name)+'</b>'+
+      (blv?'<span class="dl-boost-chip" title="Boost Level '+blv+'">'+BOOST_IC+blv+'</span>':'')+
+      (isIch?'<span class="dl-server-on"><i></i>'+online+' online</span>':'')+CHEV;
     head.onclick=e=>{e.stopPropagation();openServerMenu(head,s)};
     list.appendChild(head);
+
+    /* ---- boost bar (Discord's, under the server name) ----
+       ICH cannot be boosted - it is the site, not a server someone made - so it never shows one. */
+    if(!isIch){
+      try{
+        const n=DBoost.countFor(s),nx=DBoost.nextLevel(s);
+        const bar=document.createElement('div');
+        bar.className='dl-boostbar'+(blv?' lv'+blv:'');
+        const pct=nx?Math.max(0,Math.min(100,Math.round((n/nx.need)*100))):100;
+        bar.innerHTML=
+          '<div class="dl-bb-top"><span class="dl-bb-lv">'+BOOST_IC+(blv?'Level '+blv:'No level yet')+'</span>'+
+          '<span class="dl-bb-n">'+n+' boost'+(n===1?'':'s')+'</span></div>'+
+          '<div class="dl-bb-track"><i style="width:'+pct+'%"></i></div>'+
+          '<div class="dl-bb-sub">'+(nx?esc(nx.left+' more to reach Level '+nx.level):'Max level reached')+'</div>';
+        bar.onclick=()=>openBoostDialog(s);
+        bar.title='Server Boosts';
+        list.appendChild(bar);
+      }catch(e){console.warn('[shell] boost bar',e)}
+    }
 
     // ---- categories + channels ----
     const cats=DModel.cats(s);
@@ -500,7 +550,7 @@ const DiscordShell=(function(){
             const s2=st[String(id)]||{};
             const m=document.createElement('div');m.className='dvc-m';m.dataset.id=String(id);
             m.innerHTML='<span class="dvc-av">'+avatarHtml(u,u.username,'width:24px;height:24px;font-size:9px')+'</span>'+
-              '<span class="dvc-nm">'+esc(displayUsername(u.username))+'</span>'+
+              '<span class="dvc-nm">'+esc(dispName(u))+'</span>'+
               (s2.deaf?'<span class="dvc-st" title="Deafened">'+DEAF_IC+'</span>':
                (s2.muted?'<span class="dvc-st" title="'+(s2.forced?'Muted by a moderator':'Muted')+'">'+MUTE_IC+'</span>':''));
             m.onclick=()=>openUserProfile(id);
@@ -518,7 +568,7 @@ const DiscordShell=(function(){
       const h=document.createElement('div');
       h.className='dcat'+(isCollapsed?' collapsed':'');
       h.innerHTML='<span class="dcat-chev">'+CHEV+'</span><span class="dcat-name">'+esc(cat.name)+'</span>'+
-        (canManage?'<button type="button" class="dcat-add" title="Create channel" aria-label="Create channel">+</button>':'');
+        ((canManage&&!DModel.isSystem(s))?'<button type="button" class="dcat-add" title="Create channel" aria-label="Create channel">+</button>':'');
       h.onclick=e=>{if(e.target.closest('.dcat-add'))return;toggleCat(s,cat.id)};
       const add=h.querySelector('.dcat-add');
       if(add)add.onclick=e=>{e.stopPropagation();openCreateChannel(s,cat.id)};
@@ -544,6 +594,32 @@ const DiscordShell=(function(){
       e.textContent=canManage?'No channels yet. Use the + next to a category to make one.':'No channels you can see yet.';
       list.appendChild(e);
     }
+
+    /* ---- ICH's own section ----
+       Games, Extras and the Discord link used to be buttons on the server rail. They are site
+       features, not servers, so they sit here instead: a category in ICH's channel list, styled
+       and behaving like channels. They appear in ICH and nowhere else, because a server someone
+       made has nothing to do with them - which is the whole point of this move. */
+    if(isIch){
+      const sec=document.createElement('div');
+      sec.className='dcat';
+      sec.innerHTML='<span class="dcat-chev">'+CHEV+'</span><span class="dcat-name">Itsukis Chat Hub</span>';
+      sec.onclick=()=>toggleCat(s,'__ich');
+      const open=!collapsedSet(s).has('__ich');
+      sec.classList.toggle('collapsed',!open);
+      list.appendChild(sec);
+      if(open){
+        ICH_EXTRA_ROWS.forEach(row=>{
+          if(row.when&&!row.when())return;
+          const el=document.createElement('div');
+          el.className='dch dch-site';
+          el.innerHTML='<span class="dch-ic">'+row.ic+'</span><span class="dch-nm">'+esc(row.name)+'</span>';
+          el.onclick=ev=>{ev.stopPropagation();row.go(el)};
+          el.title=row.name;
+          list.appendChild(el);
+        });
+      }
+    }
     if(foot)foot.innerHTML='';
   }
 
@@ -559,7 +635,7 @@ const DiscordShell=(function(){
     const u=DB.getUser(id);
     if(!u){m._dlpSig=null;m.innerHTML='<div class="dl-mem-h">Loading…</div>';return}
     const deleted=!!u.deleted;
-    const name=deleted?'Deleted User':displayUsername(u.username);
+    const name=deleted?'Deleted User':dispName(u);
     const online=id===ME.id||DB.onlineIds().indexOf(id)>-1;
     const accent=safeColor(u.settings&&u.settings.meBubble,'#5865f2');
     const banner=safeColor(u.settings&&u.settings.bannerColor,accent);
@@ -602,13 +678,25 @@ const DiscordShell=(function(){
      A person is listed once, under the highest group they qualify for. No role = just "Online". */
   const SPIN_RANK=['vipperm','vip1','fire','ice','lucky','neon','crown','rainbow','gold','confetti'];
   const MEM_SHOW_OFF=60;let offAll=false;
+  /* ---- Which groups the member list shows ----
+     Owner / Admin / Mod / MVP / VIP / the custom roles in customroles/ / the Daily Spin flairs
+     are SITE ranks. They are granted from owners/, mods/, mvp/, vip/, flair/ and customroles/,
+     they carry site-wide powers and perks, and they mean nothing inside a server somebody else
+     made - a visitor's MVP badge is not a role in your server any more than it is in Discord.
+
+     They used to be appended to every member list unconditionally, which is why a brand new
+     server opened with "MVPS - 1" and "ICE FLAIR - 2" headers nobody there had created. They are
+     now scoped to ICH, and a user-made server shows exactly what its own role manager defines:
+     its hoisted roles, then Online, then Offline. */
+  function ichScope(){try{return DModel.isSystem(sid())}catch(_){return true}}
   function memGroupOf(id){
-    // A hoisted role created in the role manager outranks the legacy cosmetic groups below,
-    // because it is the one the server's own staff chose to show.
+    // A hoisted role created in the role manager outranks everything below, because it is the
+    // one this server's own staff chose to show.
     try{
       const dr=DModel.rolesOf(sid(),id).find(r=>r.hoist&&!r.everyone&&!r.virtual);
       if(dr)return 'dr:'+dr.id;
     }catch(_){}
+    if(!ichScope())return'online';          // a server someone made: no site ranks in its list
     if(isShownOwner(id))return'owner';
     let v=null;try{v=DB.vipInfo(id,true,true)}catch(_){}
     if(v&&v.kind==='owner')return'owner';
@@ -631,9 +719,11 @@ const DiscordShell=(function(){
       DModel.roles(sid()).filter(r=>r.hoist&&!r.everyone&&!r.virtual)
         .forEach(r=>d.push(['dr:'+r.id,r.name,r.color||'#99aab5']));
     }catch(_){}
-    [['owner','Owner','#faa81a'],['mvp','MVPs','#ff2fa0'],['admin','Admins','#ed4245'],['mod','Moderators','#3ba55d']].forEach(x=>d.push(x));
-    try{customRoleList().forEach(r=>d.push(['cr:'+r.id,r.name,r.color]))}catch(_){}
-    SPIN_RANK.forEach(k=>{const pz=SPIN_PRIZES.find(x=>x.id===k);d.push([k,pz?pz.name.replace(/\s*—\s*/,' · '):k,pz?pz.color:'#99aab5'])});
+    if(ichScope()){
+      [['owner','Owner','#faa81a'],['mvp','MVPs','#ff2fa0'],['admin','Admins','#ed4245'],['mod','Moderators','#3ba55d']].forEach(x=>d.push(x));
+      try{customRoleList().forEach(r=>d.push(['cr:'+r.id,r.name,r.color]))}catch(_){}
+      SPIN_RANK.forEach(k=>{const pz=SPIN_PRIZES.find(x=>x.id===k);d.push([k,pz?pz.name.replace(/\s*—\s*/,' · '):k,pz?pz.color:'#99aab5'])});
+    }
     d.push(['online','Online','#23a559']);
     return d;
   }
@@ -648,12 +738,17 @@ const DiscordShell=(function(){
   }
   function memRow(id,off){
     const u=DB.getUser(id)||{id,username:'User '+id};
-    const nm=esc(displayUsername(u.username));
-    const p=off?null:nameStylePreset(id);
-    const mv=!off&&isMvp(id)&&!tagHidden(id,'mvp');
-    // Discord tints a member's name with their top role colour. A won flair still wins (it's their own choice).
-    let cr=null;try{if(!off&&!p)cr=topCustomRole(id)}catch(_){}
-    const crS=cr?' style="color:'+esc(cr.color)+'"':'';
+    const nm=esc(dispName(u));
+    const ich=ichScope();
+    // Flair styling, the MVP trophy and customroles/ tints are site cosmetics: ICH only, for the
+    // same reason the group headers are. In a user's server the name takes that server's own
+    // top role colour instead, which is what Discord does.
+    const p=(off||!ich)?null:nameStylePreset(id);
+    const mv=!off&&ich&&isMvp(id)&&!tagHidden(id,'mvp');
+    let cr=null;try{if(!off&&!p&&ich)cr=topCustomRole(id)}catch(_){}
+    let srvCol='';
+    if(!off&&!ich){try{srvCol=DModel.colorOf(sid(),id)||''}catch(_){}}
+    const crS=cr?' style="color:'+esc(cr.color)+'"':(srvCol?' style="color:'+esc(srvCol)+'"':'');
     const nameH=p?'<span class="nm-user flair-name flair-'+p+'">'+nm+'</span>':'<span class="nm-user'+(mv?' mvp-nm':'')+(cr?' cr-nm':'')+'"'+crS+'>'+nm+(mv?' <span class="mvp-mark" title="MVP">🏆</span>':'')+'</span>';
     let cs='';try{cs=DB.customStatusOf?DB.customStatusOf(id):''}catch(_){}
     return `<div class="dl-mem${off?' off':''}" data-open-profile="${id}"${cr?` title="${esc(cr.name)}"`:''}><span class="dl-fr-av">${avatarHtml(u,u.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot ${dotClass(id,off)}"></i></span><span class="dl-mem-nm">${nameH}${(!off&&cs)?`<small class="dl-mem-cs">${esc(cs)}</small>`:''}</span></div>`;
@@ -698,7 +793,7 @@ const DiscordShell=(function(){
     if(key===CFG.VIP_ROOM)everyone=everyone.filter(id=>{try{return !!DB.vipInfo(id,true)}catch(_){return false}});
     if(key===CFG.MVP_ROOM)everyone=everyone.filter(id=>{try{return hasMvpPerks(id)}catch(_){return false}});
     const offIds=everyone.filter(id=>!onSet.has(id)&&DB.getUser(id));
-    const nameOf=id=>{const u=DB.getUser(id);return u?displayUsername(u.username):'Loading…'};
+    const nameOf=id=>{const u=DB.getUser(id);return u?dispName(u):'Loading…'};
     const cmp=(a,b)=>nameOf(a).toLowerCase().localeCompare(nameOf(b).toLowerCase());
     const defs=memGroupDefs(),buckets={};defs.forEach(d=>buckets[d[0]]=[]);
     // A group key always exists in defs, but customroles/ can change between the two calls — never throw over it.
@@ -762,6 +857,34 @@ const DiscordShell=(function(){
      message, a presence tick), so a new channel, a renamed role, a changed icon or someone
      joining could sit invisible for a while. Coalesced on a frame so a burst of listener
      callbacks - which is what arriving at a server looks like - is one repaint, not twenty. */
+  /* Boosts are watched one server at a time - the one you are looking at - so opening the app
+     does not subscribe to serverBoosts for every server you have ever joined. */
+  let _boostSid=null;
+  function syncBoostWatch(){
+    let s=null;try{s=sid()}catch(_){}
+    if(s===_boostSid)return;
+    try{if(_boostSid)DBoost.detach(_boostSid)}catch(_){}
+    _boostSid=s;
+    try{if(s&&s!==DModel.ICH_ID)DBoost.attach(s)}catch(_){}
+  }
+  /* A boost landing or leaving changes the sidebar bar, the level chip and the rail glow, so
+     redraw the sidebar the same way everything else does. Coalesced on a frame for the same
+     reason the model subscription below is. */
+  let _bPend=false;
+  try{
+    DBoost.onChange(()=>{
+      if(_bPend||!ME)return;
+      _bPend=true;
+      requestAnimationFrame(()=>{
+        _bPend=false;
+        if(!ME||view.page!=='chatPage')return;
+        try{renderRail()}catch(_){}
+        try{const l=document.getElementById('sbList'),f=document.getElementById('sbFoot');
+          if(l&&f&&serverMode()){l.innerHTML='';f.innerHTML='';renderChannels(l,f)}}catch(_){}
+      });
+    });
+  }catch(_){}
+
   let _pending=false;
   try{
     DModel.onChange(()=>{

@@ -57,6 +57,53 @@ function serverIconFromFile(file){
   });
 }
 
+/* ---- server BANNER ----
+   Same pipeline as the icon above, cropped to a wide 16:9 strip instead of a square, because
+   that is the shape it is displayed in (across the top of the channel list). Compressed under
+   the same character budget the rules allow, so an enormous photo still lands. */
+function serverBannerFromFile(file){
+  return new Promise((resolve,reject)=>{
+    if(!file){reject(new Error('No file chosen.'));return}
+    if(!/^image\//.test(file.type||'')){reject(new Error('That is not an image file.'));return}
+    if(file.size>12*1024*1024){reject(new Error('That image is over 12MB — pick a smaller one.'));return}
+    const r=new FileReader();
+    r.onerror=()=>reject(new Error('Could not read that file.'));
+    r.onload=()=>{
+      const img=new Image();
+      img.onerror=()=>reject(new Error('Could not read that image.'));
+      img.onload=()=>{
+        try{
+          // centre-crop to 16:9, keeping as much of the picture as that shape allows
+          const want=16/9;
+          let sw=img.width,sh=Math.round(img.width/want);
+          if(sh>img.height){sh=img.height;sw=Math.round(img.height*want)}
+          const sx=Math.round((img.width-sw)/2),sy=Math.round((img.height-sh)/2);
+          let w=960;
+          const c=document.createElement('canvas');
+          const draw=px=>{
+            c.width=px;c.height=Math.round(px/want);
+            const g=c.getContext('2d');
+            g.clearRect(0,0,c.width,c.height);
+            g.drawImage(img,sx,sy,sw,sh,0,0,c.width,c.height);
+          };
+          draw(w);
+          let q=.84,out=c.toDataURL('image/jpeg',q),tries=0;
+          while(out.length>SERVER_ICON_MAX_CHARS&&tries<10){
+            tries++;
+            if(q>0.5)q=Math.max(0.5,q-0.1);
+            else{w=Math.max(320,Math.round(w*0.8));draw(w)}
+            out=c.toDataURL('image/jpeg',q);
+          }
+          if(out.length>SERVER_ICON_MAX_CHARS){reject(new Error('That image is too detailed to compress. Try a smaller one.'));return}
+          resolve(out);
+        }catch(e){reject(new Error('Could not process that image.'))}
+      };
+      img.src=r.result;
+    };
+    r.readAsDataURL(file);
+  });
+}
+
 /* A reusable icon picker block: a live preview, Upload, and Remove.
    Returns {el, value()} - value() is the current data URL, '' for none. */
 function serverIconPicker(initial,initialEmoji){
@@ -274,7 +321,7 @@ const TIMEOUT_OPTS=[[60,'60 seconds'],[300,'5 minutes'],[600,'10 minutes'],[3600
 
 function openTimeoutDialog(sid,uid,after){
   const u=DB.getUser(uid)||{id:uid,username:'User '+uid};
-  const name=displayUsername(u.username||('User '+uid));
+  const name=dispName(u,'User '+uid);
   const cur=DModel.muteUntil(sid,uid);
   const m=dmodal({
     title:'Time out '+name,
@@ -307,7 +354,7 @@ function openTimeoutDialog(sid,uid,after){
 
 function openBanDialog(sid,uid,after){
   const u=DB.getUser(uid)||{id:uid,username:'User '+uid};
-  const name=displayUsername(u.username||('User '+uid));
+  const name=dispName(u,'User '+uid);
   const srvName=(DModel.server(sid)||{}).name||'';
   const ich=DModel.isSystem(sid);
   const m=dmodal({

@@ -43,6 +43,7 @@ const BOOTUI=window.ICHBoot||{prog(){},phase(){},step(){},done(){},fail(){},reve
     // servers / channels / roles listeners, and restore the last server that was open
     try{
       DModel.start(ME.id);
+      try{DBoost.start(ME.id)}catch(e){console.warn('[boot] boost model failed to start',e)}
       const last=localStorage.getItem('ich.sid');
       view.sid=last||DModel.ICH_ID;
     }catch(e){console.warn('[boot] server model failed to start',e);view.sid=DModel.ICH_ID}

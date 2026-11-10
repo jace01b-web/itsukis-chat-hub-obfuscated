@@ -44,7 +44,7 @@ function pingToast(m,key,sender){
   if(host.querySelector('.ping-rich[data-mid="'+m.id+'"]'))return;
   const live=host.querySelectorAll('.ping-rich');
   for(let i=0;i<=live.length-3;i++)live[i].remove();
-  const name=sender&&!sender.deleted?displayUsername(sender.username):'Someone';
+  const name=sender&&!sender.deleted?dispName(sender):'Someone';
   const where=key===CFG.GLOBAL_ROOM?'in Global chat':(String(key).startsWith('dm_')?'in a DM':'in a room');
   const raw=(m.text||'').replace(/\s+/g,' ').trim();
   const prev=raw?(raw.length>90?raw.slice(0,90)+'…':raw):((m.images&&m.images.length)?'[sent an image]':((m.files&&m.files.length)?'[sent '+filesLabel(m.files)+']':''));
@@ -104,7 +104,7 @@ function checkPingNotifications(){
       if(_viewingRoom(key))return;               // already looking right at it — the in-app toast/sound covers this
       if(pinged&&pingSeen(m.id))return;          // already seen in its chat
       const sender=DB.getUser(m.senderId);
-      const name=sender&&!sender.deleted?displayUsername(sender.username):'Someone';
+      const name=sender&&!sender.deleted?dispName(sender):'Someone';
       try{
         const n=new Notification(name,{
           icon:'https://aniitsukicoded.github.io/backups/icon.png',

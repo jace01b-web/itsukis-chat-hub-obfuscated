@@ -43,7 +43,7 @@
     const t=now();
     const ids=Object.keys(typers).map(Number).filter(id=>id!==ME.id&&Number(typers[id])&&t-Number(typers[id])<STALE).sort((a,b)=>a-b);
     if(!ids.length){hide();return}
-    const nm=ids.map(id=>{const u=DB.getUser(id);return u&&!u.deleted?displayUsername(u.username):'Someone'});
+    const nm=ids.map(id=>{const u=DB.getUser(id);return u&&!u.deleted?dispName(u):'Someone'});
     const sig=ids.join(',')+'|'+nm.join(',');
     // Same set of typers as last draw: leave the DOM alone so the dot-wave
     // animation (and the CSS entrance transition) keep running smoothly

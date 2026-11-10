@@ -36,3 +36,31 @@ function filterNamesOn(){return MODSET.filterNames!==false}
 function customNamesOn(){return MODSET.customNames!==false}
 function displayUsername(name){return(filterNamesOn()&&containsProfanity(name))?censorText(name):name}
 function usernameAllowed(name){return!filterNamesOn()||!containsProfanity(name)}
+
+/* ---- Display names (Discord's "display name", on top of the @username) ----
+   dispName() is what every piece of UI that shows a person uses. It returns their display name
+   if they set one and their username if they didn't, with the same profanity filtering applied
+   either way.
+
+   The username is still the identity: @mentions, friend requests, the moderation tools, sign-in
+   and anything that has to MATCH an account all keep using u.username. Display names are
+   presentation only, which is exactly how Discord treats them - two people can share one. */
+function dispName(u,fallback){
+  if(u==null||u==='')return fallback||'Deleted User';
+  // Accept an id as happily as a user object, so callers don't all have to look the user up.
+  if(typeof u==='number'||typeof u==='string'){
+    let got=null;try{got=DB.getUser(Number(u))}catch(_){}
+    if(!got)return fallback||('User '+u);
+    u=got;
+  }
+  if(u.deleted)return 'Deleted User';
+  const d=(u.style&&u.style.displayName)||'';
+  return displayUsername(d||u.username||fallback||'User');
+}
+/* True when this person's display name differs from their username, i.e. there is a point in
+   showing "@username" underneath it on their profile. */
+function hasDispName(u){
+  if(!u||typeof u!=='object')return false;
+  const d=(u.style&&u.style.displayName)||'';
+  return !!d&&d!==u.username;
+}

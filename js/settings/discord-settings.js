@@ -105,15 +105,26 @@ function SET_PANES(me,s){
       <div class="dl-acct-body">
         <div class="dl-acct-top">
           <span class="dl-acct-av">${avatarHtml(me,me.username,'width:80px;height:80px;font-size:30px')}</span>
-          <div class="dl-acct-name"><b>${esc(displayUsername(me.username))}</b><small>#${me.id}</small></div>
+          <div class="dl-acct-name"><b>${esc(dispName(me))}</b><small>#${me.id}</small></div>
           <button type="button" class="btn dl-acct-edit" id="saGoProfile">Edit User Profile</button>
         </div>
         <div class="dl-acct-fields">
+          <div class="dl-acct-f"><span>Display Name</span><b>${esc(DB.displayNameOf(me.id)||me.username)}</b><button type="button" class="btn sec small" id="saDispOpen">Edit</button></div>
           <div class="dl-acct-f"><span>Username</span><b>${esc(me.username)}</b><button type="button" class="btn sec small" id="saRenameOpen">Edit</button></div>
           <div class="dl-acct-f"><span>User ID</span><b>#${me.id}</b><button type="button" class="btn sec small" id="saCopyId">Copy</button></div>
           <div class="dl-acct-f"><span>Sign-in</span><b>${esc(me.provider||'password')}${me.email?' · '+esc(me.email):''}</b></div>
         </div>
       </div>
+    </div>
+
+    <div class="set-card" id="saDispCard" style="display:none">
+      <div class="section-h" style="margin-top:0">Change display name</div>
+      <div class="field"><label>Display Name</label><input id="saDisp" maxlength="32" placeholder="${esc(me.username)}" value="${esc(DB.displayNameOf(me.id))}"></div>
+      <div class="hint">This is the name people see in chat and in member lists. Your username
+        (<b>@${esc(me.username)}</b>) never changes with it, and mentions still use the username.
+        Leave it empty to go back to showing your username. No cooldown — change it as often as you like.</div>
+      <div class="err" id="saDispErr"></div>
+      <div class="actions" style="justify-content:flex-start"><button class="btn" id="saDispSave">Save</button><button class="btn sec" id="saDispClear">Reset to username</button></div>
     </div>
 
     <div class="set-card" id="saRenameCard" style="display:none">
@@ -156,7 +167,37 @@ function SET_PANES(me,s){
     </div>`;
   })();
 
+  /* ---------- Status, inside the profile editor ----------
+     The user-panel popout is still there; this is the same four options in the place people
+     actually go looking for them. Both write the same two fields, so they stay in step. */
+  const curStatus=(()=>{try{return normStatus(me.style&&me.style.status)}catch(_){return 'online'}})();
+  const curCustom=(()=>{try{return String((me.style&&me.style.customStatus)||'')}catch(_){return ''}})();
+  const statusCard=`<div class="set-card">
+    <div class="section-h" style="margin-top:0">Status</div>
+    <div class="dl-stgrid" id="spStatus">
+      ${STATUSES.map(id=>`<button type="button" class="dl-stopt${curStatus===id?' on':''}" data-sst="${id}">
+        <i class="dl-dot st-${id}"></i>
+        <span><b>${esc(STATUS_LABEL[id])}</b>${STATUS_SUB[id]?`<small>${esc(STATUS_SUB[id])}</small>`:''}</span>
+      </button>`).join('')}
+    </div>
+    <div class="field" style="margin:12px 0 0"><label>Custom status</label>
+      <input id="spCustomStatus" type="text" maxlength="128" placeholder="What's on your mind?" value="${esc(curCustom)}" autocomplete="off"></div>
+    <div class="err" id="spStatusErr"></div>
+  </div>`;
+
   const profile=`<div data-p="profile" class="hidden">
+    <div class="set-card">
+      <div class="section-h" style="margin-top:0">Display Name</div>
+      <div class="field" style="margin-bottom:6px"><label>How your name appears to everyone</label>
+        <input id="spDisp" maxlength="32" placeholder="${esc(me.username)}" value="${esc(DB.displayNameOf(me.id))}"></div>
+      <div class="hint">Your username stays <b>@${esc(me.username)}</b> — that's what mentions and
+        friend requests use. Leave this empty to show your username instead.</div>
+      <div class="err" id="spDispErr"></div>
+      <div class="actions" style="justify-content:flex-start"><button class="btn" id="spDispSave">Save</button></div>
+    </div>
+
+    ${statusCard}
+
     <div class="set-card">
       <div class="section-h" style="margin-top:0">Avatar</div>
       <div style="display:flex;align-items:center;gap:14px">
@@ -364,6 +405,28 @@ function wireDiscordSettings(root,me,s,reopen){
     c.style.display=c.style.display==='none'?'':'none';
     if(c.style.display==='')q('#saName').focus();
   };
+  if(q('#saDispOpen'))q('#saDispOpen').onclick=()=>{
+    const c=q('#saDispCard');if(!c)return;
+    c.style.display=c.style.display==='none'?'':'none';
+    if(c.style.display==='')q('#saDisp').focus();
+  };
+  /* Saving a display name repaints everything that shows a name rather than reloading the page:
+     unlike a username change there is nothing to re-key, so there is no reason to interrupt. */
+  const saveDisp=async v=>{
+    const b=q('#saDispSave'),e=q('#saDispErr');
+    if(b)b.disabled=true;if(e)e.textContent='';
+    try{
+      await DB.setDisplayName(me.id,v);
+      ME=DB.currentUser();
+      toast(v?'Display name saved.':'Display name cleared.');
+      reopen('account');
+      try{if(typeof DiscordShell!=='undefined'&&DiscordShell.refresh)DiscordShell.refresh()}catch(_){}
+      try{if(typeof renderChat==='function'){renderedKey=null;renderChat()}}catch(_){}
+    }catch(err){if(b)b.disabled=false;if(e)e.textContent='Could not save: '+(err.code||err.message)}
+  };
+  if(q('#saDispSave'))q('#saDispSave').onclick=()=>saveDisp(q('#saDisp').value);
+  if(q('#saDispClear'))q('#saDispClear').onclick=()=>saveDisp('');
+  if(q('#saDisp'))q('#saDisp').onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();saveDisp(q('#saDisp').value)}};
   if(q('#saCopyId'))q('#saCopyId').onclick=()=>{
     const b=q('#saCopyId');
     try{navigator.clipboard.writeText(String(me.id)).then(()=>{b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1400)},()=>toast('Couldn’t copy.','bad'))}
@@ -387,6 +450,47 @@ function wireDiscordSettings(root,me,s,reopen){
   if(q('#saSignOut'))q('#saSignOut').onclick=()=>doSignOut();
 
   /* ---------- Profiles ---------- */
+  if(q('#spDispSave'))q('#spDispSave').onclick=async()=>{
+    const b=q('#spDispSave'),e=q('#spDispErr');
+    b.disabled=true;if(e)e.textContent='';
+    try{
+      await DB.setDisplayName(me.id,q('#spDisp').value);
+      ME=DB.currentUser();
+      toast('Display name saved.');
+      reopen('profile');
+      try{if(typeof DiscordShell!=='undefined'&&DiscordShell.refresh)DiscordShell.refresh()}catch(_){}
+      try{if(typeof renderChat==='function'){renderedKey=null;renderChat()}}catch(_){}
+    }catch(err){b.disabled=false;if(e)e.textContent='Could not save: '+(err.code||err.message)}
+  };
+  /* Status, same two writes the user-panel popout makes. Repaints the panel and the member list
+     so the dot and the label move immediately rather than on the next unrelated render. */
+  root.querySelectorAll('#spStatus [data-sst]').forEach(b=>{
+    b.onclick=async()=>{
+      const v=b.dataset.sst,e=q('#spStatusErr');
+      if(e)e.textContent='';
+      root.querySelectorAll('#spStatus [data-sst]').forEach(x=>x.classList.toggle('on',x===b));
+      try{
+        await DB.setStatus(me.id,v);ME=DB.currentUser();
+        try{if(typeof DiscordShell!=='undefined'&&DiscordShell.refresh)DiscordShell.refresh()}catch(_){}
+      }catch(err){
+        if(e)e.textContent='Could not save your status'+(/PERMISSION/i.test(err.code||err.message||'')?' — the database rules need republishing.':'.');
+      }
+    };
+  });
+  if(q('#spCustomStatus')){
+    const ci=q('#spCustomStatus');
+    let was=ci.value;
+    const save=async()=>{
+      if(ci.value===was)return;
+      was=ci.value;
+      try{
+        await DB.setCustomStatus(me.id,ci.value);ME=DB.currentUser();
+        try{if(typeof DiscordShell!=='undefined'&&DiscordShell.refresh)DiscordShell.refresh()}catch(_){}
+      }catch(_){const e=q('#spStatusErr');if(e)e.textContent='Could not save your custom status.'}
+    };
+    ci.addEventListener('blur',save);
+    ci.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();ci.blur()}});
+  }
   if(q('#spAvFile'))q('#spAvFile').onchange=()=>{
     const f=q('#spAvFile').files[0];if(!f)return;
     q('#spAvErr').textContent='';
@@ -481,7 +585,7 @@ function wireDiscordSettings(root,me,s,reopen){
     if(!list.length)blk.innerHTML='<div class="hint">You haven’t blocked anyone.</div>';
     else blk.innerHTML=list.map(id=>{
       const u=DB.getUser(id)||{id,username:'User '+id};
-      return `<div class="dl-blk"><span>${esc(displayUsername(u.username))}</span><button type="button" class="btn sec small" data-unblock="${id}">Unblock</button></div>`;
+      return `<div class="dl-blk"><span>${esc(dispName(u))}</span><button type="button" class="btn sec small" data-unblock="${id}">Unblock</button></div>`;
     }).join('');
     blk.onclick=async e=>{
       const b=e.target.closest('[data-unblock]');if(!b)return;

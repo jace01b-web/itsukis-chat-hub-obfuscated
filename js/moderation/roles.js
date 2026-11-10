@@ -49,6 +49,34 @@ let ADMINS_LOADED=false;
 function isAdmin(id){return ADMINS_CACHE[Number(id)]===1}
 // Anyone with moderation powers (owner, admin or mod) — used for showing the Moderation tools.
 function isStaff(id){return isOwner(id)||isAdmin(id)||isMod(id)}
+
+/* ---- The staff ladder ----
+   One place that says how the site ranks compare, so every moderation check agrees.
+
+   This used to be written out by hand at each call site, and each one got it slightly wrong in
+   the same direction: an admin could act on another admin, and a mod on another mod, because the
+   tests only excluded the ranks ABOVE the actor and never the actor's own. The rule everywhere
+   is now the same one: you may act on someone strictly below you, and on nobody else.
+
+     owner 4  >  admin 3  >  mod 2  >  everyone 1
+
+   MVP is deliberately not on this ladder. It is a perks tier with no moderation powers, so it
+   neither protects its holder from a mod nor lets them act on anyone. */
+function siteRank(id){
+  id=Number(id);
+  if(isOwner(id))return 4;
+  if(isAdmin(id))return 3;
+  if(isMod(id))return 2;
+  return 1;
+}
+/* Can `actor` use a staff power on `target`? Strictly-higher rank, and never on yourself through
+   a staff power (acting on your OWN content is a separate, always-allowed case the callers
+   handle before they get here). */
+function outranks(actor,target){
+  actor=Number(actor);target=Number(target);
+  if(actor===target)return false;
+  return siteRank(actor)>siteRank(target);
+}
 /* MVP: permanent role (mvp/$id), won from the Daily Spin (0.1%) or given by an owner. It has NO moderation powers —
    only perks (longer messages/descriptions, image banner, 3 daily spins, MVP chat, free permanent VIP) and it ranks
    above Admin/Mod in member lists. Hiding the tag only changes how the NAME looks; the perks stay. */

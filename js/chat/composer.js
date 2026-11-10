@@ -218,12 +218,14 @@ function renderComposeContext(){
     $('#ccText').textContent='';
   }else if(view.replyingTo){
     const s=DB.getUser(view.replyingTo.senderId);
-    const name=(s&&!s.deleted)?displayUsername(s.username):'Deleted User';
+    const name=(s&&!s.deleted)?dispName(s):'Deleted User';
     box.classList.add('active');
     $('#ccLabel').textContent='Replying to '+name;
     const arr=DB.messages(view.roomKey);
     const src=arr.find(x=>x.id===view.replyingTo.id);
-    $('#ccText').textContent=src?replyPreviewText(src):'';
+    // Same plain, spoiler-safe preview the reply quote uses - see mdPlain() in js/discord/markdown.js.
+    const pv=src?replyPreviewText(src):'';
+    $('#ccText').textContent=(typeof mdPlain==='function')?mdPlain(pv):pv;
   }else{
     box.classList.remove('active');
   }

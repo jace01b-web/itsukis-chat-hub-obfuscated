@@ -27,19 +27,18 @@ function isEmojiOnly(t){
   if(!_EMOJI_ONLY_RE.test(t))return false;
   return(t.match(_EMOJI_UNIT_RE)||[]).length<=27;
 }
+/* Message text -> HTML. The escaping, mentions, links and all of Discord's markdown now live
+   together in js/discord/markdown.js, because the order those passes run in is the thing that
+   keeps the output safe and they cannot be reasoned about separately. mdRender() takes the RAW
+   text and does its own escaping.
+
+   linkify() below is kept because other callers still use it on already-escaped text. */
 function fmtText(t){
   if(!t)return'';
-  let s=esc(t);
-  s=s.replace(/@(everyone|here)\b/g,'<span class="mention everyone">@$1</span>');
-  s=s.replace(/@([0-9a-zA-Z._-]{1,20})/g,(full,n)=>{
-    if(n==='everyone'||n==='here')return full;
-    const id=DB.get().usernameIndex[n.toLowerCase()];
-    if(id===undefined)return full;
-    const u=DB.getUser(id);
-    return `<span class="mention${id===ME.id?' me':''}" data-open-profile="${id}" title="View profile">@${esc(u.username)}</span>`;
-  });
-  s=linkify(s);
-  return s;
+  if(typeof mdRender==='function')return mdRender(t);
+  // Fallback for the (impossible in the shipped build) case where markdown.js did not load:
+  // escape and linkify, so a message is never rendered as raw HTML.
+  return linkify(esc(t));
 }
 // Turns bare "https://..." / "http://..." URLs into clickable links, Discord-style —
 // the scheme is required, so plain "example.com" is left as plain text. Runs on

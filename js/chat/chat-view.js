@@ -120,6 +120,14 @@ function renderChat(){
   }else{
     const inc=DB.incoming(ME.id);
     list.appendChild(sbItem('👥',(typeof DiscordLook!=='undefined'&&DiscordLook.on())?'Friends':'Friends & Requests',view.dmView==='friends',()=>{view.dmView='friends';view.roomKey=null;renderChat()},inc.length));
+    /* The Shop sits here, under Friends, which is where Discord puts its own - it is a site
+       feature rather than a server, so it has no business on the server rail. It is also listed
+       inside ICH, for anyone who looks there first. */
+    {
+      const shop=sbItem('💎','Shop',false,()=>{if(typeof closeExtras==='function')closeExtras();openShop()});
+      shop.classList.add('sb-shop');
+      list.appendChild(shop);
+    }
     addHTML(list,`<div class="sb-section">Direct Messages<button type="button" class="sb-plus" id="sbPlus" title="Add a friend" aria-label="Add a friend">+</button></div>`);
     {const pl=document.getElementById('sbPlus');if(pl)pl.onclick=e=>{e.stopPropagation();modalAddFriend()}}
     if(!ME.friends.length)addHTML(list,`<div class="hint" style="padding:6px 10px">Add friends to start chatting.</div>`);
@@ -217,7 +225,7 @@ function openOnlineModal(label,ids){
   const root=$('#modalRoot');
   const rows=ids.map(id=>{
     const u=DB.getUser(id);
-    const nm=u?displayUsername(u.username):'Loading…';
+    const nm=u?dispName(u):'Loading…';
     const nmHTML=u?fullNameHTML(id,esc(nm)):esc(nm);
     return`<div class="online-row" data-open-profile="${id}"><span class="dot"></span><span class="nm">${nmHTML}</span><span class="idv">#${id}</span></div>`;
   }).join('')||`<div class="hint" style="padding:10px">No one is online right now.</div>`;

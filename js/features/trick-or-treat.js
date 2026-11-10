@@ -259,7 +259,7 @@ function totRankOf(id){const b=totBoard();for(let i=0;i<b.length;i++)if(b[i].id=
 // hasn't synced to this client yet, so the board never shows a wall of "User 12".
 const totName=id=>{
   const u=DB.getUser(id);
-  if(u&&u.username)return displayUsername(u.username);
+  if(u&&u.username)return dispName(u);
   const r=TOT_ALL[id];
   return (r&&typeof r.name==='string'&&r.name)?displayUsername(r.name):'User '+id;
 };

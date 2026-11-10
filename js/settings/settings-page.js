@@ -18,31 +18,17 @@ function openSettings(fromChat,startTab){
     <h2 id="sTitle">⚙️ Settings</h2>
     <div class="hint">Everything is private except your bubble &amp; text color — that's how <b>everyone</b> sees your messages.</div>
 
-    <div class="preview-box dl-hide" id="pvBox">
-      <div class="pv-bg" id="pvBg"></div><div class="pv-dim" id="pvDim"></div>
-      <div class="msg"><div class="msg-row"><div class="avatar" style="width:28px;height:28px;font-size:11px">A</div><div class="msg-body"><div class="meta">Alex</div><div class="bubble" style="background:#3b3f7a;color:#fff">Hey! How does this look?</div></div></div></div>
-      <div class="msg me"><div class="msg-row"><div class="avatar" style="width:28px;height:28px;font-size:11px">Y</div><div class="msg-body"><div class="meta">You</div><div class="bubble">Looking great 🔥</div></div></div></div>
-    </div>
-
     <button type="button" class="dl-set-x" id="sX" aria-label="Close settings" title="Close (Esc)">✕</button>
     <div class="modal-tabs" id="sTabs">
-      <div class="dl-set-user" id="sProfile" role="button" tabindex="0" title="Edit your profile"><span class="dl-set-av">${avatarHtml(ME,ME.username,'width:40px;height:40px;font-size:16px')}</span><span class="dl-set-nm"><b>${esc(displayUsername(ME.username))}</b><small>Edit Profiles <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" fill="currentColor"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z"/></svg></small></span></div>
+      <div class="dl-set-user" id="sProfile" role="button" tabindex="0" title="Edit your profile"><span class="dl-set-av">${avatarHtml(ME,ME.username,'width:40px;height:40px;font-size:16px')}</span><span class="dl-set-nm"><b>${esc(dispName(ME))}</b><small>Edit Profiles <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" fill="currentColor"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z"/></svg></small></span></div>
       <div class="dl-set-search"><input id="sSearch" type="text" placeholder="Search" autocomplete="off" spellcheck="false" aria-label="Search settings"></div>
       ${SET_NAV(ME)}
     </div>
 
     <div data-p="msg" class="hidden">
-      <div class="set-card dl-hide">
-        <div class="section-h" style="margin-top:0">Your message color (public)</div>
-        <div class="set-grid">
-          <div class="field"><label>Bubble color</label><input type="color" id="sMe" value="${s.meBubble}"></div>
-          <div class="field"><label>Text color</label><input type="color" id="sMeT" value="${s.meText}"></div>
-        </div>
-      </div>
       <div class="set-card">
         <div class="section-h" style="margin-top:0">Text display</div>
         <div class="set-grid">
-          <div class="field dl-hide"><label>Bubble roundness <span class="val" id="vRad"></span></label><input type="range" id="sRad" min="0" max="28" value="${s.radius}"></div>
           <div class="field" style="grid-column:1/-1"><label>Font</label><div id="sFontChips" style="display:flex;flex-wrap:wrap;gap:6px"></div><select id="sFont" style="display:none">${fontKeys().map(f=>`<option value="${f}" ${s.font===f?'selected':''}>${f==='custom'?'custom (link)':f}</option>`).join('')}</select></div>
           <div class="field" id="sCustomFontWrap" style="grid-column:1/-1;${s.font==='custom'?'':'display:none'}"><label>Custom font link</label><input id="sCustomFont" type="url" maxlength="300" spellcheck="false" autocapitalize="off" placeholder="https://…/MyFont.woff2" value="${esc(s.customFont||'')}"><span class="hint" id="sCustomFontHint">Paste a font link, or upload a font file (.zip, .ttf, .otf, .woff, .woff2) from your device.</span><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn sec small" id="sFontUp" style="width:auto">Upload font file…</button><span class="hint" id="sFontUpName"></span></div><input type="file" id="sFontFile" accept=".zip,.ttf,.otf,.woff,.woff2" hidden></div>
           <div class="field"><label>Text size <span class="val" id="vSize"></span></label><input type="range" id="sSize" min="11" max="24" value="${s.size}"></div>
@@ -88,12 +74,6 @@ function openSettings(fromChat,startTab){
         <div class="dl-sub">Color Themes</div>
         <div class="dl-themes" id="dlColorThemes">${DiscordLook.themes().filter(t=>t.group==='color').map(t=>`<button type="button" class="dl-sw${DiscordLook.theme()===t.id?' active':''}" data-dl-theme="${t.id}" title="${esc(t.name)}" aria-label="${esc(t.name)} theme"><span class="dl-sw-c" style="background:${t.sw}"></span><span class="dl-sw-l">${esc(t.name)}</span></button>`).join('')}</div>
         <div class="hint" style="margin-top:6px">Themes apply to the whole site while Discord look is on. Bubble colors, roundness, backgrounds and glass/opacity settings are hidden in Discord look. Saved to your account.</div>
-      </div>
-      <div class="set-card dl-hide">
-        <div class="section-h" style="margin-top:0">Interface glass</div>
-        <div class="field"><label>UI opacity <span class="val" id="vUiO"></span></label><input type="range" id="sUiO" min="10" max="100" value="${s.uiOpacity??50}"></div>
-        <div class="field"><label>UI blur (frosted glass) <span class="val" id="vUiB"></span></label><input type="range" id="sUiB" min="0" max="30" value="${s.uiBlur??18}"></div>
-        <div class="hint">Lower opacity lets your custom background show through panels, the sidebar and the top bar.</div>
       </div>
       <div class="set-card">
         <div class="section-h" style="margin-top:0">Scrolling</div>
@@ -1110,14 +1090,16 @@ function openSettings(fromChat,startTab){
     };
   }
   function read(){
-    s.meBubble=$$('#sMe').value;s.meText=$$('#sMeT').value;
-    s.radius=+$$('#sRad').value;s.font=$$('#sFont').value;s.size=+$$('#sSize').value;
+    /* meBubble / meText / radius / uiOpacity / uiBlur belonged to the old glass look and their
+       controls are gone with it. They are NOT read here any more - `s` already carries whatever
+       the account had, so removing the controls preserves those values rather than resetting
+       them, which matters because meBubble is still the colour of this person's messages. */
+    s.font=$$('#sFont').value;s.size=+$$('#sSize').value;
     s.customFont=(($$('#sCustomFont')||{}).value||'').trim();
     s.bold=$$('#sBold').checked;s.italic=$$('#sItal').checked;
     s.bgType=$$('#sBgT').value;s.bgColor=$$('#sBg1').value;s.bgColor2=$$('#sBg2').value;
     s.bgFit=$$('#sBgFit').value;
     s.bgBlur=+$$('#sBlur').value;s.bgDim=+$$('#sDim').value;
-    s.uiOpacity=+$$('#sUiO').value;s.uiBlur=+$$('#sUiB').value;
     s.autoScrollBottom=$$('#sAutoScroll').checked;
     s.discordLook=true;   // always on
     s.antiLag=AntiLag.on();   // keep the Save payload in step with the toggle (it saves itself instantly)
@@ -1174,18 +1156,22 @@ function openSettings(fromChat,startTab){
     while(l.length>5||l.join('\n').length>1500)l.pop();
     s.customFonts=l.join('\n');
   }
+  /* The readouts and the preview box belonged to controls the Discord look does not have. Each
+     lookup is guarded rather than removed outright, because the same two functions still serve
+     the controls that DID survive (text size, background blur and dim). */
   function readouts(){
-    $$('#vRad').textContent=s.radius+'px';$$('#vSize').textContent=s.size+'px';
-    $$('#vBlur').textContent=s.bgBlur+'px';$$('#vDim').textContent=s.bgDim+'%';
-    $$('#vUiO').textContent=s.uiOpacity+'%';$$('#vUiB').textContent=s.uiBlur+'px';
+    const set=(id,v)=>{const e=$$(id);if(e)e.textContent=v};
+    set('#vSize',s.size+'px');
+    set('#vBlur',s.bgBlur+'px');
+    set('#vDim',s.bgDim+'%');
   }
   function preview(){
     read();readouts();
-    $$('#sCustomFontWrap').style.display=s.font==='custom'?'':'none';
+    const cf=$$('#sCustomFontWrap');if(cf)cf.style.display=s.font==='custom'?'':'none';
     renderFontChips();
-    applyStyle($$('#pvBox'),s);
-    paintBg($$('#pvBg'),$$('#pvDim'),s);
-    // live-preview the real app too, so background/glass changes are visible behind the modal
+    const pv=$$('#pvBox');if(pv)applyStyle(pv,s);
+    const pb=$$('#pvBg');if(pb)paintBg(pb,$$('#pvDim'),s);
+    // live-preview the real app too, so background changes are visible behind the modal
     applyStyle(document.documentElement,s);
     refitAllAvatars();
   }

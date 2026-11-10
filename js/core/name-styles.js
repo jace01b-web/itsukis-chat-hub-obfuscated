@@ -28,6 +28,24 @@ function styledNameHTML(id,escapedName){
   const p=nameStylePreset(id);
   return p?'<span class="flair-name flair-'+p+'">'+escapedName+'</span>':escapedName;
 }
+/* ---- The name on a message, scoped to where the message is ----
+   fullNameHTML() paints the site ranks: the MVP/VIP title chip and the Daily-Spin flair styling.
+   Those belong to ICH and to DMs, which are site-level. Inside a server somebody else made they
+   are noise - that server never granted them - so there the name takes that server's own top
+   role colour instead, exactly like Discord.
+
+   Profiles deliberately keep using fullNameHTML(): a profile card is site-wide, and the ranks on
+   it are the equivalent of Discord's global badges. */
+function msgNameHTML(id,escapedName){
+  let srv=null;
+  try{srv=(typeof view!=='undefined'&&view.sid)||null}catch(_){}
+  let scoped=false;
+  try{scoped=!!srv&&typeof DModel!=='undefined'&&!DModel.isSystem(srv)&&(typeof view==='undefined'||view.mode!=='dms')}catch(_){}
+  if(!scoped)return fullNameHTML(id,escapedName);
+  let col='';
+  try{col=DModel.colorOf(srv,id)||''}catch(_){}
+  return '<span class="nm-user"'+(col?' style="color:'+esc(col)+'"':'')+'>'+escapedName+'</span>';
+}
 function checkMessageText_(text){return text}       // no longer pre-censors at send time — see displayMsgText()
 // Personal, per-viewer filter: ON by default, editable in Settings > Filter, client-side
 // only (each user's own preference for what THEY see; independent of the owner's

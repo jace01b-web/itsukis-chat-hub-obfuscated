@@ -386,7 +386,7 @@ function csBody(){
 }
 function csRender(){
   const bg=document.getElementById('csBg');if(!bg||!ME)return;
-  const nm=displayUsername(ME.username);
+  const nm=dispName(ME);
   const hasEq=!!((window.HW_EQ||{})[ME.id]);
   bg.querySelector('.cs-prev').innerHTML=avatarHtml(ME,nm,'width:46px;height:46px;font-size:18px;flex:none')+'<div class="cs-pn">'+fullNameHTML(ME.id,esc(nm))+'<small>This is how your name looks to everyone</small></div>';
   bg.querySelector('.cs-secs').innerHTML=CS_SECTIONS.map(s=>'<button type="button" data-s="'+s.id+'" class="'+(s.id===_csSec?'on':'')+'">'+s.emoji+' '+s.name+'</button>').join('');

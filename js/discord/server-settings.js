@@ -96,6 +96,12 @@ function openServerSettings(sid,section){
   /* ---------------- Overview ---------------- */
   function drawOverview(){
     const sys=DModel.isSystem(sid);
+    const textChans=DModel.channels(sid).filter(c=>c.type!=='voice').sort((a,b)=>a.pos-b.pos);
+    let bLevel=0,bCount=0;
+    try{bLevel=DBoost.levelFor(sid);bCount=DBoost.countFor(sid)}catch(_){}
+    const bCountTxt=bCount+' boost'+(bCount===1?'':'s');
+    const curSys=(typeof srv.sys==='string'&&textChans.some(c=>c.id===srv.sys))
+      ? srv.sys : (textChans[0]?textChans[0].id:'');
     main.innerHTML=
       '<div class="dset-h1">Server Overview</div>'+
       (sys?'<div class="dnote">This is the home server. Its name and icon are fixed, and nobody can leave it.</div>':'')+
@@ -117,6 +123,42 @@ function openServerSettings(sid,section){
         '<div class="dfield" style="margin-top:12px"><label class="dlabel">Short description</label>'+
         '<input class="dinput" id="svDesc" maxlength="200" value="'+esc((DModel._state.discovery[sid]||{}).desc||'')+'" placeholder="What is this server about?"></div>'+
         '<button type="button" class="dbtn grey" id="svPubSave">Save listing</button>')+
+      /* ---- v53: the things Discord calls System Messages, plus a server description ---- */
+      (sys?'':'<div class="dsep"></div>'+
+        '<div class="dset-h2">Server Banner</div>'+
+        (bLevel>=1
+          ?'<div class="dhint" style="margin-bottom:8px">Shown across the top of the channel list. '+
+            'Wide images work best — it is cropped to 16:9.</div>'+
+            '<div class="svbn-prev'+(srv.banner?'':' empty')+'" id="svBnPrev"'+
+              (srv.banner?' style="background-image:url(\''+esc(srv.banner)+'\')"':'')+'>'+
+              (srv.banner?'':'No banner yet')+'</div>'+
+            '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">'+
+              '<label class="dbtn" style="cursor:pointer">Upload banner<input type="file" id="svBnFile" accept="image/*" hidden></label>'+
+              (srv.banner?'<button type="button" class="dbtn grey" id="svBnClear">Remove</button>':'')+
+            '</div>'
+          :'<div class="dnote">A server banner unlocks at <b>Boost Level 1</b> (2 boosts). '+
+            'This server has '+bCountTxt+'.</div>')+
+        '<div class="derr" id="svBnErr"></div>'+
+        '<div class="dsep"></div>'+
+        '<div class="dset-h2">About</div>'+
+        '<div class="dfield"><label class="dlabel">Server description</label>'+
+        '<textarea class="dinput" id="svAbout" rows="3" maxlength="300" placeholder="What goes on in here?">'+esc(srv.desc||'')+'</textarea>'+
+        '<div class="dhint">Shown to people before they join. Up to 300 characters.</div></div>'+
+        '<div class="dsep"></div>'+
+        '<div class="dset-h2">System Messages</div>'+
+        '<div class="dfield"><label class="dlabel">System messages channel</label>'+
+        '<select class="dinput" id="svSys">'+
+          textChans.map(c=>'<option value="'+esc(c.id)+'"'+(c.id===curSys?' selected':'')+'>#'+esc(c.name)+'</option>').join('')+
+        '</select>'+
+        '<div class="dhint">Where join messages are posted.</div></div>'+
+        '<div class="drow"><div class="drow-txt"><div class="drow-nm">Send a message when someone joins</div>'+
+        '<div class="drow-d">A short line in the channel above, the way Discord announces a new member.</div></div>'+
+        dtoggleHTML(srv.welcome!==false,'id="svWelcome"')+'</div>'+
+        '<div class="drow"><div class="drow-txt"><div class="drow-nm">Use a random welcome line</div>'+
+        '<div class="drow-d">Picks from a set of greetings instead of saying the same thing every time. '+
+        'Off means a plain “<i>name</i> joined the server.”</div></div>'+
+        dtoggleHTML(srv.wjoin!==false,'id="svWJoin"')+'</div>'+
+        '<button type="button" class="dbtn grey" id="svSysSave">Save system messages</button>')+
       '<div class="dsep"></div>'+
       '<div class="dset-h2">Server Info</div>'+
       '<div class="drow"><div class="drow-txt"><div class="drow-nm">Members</div>'+
@@ -141,6 +183,43 @@ function openServerSettings(sid,section){
         if(typeof DiscordShell!=='undefined')DiscordShell.refresh();
       }catch(e){err.textContent=e.message||'Could not save.'}
       finally{b.disabled=false}
+    };
+    const bnFile=main.querySelector('#svBnFile');
+    if(bnFile)bnFile.onchange=async()=>{
+      const f=bnFile.files&&bnFile.files[0];if(!f)return;
+      const err=main.querySelector('#svBnErr');err.textContent='';
+      try{
+        const data=await serverBannerFromFile(f);
+        await DModel.updateServer(sid,{banner:data});
+        toast('Banner saved.','good');
+        if(typeof DiscordShell!=='undefined')DiscordShell.refresh();
+        drawOverview();
+      }catch(e){err.textContent=e.message||'Could not use that image.'}
+      finally{bnFile.value=''}
+    };
+    const bnClear=main.querySelector('#svBnClear');
+    if(bnClear)bnClear.onclick=async()=>{
+      const err=main.querySelector('#svBnErr');err.textContent='';
+      try{
+        await DModel.updateServer(sid,{banner:''});
+        toast('Banner removed.','good');
+        if(typeof DiscordShell!=='undefined')DiscordShell.refresh();
+        drawOverview();
+      }catch(e){err.textContent=e.message||'Could not remove the banner.'}
+    };
+    const sb=main.querySelector('#svSysSave');
+    if(sb)sb.onclick=async()=>{
+      sb.disabled=true;const err=main.querySelector('#svErr');err.textContent='';
+      try{
+        await DModel.updateServer(sid,{
+          desc:main.querySelector('#svAbout').value,
+          sys:main.querySelector('#svSys').value,
+          welcome:main.querySelector('#svWelcome').checked,
+          wjoin:main.querySelector('#svWJoin').checked
+        });
+        toast('Saved.','good');
+      }catch(e){err.textContent=e.message||'Could not save.'}
+      finally{sb.disabled=false}
     };
     const pb=main.querySelector('#svPubSave');
     if(pb)pb.onclick=async()=>{
@@ -173,10 +252,16 @@ function openServerSettings(sid,section){
   function drawRoleList(){
     const host=main.querySelector('#rmList');if(!host)return;
     const roles=DModel.roles(sid);
+    /* ICH's roles ARE the site ranks - Owner, Admin, Mod, MVP, VIP and anything in customroles/.
+       They are granted from those nodes and the database rules forbid the browser writing them,
+       so a role created here could never be given to anyone. The + is left out rather than
+       offered and then refused. */
+    const sysRoles=DModel.isSystem(sid);
     host.innerHTML='<div class="drm-list-head"><h3>Roles — '+roles.length+'</h3>'+
-      '<button type="button" class="dbtn sm" id="rmNew">'+DI.plus+'</button></div>'+
+      (sysRoles?'':'<button type="button" class="dbtn sm" id="rmNew">'+DI.plus+'</button>')+'</div>'+
+      (sysRoles?'<div class="dhint" style="padding:0 10px 8px">ICH\u2019s roles are the site ranks. They\u2019re granted from the owner tools, not created here.</div>':'')+
       '<div id="rmRoles"></div>';
-    host.querySelector('#rmNew').onclick=async()=>{
+    if(host.querySelector('#rmNew'))host.querySelector('#rmNew').onclick=async()=>{
       try{const rid=await DModel.createRole(sid,'new role');selRole=rid;roleTab='display';setTimeout(drawRoles,250)}
       catch(e){toast(e.message||'Could not create a role','bad')}
     };
@@ -339,7 +424,7 @@ function openServerSettings(sid,section){
   function paneMembers(pane,r){
     const all=DModel.memberIds(sid);
     const has=uid=>DModel.rolesOf(sid,uid).some(x=>x.id===r.id);
-    const nameOf=uid=>{const u=DB.getUser(uid);return u?displayUsername(u.username):'User '+uid};
+    const nameOf=uid=>{const u=DB.getUser(uid);return u?dispName(u):'User '+uid};
     const q=memQ.trim().toLowerCase();
     const list=all.filter(uid=>!q||nameOf(uid).toLowerCase().includes(q))
                   .sort((a,b)=>(has(b)?1:0)-(has(a)?1:0)||nameOf(a).localeCompare(nameOf(b)))
@@ -373,10 +458,15 @@ function openServerSettings(sid,section){
   /* ---------------- Channels ---------------- */
   function drawChannels(){
     const cats=DModel.cats(sid),chans=DModel.channels(sid);
+    /* ICH's channel list is the ICH_CHANNELS constant in model.js, so there is nothing to add
+       to here - the buttons are replaced by the reason they are missing. */
+    const sys=DModel.isSystem(sid);
     main.innerHTML='<div class="dset-h1">Channels</div>'+
-      '<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">'+
-      '<button type="button" class="dbtn" id="chNew">Create Channel</button>'+
-      '<button type="button" class="dbtn grey" id="catNew">Create Category</button></div>'+
+      (sys
+        ?'<div class="dhint" style="margin-bottom:16px">ICH\u2019s channels are built into the site and hold its existing history, so they can\u2019t be added to or removed. You can still edit a topic below.</div>'
+        :'<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">'+
+          '<button type="button" class="dbtn" id="chNew">Create Channel</button>'+
+          '<button type="button" class="dbtn grey" id="catNew">Create Category</button></div>')+
       cats.map(cat=>{
         const inCat=chans.filter(c=>c.cat===cat.id);
         return '<div class="dset-h2">'+esc(cat.name)+'</div>'+
@@ -386,8 +476,8 @@ function openServerSettings(sid,section){
             '<button type="button" class="dbtn sm grey" data-edit="'+esc(c.id)+'">Edit</button></div>'
           ).join(''):'<div class="dhint">No channels in this category.</div>');
       }).join('');
-    main.querySelector('#chNew').onclick=()=>openCreateChannel(sid,null);
-    main.querySelector('#catNew').onclick=()=>openCreateCategory(sid);
+    if(main.querySelector('#chNew'))main.querySelector('#chNew').onclick=()=>openCreateChannel(sid,null);
+    if(main.querySelector('#catNew'))main.querySelector('#catNew').onclick=()=>openCreateCategory(sid);
     main.querySelectorAll('[data-edit]').forEach(b=>{
       b.onclick=()=>{const c=DModel.channel(sid,b.dataset.edit);if(c)openChannelSettings(sid,c)};
     });
@@ -441,7 +531,7 @@ function openServerSettings(sid,section){
     }
     const list=DModel.serverBanList(sid);
     const ips=DModel.ipBanList(sid);
-    const nameOf=uid=>{const u=DB.getUser(uid);return u?displayUsername(u.username):'User '+uid};
+    const nameOf=uid=>{const u=DB.getUser(uid);return u?dispName(u):'User '+uid};
     main.innerHTML='<div class="dset-h1">Bans — '+list.length+'</div>'+
       '<div class="dnote info">A ban here removes someone from <b>'+esc((DModel.server(sid)||{}).name||'')+
       '</b> and stops them rejoining. It does not touch their account anywhere else — they can still use '+
@@ -475,7 +565,7 @@ function openServerSettings(sid,section){
   /* ---------------- Members ---------------- */
   let mq2='';
   function drawMembers(){
-    const nameOf=uid=>{const u=DB.getUser(uid);return u?displayUsername(u.username):'User '+uid};
+    const nameOf=uid=>{const u=DB.getUser(uid);return u?dispName(u):'User '+uid};
     const q=mq2.trim().toLowerCase();
     const ids=DModel.memberIds(sid).filter(uid=>!q||nameOf(uid).toLowerCase().includes(q))
       .sort((a,b)=>DModel.highestPos(sid,b)-DModel.highestPos(sid,a)||nameOf(a).localeCompare(nameOf(b)))
@@ -508,7 +598,7 @@ function openServerSettings(sid,section){
  * ====================================================================== */
 function openMemberManager(sid,uid,after){
   const u=DB.getUser(uid)||{id:uid,username:'User '+uid};
-  const nameOf=()=>displayUsername(u.username||('User '+uid));
+  const nameOf=()=>dispName(u,'User '+uid);
   const mem=DModel.member(sid,uid);
   const canRoles=DModel.can(sid,'manageRoles',ME.id)&&DModel.canManageMember(sid,uid);
 

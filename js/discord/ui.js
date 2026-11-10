@@ -14,6 +14,7 @@
 const DI={
   plus:'<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M13 5a1 1 0 1 0-2 0v6H5a1 1 0 1 0 0 2h6v6a1 1 0 1 0 2 0v-6h6a1 1 0 1 0 0-2h-6V5Z"/></svg>',
   gear:'<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7Zm7.4-2.5a7.6 7.6 0 0 0 0-2l2-1.6a.5.5 0 0 0 .1-.6l-1.9-3.3a.5.5 0 0 0-.6-.2l-2.4 1a7.4 7.4 0 0 0-1.7-1l-.4-2.5a.5.5 0 0 0-.5-.4h-3.8a.5.5 0 0 0-.5.4l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1a.5.5 0 0 0-.6.2L2.6 8.8a.5.5 0 0 0 .1.6l2 1.6a7.6 7.6 0 0 0 0 2l-2 1.6a.5.5 0 0 0-.1.6l1.9 3.3a.5.5 0 0 0 .6.2l2.4-1a7.4 7.4 0 0 0 1.7 1l.4 2.5a.5.5 0 0 0 .5.4h3.8a.5.5 0 0 0 .5-.4l.4-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1a.5.5 0 0 0 .6-.2l1.9-3.3a.5.5 0 0 0-.1-.6l-2-1.6Z"/></svg>',
+  boost:'<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2 2 12l10 10 10-10L12 2Zm0 4.2 5.8 5.8-5.8 5.8L6.2 12 12 6.2Z"/></svg>',
   invite:'<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 14a1 1 0 0 1 1 1v2h2a1 1 0 1 1 0 2h-2v2a1 1 0 1 1-2 0v-2h-2a1 1 0 1 1 0-2h2v-2a1 1 0 0 1 1-1ZM9.5 4a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 11c2.2 0 4.2.6 5.6 1.6A3 3 0 0 0 16 21H3a1 1 0 0 1-1-1c0-2.8 3.4-5 7.5-5Z"/></svg>',
   people:'<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="9" cy="8" r="3.6"/><path d="M2 19.5C2 16.1 5.1 14 9 14s7 2.1 7 5.5v.5H2v-.5Z"/><circle cx="17.2" cy="9" r="2.8"/><path d="M17.4 14c2.8.1 4.6 1.8 4.6 4.5V20h-4v-1.2c0-1.7-.6-3.2-1.7-4.3.3-.4.7-.5 1.1-.5Z"/></svg>',
   pencil:'<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Zm17.71-10.21a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z"/></svg>',
@@ -302,45 +303,57 @@ function openServerMenu(anchor,sid,ev){
   if(DModel.can(sid,'invite',ME.id))items.push({label:'Invite People',icon:DI.invite,onClick:()=>openInvite(sid)});
   if(DModel.can(sid,'manageSrv',ME.id)||DModel.can(sid,'manageRoles',ME.id)||DModel.can(sid,'manageCh',ME.id))
     items.push({label:'Server Settings',icon:DI.gear,onClick:()=>openServerSettings(sid)});
-  if(DModel.can(sid,'manageCh',ME.id)){
+  /* ICH's channels and categories are code, not data (see assertNotICH in model.js), so these
+     entries are not offered there - they could only ever fail. */
+  if(!sys&&DModel.can(sid,'manageCh',ME.id)){
     items.push({label:'Create Channel',icon:DI.plus,onClick:()=>openCreateChannel(sid,null)});
     items.push({label:'Create Category',icon:DI.plus,onClick:()=>openCreateCategory(sid)});
   }
+  if(!sys)items.push({label:'Server Boost',icon:DI.boost,onClick:()=>openBoostDialog(sid)});
   items.push({label:'Notification Settings',icon:DI.people,onClick:()=>openSettings(false)});
   if(items.length)items.push({sep:true});
+  const goHomeAfter=()=>{
+    view.sid=DModel.ICH_ID;
+    try{localStorage.setItem('ich.sid',DModel.ICH_ID)}catch(_){}
+    selectRoom('global');
+  };
+  const leaveItem=()=>({label:'Leave Server',icon:DI.leave,danger:true,onClick:()=>{
+    dconfirm({
+      title:'Leave ‘'+srv.name+'’',
+      sub:'Are you sure you want to leave <b>'+esc(srv.name)+'</b>? You won’t be able to rejoin unless you are re-invited.',
+      confirm:'Leave Server',danger:true,
+      onConfirm:async()=>{
+        await DModel.leaveServer(sid);
+        goHomeAfter();
+        toast('You left the server.');
+      }
+    });
+  }});
+  const deleteItem=()=>({label:'Delete Server',icon:DI.trash,danger:true,onClick:()=>{
+    dconfirm({
+      title:'Delete ‘'+srv.name+'’',
+      sub:'Are you sure you want to delete <b>'+esc(srv.name)+'</b>? This cannot be undone, and every '+
+          'channel, role, message and member in it goes with it.',
+      confirm:'Delete Server',danger:true,
+      onConfirm:async()=>{
+        await DModel.deleteServer(sid);
+        goHomeAfter();
+        toast('Server deleted.');
+      }
+    });
+  }});
   if(sys){
     // ICH is the site itself - there is deliberately no way out of it.
     items.push({label:'Home server — can’t be left',disabled:true});
   }else if(DModel.isServerOwner(sid,ME.id)){
-    items.push({label:'Delete Server',icon:DI.trash,danger:true,onClick:()=>{
-      dconfirm({
-        title:'Delete ‘'+srv.name+'’',
-        sub:'Are you sure you want to delete <b>'+esc(srv.name)+'</b>? This cannot be undone and every channel in it goes with it.',
-        confirm:'Delete Server',danger:true,
-        onConfirm:async()=>{
-          await DModel.deleteServer(sid);
-          view.sid=DModel.ICH_ID;
-          try{localStorage.setItem('ich.sid',DModel.ICH_ID)}catch(_){}
-          selectRoom('global');
-          toast('Server deleted.');
-        }
-      });
-    }});
+    /* The owner gets BOTH, with Delete underneath Leave, which is where it was asked for.
+       Leaving your own server is still refused in the model (it would orphan the place), and
+       the entry says so rather than disappearing - otherwise an owner who wants out has no idea
+       that deleting is the way to do it. */
+    items.push(leaveItem());
+    items.push(deleteItem());
   }else{
-    items.push({label:'Leave Server',icon:DI.leave,danger:true,onClick:()=>{
-      dconfirm({
-        title:'Leave ‘'+srv.name+'’',
-        sub:'Are you sure you want to leave <b>'+esc(srv.name)+'</b>? You won’t be able to rejoin unless you are re-invited.',
-        confirm:'Leave Server',danger:true,
-        onConfirm:async()=>{
-          await DModel.leaveServer(sid);
-          view.sid=DModel.ICH_ID;
-          try{localStorage.setItem('ich.sid',DModel.ICH_ID)}catch(_){}
-          selectRoom('global');
-          toast('You left the server.');
-        }
-      });
-    }});
+    items.push(leaveItem());
   }
   openCtx(ev||anchor,items);
 }
@@ -402,28 +415,24 @@ function openInvite(sid){
          blob launcher window, where a link to "this page" is meaningless - the code is the thing
          that always works, pasted into Add a Server -> Join a Server. The link is offered second,
          and only when there is a real address to point at. */
-      const link=inviteUrl(code);
+      /* Invite CODES are the product. Invite LINKS are marked coming soon on purpose: the site
+         is normally opened from an about:blank or blob launcher window, where the page has no
+         address of its own and a "link to this page" is either meaningless or points at whichever
+         deployment CFG.SITE_URL happens to name - which is not necessarily the one the person is
+         using. Until there is one address that is always right, the link would be a feature that
+         works for some people and silently fails for others. The code works everywhere. */
       m.body.querySelector('#ivOut').innerHTML=
         '<div class="dlabel" style="margin-top:4px">Invite code</div>'+
         '<div class="dcode"><span style="font-size:20px;letter-spacing:2px">'+esc(code)+'</span>'+
         '<button type="button" class="dbtn sm grey cp" data-cp>Copy code</button></div>'+
         '<div class="dhint">They join with <b>+</b> on the left → <b>Join a Server</b> → paste this. '+
         'This works everywhere, including launcher windows.</div>'+
-        (link
-          ?'<div class="dlabel" style="margin-top:16px">Or send a link</div>'+
-           '<div class="dcode"><span style="font-size:13px">'+esc(link)+'</span>'+
-           '<button type="button" class="dbtn sm grey cp" data-cp2>Copy link</button></div>'+
-           '<div class="dhint">Opening it joins them straight away.'+
-           (pageIsAddressable()?'':' Built from <b>CFG.SITE_URL</b>, because this window has no address of its own.')+
-           '</div>'
-          :'<div class="dhint" style="margin-top:14px">No invite link can be made from this window, '+
-           'and <b>CFG.SITE_URL</b> in js/core/config.js is not set to an http(s) address. The code above still works.</div>');
+        '<div class="dlabel" style="margin-top:16px">Or send a link</div>'+
+        '<div class="dcode soon"><span>Invite links — <b>coming soon</b></span>'+
+        '<button type="button" class="dbtn sm grey" disabled>Copy link</button></div>'+
+        '<div class="dhint">Share the code above for now.</div>';
       m.body.querySelector('[data-cp]').onclick=async()=>{
         const ok=await copyText(code);toast(ok?'Invite code copied':'Could not copy',ok?'good':'bad');
-      };
-      const cp2=m.body.querySelector('[data-cp2]');
-      if(cp2)cp2.onclick=async()=>{
-        const ok=await copyText(link);toast(ok?'Invite link copied':'Could not copy',ok?'good':'bad');
       };
       go.textContent='Generate Another';
     }catch(e){err.textContent=e.message||'Could not create an invite.'}
@@ -614,7 +623,7 @@ function openCategoryMenu(ev,sid,cat){
   if(!DModel.can(sid,'manageCh',ME.id)){
     items.push({label:'Collapse Category',onClick:()=>{}});
   }else{
-    items.push({label:'Create Channel',icon:DI.plus,onClick:()=>openCreateChannel(sid,cat.id)});
+    if(!DModel.isSystem(sid))items.push({label:'Create Channel',icon:DI.plus,onClick:()=>openCreateChannel(sid,cat.id)});
     items.push({label:'Rename Category',icon:DI.pencil,onClick:()=>{
       const m=dmodal({
         title:'Rename Category',
@@ -638,4 +647,101 @@ function openCategoryMenu(ev,sid,cat){
     }});
   }
   openCtx(ev,items);
+}
+
+/* ======================================================================
+ * 12. SERVER BOOSTS
+ *     The dialog behind the boost bar in the channel sidebar and the "Server Boost" entry on
+ *     the server menu. The rules the user sees here are the ones js/discord/boosts.js enforces:
+ *     MVP grants two slots, a boost has to sit somewhere for 7 days before it can be moved, and
+ *     giving one up is always allowed.
+ * ====================================================================== */
+function boostRowHTML(b){
+  const u=DB.getUser(b.uid);
+  const nm=u?esc(dispName(u)):('User '+b.uid);
+  const since=b.at?new Date(b.at).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'';
+  return '<div class="dbst-row"><span class="dbst-av">'+avatarHtml(u||{id:b.uid,username:'?'},(u&&u.username)||'?','width:24px;height:24px;font-size:11px')+'</span>'+
+    '<span class="dbst-nm">'+nm+'</span>'+(since?'<span class="dbst-since">since '+esc(since)+'</span>':'')+'</div>';
+}
+
+function openBoostDialog(sid){
+  const srv=DModel.server(sid);if(!srv)return;
+  if(DModel.isSystem(sid)){
+    toast('ICH is the site itself, so it can’t be boosted.','bad');
+    return;
+  }
+  try{DBoost.attach(sid)}catch(_){}   // the dialog reads live counts, so make sure they are live
+  const m=dmodal({title:'Boost '+srv.name,sub:'',body:'<div id="bstBody"></div>',footer:'<button type="button" class="dbtn sec" data-x>Close</button>'});
+  m.foot.querySelector('[data-x]').onclick=m.close;
+
+  function draw(){
+    const body=m.body.querySelector('#bstBody');if(!body)return;
+    const n=DBoost.countFor(sid),lv=DBoost.levelFor(sid),nx=DBoost.nextLevel(sid);
+    const slots=DBoost.mySlots();
+    const mineHere=DBoost.myBoostOn(sid);
+    const have=slots.length;
+    const pct=nx?Math.max(0,Math.min(100,Math.round((n/nx.need)*100))):100;
+    const boosters=DBoost.boostersOf(sid);
+
+    let actions='';
+    if(!have){
+      actions='<div class="dhint">Server Boosts are an <b>MVP</b> perk — MVP gives you '+DBoost.SLOTS+
+        ' of them. MVP is a 0.1% prize on the Daily Spin, or available in the Shop.</div>';
+    }else if(mineHere){
+      const left=mineHere.movableAt-Date.now();
+      actions='<div class="dbst-you">You’re boosting this server.</div>'+
+        '<div class="dhint">'+(left>0
+          ?'This boost can be moved to another server in <b>'+esc(DBoost.describeWait(left))+'</b>. You can take it back at any time.'
+          :'This boost is free to move — open another server and boost it from there.')+'</div>'+
+        '<button type="button" class="dbtn danger" id="bstOff">Remove Boost</button>';
+    }else{
+      const free=DBoost.freeSlot();
+      const movable=slots.filter(x=>x.sid&&x.movableAt<=Date.now());
+      if(free>=0){
+        actions='<button type="button" class="dbtn" id="bstOn">'+
+          'Boost this server <span class="dhint-inline">('+slots.filter(x=>!x.sid).length+' of '+have+' free)</span></button>';
+      }else if(movable.length){
+        actions='<div class="dhint">Both of your boosts are on other servers, but '+
+          (movable.length===1?'one of them has':movable.length+' of them have')+' been there long enough to move.</div>'+
+          movable.map(x=>{
+            const other=DModel.server(x.sid);
+            return '<button type="button" class="dbtn grey" data-move="'+esc(x.sid)+'">Move the boost from '+
+              esc(other?other.name:'a deleted server')+'</button>';
+          }).join('');
+      }else{
+        const soonest=slots.filter(x=>x.sid).sort((a,b)=>a.movableAt-b.movableAt)[0];
+        actions='<div class="dhint">Both of your boosts are on other servers. A boost has to sit on a '+
+          'server for 7 days before it can move'+(soonest?'; the next one is free in <b>'+
+          esc(DBoost.describeWait(soonest.movableAt-Date.now()))+'</b>':'')+'.</div>';
+      }
+    }
+
+    body.innerHTML=
+      '<div class="dbst-head '+(lv?'lv'+lv:'')+'">'+
+        '<div class="dbst-lv">'+(lv?'Level '+lv:'No level yet')+'</div>'+
+        '<div class="dbst-track"><i style="width:'+pct+'%"></i></div>'+
+        '<div class="dbst-sub">'+n+' boost'+(n===1?'':'s')+(nx?' · '+nx.left+' more to reach Level '+nx.level:' · max level')+
+      '</div></div>'+
+      '<div class="dbst-perks">'+DBoost.LEVELS.map(l=>
+        '<div class="dbst-perk'+(lv>=l.level?' on':'')+'"><b>Level '+l.level+' <span>'+l.need+' boosts</span></b>'+
+        '<ul>'+l.perks.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>').join('')+'</div>'+
+      '<div class="dbst-acts">'+actions+'</div>'+
+      (boosters.length?'<div class="dlabel" style="margin-top:14px">Boosters</div>'+boosters.map(boostRowHTML).join(''):'');
+
+    const run=(fn,msg)=>async()=>{
+      try{await fn();toast(msg,'good');draw();renderChat()}
+      catch(e){toast(e.message||'That didn’t work.','bad')}
+    };
+    const on=body.querySelector('#bstOn');
+    if(on)on.onclick=run(()=>DBoost.boost(sid),'Server boosted!');
+    const off=body.querySelector('#bstOff');
+    if(off)off.onclick=run(()=>DBoost.unboost(sid),'Boost removed.');
+    body.querySelectorAll('[data-move]').forEach(b=>{
+      b.onclick=run(()=>DBoost.move(b.dataset.move,sid),'Boost moved.');
+    });
+  }
+  draw();
+  const un=DBoost.onChange(draw);
+  const oldClose=m.close;
+  m.close=()=>{try{un()}catch(_){}oldClose()};
 }

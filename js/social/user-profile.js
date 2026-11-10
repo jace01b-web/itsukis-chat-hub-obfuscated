@@ -128,15 +128,18 @@ function openProfilePopout(id){
   const anchor=(src.closest('[data-open-profile]')||src);
   const rc=anchor.getBoundingClientRect();
   const isMe=id===ME.id,deleted=!!u.deleted;
-  const name=deleted?'Deleted User':displayUsername(u.username);
+  const name=deleted?'Deleted User':dispName(u);
   const online=isMe||DB.onlineIds().includes(id);
   const accent=safeColor(u.settings&&u.settings.meBubble,'#5865f2');
   const banner=safeColor(u.settings&&u.settings.bannerColor,accent);
   const av=avatarHtml(u,name,'width:80px;height:80px;font-size:30px');
   const canAdd=!isMe&&!deleted&&!DB.isFriend(ME.id,id)&&!DB.hasIncoming(id)&&!DB.hasOutgoing(ME.id,id)&&!DB.isBlocked(ME.id,id)&&!DB.isBlockedBy(ME.id,id);
   const canRemove=!isMe&&!deleted&&DB.isFriend(ME.id,id);
+  /* Discord shows the @username on its own line under the display name, and only when the two
+     differ \u2014 repeating "suki / @suki" for everyone who never set one is just noise. */
+  const uname=(!deleted&&hasDispName(u))?`<div class="dlpo-uname">@${esc(displayUsername(u.username))}</div>`:'';
   const sub=deleted?'Account deleted':[online?'Online':'Offline',u.pronouns?esc(u.pronouns):''].filter(Boolean).join(' <b>\u2022</b> ');
-  const roles=deleted?'':profileRolesHTML(id);
+  const roles=deleted?'':profileRolesHTML(id)+serverRolesHTML(id);
   root.innerHTML=`<div class="modal-bg dlpo-bg"><div class="dlpo" role="dialog" aria-label="Profile of ${esc(name)}">
     <div class="dlpo-banner${bannerImgOf(u)?' banner-img':''}" style="background:${bannerBg(u,banner)}"><div class="dlpo-btns">
       ${canAdd?'<button type="button" class="dlpo-ib" id="poAdd" title="Add Friend" aria-label="Add Friend"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 20c0-3.3 3.6-5 8-5s8 1.7 8 5v1H2zM19 8h-2v2h-2v2h2v2h2v-2h2v-2h-2z"/></svg></button>':''}
@@ -146,6 +149,7 @@ function openProfilePopout(id){
     <div class="dlpo-av">${av}<span class="dlpo-st"><i class="${online&&!deleted?'on':''}"></i></span></div>
     <div class="dlpo-body">
       <div class="dlpo-name">${deleted?esc(name):fullNameHTML(id,esc(name))}</div>
+      ${uname}
       <div class="dlpo-sub">${sub}</div>
       ${(!deleted&&u.description)?`<div class="dlpo-bio">${esc(u.description)}</div>`:''}
       ${deleted?'':'<button type="button" class="dlpo-full" id="poFull">View Full Profile</button>'}
@@ -212,7 +216,7 @@ function openUserProfile(id,opts){
     if(!u)return;
     const isMe=id===ME.id;
     const deleted=!!u.deleted;
-    const name=deleted?'Deleted User':displayUsername(u.username);
+    const name=deleted?'Deleted User':dispName(u);
     const online=isMe||DB.onlineIds().includes(id);   // you're obviously online while looking at your own card
     const owner=isOwner(id);
     const mod=isMod(id),admin=isAdmin(id);
@@ -296,11 +300,12 @@ function openUserProfile(id,opts){
           ${admin&&!owner?'<span class="tag" style="background:#e8503a">Admin</span>':(mod&&!owner?'<span class="tag" style="background:var(--accent)">Mod</span>':'')}
           ${banned?'<span class="tag" style="background:var(--danger)">Banned</span>':''}
         </div>
+        ${(!deleted&&hasDispName(u))?`<div class="pf-uname">@${esc(displayUsername(u.username))}</div>`:''}
         <div class="pf-sub">${(!deleted&&u.pronouns)?`<div class="pf-pron">${esc(u.pronouns)}</div>`:''}
         <div class="pf-status" style="display:flex;align-items:center;gap:6px;margin-top:6px;color:var(--muted);font-size:13px">
           ${statusDot}<span>${statusText}</span>
         </div></div>
-        ${deleted?'':profileRolesHTML(id)}
+        ${deleted?'':profileRolesHTML(id)+serverRolesHTML(id)}
         ${vipTimerHTML}
         ${(!deleted&&u.description)?`<div class="pf-desc">${esc(u.description)}</div>`:''}
         ${muted?`<div class="hint" style="color:var(--danger);margin-top:4px">Muted for ${Math.ceil(muteMs/60000)} more min</div>`:''}
