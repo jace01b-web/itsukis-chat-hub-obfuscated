@@ -62,6 +62,14 @@ const inlined=
   'serverIconFromFile,serverIconPicker,openBanDialog,openTimeoutDialog,handleInviteLink,'+
   'DiscordShell,show,modalTos,pageIsAddressable,'+
   'DBoost,openBoostDialog,mdRender,dispName,outranks,siteRank,'+
+  /* v54 */
+  'Prefs,PCard,PData,PBadges,PMutual,PActivity,PNotes,PConn,PAch,ACHIEVEMENTS,'+
+  'NotifPrefs,Notifier,Ignored,PROFILE_DECOS,PROFILE_THEMES,'+
+  'DAudit,SEmoji,SEvents,SWelcome,SRV_EXTRA,emojiizeHTML,closeServerSettings,'+
+  'DPins,DSaved,DPolls,QuickSwitch,openPinsPanel,openSavedPanel,openSearchPanel,openPollComposer,'+
+  'chipifyHTML,push,R,set,get,remove,update,updateMentionPop,extractPings,'+
+  /* v54.1 security patch */
+  'NSFW,'+
   'get view(){return view},get ME(){return ME}};\n};\n'+
   /* about:blank has no query string, so ?manual cannot be expressed there. A page written into
      about:blank is always driven by the test (seed -> sign in -> start), so it must not boot

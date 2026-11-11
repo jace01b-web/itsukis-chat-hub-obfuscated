@@ -30,10 +30,15 @@ function cors(req, res) {
   return false;
 }
 function send(res, code, obj) { res.statusCode = code; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(obj)); }
-async function readBody(req) {
+/* `limit` is the most raw JSON we will read, in characters. The default stays 20,000 so every
+   existing caller behaves exactly as before; api/nsfw.js raises it because an image data URL is
+   genuinely large. Anything past the limit is cut, which makes the JSON unparseable and yields
+   {} - a refusal, never a half-parsed body. */
+async function readBody(req, limit) {
   if (req.body && typeof req.body === 'object') return req.body;
+  const cap = Number(limit) > 0 ? Number(limit) : 20000;
   let raw = '';
-  for await (const c of req) { raw += c; if (raw.length > 20000) break; }
+  for await (const c of req) { raw += c; if (raw.length > cap) break; }
   try { return JSON.parse(raw || '{}'); } catch (_) { return {}; }
 }
 
@@ -138,6 +143,44 @@ async function adb(method, path, body) {
   return data;
 }
 
+/* ---------- compare-and-swap on one node (v54.1) ----------
+ * The Realtime Database REST API exposes exactly one atomic primitive, and this is it:
+ *   GET  with  X-Firebase-ETag: true   -> the value AND its ETag
+ *   PUT  with  if-match: <etag>        -> applied only if the value has not changed since
+ * A concurrent writer that got in first changes the ETag, so the second PUT comes back 412 and
+ * writes nothing. That is what makes "claim a spin" safe without Cloud Functions, a transaction
+ * library, or the Blaze plan.
+ *
+ * adbGetTagged(path)        -> { value, etag }
+ * adbPutIfMatch(path, v, e) -> { ok:true, etag } | { ok:false, conflict:true }
+ */
+async function adbGetTagged(path) {
+  const r = await fetch(DB_URL + '/' + path + '.json', {
+    headers: { Authorization: 'Bearer ' + await adminToken(), 'X-Firebase-ETag': 'true' },
+    signal: AbortSignal.timeout(8000)
+  });
+  const text = await r.text();
+  if (!r.ok) throw new Error('db GET ' + path + ' -> ' + r.status);
+  let value = null; try { value = text ? JSON.parse(text) : null; } catch (_) {}
+  // A node that does not exist still has an ETag, and it is the one that means "still empty".
+  return { value, etag: r.headers.get('etag') || 'null_etag' };
+}
+async function adbPutIfMatch(path, value, etag) {
+  const r = await fetch(DB_URL + '/' + path + '.json', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + await adminToken(),
+      'if-match': etag
+    },
+    body: JSON.stringify(value), signal: AbortSignal.timeout(8000)
+  });
+  if (r.status === 412) { try { await r.text(); } catch (_) {} return { ok: false, conflict: true }; }
+  const text = await r.text();
+  if (!r.ok) throw new Error('db PUT ' + path + ' -> ' + r.status + ' ' + text.slice(0, 120));
+  return { ok: true, etag: r.headers.get('etag') || null };
+}
+
 /* ---------- build check: stops old files AND "just edit the build number" ----------
  * Every release is stamped (tools/stamp-build.js) with a label and a token = HMAC(BUILD_SECRET, label).
  *   - an old file carries an old label -> older than the minimum -> refused
@@ -237,4 +280,4 @@ async function alert(kind, id, fields) {
   await discord({ embeds: [{ title: 'Anti-cheat: ' + kind, color: 0xfaa61a, fields: Object.entries(fields).map(([n, v]) => ({ name: n, value: '`' + clean(v, 120) + '`', inline: true })), timestamp: new Date().toISOString() }] });
 }
 
-module.exports = { cors, send, readBody, clientIp, normalizeIp, ipHash, isPrivateIp, vpnCheck, verifyToken, adb, checkBuild, compareBuilds, buildToken, roleOf, discord, logTos, alert, clean, limited, net, TOS_VERSION, ATTEST_TTL_MS };
+module.exports = { cors, send, readBody, clientIp, normalizeIp, ipHash, isPrivateIp, vpnCheck, verifyToken, adb, adbGetTagged, adbPutIfMatch, checkBuild, compareBuilds, buildToken, roleOf, discord, logTos, alert, clean, limited, net, TOS_VERSION, ATTEST_TTL_MS };

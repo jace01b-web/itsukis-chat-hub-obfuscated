@@ -1,1 +1,33 @@
-{ "name": "itsukis-chat-hub", "private": true, "engines": { "node": ">=18" } }
+{
+  "name": "itsukis-chat-hub",
+  "version": "54.3.0",
+  "private": true,
+  "description": "Itsuki's Chat Hub. The site itself is plain files served from GitHub and needs no build step; this package.json exists only so the test and migration tooling is reproducible.",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "preflight": "node test/security/preflight.js",
+    "test": "node test/security/run-all.js",
+    "test:security": "node test/security/run-all.js",
+    "test:rules": "node test/security/attack-suite.js",
+    "test:compat": "node test/security/compat-diff.js",
+    "test:spin": "node test/security/spin-concurrency.js && node test/security/spin-states.js && node test/security/spin-failures.js",
+    "test:migration": "node test/security/migration-logic.js && node test/security/migration-rollback.js && node test/security/rollback-exit.js",
+    "test:secrets": "node test/security/no-secrets.js",
+    "test:browser": "node test/build-harness.js && node test/run-privacy.js && node test/run-v54.js",
+    "build:single": "node build-single.js",
+    "build:harness": "node test/build-harness.js",
+    "verify:privacy": "node scripts/verify_privacy.js",
+    "test:rollback": "node test/security/rollback-exit.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.40.0",
+    "targaryen": "^3.1.0"
+  },
+  "comments": {
+    "targaryen": "An implementation of the Realtime Database rules language, used by the rules suites. It is NOT Google's evaluator - see SECURITY-TEST-RESULTS.md. Pinned to a major version because the API differs between 3.x and 4.x: 3.x takes database(rules, data, now).as({uid}), and update() takes `now` as its THIRD argument while write() takes it as its FOURTH. Getting that wrong makes clock comparisons silently fail.",
+    "playwright": "Drives real Chrome for the browser suites. Only test/run-*.js need it; every test/security/*.js suite runs without it.",
+    "no-dependencies": "The site has no runtime dependencies. Firebase is loaded from the CDN by js/loader.js, exactly as before - nothing here changes how the site loads or is hosted."
+  }
+}
