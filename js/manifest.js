@@ -45,7 +45,11 @@ window.APP_MANIFEST={
     "27-discord-exact.css",
     /* Loaded after it: fixes the image sizing that stylesheet broke, and styles the markup
        added in v53 (display names, spoilers, system messages, boosts). */
-    "28-discord-plus.css"
+    "28-discord-plus.css",
+    /* Last. Owns everything v54 added: the preference classes js/core/prefs.js sets on <html>,
+       the rebuilt profile cards, pins, search, polls, the quick switcher, and the new settings
+       and server panes. Last so it can correct the layers above it without !important wars. */
+    "29-v54.css"
   ],
   /* Not loaded on purpose: 23-lockdown.css belongs to js/features/lockdown.js, which is kept in the
      repo but left out of the load list (its master switch is ON, so loading it would lock the site). */
@@ -65,6 +69,10 @@ window.APP_MANIFEST={
     "moderation/bans.js",
     "core/database.js",
     "core/state.js",
+    /* v54: the preference layer. Declares only - it reads ME/DB at call time, never at load -
+       so it is safe this early, and being this early is what makes the appearance preferences
+       apply on the first paint instead of snapping in a second later. */
+    "core/prefs.js",
     "features/gift-promo.js",
     "chat/pings.js",
     "core/auto-update.js",
@@ -81,6 +89,11 @@ window.APP_MANIFEST={
     "games/game-hubs.js",
     "chat/chat-view.js",
     "social/user-profile.js",
+    /* v54 profiles. profile-data.js first (profile-card.js uses its consts), and both AFTER
+       user-profile.js, because profile-card.js takes over openUserProfile/openProfilePopout by
+       reassigning them - which needs the originals to exist. */
+    "social/profile-data.js",
+    "social/profile-card.js",
     "chat/chat-header.js",
     "chat/messages.js",
     "chat/emoji-picker.js",
@@ -89,11 +102,23 @@ window.APP_MANIFEST={
     "chat/composer.js",
     "ui/keyboard-shortcuts.js",
     "chat/attachments.js",
+    /* v54 chat: pins, saved messages, search, the unread divider, @role and #channel mentions,
+       and the ignore collapse. AFTER messages.js and composer.js, whose msgEl, renderMessages,
+       selectRoom, updateMentionPop and extractPings it takes over. */
+    "chat/chat-plus.js",
+    /* Polls hook the same msgEl/selectRoom chain, so they load after chat-plus.js. */
+    "chat/polls.js",
+    /* v54: per-server/per-channel notification overrides and the one place that decides whether
+       anything makes a noise. Before the settings panes, which draw its controls. */
+    "settings/notif-prefs.js",
     "settings/appearance.js",
     "settings/rules.js",
     "settings/account.js",
     "settings/discord-settings.js",
     "settings/settings-page.js",
+    /* v54 settings. AFTER both settings files, because it wraps SET_NAV, SET_PANES and
+       wireDiscordSettings - all three have to exist for it to take them over. */
+    "settings/settings-plus.js",
     "features/halloween.js",
     "features/trick-or-treat-games.js",
     "features/trick-or-treat.js",
@@ -111,6 +136,14 @@ window.APP_MANIFEST={
     "discord/boosts.js",
     "discord/shop.js",
     "discord/moderation.js",
+    /* v54 server systems. AFTER server-settings.js (they call registerServerSection, which it
+       defines) and after discord/markdown.js and chat/emoji-picker.js, which emoji.js wraps. */
+    "discord/audit.js",
+    "discord/emoji.js",
+    "discord/server-plus.js",
+    /* v54: Ctrl+K. After the shell (it calls DiscordShell.openServer) and after the settings
+       files (it lists every settings pane by reading SET_NAV). */
+    "ui/quick-switcher.js",
     "ui/context-menu.js",
     "core/boot.js"
   ]

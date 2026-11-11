@@ -8,7 +8,7 @@
 
 const DB=(()=>{
   // live cache
-  const C={users:{},usernames:{},rooms:{},roomMembers:{},dmMembers:{},friends:{},friendReqIn:{},friendReqOut:{},lastRead:{},pingSeen:{},messages:{},myRoomIds:[],online:0,onlineIds:[],presenceIds:[],banned:{},muted:{},blocked:{},blockedBy:{},reactions:{},vip:{},mvp:{},spinWin:null,flair:{},roles:{},lastSpin:0};
+  const C={users:{},priv:{},usernames:{},rooms:{},roomMembers:{},dmMembers:{},friends:{},friendReqIn:{},friendReqOut:{},lastRead:{},pingSeen:{},messages:{},myRoomIds:[],online:0,onlineIds:[],presenceIds:[],banned:{},muted:{},blocked:{},blockedBy:{},reactions:{},vip:{},mvp:{},spinWin:null,flair:{},roles:{},lastSpin:0};
   let myId=null,myUid=null,ready=false;
   const listeners=new Set();
   const unsubs=[];         // base listeners
@@ -22,15 +22,90 @@ const DB=(()=>{
   const previewUnsubs={};
   const roomUnsubs={};
   const fetchingUsers=new Set();
-  // Fallback: if a user isn't in the live cache yet (e.g. the bulk 'users' listener
-  // hasn't synced, or rules restrict it), fetch that one record directly so we
-  // don't wrongly show real people as "Deleted User".
+  /* ---------- v54.1: profiles are read ONE ACCOUNT AT A TIME ----------
+     Until v54.1 this file opened a listener on the whole `users` branch, which worked because
+     the rules carried `users/.read = auth != null`. That single grant was two problems at once:
+       * privacy  - it handed every signed-in account everybody's email and private settings
+       * quota    - avatars are stored inline, so a sign-in downloaded ~18 MB (FREE-PLAN-COMPATIBILITY.md)
+     `users/.read` is gone. A read must now name one account, so the cache is filled on demand.
+
+     Each account that appears on screen gets its own listener, so statuses, avatars and display
+     names stay LIVE exactly as before - the difference is that we only pay for the people
+     actually being looked at. The set is capped and least-recently-used entries are dropped,
+     which is what stops a long session from slowly re-creating the old cost one person at a time.
+     Your own record is never evicted. */
+  const userWatch=new Map();          // id -> {off, used}
+  const USER_WATCH_MAX=220;           // ~220 live profiles is far more than any one screen shows
+  function watchUser(id){
+    id=Number(id);
+    if(!Number.isFinite(id)||id<=0)return;
+    const w=userWatch.get(id);
+    if(w){w.used=Date.now();return}
+    if(userWatch.size>=USER_WATCH_MAX){
+      let oldest=null,t=Infinity;
+      userWatch.forEach((v,k)=>{if(k!==myId&&v.used<t){t=v.used;oldest=k}});
+      if(oldest!=null){try{userWatch.get(oldest).off()}catch(_){}userWatch.delete(oldest)}
+    }
+    const off=onValue(R('users/'+id),s=>{
+      if(s.exists())C.users[id]=s.val();
+      if(ready)emit();
+    },err=>{
+      // A denied read is not the same as "no such person" - leave whatever is cached alone,
+      // or the member list would start calling real accounts Deleted User.
+      console.warn('profile read denied',id,err&&err.code);
+    });
+    userWatch.set(id,{off,used:Date.now()});
+  }
+  function stopUserWatch(){userWatch.forEach(v=>{try{v.off()}catch(_){}});userWatch.clear()}
+
+  /* ---------- v54.1: each account moves its OWN private data, once ----------
+     scripts/migrate_privacy.js does the whole table in one go, and it is the thing to run.
+     This is the belt-and-braces version: the moment somebody signs in, their own browser
+     copies their own email and settings into userPrivate/$id and clears the public copies.
+     Nobody else's data is touched, and nothing here needs elevated access, because the only
+     records involved are the ones this account already owns.
+
+     Why both: a 3,100-row migration is a deliberate, backed-up operation you run when you are
+     ready. This closes the gap for whoever signs in before that, and makes the migration's
+     job smaller. Copy FIRST, verify, only then clear - if any step fails the public copy is
+     left exactly where it was and the next sign-in tries again. */
+  let _privMoved=false;
+  async function movePrivateDataIfNeeded(){
+    if(_privMoved||!myId)return;
+    _privMoved=true;
+    const id=myId;
+    try{
+      const pub=C.users[id]||(await get(R('users/'+id))).val()||{};
+      const email=typeof pub.email==='string'?pub.email:null;
+      const settings=(pub.settings&&typeof pub.settings==='object')?pub.settings:null;
+      if(!email&&!settings)return;
+
+      const priv=(await get(R('userPrivate/'+id))).val()||{};
+      const patch={};
+      // Never overwrite a private value that is already there - the private copy wins.
+      if(email&&typeof priv.email!=='string')patch['userPrivate/'+id+'/email']=email;
+      if(settings&&!priv.settings)patch['userPrivate/'+id+'/settings']=settings;
+      if(Object.keys(patch).length)await update(ref(rtdb),patch);
+
+      // Verify the copy landed before removing anything.
+      const after=(await get(R('userPrivate/'+id))).val()||{};
+      const clear={};
+      if(email&&typeof after.email==='string')clear['users/'+id+'/email']=null;
+      if(settings&&after.settings)clear['users/'+id+'/settings']=null;
+      if(Object.keys(clear).length){
+        await update(ref(rtdb),clear);
+        console.info('[privacy] moved this account\'s private fields out of the public profile');
+      }
+    }catch(e){
+      // Not fatal and not worth bothering the person about: the migration script covers it.
+      console.warn('[privacy] could not move private fields yet',e&&(e.code||e.message));
+    }
+  }
+  // Kept under its old name because a dozen call sites use it. It now subscribes rather than
+  // doing a one-shot read, so a profile that changes while it is on screen still updates.
   function fetchUserIfMissing(id){
-    if(id==null||C.users[id]||fetchingUsers.has(id))return;
-    fetchingUsers.add(id);
-    get(R('users/'+id)).then(s=>{
-      if(s.exists()){C.users[id]=s.val();if(ready)emit()}
-    }).catch(()=>{}).finally(()=>fetchingUsers.delete(id));
+    if(id==null)return;
+    watchUser(id);
   }
   /* emit() tells the UI "something changed" and every listener re-renders. Roughly 25 Firebase
      listeners are live at once, and a single action (sending a message, someone coming online,
@@ -52,12 +127,99 @@ const DB=(()=>{
   const mvpOn=id=>{const v=C.mvp[Number(id)];return v===true||v===1||(typeof v==='number'&&v>0)};
   const mvpAccess=id=>isOwner(id)||mvpOn(id);
   const FAKE='@itsuki.local';
+  /* ---------- v54.1: what the publicly readable login map is allowed to say ----------
+     usernameLogin/$name has to be readable by nobody-in-particular, because username sign-in
+     must resolve a name to a Firebase Auth email BEFORE anyone is authenticated. It used to
+     store that email verbatim, which published the real address of every account that signed
+     up with one.
+
+     Two shapes replace it:
+       {alias:'bob'}  -> sign in as bob@itsuki.local. The local part is STORED, not derived from
+                         the key, because renaming an account does not change its Auth email:
+                         the alias stays pinned to the username it signed up under.
+       {server:true}  -> the Auth email is a real address. The browser never learns it; it asks
+                         /api/login, or the person signs in with their email directly, which has
+                         always worked.
+     A record still holding {email:...} is read exactly as before, so nothing breaks before the
+     migration runs. */
+  const aliasLocalPart=email=>{
+    const e=String(email||'').toLowerCase();
+    return e.endsWith(FAKE)?e.slice(0,-FAKE.length):null;
+  };
+  // What to write at usernameLogin/<key> for an account whose Auth email is `authEmail`.
+  const loginRec=authEmail=>{
+    const local=aliasLocalPart(authEmail);
+    return local&&CFG.USERNAME_RE.test(local)?{alias:local}:{server:true};
+  };
+  /* The Auth email an account signs in with, worked out from whatever is on file. Needed by
+     the rename and restore paths, which have to carry the login identity across a name change.
+     Sources in order of authority:
+       1. the signed-in Firebase user itself (always right, when it is this account)
+       2. userPrivate/$id/email   - readable by that account and by a site owner
+       3. users/$id/email         - the legacy copy, still there until the migration runs
+       4. the existing login-map record, in any of its three shapes
+       5. the alias built from the account's oldest known username
+     v54.1: step 4 has to understand {alias:'bob'}, or renaming a migrated account would lose
+     the pin to its real Auth email and lock the person out of username sign-in. */
+  async function resolveAuthEmail(id,keys){
+    const live=auth.currentUser;
+    if(live&&Number(id)===myId&&live.email)return live.email;
+    try{const p=(await get(R('userPrivate/'+id+'/email'))).val();if(typeof p==='string'&&p)return p}catch(_){}
+    const pub=C.users[id]||{};
+    if(typeof pub.email==='string'&&pub.email)return pub.email;
+    for(const k of (keys||[])){
+      if(!k)continue;
+      try{
+        const rec=(await get(R('usernameLogin/'+k))).val()||{};
+        if(typeof rec.email==='string'&&rec.email)return rec.email;
+        if(typeof rec.alias==='string'&&rec.alias)return rec.alias.toLowerCase()+FAKE;
+      }catch(_){}
+    }
+    const first=(keys||[]).filter(Boolean)[0];
+    return first?first+FAKE:null;
+  }
+
+  /* Sign in without the browser ever learning the account's real email address.
+     POST /api/login {username,password} -> {token} (a Firebase custom token for that UID).
+     The server resolves the username with admin access, checks the password against Firebase
+     itself, and mints the token. Returns null when the endpoint is not configured or not
+     deployed, so the caller can fall back to "sign in with your email instead".
+     This is the ONLY place a password leaves the page for anywhere other than Google, which is
+     why it is opt-in: LOGIN_API is empty unless you set it. See SECURITY_AUDIT.md. */
+  async function serverLogin(username,password){
+    const base=String(CFG.LOGIN_API||'').replace(/\/$/,'');
+    if(!base)return null;
+    let j;
+    try{
+      const r=await fetch(base+'/api/login',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({username,password})
+      });
+      j=await r.json().catch(()=>({}));
+      if(!r.ok){
+        // A wrong password is a real answer and must be shown as one, not swallowed as
+        // "endpoint unavailable" - otherwise people get told to use an email they may not have.
+        if(r.status===401||r.status===403)throw new Error(j.error||'Incorrect username or password.');
+        if(r.status===429)throw new Error(j.error||'Too many attempts. Wait a minute and try again.');
+        return null;
+      }
+    }catch(e){
+      if(e&&e.message&&!/fetch|network|load failed/i.test(e.message))throw e;
+      return null;   // network/CORS/not deployed: let the caller offer the email route
+    }
+    if(!j||!j.token)return null;
+    try{await signInWithCustomToken(auth,j.token)}
+    catch(e){throw new Error(authMsg(e))}
+    await new Promise(r=>setTimeout(r,0));
+    await DB.settle();
+    return DB.currentUser();
+  }
 
   function listen(path,cb){
     const u=onValue(R(path),s=>{cb(s.val());if(ready)emit()},err=>console.warn('listen denied',path,err.code));
     unsubs.push(u);return u;
   }
-  function stopAll(){SECRET_OWNER_ID=null;SECRET_LOADED=false;unsubs.splice(0).forEach(u=>u());Object.keys(previewUnsubs).forEach(k=>{previewUnsubs[k]();delete previewUnsubs[k]});Object.keys(roomUnsubs).forEach(k=>{roomUnsubs[k]();delete roomUnsubs[k]});if(msgUnsub){msgUnsub();msgUnsub=null}if(reactUnsub){try{reactUnsub()}catch(_){}reactUnsub=null}if(presUnsub){try{presUnsub()}catch(_){}presUnsub=null}if(presenceSelfRef){try{remove(presenceSelfRef).catch(()=>{})}catch(_){}presenceSelfRef=null}if(sessUnsub){try{sessUnsub()}catch(_){}sessUnsub=null}presenceRef=null;mySessionToken=null;sessionConfirmed=false;kicked=false;hideKickOverlay();C.presenceIds=[];C.lastReadLoaded=false;msgKey=null}
+  function stopAll(){SECRET_OWNER_ID=null;SECRET_LOADED=false;stopUserWatch();C.priv={};unsubs.splice(0).forEach(u=>u());Object.keys(previewUnsubs).forEach(k=>{previewUnsubs[k]();delete previewUnsubs[k]});Object.keys(roomUnsubs).forEach(k=>{roomUnsubs[k]();delete roomUnsubs[k]});if(msgUnsub){msgUnsub();msgUnsub=null}if(reactUnsub){try{reactUnsub()}catch(_){}reactUnsub=null}if(presUnsub){try{presUnsub()}catch(_){}presUnsub=null}if(presenceSelfRef){try{remove(presenceSelfRef).catch(()=>{})}catch(_){}presenceSelfRef=null}if(sessUnsub){try{sessUnsub()}catch(_){}sessUnsub=null}presenceRef=null;mySessionToken=null;sessionConfirmed=false;kicked=false;hideKickOverlay();C.presenceIds=[];C.lastReadLoaded=false;msgKey=null}
 
   // ---- Single-active-session enforcement --------------------------------
   // onlineUsers/$id is one shared boolean per account, not one per tab. The old
@@ -193,8 +355,31 @@ const DB=(()=>{
     stopAll();BANNED_LOADED=false;_rcBase=undefined;signingOut=false;rcPending=false;
     presenceRef=R('onlineUsers/'+myId);
     claimSession();watchSession();
-    listen('users',v=>C.users=v||{});
-    listen('usernames',v=>C.usernames=v||{});
+    /* v54.1: the whole-table listener that used to live here is gone - see watchUser() above.
+       What replaces it is two much smaller things:
+         * one listener on MY OWN record, which has to be live (name changes, own avatar, status)
+         * the username directory, which is the only thing that needs to cover everybody
+
+       The directory is name -> id and nothing else, so it is a few tens of KB for 3,100
+       accounts rather than ~18 MB. Every feature that used to walk the whole user table -
+       @mention autocomplete, friend search, the member count, looking somebody up in the shop -
+       is built out of it now, and the full record of anyone actually shown is fetched by id. */
+    watchUser(myId);
+    listen('usernames',v=>{
+      C.usernames=v||{};
+      try{
+        DB._dirCount=Object.keys(C.usernames).length;
+        DB._dirBytes=JSON.stringify(C.usernames).length;
+      }catch(_){}
+    });
+    /* My own private record: email and settings. Readable and writable by me alone - that is
+       the whole point of the v54.1 split. Settings used to sit in users/$id/settings, where
+       every signed-in account could read them. */
+    listen('userPrivate/'+myId,v=>{
+      C.priv=v||{};
+      if(C.users[myId])C.users[myId]={...C.users[myId],settings:C.priv.settings||C.users[myId].settings};
+    });
+    movePrivateDataIfNeeded();
     listen('banned',v=>{
       C.banned=v||{};BANNED_LOADED=true;
       checkBanLock(myId,C.banned);
@@ -429,7 +614,10 @@ const DB=(()=>{
     const mine=Number(id)===myId;
     const st=u.style||{};
     const base=defaultSettings();
-    const own=mine?(u.settings||{}):{};
+    // v54.1: my own settings live in userPrivate/$id/settings. The legacy users/$id/settings
+    // is still read as a fallback so an account that has not been migrated yet keeps its
+    // preferences; movePrivateDataIfNeeded() moves them on the next sign-in.
+    const own=mine?((C.priv&&C.priv.settings)||u.settings||{}):{};
     const settings={...base,...own,pings:{...base.pings,...(own.pings||{})}};
     // public bubble style: what EVERYONE sees for this person
     settings.meBubble=st.bubble||own.meBubble||base.meBubble;
@@ -594,8 +782,44 @@ const DB=(()=>{
     },
     currentUser(){return myId?userView(myId):null},
     getUser:id=>{const v=userView(id);if(!v)fetchUserIfMissing(id);return v},
-    allUsers:()=>Object.keys(C.users).map(userView),
-    get:()=>({usernameIndex:C.usernames,rooms:C.rooms}),
+    /* ---------- v54.1: the directory, not the whole table ----------
+       This used to be Object.keys(C.users), which only worked because the client had just
+       downloaded all 3,100 records (and their avatars) into memory. It is now built from the
+       username directory - name -> id, a few tens of KB - and every entry whose full record
+       has not been fetched yet comes back as a light stub carrying the id and the username.
+
+       That is all four callers actually need: @mention autocomplete, friend search by name,
+       the member count, and looking somebody up in the shop. Anything that needs the rest of
+       a record (avatar, status, badges) should go through getUser(id), which subscribes to
+       that one account and re-renders when it arrives. */
+    allUsers:()=>{
+      const out=[],seen=new Set();
+      Object.keys(C.usernames).forEach(name=>{
+        const id=Number(C.usernames[name]);
+        if(!Number.isFinite(id)||seen.has(id))return;
+        seen.add(id);
+        const full=userView(id);
+        out.push(full||{id,username:name,deleted:false,style:{},settings:defaultSettings(),
+                        pronouns:'',description:'',banner:'',hiddenTags:'',friends:[],lastRead:{},
+                        _stub:true});
+      });
+      // Anyone cached but missing from the directory (a deleted account keeps its record but
+      // frees its name) still has to appear, or moderation views lose people.
+      Object.keys(C.users).forEach(k=>{
+        const id=Number(k);
+        if(seen.has(id))return;
+        seen.add(id);
+        const v=userView(id);if(v)out.push(v);
+      });
+      return out;
+    },
+    // How many accounts exist, without downloading them. Used by the member count.
+    userCount:()=>Object.keys(C.usernames).length,
+    /* dmMembers is exposed because the whole node is readable by any signed-in account (see its
+       `.read` rule) and is already mirrored in C.dmMembers - so handing it out reveals nothing a
+       client could not read for itself. js/social/profile-data.js uses it to work out mutual
+       friends, which is otherwise impossible: friends/$a is readable only by $a. */
+    get:()=>({usernameIndex:C.usernames,rooms:C.rooms,dmMembers:C.dmMembers}),
     onlineCount:()=>C.online,
     onlineIds:()=>C.onlineIds.slice(),
     // ids currently present in whichever context is open (global / this room / this DM)
@@ -657,14 +881,18 @@ const DB=(()=>{
         }
       }
       const rec={username,createdAt:Date.now()+SKEW,lastNameChange:0,provider};
-      if(email)rec.email=email;
+      // v54.1: a real email NEVER goes into users/$id any more - that node is readable by
+      // every signed-in account. It goes to userPrivate/$id, which only this account can read.
+      const authEmail=email||(username.toLowerCase()+FAKE);
       // ONE atomic write: username claim + profile + login lookup. The rules check they all match each other.
       try{
-        await update(ref(rtdb),{
+        const first={
           ['usernames/'+username.toLowerCase()]:id,
           ['users/'+id]:rec,
-          ['usernameLogin/'+username.toLowerCase()]:{email:email||(username.toLowerCase()+FAKE)}
-        });
+          ['usernameLogin/'+username.toLowerCase()]:loginRec(authEmail)
+        };
+        if(email)first['userPrivate/'+id+'/email']=email;
+        await update(ref(rtdb),first);
       }catch(e){
         console.error('profile write failed',e);
         throw new Error(e.code==='PERMISSION_DENIED'||/permission/i.test(e.message)
@@ -687,16 +915,29 @@ const DB=(()=>{
     async login(idf,password){
       let email=idf.trim();
       if(!email.includes('@')){
-        // username login: look up ID, then the account's email
+        // username login: resolve the name to the Auth email this account signs in with
+        const key=email.toLowerCase();
         let rec;
-        try{rec=(await get(R('usernameLogin/'+email.toLowerCase()))).val()}
+        try{rec=(await get(R('usernameLogin/'+key))).val()}
         catch(e){
           throw new Error(e.code==='PERMISSION_DENIED'
             ?'Username sign-in is unavailable right now (database rules block the lookup). Try signing in with your email instead.'
             :'Could not look up that username: '+(e.code||e.message));
         }
         if(!rec)throw new Error('Incorrect username/email or password.');
-        email=rec.email||(email.toLowerCase()+FAKE);
+        /* v54.1: three shapes, oldest first.
+             {email:...}    legacy record, not migrated yet - behaves exactly as before
+             {alias:'bob'}  sign in as bob@itsuki.local
+             {server:true}  the Auth email is a real address the browser is not told. The
+                            server signs in on our behalf and hands back a custom token. */
+        if(typeof rec.email==='string'&&rec.email)email=rec.email;
+        else if(typeof rec.alias==='string'&&rec.alias)email=rec.alias.toLowerCase()+FAKE;
+        else if(rec.server===true){
+          const u=await serverLogin(key,password);
+          if(u)return u;
+          throw new Error('This account signs in with an email address. Enter that email instead of your username.');
+        }
+        else email=key+FAKE;
       }
       try{await signInWithEmailAndPassword(auth,email,password)}
       catch(e){throw new Error(authMsg(e))}
@@ -732,11 +973,70 @@ const DB=(()=>{
     async resetPassword(email){try{await sendPasswordResetEmail(auth,email)}catch(e){throw new Error(authMsg(e))}},
     // Lets a Google-signed-up account also sign in with username/password.
     hasPasswordLogin:()=>!!auth.currentUser?.providerData.some(p=>p.providerId==='password'),
+    /* Change the password of an account that already signs in with one.
+     *
+     * NOT the same thing as setPassword() below, which is linkWithCredential - that ADDS password
+     * sign-in to an account that does not have it (a Google account) and throws
+     * 'provider-already-linked' for everybody else. The change-password UI needs this.
+     *
+     * Firebase refuses updatePassword when the sign-in is not recent, which for a long-lived
+     * session is most of the time. So the current password is used to reauthenticate first. That
+     * is not a workaround - it is the right check: these accounts have no email, so there is no
+     * reset link, and the current password is the only proof that the person at the keyboard is
+     * the account holder rather than somebody who sat down at an unlocked screen.
+     *
+     * Nothing is written to the database. The password only ever exists inside the Firebase Auth
+     * SDK - there is no plaintext password anywhere in the Realtime Database, by design. */
+    async changePassword(currentPassword,newPassword){
+      const u=auth.currentUser;
+      if(!u)throw new Error('Not signed in.');
+      if(!currentPassword)throw new Error('Enter your current password.');
+      if(!newPassword||newPassword.length<CFG.MIN_PW)
+        throw new Error(`New password must be at least ${CFG.MIN_PW} characters.`);
+      if(currentPassword===newPassword)
+        throw new Error('That is the password you already have.');
+
+      const rec=C.users[myId]||{};
+      /* The email Firebase knows this account by: the real one if they signed up with it,
+         otherwise the username@itsuki.local alias. u.email is authoritative when present. */
+      const email=u.email||(C.priv&&C.priv.email)||rec.email||((rec.username||'').toLowerCase()+FAKE);
+      if(!email)throw new Error('This account has no sign-in email on file. Tell an owner.');
+
+      const hasPassword=(u.providerData||[]).some(p=>p&&p.providerId==='password');
+      if(!hasPassword)
+        throw new Error('This account signs in with Google, so there is no password to change. '
+          +'Use "Set a password" to add one.');
+
+      try{
+        await reauthenticateWithCredential(u,EmailAuthProvider.credential(email,currentPassword));
+      }catch(e){
+        const c=(e&&e.code)||'';
+        if(/wrong-password|invalid-credential|invalid-login/i.test(c))
+          throw new Error('That current password is not right.');
+        if(/too-many-requests/i.test(c))
+          throw new Error('Too many attempts. Wait a few minutes and try again.');
+        if(/user-mismatch|user-not-found/i.test(c))
+          throw new Error('Could not confirm this account. Sign out, sign back in, and try again.');
+        throw new Error(authMsg(e));
+      }
+
+      try{
+        await updatePassword(u,newPassword);
+      }catch(e){
+        const c=(e&&e.code)||'';
+        if(/weak-password/i.test(c))throw new Error('That password is too weak. Try a longer one.');
+        if(/requires-recent-login/i.test(c))
+          throw new Error('Firebase wants a fresh sign-in. Sign out, sign back in, and try again.');
+        throw new Error(authMsg(e));
+      }
+      return true;
+    },
+
     async setPassword(password){
       const u=auth.currentUser;if(!u)throw new Error('Not signed in.');
       if(password.length<CFG.MIN_PW)throw new Error(`Password must be at least ${CFG.MIN_PW} characters.`);
       const rec=C.users[myId]||{};
-      const email=u.email||rec.email||(rec.username?.toLowerCase()+FAKE);
+      const email=u.email||(C.priv&&C.priv.email)||rec.email||(rec.username?.toLowerCase()+FAKE);
       try{await linkWithCredential(u,EmailAuthProvider.credential(email,password))}
       catch(e){
         if(e.code==='auth/provider-already-linked'||e.code==='auth/credential-already-in-use')
@@ -761,8 +1061,9 @@ const DB=(()=>{
         const taken=(await get(R('usernames/'+newKey))).val();
         if(taken!=null&&Number(taken)!==Number(id))throw new Error('That username is already taken.');
       }
-      let email=u.email;
-      if(!email){try{email=((await get(R('usernameLogin/'+oldKey))).val()||{}).email}catch(_){}}
+      // v54.1: via resolveAuthEmail, because the login-map record may now be {alias:'bob'}
+      // rather than an address, and reading `.email` off it would come back undefined.
+      let email=u.email||await resolveAuthEmail(id,[oldKey]);
       if(!email)email=oldKey+FAKE;
       const stamp=Date.now()+SKEW;
       // Single atomic multi-path write: claim the new name, update the profile, point the
@@ -777,7 +1078,7 @@ const DB=(()=>{
       patch['users/'+id+'/lastNameChange']=stamp;
       if(newKey!==oldKey){
         patch['usernames/'+newKey]=id;
-        patch['usernameLogin/'+newKey]={email};
+        patch['usernameLogin/'+newKey]=loginRec(email);   // v54.1: a shape, never a real address
         patch['usernames/'+oldKey]=null;
         patch['usernameLogin/'+oldKey]=null;
       }
@@ -842,8 +1143,9 @@ const DB=(()=>{
       try{const sn=await get(query(R('usernames'),orderByValue(),equalTo(id)));if(sn.exists())Object.keys(sn.val()).forEach(k=>oldKeys.add(k))}catch(_){}
       oldKeys.delete(newKey);
       // Keep the account's real login email (never regenerate it from the new name).
-      let email=u.email;
-      if(!email){try{email=((await get(R('usernameLogin/'+oldKey))).val()||{}).email}catch(_){}}
+      // v54.1: via resolveAuthEmail, because the login-map record may now be {alias:'bob'}
+      // rather than an address, and reading `.email` off it would come back undefined.
+      let email=u.email||await resolveAuthEmail(id,[oldKey]);
       if(!email)email=oldKey+FAKE;
       const stamp=Date.now()+SKEW;
       const patch={};
@@ -851,7 +1153,7 @@ const DB=(()=>{
       patch['users/'+id+'/lastNameChange']=stamp;   // also stops them instantly reverting the name for the normal cooldown
       if(newKey!==oldKey||!C.usernames[newKey]){
         patch['usernames/'+newKey]=id;
-        patch['usernameLogin/'+newKey]={email};
+        patch['usernameLogin/'+newKey]=loginRec(email);   // v54.1: a shape, never a real address
       }
       oldKeys.forEach(k=>{patch['usernames/'+k]=null;patch['usernameLogin/'+k]=null});
       try{await update(ref(rtdb),patch)}
@@ -892,8 +1194,12 @@ const DB=(()=>{
     // background image) — used for small toggles like anti-lag.
     async setSettingKey(id,key,val){
       const cur=C.users[id]||{};
-      C.users[id]={...cur,settings:{...(cur.settings||{}),[key]:val}};emit();
-      try{await set(R('users/'+id+'/settings/'+key),val)}
+      C.users[id]={...cur,settings:{...(cur.settings||{}),[key]:val}};
+      if(Number(id)===myId)C.priv={...C.priv,settings:{...(C.priv.settings||{}),[key]:val}};
+      emit();
+      // v54.1: settings are private. They used to be written to users/$id/settings, which
+      // every signed-in account could read.
+      try{await set(R('userPrivate/'+id+'/settings/'+key),val)}
       catch(e){console.error('setting save failed',key,e);throw e}
     },
     /* ---- Presence status (Discord's Online / Idle / Do Not Disturb / Invisible) ----
@@ -1006,14 +1312,18 @@ const DB=(()=>{
       if(status&&status!=='online')style.status=status;   // online is the default; no need to store it
       if(customStatus)style.customStatus=customStatus;
       if(hiddenTags)style.hiddenTags=hiddenTags;       // empty = field omitted, so nothing changes for people who don't use it
-      C.users[id]={...cur,settings:merged,style};emit();
+      C.users[id]={...cur,settings:merged,style};
+      if(Number(id)===myId)C.priv={...C.priv,settings:merged};
+      emit();
       // avatar lives in the public `style` node (above), not `settings` (which is
       // private and rules-limited to short values) — strip it before that write.
       const settingsToSave={...merged};delete settingsToSave.avatar;
       try{
-        // public style first (tiny, everyone reads it), then the private settings blob
+        // public style first (tiny, everyone reads it), then the private settings blob.
+        // v54.1: the blob goes to userPrivate/$id/settings. It was in users/$id/settings,
+        // where the old users/.read grant let every signed-in account read it.
         await set(R(`users/${id}/style`),style);
-        await set(R(`users/${id}/settings`),settingsToSave);
+        await set(R(`userPrivate/${id}/settings`),settingsToSave);
       }catch(e){console.error('settings save failed',e);toast('Could not save settings ('+(e.code||e.message)+')','bad');throw e}
     },
     // Only writes when there is genuinely something newer than what's already marked read.
@@ -1371,7 +1681,14 @@ const DB=(()=>{
       let u=C.users[id];
       try{const sn=await get(R('users/'+id));if(sn.exists())u=sn.val()}catch(_){}
       if(!u||u.deleted!==true||u.username!=='Deleted User')return null;
-      if(!u.email)return null;   // no stored login email: the account restores itself on its next sign-in
+      /* v54.1: the email no longer lives in users/$id, so this read goes through
+         resolveAuthEmail (a site owner may read userPrivate, and the login map still pins the
+         alias). Only give up if there is genuinely nothing to restore the sign-in identity
+         from - in which case the account still restores itself on its next sign-in. */
+      let oldKeysForEmail=[];
+      try{const s0=await get(query(R('usernames'),orderByValue(),equalTo(id)));if(s0.exists())oldKeysForEmail=Object.keys(s0.val())}catch(_){}
+      const restoreEmail=await resolveAuthEmail(id,oldKeysForEmail);
+      if(!restoreEmail)return null;
       if((await get(R('banned/'+id))).val()!==false)return null;
       let oldKeys=[];
       try{const s2=await get(query(R('usernames'),orderByValue(),equalTo(id)));if(s2.exists())oldKeys=Object.keys(s2.val())}catch(_){}
@@ -1387,7 +1704,7 @@ const DB=(()=>{
       patch['users/'+id+'/deleted']=null;
       patch['users/'+id+'/lastNameChange']=stamp;
       patch['usernames/'+newKey]=id;
-      patch['usernameLogin/'+newKey]={email:u.email};
+      patch['usernameLogin/'+newKey]=loginRec(restoreEmail);   // v54.1: a shape, never a real address
       oldKeys.forEach(k=>{patch['usernames/'+k]=null;patch['usernameLogin/'+k]=null});
       await update(ref(rtdb),patch);
       const nu={...u,username:newName,lastNameChange:stamp};delete nu.deleted;
@@ -1601,7 +1918,7 @@ const DB=(()=>{
       patch['users/'+id+'/deleted']=null;          // un-freeze the account
       patch['users/'+id+'/lastNameChange']=stamp;   // must change alongside username, per the rules
       patch['usernames/'+newKey]=id;
-      patch['usernameLogin/'+newKey]={email};
+      patch['usernameLogin/'+newKey]=loginRec(email);   // v54.1: a shape, never a real address
       oldKeys.forEach(k=>{patch['usernames/'+k]=null;patch['usernameLogin/'+k]=null;}); // free the old name for anyone to use
       await update(ref(rtdb),patch);
       const nu={...u,username:newName,lastNameChange:stamp};delete nu.deleted;
@@ -1846,6 +2163,11 @@ const DB=(()=>{
       }
       DB._lastOk=Date.now();
       (DB._sendTimes=DB._sendTimes||[]).push(DB._lastOk); // only counted here, on confirmed success
+      /* v54: hand back the id of the message that was just written. Nothing used the old
+         undefined return, and a feature that attaches something to a message it just sent (a
+         poll) cannot work without it - the alternative is guessing which message is yours by
+         timestamp, which is a race. */
+      return newRef.key;
     },
     // Explains WHY a send was refused (shown in the error toast so no DevTools needed)
     async _diag(id){

@@ -707,7 +707,7 @@ function openSettings(fromChat,startTab){
         if(!good){   // the server is not there, so also test the browser fallback: does the Discord webhook receive a log?
           const dc=await tosClientDiscord({test:true,name:(ME&&ME.username)||'',id:(ME&&ME.id)||0,ip:await tosClientIp()});
           if(diag)diag.insertAdjacentHTML('beforeend','<div class="hint" style="margin:6px 0 0">Browser fallback → Discord: <b>'+esc(dc)+'</b>'+
-            (dc==='sent'?' — check the channel for a TEST message. New acceptances will log from the browser until the server is deployed.':dc==='not-configured'?' — set CFG.TOS_WEBHOOK in config.js.':' — the webhook URL is wrong, deleted, or blocked by this network.')+'</div>');
+            (dc==='sent'?' — check the channel for a TEST message.':dc==='server-only'?' — the Discord log is server-side only (v54.1): the webhook lives in the Vercel environment, never in config.js. Deploy /api/tos and acceptances log from there; without it the database receipt is still written.':dc==='not-configured'?' — set DISCORD_WEBHOOK_URL in the Vercel environment.':' — the webhook URL is wrong, deleted, or blocked by this network.')+'</div>');
         }
         if(good)toast('The server answered. IPs will be logged from now on.');
       }catch(e){

@@ -47,7 +47,14 @@ const PERMS=[
   {k:'manageMsg',  n:'Manage Messages',      cat:'Text',     d:'Allows members to delete messages by other members, and to pin any message.'},
   {k:'voiceJoin',  n:'Connect',              cat:'Voice',    d:'Allows members to join voice channels and hear others.'},
   {k:'voiceSpeak', n:'Speak',                cat:'Voice',    d:'Allows members to talk in voice channels.'},
-  {k:'voiceMute',  n:'Mute Members',         cat:'Voice',    d:'Allows members to mute other members in voice channels for everyone.'}
+  {k:'voiceMute',  n:'Mute Members',         cat:'Voice',    d:'Allows members to mute other members in voice channels for everyone.'},
+  /* v54. Each of these is spelled out in the database rules too, in BOTH places a permission
+     lives (serverRoles/$sid/$rid/perms/<k> and the flattened serverMembers/$sid/$id/p/<k>) -
+     added by scripts/add_rules_v54.py. A permission the rules do not know about would be
+     enforced in the browser only, which is not enforcement. */
+  {k:'manageEmoji', n:'Manage Expressions',  cat:'General',  d:'Allows members to add, rename and remove this server\'s custom emoji.'},
+  {k:'manageEvents',n:'Manage Events',       cat:'General',  d:'Allows members to create, edit and cancel server events.'},
+  {k:'viewAudit',   n:'View Audit Log',      cat:'Advanced', d:'Allows members to read this server\'s audit log — who changed what, and when.'}
 ];
 const PERM_KEYS=PERMS.map(p=>p.k);
 const PERM_CATS=['General','Membership','Text','Voice','Advanced'];
@@ -201,7 +208,18 @@ const DModel=(()=>{
       sys:typeof v.sys==='string'?v.sys:'',
       welcome:v.welcome!==false,     // on unless explicitly turned off
       wjoin:v.wjoin!==false,
-      banner:typeof v.banner==='string'?v.banner:''
+      banner:typeof v.banner==='string'?v.banner:'',
+      /* v54. This shape is a WHITELIST - a field that is not named here is invisible to every
+         caller even though it is sitting in the database, which is exactly what happened to the
+         welcome screen before these lines existed. Anything added to servers/$sid in the rules
+         has to be added here too. */
+      srules:typeof v.srules==='string'?v.srules:'',
+      screenOn:v.screenOn===true,
+      wtitle:typeof v.wtitle==='string'?v.wtitle:'',
+      wdesc:typeof v.wdesc==='string'?v.wdesc:'',
+      verify:typeof v.verify==='string'?v.verify:'none',
+      efilter:typeof v.efilter==='string'?v.efilter:'members',
+      defNotif:typeof v.defNotif==='string'?v.defNotif:'all'
     };
   }
   // Every server I'm in, ICH always pinned first, then my saved order, then by name.

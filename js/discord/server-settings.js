@@ -16,6 +16,30 @@ const ROLE_COLORS=[
   '#11806a','#1f8b4c','#206694','#71368a','#ad1457','#c27c0e','#a84300','#992d22','#979c9f','#546e7a'
 ];
 
+/* ======================================================================
+ *  EXTRA SECTIONS (v54)
+ *
+ *  openServerSettings() is one closure: its drawNav() and draw() cannot be reached from another
+ *  file. Rather than rewrite it - it works and is covered by tests - it consults this registry,
+ *  which other files push into at load time. That keeps every new server section (audit log,
+ *  events, welcome screen, emoji, stats) in its own file while there is still exactly ONE nav
+ *  and ONE draw path, so a section cannot appear in the list without something to draw.
+ *
+ *  Each entry:
+ *    k      section id, used in the nav and by openServerSettings(sid,'<k>')
+ *    n      what the nav shows
+ *    cat    which nav group it belongs under ('Server' | 'People' | 'Moderation')
+ *    perm   the permission needed to see it, or '' for everyone
+ *    ich    false to hide it on ICH (which is defined in code, not stored as a server)
+ *    draw   draw(main, sid, srv, api) - api = {redraw, close, section}
+ * ====================================================================== */
+const SRV_EXTRA=[];
+function registerServerSection(def){
+  if(!def||!def.k||typeof def.draw!=='function'){console.warn('[server settings] bad section',def);return}
+  if(SRV_EXTRA.some(s=>s.k===def.k)){console.warn('[server settings] duplicate section',def.k);return}
+  SRV_EXTRA.push({cat:'Server',perm:'',ich:true,...def});
+}
+
 let _dset=null;
 function closeServerSettings(){if(_dset){_dset.remove();_dset=null;document.removeEventListener('keydown',_dsetKey)}}
 function _dsetKey(e){
@@ -54,6 +78,14 @@ function openServerSettings(sid,section){
 
   const nav=el.querySelector('#svNav'),main=el.querySelector('#svMain');
 
+  /* Which registered extras this person can see in this server, in registration order. */
+  function extrasIn(cat){
+    const sys=DModel.isSystem(sid);
+    return SRV_EXTRA.filter(x=>x.cat===cat
+      &&(x.ich||!sys)
+      &&(!x.perm||DModel.can(sid,x.perm,ME.id)));
+  }
+
   function drawNav(){
     const can=p=>DModel.can(sid,p,ME.id);
     const items=[];
@@ -62,9 +94,20 @@ function openServerSettings(sid,section){
     if(can('manageRoles'))items.push({k:'roles',n:'Roles'});
     if(can('manageCh'))items.push({k:'channels',n:'Channels'});
     if(can('invite'))items.push({k:'invites',n:'Invites'});
+    /* v54 sections in the Server group go here, before People, so Overview / Roles / Channels /
+       Invites / Emoji / Events / Welcome / Stats read as one block the way Discord's do. */
+    extrasIn('Server').forEach(x=>items.push({k:x.k,n:x.n}));
     items.push({cat:'People'});
     items.push({k:'members',n:'Members'});
+    extrasIn('People').forEach(x=>items.push({k:x.k,n:x.n}));
+    /* Bans stays exactly where it was, under People - moving it would change a layout the
+       existing tests measure. Moderation is a NEW group, drawn only when something is in it. */
     if(can('ban'))items.push({k:'bans',n:'Bans'});
+    const modExtras=extrasIn('Moderation');
+    if(modExtras.length){
+      items.push({cat:'Moderation'});
+      modExtras.forEach(x=>items.push({k:x.k,n:x.n}));
+    }
     nav.innerHTML=items.map(it=>it.cat
       ?'<div class="dset-cat">'+esc(it.cat)+'</div>'
       :'<div class="dset-item'+(sec===it.k?' active':'')+'" data-k="'+it.k+'">'+esc(it.n)+'</div>'
@@ -90,7 +133,20 @@ function openServerSettings(sid,section){
     else if(sec==='channels')drawChannels();
     else if(sec==='invites')drawInvites();
     else if(sec==='bans')drawBans();
-    else drawMembers();
+    else{
+      /* A registered extra, if this is one. Wrapped: a section from another file must not be
+         able to take the whole panel down - the nav is already drawn by this point, so a failed
+         section leaves everything else usable. */
+      const x=SRV_EXTRA.find(s=>s.k===sec);
+      if(x){
+        try{x.draw(main,sid,srv,{redraw:draw,close:closeServerSettings,section:sec})}
+        catch(e){
+          console.error('[server settings] section failed:',sec,e);
+          main.innerHTML='<div class="dset-h1">'+esc(x.n)+'</div><div class="dempty">This section could not be drawn. '+esc((e&&e.message)||'')+'</div>';
+        }
+      }
+      else drawMembers();
+    }
   }
 
   /* ---------------- Overview ---------------- */

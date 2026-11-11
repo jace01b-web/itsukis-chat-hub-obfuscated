@@ -31,6 +31,17 @@ function goHome(forceMenu){
     DModel.ensureStarted(ME.id);
     // Boosts follow the same path for the same reason: every sign-in comes through here.
     try{DBoost.ensureStarted(ME.id)}catch(e){console.warn('[goHome] boost model',e)}
+    /* v54 models, started here for exactly the same reason: this is the one place every sign-in
+       path is guaranteed to pass through, and each of them has to be pointed at the account that
+       just signed in rather than whoever was here before. Each is wrapped on its own so one
+       failing listener cannot stop the others - or stop you reaching a channel. */
+    try{PActivity.ensureStarted(ME.id)}catch(e){console.warn('[goHome] activity',e)}
+    try{PNotes.ensureStarted(ME.id)}catch(e){console.warn('[goHome] notes',e)}
+    try{PAch.ensureStarted(ME.id)}catch(e){console.warn('[goHome] achievements',e)}
+    try{NotifPrefs.ensureStarted(ME.id)}catch(e){console.warn('[goHome] notification prefs',e)}
+    try{DSaved.ensureStarted(ME.id)}catch(e){console.warn('[goHome] saved messages',e)}
+    try{Prefs.apply()}catch(e){console.warn('[goHome] prefs',e)}
+    try{setTimeout(()=>{try{PAch.sweep()}catch(_){}},4000)}catch(_){}
     if(!view.sid)view.sid=localStorage.getItem('ich.sid')||DModel.ICH_ID;
     // Don't try to open a server that was left, deleted, or that this account was banned from.
     const mine=DModel.myServers().map(s=>s.id);

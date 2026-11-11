@@ -27,6 +27,51 @@ const SPIN_PRIZES=[
   {id:'vipperm', name:'VIP — Forever',  e:'💎',pct:2, color:'#ffe11a',role:'vipperm',msg:'VIP forever. The VIP Lounge is yours for good.'},
   {id:'mvp',     name:'MVP — Forever',  e:'🏆',pct:0.1,color:'#ff2fa0',role:'mvp',msg:'MVP! Permanent. Image banners, 300-char bio, 2x message length, 3 spins a day, MVP Chat and free VIP are yours.'}
 ];
+/* ======================================================================
+ *  WHICH PRIZES THIS INSTALL CAN ACTUALLY AWARD  (v54 security hardening)
+ *
+ *  The two jackpots - permanent VIP and MVP - used to be written straight from the browser,
+ *  which meant anybody could write them to their own account and take the $10 and $30 products
+ *  for nothing. The database rules now refuse a self-written permanent VIP or MVP, so the
+ *  browser can no longer award them at all, and a spin that tried would have its whole atomic
+ *  update refused - taking the spin marker down with it.
+ *
+ *  So the wheel only ever shows what it can really pay out:
+ *
+ *    CFG.SPIN_API empty   (the default)
+ *        The jackpots are left off the wheel. Everything else - the flairs, the roles, 24h VIP -
+ *        works exactly as before. Nobody sees a prize they cannot be given.
+ *
+ *    CFG.SPIN_API set
+ *        The whole spin becomes server-authoritative: the browser asks POST /api/spin, the
+ *        SERVER rolls and writes the prize with the Admin SDK, and the wheel animates to
+ *        whatever came back. The browser writes nothing, so it can no longer be told to claim
+ *        anything - which also closes the 24h-VIP self-grant, not just the jackpots.
+ *        api/spin.js follows api/totaward.js, which already decides Trick-or-Treat placings
+ *        server-side for exactly this reason.
+ *
+ *  See SECURITY_AUDIT.md (H2) and DEPLOY-API.md.
+ * ====================================================================== */
+/* v54.1: nonce plumbing for the server-authoritative spin (see api/spin.js). */
+let _spinNonce='';
+function newSpinNonce(){
+  try{
+    if(window.crypto&&crypto.getRandomValues){
+      const a=new Uint8Array(16);crypto.getRandomValues(a);
+      return Array.from(a).map(x=>x.toString(16).padStart(2,'0')).join('');
+    }
+  }catch(_){}
+  return 'n'+Date.now().toString(36)+Math.random().toString(36).slice(2,10);
+}
+function spinServer(){
+  try{const u=String((CFG&&CFG.SPIN_API)||'').trim().replace(/\/+$/,'');return u||''}
+  catch(_){return ''}
+}
+const JACKPOTS=['vipperm','mvp'];
+function spinPrizes(){
+  return spinServer()?SPIN_PRIZES:SPIN_PRIZES.filter(p=>JACKPOTS.indexOf(p.id)<0);
+}
+
 const ROLE_LABELS={
   confetti:'🎉 Confetti Blast',gold:'🥇 Golden Flair',rainbow:'🌈 Rainbow Flair',crown:'👑 Crown Flair',neon:'💡 Neon Flair',
   lucky:'🍀 Lucky Flair',ice:'❄️ Ice Flair',fire:'🔥 Fire Flair',vip1:'🌞 VIP — 1 Day',vipperm:'💎 VIP — Forever',mvp:'🏆 MVP — Forever'
@@ -200,19 +245,20 @@ setInterval(()=>{
 let _spinBusy=false,_wheelRot=0;
 function rollPrize(){
   // Odds are the pct values (they add up to 100). Normalising by the real total keeps rounding from ever skewing the roll.
-  const total=SPIN_PRIZES.reduce((t,p)=>t+p.pct,0);
+  const list=spinPrizes();
+  const total=list.reduce((t,p)=>t+p.pct,0);
   const buf=new Uint32Array(1);crypto.getRandomValues(buf);
   let r=(buf[0]/4294967296)*total,acc=0;
-  for(const p of SPIN_PRIZES){acc+=p.pct;if(r<acc)return p}
-  return SPIN_PRIZES[0];
+  for(const p of list){acc+=p.pct;if(r<acc)return p}
+  return list[0];
 }
 const fmtPct=n=>String(Math.round(n*10)/10);
 // The wheel has one equal slice per prize (slice size is cosmetic; the real odds are in the list under it).
-const sliceDeg=()=>360/SPIN_PRIZES.length;
+const sliceDeg=()=>360/spinPrizes().length;
 function wheelSVG(){
   const R0=150,C0=160,SL=sliceDeg(),pt=(deg,r)=>{const a=deg*Math.PI/180;return[(C0+r*Math.sin(a)).toFixed(2),(C0-r*Math.cos(a)).toFixed(2)]};
   let out='<svg viewBox="0 0 320 320" aria-hidden="true">';
-  SPIN_PRIZES.forEach((p,i)=>{
+  spinPrizes().forEach((p,i)=>{
     const a=pt(i*SL,R0),b=pt((i+1)*SL,R0),m=pt(i*SL+SL/2,102);
     out+='<path d="M160 160 L'+a[0]+' '+a[1]+' A150 150 0 0 1 '+b[0]+' '+b[1]+' Z" fill="'+p.color+'" stroke="rgba(255,255,255,.14)" stroke-width="1"/>';
     out+='<text transform="translate('+m[0]+' '+m[1]+') rotate('+(i*SL+SL/2)+')" text-anchor="middle" dominant-baseline="central" font-size="25">'+p.e+'</text>';
@@ -294,7 +340,8 @@ function openSpin(){
     </div>
     <div class="spin-res" id="spinRes" aria-live="polite"></div>
     <button class="btn spin-go" id="spinBtn" type="button"></button>
-    <div class="odds-grid">${SPIN_PRIZES.map(p=>'<div class="odd'+(p.id==='vip1'||p.id==='vipperm'?' vip':'')+(p.id==='mvp'?' mvp':'')+'"><span>'+p.e+' '+p.name+'</span><b>'+fmtPct(p.pct)+'%</b></div>').join('')}</div>
+    <div class="odds-grid">${spinPrizes().map(p=>'<div class="odd'+(p.id==='vip1'||p.id==='vipperm'?' vip':'')+(p.id==='mvp'?' mvp':'')+'"><span>'+p.e+' '+p.name+'</span><b>'+fmtPct(p.pct)+'%</b></div>').join('')}</div>
+    ${spinServer()?'':'<div class="hint" style="margin-top:8px">VIP Forever and MVP are not on the wheel on this install. They can only be awarded by the server, so that nobody can hand them to themselves \u2014 see DEPLOY-API.md to switch them on.</div>'}
     ${mvpPerksHTML()}
     <div class="spin-roles" id="spinRoles">${spinRolesHTML()}</div>
     <div class="mvp-hall" id="mvpHall">${mvpHallHTML()}</div>
@@ -323,7 +370,72 @@ async function doSpin(){
   const st=spinState();
   if(st.wait>0){setSpinBtn();return}
   _spinBusy=true;setSpinBtn();res.className='spin-res';res.textContent='';
-  const prize=rollPrize(),id=ME.id;
+  const id=ME.id;
+
+  /* ---- server-authoritative path ----------------------------------
+     The server rolls, the server writes, and the wheel then animates to the answer. The browser
+     has no say in the outcome and writes nothing, so there is nothing here to tamper with. */
+  if(spinServer()){
+    const wasMvpAlready=isMvp(id);
+    /* v54.1: one nonce per press, reused across retries of THAT press. The server remembers
+       the last nonce it honoured, so a dropped connection or a double-tap returns the same
+       prize instead of eating a second spin. Generated here because only the browser knows
+       that two requests are the same attempt - the server treats it purely as a label and
+       makes no decision from it. */
+    if(!_spinNonce)_spinNonce=newSpinNonce();
+    let out=null,err='';
+    /* The server runs a small state machine per spin (see api/spin.js). Four answers matter to
+       the client beyond plain success and failure:
+         202 + state:'processing'  the previous attempt is still in flight. Wait and retry with
+                                   the SAME nonce; rolling again would be a second spin.
+         503 + state:'refunded'    the payout failed and the spin was given back. Safe to retry
+                                   straight away, so the nonce is retired.
+         503 + state:'processing'  the payout failed and the refund could not be recorded yet.
+         503 + state:'claimed'     v54.3: the spin was reserved but the transition to processing
+                                   could not be confirmed, so NOTHING was paid. The server
+                                   refuses to pay a reward its own record cannot describe.
+       For the last two the server's recovery sweep returns the spin within a couple of minutes,
+       so the nonce is kept and the user is told to wait rather than hammering the endpoint. */
+    const postSpin=async()=>{
+      const tok=await (auth.currentUser&&auth.currentUser.getIdToken());
+      const rsp=await fetch(spinServer()+'/api/spin',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({idToken:tok,nonce:_spinNonce})
+      });
+      const body=await rsp.json().catch(()=>null);
+      return{ok:rsp.ok,status:rsp.status,body};
+    };
+    try{
+      let r=await postSpin();
+      // One short wait-and-retry for a spin that is still being processed. Same nonce, so the
+      // server hands back the same transaction rather than starting another.
+      for(let i=0;i<2&&r.status===202;i++){
+        await new Promise(res=>setTimeout(res,1200));
+        r=await postSpin();
+      }
+      out=r.body;
+      if(!r.ok)err=(out&&out.error)||('HTTP '+r.status);
+    }catch(e){err=(e&&e.message)||'network error'}
+    /* The nonce is retired only once a prize is in hand. Keeping it on failure is what makes a
+       retry recognisable as the same press; clearing it on a refund lets the next press be a
+       genuinely new spin. */
+    if(!err&&out&&out.prize)_spinNonce='';
+    else if(out&&out.state==='refunded')_spinNonce='';
+    if(err||!out||!out.prize){
+      _spinBusy=false;setSpinBtn();
+      res.className='spin-res bad';
+      res.textContent='The spin could not be saved ('+(err||'no prize came back')+'). Nothing was used up — try again.';
+      return;
+    }
+    const won=SPIN_PRIZES.find(p=>p.id===out.prize)||SPIN_PRIZES[0];
+    animateTo(won,wasMvpAlready);
+    return;
+  }
+
+  /* ---- browser path (no spin server configured) -------------------
+     Can only award what the database rules let a browser award: flairs, roles and 24h VIP.
+     spinPrizes() has already removed the two jackpots, so nothing here can be refused. */
+  const prize=rollPrize();
   const serverNow=Math.round(Date.now()+SKEW);
   const up={};
   const wasMvp=isMvp(id);
@@ -349,7 +461,13 @@ async function doSpin(){
     res.textContent='The spin could not be saved ('+(e.code||e.message)+'). Blocked paths: '+Object.keys(up).join(', ')+'.'+(/mvp|spinWin/.test(Object.keys(up).join(','))?' If this is about MVP, publish the MVP database rules (SETUP-MVP.md).':'');
     return;
   }
-  const idx=SPIN_PRIZES.indexOf(prize);
+  animateTo(prize,wasMvp);
+}
+
+/* The wheel animation and the result card. Extracted so both paths - the browser roll and the
+   server-authoritative one - show the result the same way, rather than two copies drifting
+   apart. By the time this runs the prize is already decided and already saved. */
+function animateTo(prize,alreadyMvp){
   const SL=sliceDeg(),jitter=(Math.random()-.5)*SL*.55;
   const mid=idx*SL+SL/2+jitter;
   const d=(((-(mid+_wheelRot))%360)+360)%360;
@@ -383,7 +501,7 @@ async function doSpin(){
     if(prize.id!=='none'&&prize.id!=='close')burstConfetti(prize.id==='mvp'?260:(prize.id==='vipperm'?140:(prize.id==='confetti'?110:60)));
     if(prize.id==='vip1'||prize.id==='vipperm')toast('VIP unlocked. Open VIP Chat from the chat menu.');
     if(prize.id==='mvp'){
-      if(wasMvp){const r3=$('#spinRes');if(r3)r3.querySelector('span:not(.sr-e)').textContent='You already are an MVP, so this is pure bragging rights. Nice.'}
+      if(alreadyMvp){const r3=$('#spinRes');if(r3)r3.querySelector('span:not(.sr-e)').textContent='You already are an MVP, so this is pure bragging rights. Nice.'}
       else toast('🏆 You are an MVP! Open MVP Chat from the chat menu.');
     }
   },dur+200);

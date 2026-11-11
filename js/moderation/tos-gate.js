@@ -198,7 +198,7 @@ function tosWhyCode(){
 }
 /* ---------- BROWSER FALLBACK (used only when /api is unreachable) ----------
    The server is the proper way to see an IP. When it is not deployed, the browser reads its own IP from a free lookup service, saves it on the
-   receipt (the database rules already allow an `ip` field there and only owners can read it), posts the log to CFG.TOS_WEBHOOK, and IP bans
+   receipt (the database rules already allow an `ip` field there and only owners can read it), and IP bans
    are stored as a SHA-256 of the network that staff can write and every browser can look up. It is weaker than the server (a tampered
    client can lie or skip it) but it works with nothing deployed. Lookups only ever run for someone who pressed Accept, or for staff. */
 let _tosIpCache={ip:'',at:0};
@@ -226,21 +226,19 @@ async function tosClientHash(ip){
   const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('ip:'+tosNormIp(ip)));
   return 'c'+Array.from(new Uint8Array(buf)).map(x=>x.toString(16).padStart(2,'0')).join('').slice(0,32);
 }
+/* v54.1: this function used to POST the TOS receipt straight to a webhook URL kept in
+   config.js (the TOS_WEBHOOK setting, now removed) whenever /api was
+   unreachable. The webhook URL had to be in config.js for that to work, which published it to
+   every visitor - anyone could read it from the page source and post to, or delete, that
+   channel. It has been removed.
+
+   There is no version of this that keeps the secret: a URL the browser can post to is a URL the
+   browser can read. So the Discord log is now the server's job only (/api/tos, with the webhook
+   in the Vercel environment). If /api is unreachable, the acceptance is still written to the
+   database - that receipt is the record that matters - and there is simply no Discord post.
+   Returns 'server-only' so the diagnostics panel can say exactly that. */
 async function tosClientDiscord(f){
-  const url=String(CFG.TOS_WEBHOOK||'');
-  if(!/^https:\/\/(discord|discordapp)\.com\/api\/webhooks\//.test(url))return 'not-configured';
-  const v=x=>'`'+(String(x==null?'':x).replace(/[`\r\n]/g,' ').slice(0,190)||'-')+'`';
-  try{
-    const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-      username:'ICH Security',allowed_mentions:{parse:[]},
-      embeds:[{title:(f.test?'TEST - ':'')+'TOS accepted (v'+CFG.TOS_VERSION+') - browser fallback',color:f.test?0x5865f2:0xfaa61a,
-        fields:[{name:'Username',value:v(f.name),inline:true},{name:'Account ID',value:v(f.id),inline:true},{name:'IP',value:v(f.ip||'could not be read'),inline:true},
-          {name:'Source',value:v('browser (server /api unreachable) - IP is browser-reported'),inline:false},
-          {name:'Build',value:v(typeof MY_BUILD==='string'?MY_BUILD:''),inline:true},{name:'Browser',value:v(navigator.userAgent),inline:false}],
-        timestamp:new Date().toISOString()}]
-    })});
-    return r.ok?'sent':'failed-'+r.status;
-  }catch(_){return 'failed'}
+  return 'server-only';
 }
 // Used by tosCheckIp when the server cannot answer: is THIS network in ipBans? (needs the ipBans/$h read rule - see RULES-PATCH.md)
 async function tosClientBanCheck(){

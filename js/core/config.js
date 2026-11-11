@@ -61,18 +61,46 @@ const CFG={
   MAX_SERVERS_JOINED_VIP:200,
   MAX_SERVERS_JOINED_MVP:300,
   TOS_API:'https://itsukis-chat-hub.vercel.app',   // where the /api functions are deployed. The Discord webhook now lives ONLY in the server env.
-  /* BROWSER FALLBACK for when /api is not deployed: the accepting person's browser reads its own IP (ipify), saves it on the receipt, and posts a log
-     to this Discord webhook itself. NOTE: this file is public, so anyone who opens the site can read this URL (and spam or delete the webhook).
-     If that ever happens, make a new webhook and replace this one line. Leave '' to turn the fallback post off. Once /api is deployed the SERVER
-     logs instead (webhook in the Vercel env var) and this is never used. */
-  TOS_WEBHOOK:'https://discord.com/api/webhooks/1566680471822274700/vPrDw2IabLh2_KXKIensrgTdFKvnIg49en6zAMPWzUufAivkFPDoKQl691EdI6oTHkUA',
+  /* Where POST /api/spin lives. EMPTY = off, which is the safe default and what this build
+     ships with: with it off, the Daily Spin cannot award VIP Forever or MVP at all, because the
+     database rules refuse a browser that tries to write either to itself. Set this to the same
+     origin as TOS_API once api/spin.js is deployed there, and the two jackpots come back -
+     decided and written by the server. See SECURITY_AUDIT.md (H2) and DEPLOY-API.md. */
+  SPIN_API:'',
+  /* Where POST /api/login lives. EMPTY = off, which is the default.
+     Only accounts whose Firebase Auth email is a REAL address need it: their address is no
+     longer published in the public username->email map, so username sign-in for them has to
+     ask the server. With this empty they sign in by typing their email address, exactly as
+     they always could. Deploying it is the only way a password is sent anywhere other than
+     Google - read the header of api/login.js before you turn it on. */
+  LOGIN_API:'',
+  /* v54.1: TOS_WEBHOOK WAS HERE AND HAS BEEN REMOVED.
+     It held a live Discord webhook URL in a file served to every visitor, so anyone who opened
+     the site could read it and post to - or delete - that channel. It existed as a fallback for
+     when /api was not deployed, which is no longer the situation: TOS_API is set and /api/tos
+     logs the acceptance server-side from the webhook URL in the Vercel environment, where the
+     browser cannot see it.
+     There is no secret-keeping version of the fallback. A URL the browser can post to is a URL
+     the browser can read, so if /api is unreachable there is simply no Discord post - the
+     database receipt is still written. The old webhook must be deleted and recreated: see
+     SECURITY_AUDIT.md, "credential rotation". */
   ATTEST_EVERY_MS:4*60*1000,      // how often the browser asks the server to re-clear this login (server grants 8 min at a time)
   IP_BAN_FULL_LOCK:false,         // false = an IP-banned network can't CHAT. true = it is locked out of the whole menu like a banned account
   // --- NSFW image detection (Nyckel) ---
   NSFW_ENABLED:true,
+  /* v54.1: NYCKEL_CLIENT_SECRET WAS HERE AND HAS BEEN REMOVED.
+     It was a live API secret in a file served to every visitor. Scanning now goes through
+     POST /api/nsfw, which holds the credential in the Vercel environment and returns only a
+     verdict. The old secret is compromised and must be rotated in the Nyckel dashboard -
+     moving it server-side does not un-publish it. See SECURITY_AUDIT.md.
+     The two ids below are not secrets: they name which account and which function to call, and
+     they are useless without the secret. Kept so the client can tell whether scanning is set
+     up at all, and so the diagnostics can say which function it would use. */
   NYCKEL_FUNCTION_ID:'wyv22067tq24vkn5',
   NYCKEL_CLIENT_ID:'p3752er2dbapnm9gxuqzk57o5w0jpbj3',
-  NYCKEL_CLIENT_SECRET:'tkgbj7q6exahzgpi93kzv1jkwiz6d7c1s7w35ywp3jlmupoo6iamqj8r1we08ks6',   // <-- paste your Nyckel client secret here (see note: it is visible to anyone who views the page source)
+  /* Where POST /api/nsfw lives. Empty = use TOS_API's origin, which is where /api already is.
+     Set it only if you deploy the scanner somewhere else. */
+  NSFW_API:'',
   NSFW_MIN_CONFIDENCE:0.6,   // flag when the NSFW label's confidence is at least this
   NSFW_LABEL_REGEX:/nsfw|explicit|porn|adult|unsafe|sexual|nude/i,   // labels that count as NSFW
   NSFW_SAFE_REGEX:/^(sfw|safe|not|non|no\b|clean)/i                 // labels that are explicitly safe (wins over the regex above)

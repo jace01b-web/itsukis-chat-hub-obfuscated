@@ -864,8 +864,15 @@ const DiscordShell=(function(){
     let s=null;try{s=sid()}catch(_){}
     if(s===_boostSid)return;
     try{if(_boostSid)DBoost.detach(_boostSid)}catch(_){}
+    try{if(_boostSid&&typeof SEmoji!=='undefined')SEmoji.detach(_boostSid)}catch(_){}
+    try{if(_boostSid&&typeof SEvents!=='undefined')SEvents.detach(_boostSid)}catch(_){}
     _boostSid=s;
     try{if(s&&s!==DModel.ICH_ID)DBoost.attach(s)}catch(_){}
+    /* v54 rides the same one-server-at-a-time rule, for the same reason: the custom emoji and
+       the event list of the server you are LOOKING at are worth a listener; those of every
+       server you have ever joined are not. */
+    try{if(s&&s!==DModel.ICH_ID&&typeof SEmoji!=='undefined')SEmoji.attach(s)}catch(_){}
+    try{if(s&&s!==DModel.ICH_ID&&typeof SEvents!=='undefined')SEvents.attach(s)}catch(_){}
   }
   /* A boost landing or leaving changes the sidebar bar, the level chip and the rail glow, so
      redraw the sidebar the same way everything else does. Coalesced on a frame for the same
@@ -943,5 +950,25 @@ const DiscordShell=(function(){
     }catch(e){console.warn('[shell] voiceGoToChannel failed',e)}
   };
 
-  return{refresh,renderFriends,on,serverMode,renderChannels};
+  /* v54: open a server from outside the shell - the mutual-servers list on a profile, the quick
+     switcher, anything else that needs to GO somewhere.
+     There was no such export before, and `serverMode` reads like one but is a predicate ("are we
+     looking at a server?"), so calling it as a setter silently did nothing. This is the same
+     sequence railClick runs for a server button, in one place both can use. */
+  function openServer(s){
+    if(!ME||!s)return false;
+    let exists=false;
+    try{exists=DModel.myServers().some(x=>x.id===s)}catch(_){}
+    if(!exists)return false;
+    closeExtras();
+    view.mode='global';view.sid=s;view.section=null;view.dmView='chat';
+    try{localStorage.setItem('ich.sid',s)}catch(_){}
+    try{DModel.grantAccess(s).catch(()=>{})}catch(_){}
+    const c=lastChannelOf(s);
+    if(c)openChannel(s,c);
+    else{view.roomKey=null;DB.watchMessages(null);renderChat()}
+    return true;
+  }
+
+  return{refresh,renderFriends,on,serverMode,renderChannels,openServer,openChannel,lastChannelOf};
 })();
