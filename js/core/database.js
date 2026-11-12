@@ -8,7 +8,7 @@
 
 const DB=(()=>{
   // live cache
-  const C={users:{},priv:{},usernames:{},rooms:{},roomMembers:{},dmMembers:{},friends:{},friendReqIn:{},friendReqOut:{},lastRead:{},pingSeen:{},messages:{},myRoomIds:[],online:0,onlineIds:[],presenceIds:[],banned:{},muted:{},blocked:{},blockedBy:{},reactions:{},vip:{},mvp:{},spinWin:null,flair:{},roles:{},lastSpin:0};
+  const C={users:{},priv:{},usernames:{},rooms:{},roomMembers:{},dmMembers:{},friends:{},friendReqIn:{},friendReqOut:{},dmReqIn:{},lastRead:{},pingSeen:{},messages:{},myRoomIds:[],online:0,onlineIds:[],presenceIds:[],banned:{},muted:{},blocked:{},blockedBy:{},reactions:{},vip:{},mvp:{},spinWin:null,flair:{},roles:{},lastSpin:0};
   let myId=null,myUid=null,ready=false;
   const listeners=new Set();
   const unsubs=[];         // base listeners
@@ -75,6 +75,63 @@ const DB=(()=>{
      ready. This closes the gap for whoever signs in before that, and makes the migration's
      job smaller. Copy FIRST, verify, only then clear - if any step fails the public copy is
      left exactly where it was and the next sign-in tries again. */
+  /* ---- v54.5: the personal content filter and the background music default OFF ----
+     Changing defaultSettings() alone would not have reached anybody who already exists: the
+     Settings page writes the whole settings blob when you press Save, so almost every account
+     has an incidental `filterLocal:true` / `music.enabled:true` stored from back when those
+     were the defaults - a value nobody chose, which would have kept overriding the new default
+     for ever.
+
+     So this clears those two stored values ONCE per account, the next time it signs in, and
+     writes a marker so it never runs again. After that the account falls through to the new
+     default, and anyone who actually wants either one turns it on and that choice sticks -
+     the marker means it is never cleared a second time.
+
+     Only this account's own records are touched, nothing else in the blob is read or written,
+     and a failure is silent and simply retried on the next sign-in.
+
+     TWO DELIBERATE CHOICES ABOUT WHERE AND HOW
+       The marker lives INSIDE settings, not beside it: userPrivate/$id/$other is
+       `.validate:false`, so a new sibling key there would be refused by the rules, while
+       settings/$other already allows a scalar. No rules change is needed for any of this.
+
+       The two values are set to false rather than deleted, because settings/music carries
+       `.validate: newData.hasChildren()` - removing its only child on an account that has no
+       volume or shuffle stored would leave an empty node and the whole update would bounce,
+       taking the marker with it. false is what the new default resolves to anyway. */
+  let _defaultsReset=false;
+  const OPTIN_RESET_KEY='optinReset545';
+  async function resetOptedInDefaults(){
+    if(_defaultsReset||!myId)return;
+    _defaultsReset=true;
+    const id=myId;
+    try{
+      const priv=(await get(R('userPrivate/'+id))).val()||{};
+      const s=(priv.settings&&typeof priv.settings==='object')?priv.settings:null;
+      if(s&&s[OPTIN_RESET_KEY])return;                       // already done for this account
+      const patch={};
+      if(s){
+        if(s.filterLocal===true)patch['userPrivate/'+id+'/settings/filterLocal']=false;
+        if(s.music&&typeof s.music==='object'&&s.music.enabled===true)
+          patch['userPrivate/'+id+'/settings/music/enabled']=false;
+      }
+      patch['userPrivate/'+id+'/settings/'+OPTIN_RESET_KEY]=1;
+      await update(ref(rtdb),patch);
+      /* Keep the in-memory copy in step so the change applies now rather than on next load. */
+      if(C.priv&&C.priv.settings){
+        const ps=C.priv.settings;
+        if(ps.filterLocal===true)ps.filterLocal=false;
+        if(ps.music&&ps.music.enabled===true)ps.music.enabled=false;
+        ps[OPTIN_RESET_KEY]=1;
+        if(C.users[id])C.users[id]={...C.users[id],settings:ps};
+        emit();
+      }
+    }catch(e){
+      _defaultsReset=false;                                  // let the next sign-in try again
+      console.warn('[defaults] could not reset the opt-in defaults yet',e&&(e.code||e.message));
+    }
+  }
+
   let _privMoved=false;
   async function movePrivateDataIfNeeded(){
     if(_privMoved||!myId)return;
@@ -387,6 +444,7 @@ const DB=(()=>{
       if(C.users[myId])C.users[myId]={...C.users[myId],settings:C.priv.settings||C.users[myId].settings};
     });
     movePrivateDataIfNeeded();
+    resetOptedInDefaults();
     listen('banned',v=>{
       C.banned=v||{};BANNED_LOADED=true;
       checkBanLock(myId,C.banned);
@@ -416,7 +474,20 @@ const DB=(()=>{
       if(typeof DiscordShell!=='undefined'){try{DiscordShell.refresh()}catch(_){}}
     });
     listen('appVersion',v=>{APP_VERSION_CACHE=v||null;APP_VERSION_LOADED=true;if(typeof checkForcedVersion==="function")checkForcedVersion();});
-    listen('dmMembers',v=>C.dmMembers=v||{});
+    /* dmMembers is the whole node (its own .read is "any signed-in account" - see the note
+       further down where it is handed out). Every conversation I am a member of gets its
+       preview watched, not just the ones with friends: since v54.5 a DM can exist with
+       somebody who is not a friend, and without this their messages would arrive with no
+       unread badge and no row in the DM list until the page was reloaded. */
+    listen('dmMembers',v=>{
+      C.dmMembers=v||{};
+      try{
+        Object.keys(C.dmMembers).forEach(k=>{
+          if(C.dmMembers[k]&&C.dmMembers[k][myId])watchPreview(k);
+        });
+      }catch(_){}
+      if(ready)emit();
+    });
     listen('vip',v=>{C.vip=v||{};if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
     /* MVP repaints too: it owns a member-list group, the trophy next to a name, the image-banner
        perk and - new in v53 - two server boost slots, all of which must disappear the moment the
@@ -428,6 +499,11 @@ const DB=(()=>{
     listen('lastSpin/'+myId,v=>{C.lastSpin=Number(v)||0;if(typeof refreshSpinUI==='function'){try{refreshSpinUI()}catch(_){}}});
     listen('spinWin/'+myId,v=>{C.spinWin=(v&&typeof v==='object')?v:null;if(typeof refreshSpinUI==='function'){try{refreshSpinUI()}catch(_){}}});
     listen('friendRequests/'+myId,v=>C.friendReqIn=v||{});
+    /* Message requests addressed to me. Readable by me alone (see the node's own .read), so
+       this is the only place they arrive from. The rows I have already ignored stay in the
+       node on purpose - the rules consult them to stop that person re-raising the request -
+       and are filtered out of dmRequestsIn() rather than deleted. */
+    listen('dmRequests/'+myId,v=>{C.dmReqIn=v||{};if(ready)emit()});
     listen('lastRead/'+myId,v=>{C.lastRead=v||{};C.lastReadLoaded=true});
     listen('pingSeen/'+myId,v=>{C.pingSeen=v||{}});
     // Rooms: rather than trying to read the whole 'rooms'/'roomMembers' trees (which
@@ -1347,6 +1423,31 @@ const DB=(()=>{
         :String((cur.style&&cur.style.displayName)||'');
       delete merged.displayName;
       const style={bubble:merged.meBubble||'#7c6cff',text:merged.meText||'#ffffff',radius:Number(merged.radius)||16,avatar};
+      /* v54.5: the three v54 profile fields have to be carried forward too.
+         accent, theme and deco are written as individual children by Settings -> Profiles
+         (js/settings/settings-plus.js writes users/$id/style/accent and friends directly),
+         but THIS write replaces the whole style node. They were never added to the
+         carry-forward list the avatar, status and display name already had, so saving any
+         unrelated setting - pronouns, a description, a banner colour, removing an avatar,
+         hiding a tag - silently wiped the person's profile colour, profile theme and avatar
+         decoration. Exactly the trap described above the avatar line, one node along.
+         Each is validated the same way it is on the way in, so a junk value that somehow
+         reached the cache is dropped here rather than written back.
+
+         The two catalogue lookups go through a try: profile-data.js is loaded AFTER this file
+         (js/manifest.js), so its consts are only reachable once everything has evaluated.
+         Anything unreadable falls back to "keep whatever is already there", which is the safe
+         direction - the field is being preserved here, not set. */
+      const curStyle=cur.style||{};
+      /* The map is reached through a thunk so the identifier is only touched INSIDE the try -
+         naming it in the argument list would evaluate it first and defeat the guard. */
+      const known=(getMap,v)=>{try{return !!getMap()[v]}catch(_){return true}};
+      const keepAccent=('accent' in patch)?patch.accent:curStyle.accent;
+      if(/^#[0-9a-fA-F]{3,8}$/.test(String(keepAccent||'')))style.accent=String(keepAccent);
+      const keepTheme=('theme' in patch)?patch.theme:curStyle.theme;
+      if(keepTheme&&known(()=>THEME_BY_ID,String(keepTheme)))style.theme=String(keepTheme);
+      const keepDeco=('deco' in patch)?patch.deco:curStyle.deco;
+      if(keepDeco&&known(()=>DECO_BY_ID,String(keepDeco)))style.deco=String(keepDeco);
       /* v54.4: the banner COLOUR is public now.
          It has always lived in `settings`, which userView only merges for your OWN account - so
          everybody else's banner fell back to their bubble colour and nobody had ever seen
@@ -1466,6 +1567,154 @@ const DB=(()=>{
       await remove(R(`sentRequests/${me}/${other}`)).catch(()=>{});
       C.friendReqOut[me]=(C.friendReqOut[me]||[]).filter(r=>r.to!==other);emit();
     },
+    /* ==================================================================
+     *  MESSAGE REQUESTS  (v54.5)
+     *
+     *  Messaging somebody you are not friends with raises a request they accept or decline.
+     *  Friends skip all of it - there is nothing to accept between people who already added
+     *  each other, which is the whole point of having added each other.
+     *
+     *  WHAT DECIDES THE STATE OF A CONVERSATION
+     *    friends                      -> open, always
+     *    they wrote dmMembers/$key/$them -> open; that is what accepting does
+     *    neither, and I sent first    -> outgoing, waiting on them
+     *    neither, and they sent first -> incoming request, in my inbox
+     *
+     *  There is no "accepted" flag anywhere: being a dmMember IS the acceptance, because it
+     *  is exactly what the message rules check. One source of truth, and it cannot drift
+     *  from what the database will actually let you read.
+     * ================================================================== */
+
+    /* Everyone who has asked to message me and has not been dealt with, newest first.
+       Rows I ignored are left in the database (the rules read them to keep that person from
+       asking again) and filtered out here. */
+    dmRequestsIn(){
+      const me=myId;if(me==null)return [];
+      const out=[];
+      Object.keys(C.dmReqIn||{}).forEach(k=>{
+        const from=Number(k),r=C.dmReqIn[k];
+        if(!r||r.ignored===true||!Number.isFinite(from)||from===me)return;
+        if((C.friends[me]||[]).includes(from))return;            // friends need no request
+        if((C.blocked[me]||[]).includes(from))return;
+        if((C.blockedBy[me]||[]).includes(from))return;
+        if((C.users[from]||{}).deleted)return;
+        out.push({from,at:Number(r.at)||0,msg:typeof r.msg==='string'?r.msg:''});
+      });
+      return out.sort((a,b)=>b.at-a.at);
+    },
+    dmRequestCount(){return DB.dmRequestsIn().length},
+    hasDmRequestFrom(id){return DB.dmRequestsIn().some(r=>r.from===Number(id))},
+    /* True when I have ignored this person's request. Only I can know this. */
+    dmIgnored(id){const r=(C.dmReqIn||{})[String(Number(id))];return !!(r&&r.ignored===true)},
+
+    /* Is the conversation with this person open - can we both read it?
+       BOTH dmMembers rows have to be there, not just theirs. Only mine decides what I am
+       allowed to read (that is literally what the message rules check) and only theirs
+       decides whether they have accepted, so a one-sided answer is wrong from one end or the
+       other: checking theirs alone told a recipient that an unaccepted request was already an
+       open conversation, because the sender's row is the first thing a request writes.
+       Friends short-circuit: the rows follow from ensureDmMemberships either way. */
+    dmOpenWith(id){
+      const me=myId;if(me==null)return false;
+      id=Number(id);
+      if((C.friends[me]||[]).includes(id))return true;
+      const m=C.dmMembers[dmKey(me,id)];
+      return !!(m&&m[me]&&m[id]);
+    },
+    /* I have messaged them and they have not accepted yet. */
+    dmPendingWith(id){
+      const me=myId;if(me==null)return false;
+      id=Number(id);
+      if(DB.dmOpenWith(id))return false;
+      const m=C.dmMembers[dmKey(me,id)];
+      return !!(m&&m[me]);
+    },
+
+    /* Start, or continue, a conversation with somebody who is not a friend.
+       Writes my own dmMembers row (which the rules have always allowed, for any key carrying
+       my id) so I can send, then raises the request on their side.
+
+       The request write is allowed to fail softly: they may have ignored me, in which case
+       the rules refuse it and SHOULD. The message still goes into the conversation, exactly
+       as it does when somebody keeps typing into a request that was never accepted - it is
+       simply never shown to them. Telling the sender "you have been ignored" is the one
+       thing a decline must not do. */
+    async openDmRequest(to,preview){
+      const me=myId;
+      if(me==null)throw new Error('Sign in first.');
+      to=Number(to);
+      if(!to||Number.isNaN(to))throw new Error('No such user.');
+      if(to===me)throw new Error('You cannot message yourself.');
+      if((C.blocked[me]||[]).includes(to)||(C.blockedBy[me]||[]).includes(to))
+        throw new Error("You can't message this user.");
+      if((C.users[to]||{}).deleted)throw new Error('That account was deleted.');
+      const key=dmKey(me,to);
+      if(!(C.dmMembers[key]&&C.dmMembers[key][me])){
+        await set(R(`dmMembers/${key}/${me}`),true);
+        (C.dmMembers[key]=C.dmMembers[key]||{})[me]=true;
+      }
+      watchPreview(key);
+      /* They asked ME first and I am replying: replying IS accepting, so clear their request
+         out of my inbox instead of raising a competing one back at them. */
+      if((C.dmReqIn||{})[String(to)]&&C.dmReqIn[String(to)].ignored!==true){
+        try{await remove(R(`dmRequests/${me}/${to}`))}catch(_){}
+        delete C.dmReqIn[String(to)];
+        emit();
+        return key;
+      }
+      if(!DB.dmOpenWith(to)){
+        const rec={at:Date.now()+SKEW};
+        const p=String(preview||'').replace(/[\u0000-\u001f\u007f]/g,' ').trim().slice(0,200);
+        if(p)rec.msg=p;
+        try{await set(R(`dmRequests/${to}/${me}`),rec)}
+        catch(e){console.info('[dm] request not raised',e&&e.code)}
+      }
+      emit();
+      return key;
+    },
+
+    /* Accept: write my dmMembers row - that is what unlocks reading and replying - and then
+       clear the request. The order matters; a failure after the first step leaves a readable
+       conversation and a stale request row, which the next accept tidies. */
+    async acceptDmRequest(from){
+      const me=myId;if(me==null)throw new Error('Sign in first.');
+      from=Number(from);
+      const key=dmKey(me,from);
+      await set(R(`dmMembers/${key}/${me}`),true);
+      (C.dmMembers[key]=C.dmMembers[key]||{})[me]=true;
+      try{await remove(R(`dmRequests/${me}/${from}`))}catch(_){}
+      delete C.dmReqIn[String(from)];
+      watchPreview(key);emit();
+      return key;
+    },
+
+    /* Decline: keep the row and mark it ignored, rather than deleting it. The marker is what
+       the rules consult to refuse a second request from the same person, so deleting the row
+       would turn "decline" into "decline until they try again". `at` is carried because the
+       node validates that every row has one.
+       Nothing is written on the sender's side and nothing is sent to them: as far as their
+       client can tell, the message simply has not been answered. */
+    async declineDmRequest(from){
+      const me=myId;if(me==null)throw new Error('Sign in first.');
+      from=Number(from);
+      const cur=(C.dmReqIn||{})[String(from)]||{};
+      const rec={at:Number(cur.at)||(Date.now()+SKEW),ignored:true};
+      await set(R(`dmRequests/${me}/${from}`),rec);
+      C.dmReqIn[String(from)]=rec;
+      emit();
+    },
+
+    /* Un-ignore somebody, so they can reach me again. Nothing in the UI calls this yet; it
+       exists so "ignored" is a reversible state rather than a permanent one, and so the
+       marker never becomes a thing only a database edit can clear. */
+    async unignoreDm(from){
+      const me=myId;if(me==null)return;
+      from=Number(from);
+      try{await remove(R(`dmRequests/${me}/${from}`))}catch(_){}
+      delete C.dmReqIn[String(from)];
+      emit();
+    },
+
     async removeFriend(me,other){
       me=Number(me);other=Number(other);
       const before=(C.friends[me]||[]).slice();
@@ -1606,7 +1855,8 @@ const DB=(()=>{
     async searchUserMessages(userId){
       userId=Number(userId);
       const keys=['global','announcements','shitpost',...C.myRoomIds.filter(id=>C.rooms[id]),
-        ...(C.friends[myId]||[]).map(f=>dmKey(myId,f))];
+        /* Non-friend DMs count too since v54.5 - a message request is still a message. */
+        ...DB.dmPartners(myId).map(f=>dmKey(myId,f))];
       const results=[];
       await Promise.all(keys.map(async key=>{
         try{
@@ -1676,7 +1926,7 @@ const DB=(()=>{
       if(isOwner(myId)||DB.vipInfo(myId))keys.push(CFG.VIP_ROOM);
       if(mvpAccess(myId))keys.push(CFG.MVP_ROOM);
       (C.myRoomIds||[]).filter(r=>C.rooms[r]).forEach(r=>keys.push(r));
-      (C.friends[myId]||[]).forEach(f=>keys.push(dmKey(myId,f)));
+      DB.dmPartners(myId).forEach(f=>keys.push(dmKey(myId,f)));   // includes non-friend DMs
       const items=[];
       await Promise.all([...new Set(keys)].map(async key=>{
         let snap=null;
@@ -1890,7 +2140,7 @@ const DB=(()=>{
           if(isOwner(myId)||DB.vipInfo(myId))keys.push(CFG.VIP_ROOM);
           if(mvpAccess(myId))keys.push(CFG.MVP_ROOM);
           (C.myRoomIds||[]).forEach(r=>keys.push(r));
-          (C.friends[myId]||[]).forEach(f=>keys.push(dmKey(myId,f)));
+          DB.dmPartners(myId).forEach(f=>keys.push(dmKey(myId,f)));   // includes non-friend DMs
           for(const key of keys){
             for(let b=0;b<perKey;b++){
               const n=await pruneBatch(key,per,days);
@@ -2333,6 +2583,21 @@ const DB=(()=>{
         return true;
       });
     },
+    /* When the newest message in a conversation was sent, or 0 for one with nothing in it.
+       Reads the same preview cache the unread badges do - watchPreview() keeps the last 30
+       messages of every DM and room loaded - so this costs nothing extra and is as live as
+       the badge beside it. Deleted/blocked senders are filtered out exactly as messages()
+       does, so a conversation whose only recent message is hidden from you does not jump to
+       the top of a list showing nothing new. */
+    lastMsgAt(key){
+      const list=DB.messages(key);
+      let t=0;
+      for(let i=list.length-1;i>=0;i--){
+        const at=Number(list[i].at)||0;
+        if(at>t)t=at;
+      }
+      return t;
+    },
     // Unread count for ONE conversation. Counts exactly what the chat would show you as new:
     //  - not before lastRead has actually loaded (otherwise everything flashes as unread on startup)
     //  - never my own messages, never from deleted accounts, never from people I blocked / who blocked me
@@ -2353,10 +2618,39 @@ const DB=(()=>{
       });
       return n;
     },
+    /* Everyone I have a direct-message conversation with: my friends, plus anybody else I am
+       a dmMembers of since v54.5 - a request I sent and a request I accepted both put a row
+       there. People whose request I have ignored, and people either of us has blocked, are
+       left out: the conversation may exist in the database but it is not one I am in.
+       Returns ids, unsorted; the DM list orders them by recency. */
+    dmPartners(uid){
+      uid=Number(uid);
+      const out=new Set(C.friends[uid]||[]);
+      const blocked=new Set([...(C.blocked[uid]||[]),...(C.blockedBy[uid]||[])]);
+      Object.keys(C.dmMembers||{}).forEach(key=>{
+        const m=C.dmMembers[key];
+        if(!m||!m[uid])return;
+        const parts=String(key).split('_');
+        if(parts[0]!=='dm')return;
+        const a=Number(parts[1]),b=Number(parts[2]);
+        const other=a===uid?b:a;
+        if(!Number.isFinite(other)||other===uid)return;
+        if((C.users[other]||{}).deleted)return;
+        out.add(other);
+      });
+      blocked.forEach(id=>out.delete(id));
+      if(uid===myId)Object.keys(C.dmReqIn||{}).forEach(k=>{
+        if(C.dmReqIn[k]&&C.dmReqIn[k].ignored===true)out.delete(Number(k));
+      });
+      return [...out];
+    },
     unreadDMs(uid){
       let n=0;
-      (C.friends[uid]||[]).forEach(f=>{n+=DB.unreadIn(dmKey(uid,f),uid)});
-      return n+DB.incomingUnseen(uid).length;
+      DB.dmPartners(uid).forEach(f=>{n+=DB.unreadIn(dmKey(uid,f),uid)});
+      /* A message request is unread by definition until it is dealt with, and it is the only
+         sign of it anywhere else in the UI, so it carries a badge like a friend request. */
+      const reqs=(uid===myId)?DB.dmRequestCount():0;
+      return n+DB.incomingUnseen(uid).length+reqs;
     },
     // Friend requests that still count toward the badge. "Mark all as read" hides the current ones from the
     // BADGE only (stored on this device); they stay in Friends & Requests so nothing is lost.
@@ -2369,7 +2663,7 @@ const DB=(()=>{
       const stamp=Math.round(Date.now()+SKEW);
       const keys=new Set([CFG.GLOBAL_ROOM]);   // announcements + shitpost are left alone on purpose
       (C.myRoomIds||[]).forEach(id=>keys.add(id));
-      (C.friends[uid]||[]).forEach(f=>keys.add(dmKey(uid,f)));
+      DB.dmPartners(uid).forEach(f=>keys.add(dmKey(uid,f)));
       const upd={};
       keys.forEach(k=>{
         const newest=(C.messages[k]||[]).reduce((a,m)=>Math.max(a,Number(m.at)||0),0);
@@ -2406,9 +2700,15 @@ const DB=(()=>{
     bgType:'gradient',bgColor:'#2a1f5c',bgColor2:'#7c2f66',bgImage:'',bgFit:'cover',bgBlur:0,bgDim:30,
     uiOpacity:50,uiBlur:18,
     autoScrollBottom:true,
-    filterLocal:true,
+    /* v54.5: both of these default OFF now.
+       filterLocal is the personal "Content filter (your view)" switch, and music.enabled
+       starts the background player. Each used to default on, so a brand-new account arrived
+       with its chat censored and music trying to play before it had asked for either. Both
+       are one toggle away in Settings for anyone who wants them, and a stored choice still
+       wins over the default - see the one-time reset in resetOptedInDefaults(). */
+    filterLocal:false,
     pings:{everyone:true,sound:true,desktop:true},
-    music:{enabled:true,volume:15,shuffle:true}
+    music:{enabled:false,volume:15,shuffle:true}
   }}
   function authMsg(e){
     const m={

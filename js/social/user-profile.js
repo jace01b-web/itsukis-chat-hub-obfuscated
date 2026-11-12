@@ -103,11 +103,18 @@ function pfStatus(id,online,deleted){
 // Click-through profile card: username, avatar, online state, user ID, friend status/actions.
 // Open the DM with someone from anywhere (profile card opened from the home screen, Global Chat, a room...).
 // The old button only swapped the open chat, so it did nothing visible unless you were already inside Itsuki DMs.
+/* v54.5: you can message anybody, not only friends.
+   Friends open straight into the conversation, exactly as before. Anybody else gets the same
+   conversation, but the first thing they send raises a message request on the other side -
+   see DB.openDmRequest and the composer in js/chat/composer.js. Opening the DM does NOT raise
+   a request on its own; clicking someone's Message button and then changing your mind should
+   not put anything in their inbox. */
 async function openDmWith(id,modalRoot){
   id=Number(id);
   if(!ME||id===ME.id)return;
-  if(!DB.isFriend(ME.id,id)){toast('You can only message friends. Send a friend request first.','bad');return}
   if(DB.isBlocked(ME.id,id)||DB.isBlockedBy(ME.id,id)){toast('You can\'t message this user.','bad');return}
+  const u=DB.getUser(id);
+  if(u&&u.deleted){toast('That account was deleted.','bad');return}
   (modalRoot||$('#modalRoot')).innerHTML='';
   // make sure my side of the DM exists so the messages are readable/sendable
   try{await DB.ensureDmMemberships()}catch(_){}

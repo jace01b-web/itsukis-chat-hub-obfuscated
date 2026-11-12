@@ -328,6 +328,9 @@ html.discord-look .modal.wide:has(#sTabs){animation:dsetIn .16s ease-out}
 .dbst-row{display:flex;align-items:center;gap:8px;padding:6px 0}
 .dbst-nm{font-size:14px;color:var(--dl-text,#dbdee1);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dbst-since{font-size:11px;color:var(--dl-muted,#949ba4)}
+/* How many of one person's boosts are on this server, shown only when it is more than one. */
+.dbst-x{font-size:11px;font-weight:700;color:#ff73fa;background:rgba(255,115,250,.14);
+  border-radius:9px;padding:1px 7px;flex:none;font-variant-numeric:tabular-nums}
 /* a boosted server's rail icon gets Discord's pink ring */
 .dl-rail-item.boosted .dl-rail-btn{box-shadow:0 0 0 2px #ff73fa}
 .dl-rail-item.boosted.lv3 .dl-rail-btn{box-shadow:0 0 0 2px #ffcc4d,0 0 10px rgba(255,204,77,.5)}

@@ -61,7 +61,7 @@ const inlined=
   'serverLockReason,openDiscover,inviteUrl,readInviteFromUrl,clearInviteFromUrl,'+
   'serverIconFromFile,serverIconPicker,openBanDialog,openTimeoutDialog,handleInviteLink,'+
   'DiscordShell,show,modalTos,pageIsAddressable,'+
-  'DBoost,openBoostDialog,mdRender,dispName,outranks,siteRank,'+
+  'DBoost,openBoostDialog,boostersGrouped,mdRender,dispName,outranks,siteRank,'+
   /* v54 */
   'Prefs,PCard,PData,PBadges,PMutual,PActivity,PNotes,PConn,PAch,ACHIEVEMENTS,'+
   'NotifPrefs,Notifier,Ignored,PROFILE_DECOS,PROFILE_THEMES,'+
@@ -73,6 +73,12 @@ const inlined=
   /* v54.4: the profile-status suite needs the status resolver. dispName is already exported
      above, for the member-list-at-scale suite. */
   'pfStatus,'+
+  /* v54.5: message requests. The suite drives the real entry points rather than the model,
+     because the point of the feature is what the UI does with a non-friend. */
+  'openDmWith,send,renderDmRequests,dmSortedFriends,dmPartnerOf,'+
+  /* v54.5: the filter defaults. These are plain predicates and the only way to assert what
+     a fresh account actually sees. */
+  'myFilterOn,filterMsgEnabled,filterNamesOn,displayMsgText,'+
   'get view(){return view},get ME(){return ME}};\n};\n'+
   /* about:blank has no query string, so ?manual cannot be expressed there. A page written into
      about:blank is always driven by the test (seed -> sign in -> start), so it must not boot

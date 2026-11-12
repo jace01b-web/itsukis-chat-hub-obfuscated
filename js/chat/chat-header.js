@@ -21,6 +21,15 @@ function renderMain(){
     $('#settingsBtn').classList.add('hidden');$('#dmFriendBtn').classList.add('hidden');
     renderedKey=null;renderFriends();return;
   }
+  /* v54.5: the message-request inbox. Same shape as the Friends page above - no composer,
+     no room key, its own renderer. */
+  if(view.mode==='dms'&&view.dmView==='dmreq'){
+    applyVipLock();
+    composer.classList.add('hidden');
+    $('#chatTitle').textContent='Message Requests';
+    $('#settingsBtn').classList.add('hidden');$('#dmFriendBtn').classList.add('hidden');
+    renderedKey=null;renderDmRequests();return;
+  }
   composer.classList.remove('hidden');$('#settingsBtn').classList.remove('hidden');
   const key=view.roomKey;
   if(!key){applyVipLock();renderedKey=null;msgs.innerHTML='<div class="empty">Select a conversation.</div>';composer.classList.add('hidden');return}

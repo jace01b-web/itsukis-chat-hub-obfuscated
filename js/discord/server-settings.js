@@ -669,7 +669,10 @@ function openMemberManager(sid,uid,after){
 
   function draw(){
     const roles=DModel.roles(sid).filter(r=>!r.everyone);
-    const mineHas=rid=>DModel.rolesOf(sid,uid).some(r=>r.id===rid);
+    /* storedRolesOf, not rolesOf: a site owner effectively holds every role, and showing all
+       of them lit up here would describe the member record as containing rows it does not,
+       so switching one off would appear to do nothing. This pane edits what is stored. */
+    const mineHas=rid=>DModel.storedRolesOf(sid,uid).some(r=>r.id===rid);
     pane.innerHTML=
       '<div class="dfield"><label class="dlabel">Nickname</label>'+
       '<input class="dinput" id="mmNick" maxlength="32" value="'+esc(mem.nick||'')+'" placeholder="'+esc(nameOf())+'">'+

@@ -8,8 +8,14 @@
 
 /* ---------- Profanity / inappropriate-content filter ----------
    Leetspeak-aware. Catches "f u c k", "f4ck", mid-word evasion like "Hel****lo".
-   Toggled via modSettings/filterEnabled + modSettings/filterNames (owner-only
-   write; ON by default until an owner explicitly turns it off). */
+   Toggled via modSettings/filterEnabled + modSettings/filterNames (owner-only write).
+
+   v54.5: OFF by default. Both of these used to read `!==false`, i.e. on unless an owner had
+   explicitly turned them off, so a database with no modSettings node at all arrived with
+   usernames censored. They now read `===true`: nothing is filtered until an owner asks for
+   it in Settings -> Moderation. An owner who HAS already stored `true` keeps it on, which is
+   the point - that one is a real choice, unlike the absence of a value.
+   The per-viewer message filter is separate and lives in js/core/name-styles.js. */
 const FILTER_WORDS=['fuck','shit','bitch','cunt','asshole','bastard','dick','pussy','whore','slut','nigger','nigga','faggot','fag','retard','rape','molest'];
 const LEET={a:'[a4@]',b:'[b8]',c:'[c(]',e:'[e3]',g:'[g9]',i:'[i1!|]',l:'[l1|]',o:'[o0]',s:'[s5$]',t:'[t7]',u:'[uv]',z:'[z2]'};
 function _wordPat(word){
@@ -26,10 +32,10 @@ function _wordPat(word){
 const FILTER_RE=new RegExp(FILTER_WORDS.map(w=>'('+_wordPat(w)+')').join('|'),'gi');
 function containsProfanity(str){if(!str)return false;FILTER_RE.lastIndex=0;return FILTER_RE.test(String(str).normalize('NFKC'))}
 function censorText(str){if(!str)return str;return String(str).normalize('NFKC').replace(FILTER_RE,m=>'*'.repeat(m.length))}
-let MODSET={filterEnabled:true,filterNames:true,customNames:true};
+let MODSET={filterEnabled:false,filterNames:false,customNames:true};
 let MODSET_LOADED=false;   // retention/cleanup must never run off the built-in default before the real value has arrived
-function filterMsgEnabled(){return MODSET.filterEnabled!==false}       // owner-controlled, server-side default (affects what's stored/shown to everyone)
-function filterNamesOn(){return MODSET.filterNames!==false}
+function filterMsgEnabled(){return MODSET.filterEnabled===true}        // owner-controlled, off unless switched on
+function filterNamesOn(){return MODSET.filterNames===true}
 // Owner toggle: when on (default), a user holding a decorative role/flair gets a
 // styled/colored name everywhere their name is shown; when off, everyone displays
 // as a plain username regardless of what roles they hold.

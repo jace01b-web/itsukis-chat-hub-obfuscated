@@ -568,7 +568,9 @@ function loadedKeys(){
     DModel.myServers().forEach(s=>{
       DModel.channels(s.id).forEach(c=>{if((DB.messages(c.id)||[]).length)out.add(c.id)});
     });
-    (DB.friends(ME.id)||[]).forEach(f=>{
+    /* Every DM, not only the ones with friends - an accepted message request is a
+       conversation like any other and searching "everywhere" has to mean everywhere. */
+    (DB.dmPartners(ME.id)||[]).forEach(f=>{
       const k=DB.dmKey(ME.id,f);
       if((DB.messages(k)||[]).length)out.add(k);
     });

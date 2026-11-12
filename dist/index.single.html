@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-11-11.03">
+<meta name="build-version" content="2026-11-11.04">
 
 
 <title>Itsukis Chat Hub</title>
@@ -7174,6 +7174,9 @@ html.discord-look .modal.wide:has(#sTabs){animation:dsetIn .16s ease-out}
 .dbst-row{display:flex;align-items:center;gap:8px;padding:6px 0}
 .dbst-nm{font-size:14px;color:var(--dl-text,#dbdee1);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dbst-since{font-size:11px;color:var(--dl-muted,#949ba4)}
+/* How many of one person's boosts are on this server, shown only when it is more than one. */
+.dbst-x{font-size:11px;font-weight:700;color:#ff73fa;background:rgba(255,115,250,.14);
+  border-radius:9px;padding:1px 7px;flex:none;font-variant-numeric:tabular-nums}
 /* a boosted server's rail icon gets Discord's pink ring */
 .dl-rail-item.boosted .dl-rail-btn{box-shadow:0 0 0 2px #ff73fa}
 .dl-rail-item.boosted.lv3 .dl-rail-btn{box-shadow:0 0 0 2px #ffcc4d,0 0 10px rgba(255,204,77,.5)}
@@ -7429,7 +7432,15 @@ html.discord-look .dlpo.pf2{width:340px;padding:0}
 
 .pf2-av{position:relative;flex:none;border-radius:50%;
   background:var(--dl-pop,var(--panel));padding:6px;line-height:0}
-.pf2-av .avatar{display:block}
+/* The avatar keeps the flex centring every other copy of it on the site has.
+   This used to be `display:block`, which dropped the centring that .avatar's own rule
+   provides, and the letter initial then laid out as an ordinary line of text: with the
+   line-height:0 inherited from .pf2-av above, that painted the glyph roughly half its own
+   height ABOVE the circle and hard against its left edge - a stray letter floating outside
+   the avatar on every profile belonging to somebody who has not uploaded a picture.
+   An uploaded image filled the box and hid it, which is why it survived this long.
+   line-height is restored alongside, so the glyph box has a height to be centred within. */
+.pf2-av .avatar{display:flex;align-items:center;justify-content:center;line-height:1;text-align:center}
 
 .pf2-acts{display:flex;gap:6px;align-items:center;padding-bottom:6px;flex-wrap:wrap;justify-content:flex-end}
 .pf2-ib{width:32px;height:32px;border:0;border-radius:8px;cursor:pointer;
@@ -7981,6 +7992,34 @@ html.discord-look .dl-stopt .dl-dot,
 html.discord-look .dl-stgrid .dl-dot{
   position:static;right:auto;bottom:auto;left:auto;top:auto;
   flex:none;margin-top:3px;box-shadow:none}
+
+/* ==========================================================================
+ * 8. MESSAGE REQUESTS  (v54.5)
+ *
+ * Messaging somebody who is not a friend raises a request they accept or decline. Three
+ * surfaces need marking: the inbox row in the sidebar, a conversation of mine they have not
+ * accepted yet, and the rows in the inbox itself.
+ * ========================================================================== */
+
+/* The sidebar inbox row. Tinted like the friend-request row next to it so the two read as
+   the same kind of thing, which they are. */
+.sb-item.sb-dmreq .nm{font-weight:600}
+
+/* A DM I have sent into that has not been accepted. Dimmed rather than badged: it is not
+   waiting on ME, so it must not look like something to action. */
+.sb-item.sb-dm-pending .nm{opacity:.62;font-style:italic}
+.sb-item.sb-dm-pending.active .nm{opacity:1;font-style:italic}
+
+/* Inbox rows. .dl-fr-row already lays the row out (avatar, name, actions); these only add
+   room for two buttons and keep a long first message on one line. */
+.dmreq-row .dl-fr-acts{display:flex;gap:6px;align-items:center;flex:none}
+.dmreq-row .dl-fr-who small{
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:46ch;display:block}
+@media (max-width:620px){
+  .dmreq-row{flex-wrap:wrap}
+  .dmreq-row .dl-fr-who small{max-width:100%}
+  .dmreq-row .dl-fr-acts{width:100%;justify-content:flex-end;margin-top:6px}
+}
 
 </style>
 <script>
@@ -9842,8 +9881,14 @@ function expandShortcodes(str){
 
 /* ---------- Profanity / inappropriate-content filter ----------
    Leetspeak-aware. Catches "f u c k", "f4ck", mid-word evasion like "Hel****lo".
-   Toggled via modSettings/filterEnabled + modSettings/filterNames (owner-only
-   write; ON by default until an owner explicitly turns it off). */
+   Toggled via modSettings/filterEnabled + modSettings/filterNames (owner-only write).
+
+   v54.5: OFF by default. Both of these used to read `!==false`, i.e. on unless an owner had
+   explicitly turned them off, so a database with no modSettings node at all arrived with
+   usernames censored. They now read `===true`: nothing is filtered until an owner asks for
+   it in Settings -> Moderation. An owner who HAS already stored `true` keeps it on, which is
+   the point - that one is a real choice, unlike the absence of a value.
+   The per-viewer message filter is separate and lives in js/core/name-styles.js. */
 const FILTER_WORDS=['fuck','shit','bitch','cunt','asshole','bastard','dick','pussy','whore','slut','nigger','nigga','faggot','fag','retard','rape','molest'];
 const LEET={a:'[a4@]',b:'[b8]',c:'[c(]',e:'[e3]',g:'[g9]',i:'[i1!|]',l:'[l1|]',o:'[o0]',s:'[s5$]',t:'[t7]',u:'[uv]',z:'[z2]'};
 function _wordPat(word){
@@ -9860,10 +9905,10 @@ function _wordPat(word){
 const FILTER_RE=new RegExp(FILTER_WORDS.map(w=>'('+_wordPat(w)+')').join('|'),'gi');
 function containsProfanity(str){if(!str)return false;FILTER_RE.lastIndex=0;return FILTER_RE.test(String(str).normalize('NFKC'))}
 function censorText(str){if(!str)return str;return String(str).normalize('NFKC').replace(FILTER_RE,m=>'*'.repeat(m.length))}
-let MODSET={filterEnabled:true,filterNames:true,customNames:true};
+let MODSET={filterEnabled:false,filterNames:false,customNames:true};
 let MODSET_LOADED=false;   // retention/cleanup must never run off the built-in default before the real value has arrived
-function filterMsgEnabled(){return MODSET.filterEnabled!==false}       // owner-controlled, server-side default (affects what's stored/shown to everyone)
-function filterNamesOn(){return MODSET.filterNames!==false}
+function filterMsgEnabled(){return MODSET.filterEnabled===true}        // owner-controlled, off unless switched on
+function filterNamesOn(){return MODSET.filterNames===true}
 // Owner toggle: when on (default), a user holding a decorative role/flair gets a
 // styled/colored name everywhere their name is shown; when off, everyone displays
 // as a plain username regardless of what roles they hold.
@@ -9948,10 +9993,13 @@ function msgNameHTML(id,escapedName){
   return '<span class="nm-user"'+(col?' style="color:'+esc(col)+'"':'')+'>'+escapedName+'</span>';
 }
 function checkMessageText_(text){return text}       // no longer pre-censors at send time — see displayMsgText()
-// Personal, per-viewer filter: ON by default, editable in Settings > Filter, client-side
-// only (each user's own preference for what THEY see; independent of the owner's
+// Personal, per-viewer filter: OFF by default as of v54.5, editable in Settings > Filter,
+// client-side only (each user's own preference for what THEY see; independent of the owner's
 // global filter above, which still applies to everyone regardless of this setting).
-function myFilterOn(){const u=(typeof DB!=='undefined')&&DB.currentUser&&DB.currentUser();return!u||u.settings.filterLocal!==false}
+// Signed out counts as off too - it used to return true for `!u`, which censored the chat for
+// anyone not yet loaded, so the first paint after a reload was filtered and then unfiltered
+// itself a moment later.
+function myFilterOn(){const u=(typeof DB!=='undefined')&&DB.currentUser&&DB.currentUser();return !!u&&u.settings.filterLocal===true}
 // Server-wide filter (owner-controlled) OR the viewer's own local toggle — either one
 // being on censors what THEY see. Text is stored raw (see checkMessageText_) so turning
 // either off actually reveals the original words, instead of unmasking pre-baked '*'s.
@@ -10026,7 +10074,7 @@ const rtdb=getDatabase(fbApp);
 const R=p=>ref(rtdb,p);
 let SKEW=0;
 onValue(ref(rtdb,'.info/serverTimeOffset'),s=>{SKEW=Number(s.val())||0});
-onValue(R('modSettings'),s=>{MODSET={filterEnabled:true,filterNames:true,customNames:true,...(s.val()||{})};MODSET_LOADED=true;if(typeof render==='function')try{render()}catch(_){}if(typeof renderChat==='function')try{renderChat()}catch(_){}});
+onValue(R('modSettings'),s=>{MODSET={filterEnabled:false,filterNames:false,customNames:true,...(s.val()||{})};MODSET_LOADED=true;if(typeof render==='function')try{render()}catch(_){}if(typeof renderChat==='function')try{renderChat()}catch(_){}});
 
 /* ==========================================================================
  * js/chat/file-upload.js
@@ -10969,11 +11017,18 @@ const DModel=(()=>{
     /* The ICH server stays undeletable even for a site owner. Everything on the site lives in
        it; there is no undo, and no reason to allow it by accident. Delete its channels instead. */
     if(isSystem(sid))throw new Error('The ICH server cannot be deleted.');
-    /* v54.4: site owners can delete any server. They already outrank every server everywhere
-       else - can() short-circuits on isOwner - and the database rules already allowed this;
-       only this line stopped it. */
-    if(!isServerOwner(sid,myId)&&!isOwner(myId))
-      throw new Error('Only the server owner, or a site owner, can delete this server.');
+    /* v54.5: deleting a server belongs to the person who made it, and to nobody else.
+       v54.4 had handed this to site owners on the grounds that they outrank every server
+       everywhere else. Outranking a server is not the same as owning it: every other staff
+       power is reversible - a ban is lifted, a role is given back, a channel is remade - and
+       this one destroys the server, its channels, its roles and its entire history for
+       everybody in it, with no undo and no copy kept. A site owner who needs a server gone
+       can still moderate it, or ask the person who owns it.
+       Site owners keep every other power here, including deleting their OWN servers. */
+    if(!isServerOwner(sid,myId))
+      throw new Error(isOwner(myId)
+        ?'Only the person who created this server can delete it — site owners included. You can still moderate it, or ask its owner to remove it.'
+        :'Only the server owner can delete this server.');
     const chans=channels(sid);
     const patch={};
     patch['servers/'+sid]=null;patch['serverChannels/'+sid]=null;patch['serverCats/'+sid]=null;
@@ -11483,14 +11538,36 @@ const DModel=(()=>{
   }
   function role(sid,rid){return roles(sid).find(r=>r.id===rid)||null}
 
-  // The roles one member has, highest first.
-  function rolesOf(sid,uid){
+  /* The roles STORED against one member - what the member record actually says, with no site
+     rank folded in. The member manager edits this list, so it has to show what a change would
+     write rather than what the person effectively holds. */
+  function storedRolesOf(sid,uid){
     uid=Number(uid);
     const mine=(S.members[sid]&&S.members[sid][uid]&&S.members[sid][uid].roles)||{};
     return roles(sid).filter(r=>{
       if(r.everyone)return true;
       if(r.virtual)return typeof r.test==='function'&&r.test(uid);
       return mine[r.id]===true;
+    });
+  }
+  /* The roles one member HAS, highest first.
+     v54.5: a site owner holds every role in every server. They already outranked every server
+     - can() short-circuits on isOwner - but the roles themselves were never granted, so their
+     name carried no role colour, they sat in the plain Online group of the member list instead
+     of the top hoisted one, and their own profile showed no server roles at all. Granting the
+     list here rather than writing rows into every server keeps it true the moment ownership
+     changes and leaves nothing behind if it is taken away, which is the same approach the
+     virtual ranks and the boost counts already take.
+     Virtual roles stay conditional even for an owner: those are site ranks with their own
+     tests (MVP, VIP, a custom role), and claiming them would be a lie rather than a power. */
+  function rolesOf(sid,uid){
+    uid=Number(uid);
+    let owner=false;try{owner=isOwner(uid)}catch(_){}
+    if(!owner)return storedRolesOf(sid,uid);
+    return roles(sid).filter(r=>{
+      if(r.everyone)return true;
+      if(r.virtual)return typeof r.test==='function'&&r.test(uid);
+      return true;
     });
   }
   // Their highest role that has a colour — that's the name colour, same as Discord.
@@ -11501,6 +11578,11 @@ const DModel=(()=>{
   function topRole(sid,uid){const l=rolesOf(sid,uid).filter(r=>!r.everyone);return l[0]||null}
   function highestPos(sid,uid){
     if(isServerOwner(sid,uid))return Infinity;
+    /* A site owner now holds every role, so their highest would be whatever the top role in
+       the server happens to be - which a server owner could out-position by making a higher
+       one. They outrank every server by definition, so they are placed above the ladder
+       outright, the same as the server's own owner. */
+    try{if(isOwner(uid))return Infinity}catch(_){}
     const l=rolesOf(sid,uid).filter(r=>!r.everyone);
     return l.length?l[0].pos:0;
   }
@@ -11921,7 +12003,7 @@ const DModel=(()=>{
     cats,channels,channel,channelByKey,visibleChannels,
     createChannel,updateChannel,deleteChannel,
     createCategory,updateCategory,deleteCategory,
-    roles,role,rolesOf,colorOf,topRole,highestPos,
+    roles,role,rolesOf,storedRolesOf,colorOf,topRole,highestPos,
     can,canIn,canManageRole,canManageMember,basePerms,
     createRole,updateRole,deleteRole,reorderRoles,setMemberRole,setChannelOverride,
     memberIds,member,memberCount,setNick,kickMember,groupedMembers,syncPerms,
@@ -12190,7 +12272,7 @@ function onReconnectCheck(){
 
 const DB=(()=>{
   // live cache
-  const C={users:{},priv:{},usernames:{},rooms:{},roomMembers:{},dmMembers:{},friends:{},friendReqIn:{},friendReqOut:{},lastRead:{},pingSeen:{},messages:{},myRoomIds:[],online:0,onlineIds:[],presenceIds:[],banned:{},muted:{},blocked:{},blockedBy:{},reactions:{},vip:{},mvp:{},spinWin:null,flair:{},roles:{},lastSpin:0};
+  const C={users:{},priv:{},usernames:{},rooms:{},roomMembers:{},dmMembers:{},friends:{},friendReqIn:{},friendReqOut:{},dmReqIn:{},lastRead:{},pingSeen:{},messages:{},myRoomIds:[],online:0,onlineIds:[],presenceIds:[],banned:{},muted:{},blocked:{},blockedBy:{},reactions:{},vip:{},mvp:{},spinWin:null,flair:{},roles:{},lastSpin:0};
   let myId=null,myUid=null,ready=false;
   const listeners=new Set();
   const unsubs=[];         // base listeners
@@ -12257,6 +12339,63 @@ const DB=(()=>{
      ready. This closes the gap for whoever signs in before that, and makes the migration's
      job smaller. Copy FIRST, verify, only then clear - if any step fails the public copy is
      left exactly where it was and the next sign-in tries again. */
+  /* ---- v54.5: the personal content filter and the background music default OFF ----
+     Changing defaultSettings() alone would not have reached anybody who already exists: the
+     Settings page writes the whole settings blob when you press Save, so almost every account
+     has an incidental `filterLocal:true` / `music.enabled:true` stored from back when those
+     were the defaults - a value nobody chose, which would have kept overriding the new default
+     for ever.
+
+     So this clears those two stored values ONCE per account, the next time it signs in, and
+     writes a marker so it never runs again. After that the account falls through to the new
+     default, and anyone who actually wants either one turns it on and that choice sticks -
+     the marker means it is never cleared a second time.
+
+     Only this account's own records are touched, nothing else in the blob is read or written,
+     and a failure is silent and simply retried on the next sign-in.
+
+     TWO DELIBERATE CHOICES ABOUT WHERE AND HOW
+       The marker lives INSIDE settings, not beside it: userPrivate/$id/$other is
+       `.validate:false`, so a new sibling key there would be refused by the rules, while
+       settings/$other already allows a scalar. No rules change is needed for any of this.
+
+       The two values are set to false rather than deleted, because settings/music carries
+       `.validate: newData.hasChildren()` - removing its only child on an account that has no
+       volume or shuffle stored would leave an empty node and the whole update would bounce,
+       taking the marker with it. false is what the new default resolves to anyway. */
+  let _defaultsReset=false;
+  const OPTIN_RESET_KEY='optinReset545';
+  async function resetOptedInDefaults(){
+    if(_defaultsReset||!myId)return;
+    _defaultsReset=true;
+    const id=myId;
+    try{
+      const priv=(await get(R('userPrivate/'+id))).val()||{};
+      const s=(priv.settings&&typeof priv.settings==='object')?priv.settings:null;
+      if(s&&s[OPTIN_RESET_KEY])return;                       // already done for this account
+      const patch={};
+      if(s){
+        if(s.filterLocal===true)patch['userPrivate/'+id+'/settings/filterLocal']=false;
+        if(s.music&&typeof s.music==='object'&&s.music.enabled===true)
+          patch['userPrivate/'+id+'/settings/music/enabled']=false;
+      }
+      patch['userPrivate/'+id+'/settings/'+OPTIN_RESET_KEY]=1;
+      await update(ref(rtdb),patch);
+      /* Keep the in-memory copy in step so the change applies now rather than on next load. */
+      if(C.priv&&C.priv.settings){
+        const ps=C.priv.settings;
+        if(ps.filterLocal===true)ps.filterLocal=false;
+        if(ps.music&&ps.music.enabled===true)ps.music.enabled=false;
+        ps[OPTIN_RESET_KEY]=1;
+        if(C.users[id])C.users[id]={...C.users[id],settings:ps};
+        emit();
+      }
+    }catch(e){
+      _defaultsReset=false;                                  // let the next sign-in try again
+      console.warn('[defaults] could not reset the opt-in defaults yet',e&&(e.code||e.message));
+    }
+  }
+
   let _privMoved=false;
   async function movePrivateDataIfNeeded(){
     if(_privMoved||!myId)return;
@@ -12569,6 +12708,7 @@ const DB=(()=>{
       if(C.users[myId])C.users[myId]={...C.users[myId],settings:C.priv.settings||C.users[myId].settings};
     });
     movePrivateDataIfNeeded();
+    resetOptedInDefaults();
     listen('banned',v=>{
       C.banned=v||{};BANNED_LOADED=true;
       checkBanLock(myId,C.banned);
@@ -12598,7 +12738,20 @@ const DB=(()=>{
       if(typeof DiscordShell!=='undefined'){try{DiscordShell.refresh()}catch(_){}}
     });
     listen('appVersion',v=>{APP_VERSION_CACHE=v||null;APP_VERSION_LOADED=true;if(typeof checkForcedVersion==="function")checkForcedVersion();});
-    listen('dmMembers',v=>C.dmMembers=v||{});
+    /* dmMembers is the whole node (its own .read is "any signed-in account" - see the note
+       further down where it is handed out). Every conversation I am a member of gets its
+       preview watched, not just the ones with friends: since v54.5 a DM can exist with
+       somebody who is not a friend, and without this their messages would arrive with no
+       unread badge and no row in the DM list until the page was reloaded. */
+    listen('dmMembers',v=>{
+      C.dmMembers=v||{};
+      try{
+        Object.keys(C.dmMembers).forEach(k=>{
+          if(C.dmMembers[k]&&C.dmMembers[k][myId])watchPreview(k);
+        });
+      }catch(_){}
+      if(ready)emit();
+    });
     listen('vip',v=>{C.vip=v||{};if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}});
     /* MVP repaints too: it owns a member-list group, the trophy next to a name, the image-banner
        perk and - new in v53 - two server boost slots, all of which must disappear the moment the
@@ -12610,6 +12763,11 @@ const DB=(()=>{
     listen('lastSpin/'+myId,v=>{C.lastSpin=Number(v)||0;if(typeof refreshSpinUI==='function'){try{refreshSpinUI()}catch(_){}}});
     listen('spinWin/'+myId,v=>{C.spinWin=(v&&typeof v==='object')?v:null;if(typeof refreshSpinUI==='function'){try{refreshSpinUI()}catch(_){}}});
     listen('friendRequests/'+myId,v=>C.friendReqIn=v||{});
+    /* Message requests addressed to me. Readable by me alone (see the node's own .read), so
+       this is the only place they arrive from. The rows I have already ignored stay in the
+       node on purpose - the rules consult them to stop that person re-raising the request -
+       and are filtered out of dmRequestsIn() rather than deleted. */
+    listen('dmRequests/'+myId,v=>{C.dmReqIn=v||{};if(ready)emit()});
     listen('lastRead/'+myId,v=>{C.lastRead=v||{};C.lastReadLoaded=true});
     listen('pingSeen/'+myId,v=>{C.pingSeen=v||{}});
     // Rooms: rather than trying to read the whole 'rooms'/'roomMembers' trees (which
@@ -13529,6 +13687,31 @@ const DB=(()=>{
         :String((cur.style&&cur.style.displayName)||'');
       delete merged.displayName;
       const style={bubble:merged.meBubble||'#7c6cff',text:merged.meText||'#ffffff',radius:Number(merged.radius)||16,avatar};
+      /* v54.5: the three v54 profile fields have to be carried forward too.
+         accent, theme and deco are written as individual children by Settings -> Profiles
+         (js/settings/settings-plus.js writes users/$id/style/accent and friends directly),
+         but THIS write replaces the whole style node. They were never added to the
+         carry-forward list the avatar, status and display name already had, so saving any
+         unrelated setting - pronouns, a description, a banner colour, removing an avatar,
+         hiding a tag - silently wiped the person's profile colour, profile theme and avatar
+         decoration. Exactly the trap described above the avatar line, one node along.
+         Each is validated the same way it is on the way in, so a junk value that somehow
+         reached the cache is dropped here rather than written back.
+
+         The two catalogue lookups go through a try: profile-data.js is loaded AFTER this file
+         (js/manifest.js), so its consts are only reachable once everything has evaluated.
+         Anything unreadable falls back to "keep whatever is already there", which is the safe
+         direction - the field is being preserved here, not set. */
+      const curStyle=cur.style||{};
+      /* The map is reached through a thunk so the identifier is only touched INSIDE the try -
+         naming it in the argument list would evaluate it first and defeat the guard. */
+      const known=(getMap,v)=>{try{return !!getMap()[v]}catch(_){return true}};
+      const keepAccent=('accent' in patch)?patch.accent:curStyle.accent;
+      if(/^#[0-9a-fA-F]{3,8}$/.test(String(keepAccent||'')))style.accent=String(keepAccent);
+      const keepTheme=('theme' in patch)?patch.theme:curStyle.theme;
+      if(keepTheme&&known(()=>THEME_BY_ID,String(keepTheme)))style.theme=String(keepTheme);
+      const keepDeco=('deco' in patch)?patch.deco:curStyle.deco;
+      if(keepDeco&&known(()=>DECO_BY_ID,String(keepDeco)))style.deco=String(keepDeco);
       /* v54.4: the banner COLOUR is public now.
          It has always lived in `settings`, which userView only merges for your OWN account - so
          everybody else's banner fell back to their bubble colour and nobody had ever seen
@@ -13648,6 +13831,154 @@ const DB=(()=>{
       await remove(R(`sentRequests/${me}/${other}`)).catch(()=>{});
       C.friendReqOut[me]=(C.friendReqOut[me]||[]).filter(r=>r.to!==other);emit();
     },
+    /* ==================================================================
+     *  MESSAGE REQUESTS  (v54.5)
+     *
+     *  Messaging somebody you are not friends with raises a request they accept or decline.
+     *  Friends skip all of it - there is nothing to accept between people who already added
+     *  each other, which is the whole point of having added each other.
+     *
+     *  WHAT DECIDES THE STATE OF A CONVERSATION
+     *    friends                      -> open, always
+     *    they wrote dmMembers/$key/$them -> open; that is what accepting does
+     *    neither, and I sent first    -> outgoing, waiting on them
+     *    neither, and they sent first -> incoming request, in my inbox
+     *
+     *  There is no "accepted" flag anywhere: being a dmMember IS the acceptance, because it
+     *  is exactly what the message rules check. One source of truth, and it cannot drift
+     *  from what the database will actually let you read.
+     * ================================================================== */
+
+    /* Everyone who has asked to message me and has not been dealt with, newest first.
+       Rows I ignored are left in the database (the rules read them to keep that person from
+       asking again) and filtered out here. */
+    dmRequestsIn(){
+      const me=myId;if(me==null)return [];
+      const out=[];
+      Object.keys(C.dmReqIn||{}).forEach(k=>{
+        const from=Number(k),r=C.dmReqIn[k];
+        if(!r||r.ignored===true||!Number.isFinite(from)||from===me)return;
+        if((C.friends[me]||[]).includes(from))return;            // friends need no request
+        if((C.blocked[me]||[]).includes(from))return;
+        if((C.blockedBy[me]||[]).includes(from))return;
+        if((C.users[from]||{}).deleted)return;
+        out.push({from,at:Number(r.at)||0,msg:typeof r.msg==='string'?r.msg:''});
+      });
+      return out.sort((a,b)=>b.at-a.at);
+    },
+    dmRequestCount(){return DB.dmRequestsIn().length},
+    hasDmRequestFrom(id){return DB.dmRequestsIn().some(r=>r.from===Number(id))},
+    /* True when I have ignored this person's request. Only I can know this. */
+    dmIgnored(id){const r=(C.dmReqIn||{})[String(Number(id))];return !!(r&&r.ignored===true)},
+
+    /* Is the conversation with this person open - can we both read it?
+       BOTH dmMembers rows have to be there, not just theirs. Only mine decides what I am
+       allowed to read (that is literally what the message rules check) and only theirs
+       decides whether they have accepted, so a one-sided answer is wrong from one end or the
+       other: checking theirs alone told a recipient that an unaccepted request was already an
+       open conversation, because the sender's row is the first thing a request writes.
+       Friends short-circuit: the rows follow from ensureDmMemberships either way. */
+    dmOpenWith(id){
+      const me=myId;if(me==null)return false;
+      id=Number(id);
+      if((C.friends[me]||[]).includes(id))return true;
+      const m=C.dmMembers[dmKey(me,id)];
+      return !!(m&&m[me]&&m[id]);
+    },
+    /* I have messaged them and they have not accepted yet. */
+    dmPendingWith(id){
+      const me=myId;if(me==null)return false;
+      id=Number(id);
+      if(DB.dmOpenWith(id))return false;
+      const m=C.dmMembers[dmKey(me,id)];
+      return !!(m&&m[me]);
+    },
+
+    /* Start, or continue, a conversation with somebody who is not a friend.
+       Writes my own dmMembers row (which the rules have always allowed, for any key carrying
+       my id) so I can send, then raises the request on their side.
+
+       The request write is allowed to fail softly: they may have ignored me, in which case
+       the rules refuse it and SHOULD. The message still goes into the conversation, exactly
+       as it does when somebody keeps typing into a request that was never accepted - it is
+       simply never shown to them. Telling the sender "you have been ignored" is the one
+       thing a decline must not do. */
+    async openDmRequest(to,preview){
+      const me=myId;
+      if(me==null)throw new Error('Sign in first.');
+      to=Number(to);
+      if(!to||Number.isNaN(to))throw new Error('No such user.');
+      if(to===me)throw new Error('You cannot message yourself.');
+      if((C.blocked[me]||[]).includes(to)||(C.blockedBy[me]||[]).includes(to))
+        throw new Error("You can't message this user.");
+      if((C.users[to]||{}).deleted)throw new Error('That account was deleted.');
+      const key=dmKey(me,to);
+      if(!(C.dmMembers[key]&&C.dmMembers[key][me])){
+        await set(R(`dmMembers/${key}/${me}`),true);
+        (C.dmMembers[key]=C.dmMembers[key]||{})[me]=true;
+      }
+      watchPreview(key);
+      /* They asked ME first and I am replying: replying IS accepting, so clear their request
+         out of my inbox instead of raising a competing one back at them. */
+      if((C.dmReqIn||{})[String(to)]&&C.dmReqIn[String(to)].ignored!==true){
+        try{await remove(R(`dmRequests/${me}/${to}`))}catch(_){}
+        delete C.dmReqIn[String(to)];
+        emit();
+        return key;
+      }
+      if(!DB.dmOpenWith(to)){
+        const rec={at:Date.now()+SKEW};
+        const p=String(preview||'').replace(/[\u0000-\u001f\u007f]/g,' ').trim().slice(0,200);
+        if(p)rec.msg=p;
+        try{await set(R(`dmRequests/${to}/${me}`),rec)}
+        catch(e){console.info('[dm] request not raised',e&&e.code)}
+      }
+      emit();
+      return key;
+    },
+
+    /* Accept: write my dmMembers row - that is what unlocks reading and replying - and then
+       clear the request. The order matters; a failure after the first step leaves a readable
+       conversation and a stale request row, which the next accept tidies. */
+    async acceptDmRequest(from){
+      const me=myId;if(me==null)throw new Error('Sign in first.');
+      from=Number(from);
+      const key=dmKey(me,from);
+      await set(R(`dmMembers/${key}/${me}`),true);
+      (C.dmMembers[key]=C.dmMembers[key]||{})[me]=true;
+      try{await remove(R(`dmRequests/${me}/${from}`))}catch(_){}
+      delete C.dmReqIn[String(from)];
+      watchPreview(key);emit();
+      return key;
+    },
+
+    /* Decline: keep the row and mark it ignored, rather than deleting it. The marker is what
+       the rules consult to refuse a second request from the same person, so deleting the row
+       would turn "decline" into "decline until they try again". `at` is carried because the
+       node validates that every row has one.
+       Nothing is written on the sender's side and nothing is sent to them: as far as their
+       client can tell, the message simply has not been answered. */
+    async declineDmRequest(from){
+      const me=myId;if(me==null)throw new Error('Sign in first.');
+      from=Number(from);
+      const cur=(C.dmReqIn||{})[String(from)]||{};
+      const rec={at:Number(cur.at)||(Date.now()+SKEW),ignored:true};
+      await set(R(`dmRequests/${me}/${from}`),rec);
+      C.dmReqIn[String(from)]=rec;
+      emit();
+    },
+
+    /* Un-ignore somebody, so they can reach me again. Nothing in the UI calls this yet; it
+       exists so "ignored" is a reversible state rather than a permanent one, and so the
+       marker never becomes a thing only a database edit can clear. */
+    async unignoreDm(from){
+      const me=myId;if(me==null)return;
+      from=Number(from);
+      try{await remove(R(`dmRequests/${me}/${from}`))}catch(_){}
+      delete C.dmReqIn[String(from)];
+      emit();
+    },
+
     async removeFriend(me,other){
       me=Number(me);other=Number(other);
       const before=(C.friends[me]||[]).slice();
@@ -13788,7 +14119,8 @@ const DB=(()=>{
     async searchUserMessages(userId){
       userId=Number(userId);
       const keys=['global','announcements','shitpost',...C.myRoomIds.filter(id=>C.rooms[id]),
-        ...(C.friends[myId]||[]).map(f=>dmKey(myId,f))];
+        /* Non-friend DMs count too since v54.5 - a message request is still a message. */
+        ...DB.dmPartners(myId).map(f=>dmKey(myId,f))];
       const results=[];
       await Promise.all(keys.map(async key=>{
         try{
@@ -13858,7 +14190,7 @@ const DB=(()=>{
       if(isOwner(myId)||DB.vipInfo(myId))keys.push(CFG.VIP_ROOM);
       if(mvpAccess(myId))keys.push(CFG.MVP_ROOM);
       (C.myRoomIds||[]).filter(r=>C.rooms[r]).forEach(r=>keys.push(r));
-      (C.friends[myId]||[]).forEach(f=>keys.push(dmKey(myId,f)));
+      DB.dmPartners(myId).forEach(f=>keys.push(dmKey(myId,f)));   // includes non-friend DMs
       const items=[];
       await Promise.all([...new Set(keys)].map(async key=>{
         let snap=null;
@@ -14072,7 +14404,7 @@ const DB=(()=>{
           if(isOwner(myId)||DB.vipInfo(myId))keys.push(CFG.VIP_ROOM);
           if(mvpAccess(myId))keys.push(CFG.MVP_ROOM);
           (C.myRoomIds||[]).forEach(r=>keys.push(r));
-          (C.friends[myId]||[]).forEach(f=>keys.push(dmKey(myId,f)));
+          DB.dmPartners(myId).forEach(f=>keys.push(dmKey(myId,f)));   // includes non-friend DMs
           for(const key of keys){
             for(let b=0;b<perKey;b++){
               const n=await pruneBatch(key,per,days);
@@ -14515,6 +14847,21 @@ const DB=(()=>{
         return true;
       });
     },
+    /* When the newest message in a conversation was sent, or 0 for one with nothing in it.
+       Reads the same preview cache the unread badges do - watchPreview() keeps the last 30
+       messages of every DM and room loaded - so this costs nothing extra and is as live as
+       the badge beside it. Deleted/blocked senders are filtered out exactly as messages()
+       does, so a conversation whose only recent message is hidden from you does not jump to
+       the top of a list showing nothing new. */
+    lastMsgAt(key){
+      const list=DB.messages(key);
+      let t=0;
+      for(let i=list.length-1;i>=0;i--){
+        const at=Number(list[i].at)||0;
+        if(at>t)t=at;
+      }
+      return t;
+    },
     // Unread count for ONE conversation. Counts exactly what the chat would show you as new:
     //  - not before lastRead has actually loaded (otherwise everything flashes as unread on startup)
     //  - never my own messages, never from deleted accounts, never from people I blocked / who blocked me
@@ -14535,10 +14882,39 @@ const DB=(()=>{
       });
       return n;
     },
+    /* Everyone I have a direct-message conversation with: my friends, plus anybody else I am
+       a dmMembers of since v54.5 - a request I sent and a request I accepted both put a row
+       there. People whose request I have ignored, and people either of us has blocked, are
+       left out: the conversation may exist in the database but it is not one I am in.
+       Returns ids, unsorted; the DM list orders them by recency. */
+    dmPartners(uid){
+      uid=Number(uid);
+      const out=new Set(C.friends[uid]||[]);
+      const blocked=new Set([...(C.blocked[uid]||[]),...(C.blockedBy[uid]||[])]);
+      Object.keys(C.dmMembers||{}).forEach(key=>{
+        const m=C.dmMembers[key];
+        if(!m||!m[uid])return;
+        const parts=String(key).split('_');
+        if(parts[0]!=='dm')return;
+        const a=Number(parts[1]),b=Number(parts[2]);
+        const other=a===uid?b:a;
+        if(!Number.isFinite(other)||other===uid)return;
+        if((C.users[other]||{}).deleted)return;
+        out.add(other);
+      });
+      blocked.forEach(id=>out.delete(id));
+      if(uid===myId)Object.keys(C.dmReqIn||{}).forEach(k=>{
+        if(C.dmReqIn[k]&&C.dmReqIn[k].ignored===true)out.delete(Number(k));
+      });
+      return [...out];
+    },
     unreadDMs(uid){
       let n=0;
-      (C.friends[uid]||[]).forEach(f=>{n+=DB.unreadIn(dmKey(uid,f),uid)});
-      return n+DB.incomingUnseen(uid).length;
+      DB.dmPartners(uid).forEach(f=>{n+=DB.unreadIn(dmKey(uid,f),uid)});
+      /* A message request is unread by definition until it is dealt with, and it is the only
+         sign of it anywhere else in the UI, so it carries a badge like a friend request. */
+      const reqs=(uid===myId)?DB.dmRequestCount():0;
+      return n+DB.incomingUnseen(uid).length+reqs;
     },
     // Friend requests that still count toward the badge. "Mark all as read" hides the current ones from the
     // BADGE only (stored on this device); they stay in Friends & Requests so nothing is lost.
@@ -14551,7 +14927,7 @@ const DB=(()=>{
       const stamp=Math.round(Date.now()+SKEW);
       const keys=new Set([CFG.GLOBAL_ROOM]);   // announcements + shitpost are left alone on purpose
       (C.myRoomIds||[]).forEach(id=>keys.add(id));
-      (C.friends[uid]||[]).forEach(f=>keys.add(dmKey(uid,f)));
+      DB.dmPartners(uid).forEach(f=>keys.add(dmKey(uid,f)));
       const upd={};
       keys.forEach(k=>{
         const newest=(C.messages[k]||[]).reduce((a,m)=>Math.max(a,Number(m.at)||0),0);
@@ -14588,9 +14964,15 @@ const DB=(()=>{
     bgType:'gradient',bgColor:'#2a1f5c',bgColor2:'#7c2f66',bgImage:'',bgFit:'cover',bgBlur:0,bgDim:30,
     uiOpacity:50,uiBlur:18,
     autoScrollBottom:true,
-    filterLocal:true,
+    /* v54.5: both of these default OFF now.
+       filterLocal is the personal "Content filter (your view)" switch, and music.enabled
+       starts the background player. Each used to default on, so a brand-new account arrived
+       with its chat censored and music trying to play before it had asked for either. Both
+       are one toggle away in Settings for anyone who wants them, and a stored choice still
+       wins over the default - see the one-time reset in resetOptedInDefaults(). */
+    filterLocal:false,
     pings:{everyone:true,sound:true,desktop:true},
-    music:{enabled:true,volume:15,shuffle:true}
+    music:{enabled:false,volume:15,shuffle:true}
   }}
   function authMsg(e){
     const m={
@@ -15058,7 +15440,11 @@ function checkPingNotifications(){
   }catch(_){}
   const keys=[...new Set([CFG.GLOBAL_ROOM,CFG.ANNOUNCEMENTS_ROOM,CFG.SHITPOST_ROOM,
     ...chanKeys,
-    ...DB.friends(ME.id).map(f=>DB.dmKey(ME.id,f))])];
+    /* dmPartners, not friends: since v54.5 an accepted message request is a DM like any
+       other, and a notification that only fires for friends would make those conversations
+       silent for no reason the person could see. People whose request was declined are not
+       in this list, so ignoring somebody really does stop the notifications too. */
+    ...DB.dmPartners(ME.id).map(f=>DB.dmKey(ME.id,f))])];
   keys.forEach(key=>{
     const isDM=String(key).startsWith('dm_');
     (DB.messages(key)||[]).forEach(m=>{
@@ -17148,6 +17534,27 @@ function updateMuteLock(){
   if(mutedBanner)mutedBanner.classList.toggle('hidden',!muted);
   if(announceBanner)announceBanner.classList.toggle('hidden',!announceLocked);
   if(shitBanner)shitBanner.classList.toggle('hidden',!shitLocked);
+  /* v54.5: a DM the other person has not accepted. The composer stays usable - this explains
+     the silence rather than enforcing it. Nothing is shown once they accept, or for a friend,
+     because then there is nothing to explain. */
+  {
+    const dmBanner=$('#dmReqBanner');
+    if(dmBanner){
+      let show='';
+      try{
+        const other=(typeof dmPartnerOf==='function')?dmPartnerOf(view.roomKey):null;
+        if(other!=null&&!DB.dmOpenWith(other)){
+          const u=DB.getUser(other);
+          const nm=u?dispName(u,'They'):'They';
+          show=DB.dmPendingWith(other)
+            ?'✉️ Message request sent to '+nm+'. They’ll see your messages once they accept.'
+            :'✉️ '+nm+' isn’t a friend yet — your first message will arrive as a message request they can accept or decline.';
+        }
+      }catch(_){}
+      dmBanner.textContent=show;
+      dmBanner.classList.toggle('hidden',!show);
+    }
+  }
   const tosReason=(typeof chatBlockReason==='function')?chatBlockReason():null;
   if(typeof tosBannerSync==='function')tosBannerSync(tosReason);
   /* A timeout or ban issued in a server applies to that server's channels only, so it is checked
@@ -17234,6 +17641,22 @@ function renderChat(){
   }else{
     const inc=DB.incoming(ME.id);
     list.appendChild(sbItem('👥',(typeof DiscordLook!=='undefined'&&DiscordLook.on())?'Friends':'Friends & Requests',view.dmView==='friends',()=>{view.dmView='friends';view.roomKey=null;renderChat()},inc.length));
+    /* Message requests get their own row, above the conversations, and only when there are
+       any - an always-present empty inbox is one more thing to scan past every day. */
+    {
+      let dmReq=0;try{dmReq=DB.dmRequestCount()}catch(_){}
+      if(dmReq){
+        const it=sbItem('✉️','Message Requests',view.dmView==='dmreq',
+          ()=>{view.dmView='dmreq';view.roomKey=null;renderChat()},dmReq);
+        it.classList.add('sb-dmreq');
+        /* The sidebar is narrow enough to clip the label, so the full text and the count go
+           in a tooltip rather than only in the truncated row. */
+        it.title=dmReq+' message request'+(dmReq===1?'':'s')+' waiting';
+        list.appendChild(it);
+      }else if(view.dmView==='dmreq'){
+        view.dmView='friends';            // the last one was just dealt with
+      }
+    }
     /* The Shop sits here, under Friends, which is where Discord puts its own - it is a site
        feature rather than a server, so it has no business on the server rail. It is also listed
        inside ICH, for anyone who looks there first. */
@@ -17244,18 +17667,26 @@ function renderChat(){
     }
     addHTML(list,`<div class="sb-section">Direct Messages<button type="button" class="sb-plus" id="sbPlus" title="Add a friend" aria-label="Add a friend">+</button></div>`);
     {const pl=document.getElementById('sbPlus');if(pl)pl.onclick=e=>{e.stopPropagation();modalAddFriend()}}
-    if(!ME.friends.length)addHTML(list,`<div class="hint" style="padding:6px 10px">Add friends to start chatting.</div>`);
-    if(ME.friends.length){
+    const _dmRows=dmSortedFriends();
+    if(!_dmRows.length)addHTML(list,`<div class="hint" style="padding:6px 10px">Add friends to start chatting.</div>`);
+    if(_dmRows.length){
       const sr=document.createElement('div');sr.className='sb-search';
       sr.innerHTML='<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4-4"/></svg><input id="sbFriendQ" type="text" placeholder="Search friends" autocomplete="off" spellcheck="false" aria-label="Search friends"><button type="button" class="sb-search-x" id="sbFriendX" aria-label="Clear search" hidden>✕</button>';
       if(typeof DiscordLook!=='undefined'&&DiscordLook.on()){const si=sr.querySelector('input');si.placeholder='Find or start a conversation';si.setAttribute('aria-label','Find or start a conversation')}
       list.appendChild(sr);
     }
-    ME.friends.forEach(fid=>{
-      const f=DB.getUser(fid);if(!f)return;const k=DB.dmKey(ME.id,fid);
+    /* Most recently active conversation first, the way Discord orders its DM list: whoever
+       just messaged you is at the top instead of wherever they happen to sit in the friends
+       list. Conversations with nothing in them have no time to sort by, so they fall to the
+       bottom in alphabetical order rather than being scattered through the list at the
+       arbitrary positions their friend-ids give them. */
+    _dmRows.forEach(({fid,f,k,pending})=>{
       const unread=DB.unreadIn(k,ME.id);
       const it=sbItem(null,f.username,view.roomKey===k,()=>{view.dmView='chat';selectRoom(k)},unread,f);
       it.classList.add('sb-friend');it.dataset.fname=String(f.username).toLowerCase();
+      /* A conversation they have not accepted is marked, so an unanswered message reads as
+         "not accepted yet" rather than "ignoring me". */
+      if(pending){it.classList.add('sb-dm-pending');it.title='Waiting for them to accept your message request'}
       list.appendChild(it);
     });
     {
@@ -17281,6 +17712,107 @@ function renderChat(){
   renderMain();
   if(typeof DiscordShell!=='undefined')DiscordShell.refresh();
 }
+/* ---- DM list order ------------------------------------------------------------------
+   The friends you can DM, newest conversation first. Returns {fid,f,k} so the caller does
+   not look each person up twice.
+
+   Ties and empties: a conversation with no messages sorts last, alphabetically, because
+   ordering a dozen never-used DMs by friend-id looks random to the person reading it.
+
+   The open DM is NOT held in place. It sorts on its own timestamps like every other row, so
+   sending a message in it moves it to the top immediately - which is what Discord does, and
+   what somebody watching the list expects to see. */
+function dmSortedFriends(){
+  const out=[];
+  let ids=[];
+  /* dmPartners, not ME.friends: since v54.5 a DM can exist with somebody who is not a friend
+     - one I accepted, or one I started and am waiting on. Those belong in this list too. */
+  try{ids=DB.dmPartners(ME.id)}catch(_){ids=(ME.friends||[]).slice()}
+  ids.forEach(fid=>{
+    const f=DB.getUser(fid);if(!f)return;
+    const k=DB.dmKey(ME.id,fid);
+    let at=0;try{at=DB.lastMsgAt(k)||0}catch(_){}
+    let pending=false;try{pending=DB.dmPendingWith(fid)}catch(_){}
+    out.push({fid,f,k,at,pending});
+  });
+  const name=x=>String((x.f&&x.f.username)||'').toLowerCase();
+  out.sort((a,b)=>{
+    if(a.at&&b.at)return b.at-a.at;      // both have history: newest first
+    if(a.at)return -1;                    // anything beats nothing
+    if(b.at)return 1;
+    return name(a).localeCompare(name(b));
+  });
+  return out;
+}
+/* ---- the message-request inbox ------------------------------------------------------
+   Everyone who has asked to message me, with what they said and the two things I can do
+   about it. Accept opens the conversation; Decline ignores them, and because the ignore
+   marker is what the database rules consult, that person cannot raise the request again.
+   Deliberately says so on the button's tooltip rather than hiding it behind a confirm. */
+function renderDmRequests(){
+  const box=$('#messages');if(!box)return;
+  let reqs=[];try{reqs=DB.dmRequestsIn()}catch(_){}
+  /* "Who can DM me" is applied here, on the receiving side. The sender cannot read this
+     setting - it is private - so it could never have been enforced when the request was
+     made; see the note in scripts/add_rules_dm_requests.py. */
+  let who='all';try{who=Prefs.get('dmFrom')||'all'}catch(_){}
+  if(who==='none')reqs=[];
+  else if(who==='friends')reqs=reqs.filter(r=>DB.isFriend(ME.id,r.from));
+
+  box.innerHTML='<div class="dl-fr" id="dmReqWrap">'+
+    '<div class="dl-fr-tabs"><span class="dl-fr-title">✉️ Message Requests</span></div>'+
+    '<div id="dmReqBody"></div></div>';
+  const body=$('#dmReqBody');
+
+  if(!reqs.length){
+    body.innerHTML='<div class="dl-fr-empty">'+(who==='none'
+      ? 'You have turned off direct messages from people you are not friends with. Settings → Privacy & Safety changes that.'
+      : 'No message requests.')+'</div>';
+    return;
+  }
+
+  const head=document.createElement('div');
+  head.className='dl-fr-h';head.textContent='Requests — '+reqs.length;
+  body.appendChild(head);
+
+  reqs.forEach(r=>{
+    const u=DB.getUser(r.from)||{id:r.from,username:'User '+r.from};
+    const row=document.createElement('div');
+    row.className='dl-fr-row dmreq-row';
+    const when=r.at?new Date(r.at).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'';
+    row.innerHTML=
+      '<span class="dl-fr-av" data-open-profile="'+r.from+'">'+
+        avatarHtml(u,u.username,'width:32px;height:32px;font-size:13px')+'</span>'+
+      '<div class="dl-fr-who"><b>'+esc(dispName(u))+'</b>'+
+        '<small>'+(r.msg?esc(r.msg):'wants to send you a message')+(when?' · '+esc(when):'')+'</small></div>'+
+      '<div class="dl-fr-acts"></div>';
+    row.querySelector('[data-open-profile]').onclick=e=>{e.stopPropagation();openUserProfile(r.from)};
+    const acts=row.querySelector('.dl-fr-acts');
+    const btn=(label,title,cls,fn)=>{
+      const b=document.createElement('button');
+      b.type='button';b.className='btn small'+(cls?' '+cls:'');
+      b.textContent=label;b.title=title;
+      b.onclick=async e=>{
+        e.stopPropagation();
+        b.disabled=true;
+        try{await fn()}catch(err){toast((err&&err.message)||'That did not work.','bad');b.disabled=false}
+      };
+      return b;
+    };
+    acts.appendChild(btn('Accept','Open the conversation','',async()=>{
+      const k=await DB.acceptDmRequest(r.from);
+      toast('Message request accepted.');
+      view.dmView='chat';selectRoom(k);
+    }));
+    acts.appendChild(btn('Decline','Ignores them — they cannot ask again','sec',async()=>{
+      await DB.declineDmRequest(r.from);
+      toast('Request declined. They won’t be able to ask again.');
+      renderChat();
+    }));
+    body.appendChild(row);
+  });
+}
+
 function addHTML(parent,html){const t=document.createElement('template');t.innerHTML=html.trim();parent.appendChild(t.content)}
 // Plays the shared modal-close animation (.modal-bg.closing — see the
 // "===== Modals =====" CSS block) before actually clearing the modal root,
@@ -17468,11 +18000,18 @@ function pfStatus(id,online,deleted){
 // Click-through profile card: username, avatar, online state, user ID, friend status/actions.
 // Open the DM with someone from anywhere (profile card opened from the home screen, Global Chat, a room...).
 // The old button only swapped the open chat, so it did nothing visible unless you were already inside Itsuki DMs.
+/* v54.5: you can message anybody, not only friends.
+   Friends open straight into the conversation, exactly as before. Anybody else gets the same
+   conversation, but the first thing they send raises a message request on the other side -
+   see DB.openDmRequest and the composer in js/chat/composer.js. Opening the DM does NOT raise
+   a request on its own; clicking someone's Message button and then changing your mind should
+   not put anything in their inbox. */
 async function openDmWith(id,modalRoot){
   id=Number(id);
   if(!ME||id===ME.id)return;
-  if(!DB.isFriend(ME.id,id)){toast('You can only message friends. Send a friend request first.','bad');return}
   if(DB.isBlocked(ME.id,id)||DB.isBlockedBy(ME.id,id)){toast('You can\'t message this user.','bad');return}
+  const u=DB.getUser(id);
+  if(u&&u.deleted){toast('That account was deleted.','bad');return}
   (modalRoot||$('#modalRoot')).innerHTML='';
   // make sure my side of the DM exists so the messages are readable/sendable
   try{await DB.ensureDmMemberships()}catch(_){}
@@ -18635,6 +19174,14 @@ const PCard=(function(){
       }).join('')+'</div></div>';
   }
 
+  /* A section header with nothing under it is worse than no section at all, so the header and
+     its body are built together here. Every caller used to write the header itself and append
+     the body, which left a bare "MEMBER SINCE" heading on any account with no createdAt - every
+     account made before the field existed, and every stub whose record has not arrived yet. */
+  function memberSinceSection(id){
+    const body=memberSinceHTML(id);
+    return body?'<div class="pf-sec"><div class="pf-sec-h">Member Since</div>'+body+'</div>':'';
+  }
   function memberSinceHTML(id){
     let x=null;try{x=DB.getUser(id)}catch(_){}
     const c=x&&Number(x.createdAt);
@@ -18715,7 +19262,7 @@ const PCard=(function(){
             activityHTML(id)+
             bioHTML(id)+
             (x.pronouns?'<div class="pf-sec"><div class="pf-sec-h">Pronouns</div><div class="pf-flat">'+esc(x.pronouns)+'</div></div>':'')+
-            '<div class="pf-sec"><div class="pf-sec-h">Member Since</div>'+memberSinceHTML(id)+'</div>'+
+            memberSinceSection(id)+
             (roles?'<div class="pf-sec"><div class="pf-sec-h">Roles</div>'+roles+'</div>':'')+
             noteHTML(id)+
           '</div>')+
@@ -18733,7 +19280,6 @@ const PCard=(function(){
         e.stopPropagation();
         if(e.key!=='Enter')return;e.preventDefault();
         const txt=mi.value;
-        if(!DB.isFriend(ME.id,id)){toast('You can only message friends. Send a friend request first.','bad');return}
         await openDmWith(id,root);
         if(txt&&typeof msgIn!=='undefined'&&msgIn){msgIn.value=txt;msgIn.focus();const cc=$('#cc');if(cc)cc.textContent=txt.length}
       };
@@ -18774,7 +19320,14 @@ const PCard=(function(){
         else if(DB.hasIncoming(id))out.push(b('accept','Accept Friend Request',IC.add));
         else if(DB.hasOutgoing(ME.id,id))out.push(b('cancel','Cancel Friend Request',IC.rem));
         else out.push(b('add','Add Friend',IC.add));
-        out.push(b('msg','Message',IC.msg));
+        /* The tooltip says what will actually happen: a non-friend gets a message request
+           rather than a message, and a button that does not say so looks broken when they
+           do not reply. */
+        let msgTip='Message';
+        try{
+          if(!mine&&!DB.dmOpenWith(id))msgTip=DB.dmPendingWith(id)?'Message (request sent)':'Send a message request';
+        }catch(_){}
+        out.push(b('msg',msgTip,IC.msg));
       }
       out.push(iBlocked?b('unblock','Unblock',IC.blk,' on'):b('block','Block',IC.blk));
     }
@@ -18809,7 +19362,8 @@ const PCard=(function(){
               if(open.id===id)repaint();renderChat();
             });
           }else if(k==='msg'){
-            if(!DB.isFriend(ME.id,id)){toast('You can only message friends. Send a friend request first.','bad');return}
+            /* v54.5: no friendship needed. If they are not a friend the first message raises
+               a request rather than landing in their chat unannounced. */
             close();await openDmWith(id,$('#modalRoot'));
           }else if(k==='block'){
             modalBlockConfirm(id,name,async()=>{
@@ -18952,7 +19506,7 @@ const PCard=(function(){
     out+=activityHTML(id);
     out+=bioHTML(id);
     if(x.pronouns)out+='<div class="pf-sec"><div class="pf-sec-h">Pronouns</div><div class="pf-flat">'+esc(x.pronouns)+'</div></div>';
-    out+='<div class="pf-sec"><div class="pf-sec-h">Member Since</div>'+memberSinceHTML(id)+'</div>';
+    out+=memberSinceSection(id);
     out+='<div class="pf-sec"><div class="pf-sec-h">User ID</div><div class="pf-flat"><button type="button" class="pf-copy" data-pf-copyid>#'+id+'</button></div></div>';
     if(roles)out+='<div class="pf-sec"><div class="pf-sec-h">Roles</div>'+roles+'</div>';
     out+=connHTML(id);
@@ -18987,11 +19541,17 @@ const PCard=(function(){
     try{add('Friends',(DB.friends(id)||[]).length)}catch(_){}
     try{add('Servers',DModel.myServers().filter(s=>s.id!==DModel.ICH_ID).length)}catch(_){}
     try{add('Servers you own',DModel.myServers().filter(s=>s.id!==DModel.ICH_ID&&s.ownerId===id).length)}catch(_){}
-    try{add('Boosts in use',DBoost.mySlots().filter(s=>s.sid).length+' of '+DBoost.slotsFor(id))}catch(_){}
+    /* Site owners have no practical slot limit, so "3 of 99" would be a number pretending to be
+       a budget. They see the count on its own. */
+    try{
+      const used=DBoost.mySlots().filter(s=>s.sid).length;
+      add('Boosts in use',DBoost.unlimitedFor(id)?String(used):(used+' of '+DBoost.slotsFor(id)));
+    }catch(_){}
     try{add('Notes you’ve written',PNotes.count())}catch(_){}
     try{
       const ms=PBadges.ageOf(id);
-      add('Account age',ms>=864e5?Math.floor(ms/864e5)+' days':'less than a day');
+      const days=Math.floor(ms/864e5);
+      add('Account age',ms>=864e5?(days+(days===1?' day':' days')):'less than a day');
     }catch(_){}
     let earned=[];try{earned=Object.keys(PAch.haveMine())}catch(_){}
     const ach='<div class="pf-sec"><div class="pf-sec-h">Achievements <small>'+earned.length+' of '+ACHIEVEMENTS.length+'</small></div>'+
@@ -19151,6 +19711,15 @@ function renderMain(){
     $('#chatTitle').textContent='Friends';
     $('#settingsBtn').classList.add('hidden');$('#dmFriendBtn').classList.add('hidden');
     renderedKey=null;renderFriends();return;
+  }
+  /* v54.5: the message-request inbox. Same shape as the Friends page above - no composer,
+     no room key, its own renderer. */
+  if(view.mode==='dms'&&view.dmView==='dmreq'){
+    applyVipLock();
+    composer.classList.add('hidden');
+    $('#chatTitle').textContent='Message Requests';
+    $('#settingsBtn').classList.add('hidden');$('#dmFriendBtn').classList.add('hidden');
+    renderedKey=null;renderDmRequests();return;
   }
   composer.classList.remove('hidden');$('#settingsBtn').classList.remove('hidden');
   const key=view.roomKey;
@@ -20213,6 +20782,17 @@ function extractPings(text){
 }
 let _lastSendAt=0;
 let _sendScanning=false;
+/* The other person in a DM key, or null if this is not a DM. "dm_<a>_<b>" with the two ids
+   sorted, so which half is mine is not fixed - both are checked. */
+function dmPartnerOf(key){
+  const m=/^dm_(\d+)_(\d+)$/.exec(String(key||''));
+  if(!m||!ME)return null;
+  const a=Number(m[1]),b=Number(m[2]);
+  if(a===ME.id)return b;
+  if(b===ME.id)return a;
+  return null;
+}
+
 async function send(){
   const msgLimit=view.roomKey===CFG.ANNOUNCEMENTS_ROOM?Infinity:maxMsgFor(ME.id);
   const text=expandShortcodes(msgIn.value.trim()).slice(0,msgLimit);
@@ -20260,6 +20840,18 @@ async function send(){
       return;
     }
   }
+  /* v54.5: messaging somebody who is not a friend.
+     My own dmMembers row is what the rules check before letting me send, so it has to exist
+     before the message goes out - and the request on their side is raised from the same
+     call. Both are idempotent, so a conversation already under way just falls through.
+     This is awaited rather than fired off: sending first would be refused by the rules,
+     and the person would see their message bounce for no visible reason. */
+  const _dmOther=dmPartnerOf(view.roomKey);
+  if(_dmOther!=null&&!DB.dmOpenWith(_dmOther)){
+    try{await DB.openDmRequest(_dmOther,text)}
+    catch(e){toast((e&&e.message)||'Could not start that conversation.','bad');return}
+  }
+
   _lastSendAt=Date.now();
   const replyTo=view.replyingTo?{id:view.replyingTo.id,senderId:view.replyingTo.senderId,preview:replyPreviewText(view.replyingTo)}:null;
   const _draftImgs=view.pending.slice();
@@ -21195,7 +21787,9 @@ function loadedKeys(){
     DModel.myServers().forEach(s=>{
       DModel.channels(s.id).forEach(c=>{if((DB.messages(c.id)||[]).length)out.add(c.id)});
     });
-    (DB.friends(ME.id)||[]).forEach(f=>{
+    /* Every DM, not only the ones with friends - an accepted message request is a
+       conversation like any other and searching "everywhere" has to mean everywhere. */
+    (DB.dmPartners(ME.id)||[]).forEach(f=>{
       const k=DB.dmKey(ME.id,f);
       if((DB.messages(k)||[]).length)out.add(k);
     });
@@ -23431,9 +24025,9 @@ function openSettings(fromChat,startTab){
         <div class="toggle-row" style="margin-bottom:0">
           <div>
             <div style="font-weight:600;font-size:14px">Censor inappropriate words in chat</div>
-            <div class="hint" style="margin-top:2px">On by default. This only changes what YOU see — it censors messages client-side as you read them, and doesn't affect what other people see or what's stored.</div>
+            <div class="hint" style="margin-top:2px">Off by default. This only changes what YOU see — it censors messages client-side as you read them, and doesn't affect what other people see or what's stored.</div>
           </div>
-          <label class="switch"><input type="checkbox" id="sFilterLocal" ${s.filterLocal!==false?'checked':''}><span class="slider"></span></label>
+          <label class="switch"><input type="checkbox" id="sFilterLocal" ${s.filterLocal===true?'checked':''}><span class="slider"></span></label>
         </div>
       </div>
       <div class="hint">Server-wide username filtering is controlled separately by the server owners.</div>
@@ -24515,7 +25109,10 @@ function openSettings(fromChat,startTab){
     root.querySelectorAll('#sTabs .dl-set-h,#sTabs .dl-set-sep').forEach(h=>{h.style.display=q?'none':''});
   });
   $$('#sReset').onclick=()=>{
-    Object.assign(s,{meBubble:'#7c6cff',meText:'#ffffff',radius:16,font:'system',customFont:'',size:15,bold:false,italic:false,bgType:'gradient',bgColor:'#2a1f5c',bgColor2:'#7c2f66',bgImage:'',bgFit:'cover',bgBlur:0,bgDim:30,uiOpacity:50,uiBlur:18,autoScrollBottom:true,filterLocal:true,pings:{everyone:true,sound:true,desktop:true},music:{enabled:true,volume:15,shuffle:true}});
+    /* Keep this list in step with defaultSettings() in js/core/database.js - "Reset" has to
+       land on the same values a new account gets, and filterLocal/music.enabled are off there
+       as of v54.5. */
+    Object.assign(s,{meBubble:'#7c6cff',meText:'#ffffff',radius:16,font:'system',customFont:'',size:15,bold:false,italic:false,bgType:'gradient',bgColor:'#2a1f5c',bgColor2:'#7c2f66',bgImage:'',bgFit:'cover',bgBlur:0,bgDim:30,uiOpacity:50,uiBlur:18,autoScrollBottom:true,filterLocal:false,pings:{everyone:true,sound:true,desktop:true},music:{enabled:false,volume:15,shuffle:true}});
     if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();if(banListStop){banListStop();banListStop=null}if(muteListTimer){clearInterval(muteListTimer);muteListTimer=null}
     MusicPlayer.setBackground(false);
     DB.updateSettings(ME.id,s).catch(()=>{});
@@ -30554,15 +31151,29 @@ function openCategoryMenu(ev,sid,cat){
  * 12. SERVER BOOSTS
  *     The dialog behind the boost bar in the channel sidebar and the "Server Boost" entry on
  *     the server menu. The rules the user sees here are the ones js/discord/boosts.js enforces:
- *     MVP grants two slots, a boost has to sit somewhere for 7 days before it can be moved, and
- *     giving one up is always allowed.
+ *     MVP grants two slots, a boost has to sit somewhere for 7 days before it can be moved,
+ *     giving one up is always allowed, and (v54.5) several of them may sit on one server.
  * ====================================================================== */
 function boostRowHTML(b){
   const u=DB.getUser(b.uid);
   const nm=u?esc(dispName(u)):('User '+b.uid);
   const since=b.at?new Date(b.at).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'';
+  /* b.n is how many of this person's boosts are on the server; it is absent for a single one. */
+  const many=Number(b.n)>1?'<span class="dbst-x">×'+Number(b.n)+'</span>':'';
   return '<div class="dbst-row"><span class="dbst-av">'+avatarHtml(u||{id:b.uid,username:'?'},(u&&u.username)||'?','width:24px;height:24px;font-size:11px')+'</span>'+
-    '<span class="dbst-nm">'+nm+'</span>'+(since?'<span class="dbst-since">since '+esc(since)+'</span>':'')+'</div>';
+    '<span class="dbst-nm">'+nm+'</span>'+many+(since?'<span class="dbst-since">since '+esc(since)+'</span>':'')+'</div>';
+}
+/* One row per PERSON rather than one per slot: with stacking, boostersOf() returns a row for
+   each boost, and somebody who boosted three times would otherwise be listed three times. */
+function boostersGrouped(sid){
+  let raw=[];try{raw=DBoost.boostersOf(sid)}catch(_){}
+  const by=new Map();
+  raw.forEach(b=>{
+    const cur=by.get(b.uid);
+    if(cur){cur.n++;cur.at=Math.min(cur.at,b.at)}        // "since" is their FIRST boost
+    else by.set(b.uid,{uid:b.uid,at:b.at,n:1});
+  });
+  return [...by.values()].sort((a,b)=>a.at-b.at);
 }
 
 function openBoostDialog(sid){
@@ -30579,41 +31190,71 @@ function openBoostDialog(sid){
     const body=m.body.querySelector('#bstBody');if(!body)return;
     const n=DBoost.countFor(sid),lv=DBoost.levelFor(sid),nx=DBoost.nextLevel(sid);
     const slots=DBoost.mySlots();
-    const mineHere=DBoost.myBoostOn(sid);
     const have=slots.length;
     const pct=nx?Math.max(0,Math.min(100,Math.round((n/nx.need)*100))):100;
-    const boosters=DBoost.boostersOf(sid);
+    const boosters=boostersGrouped(sid);
+
+    /* v54.5: a server can hold several of your boosts, so this is no longer an either/or
+       between "you boost it" and "you could boost it". Both can be true at once, and the
+       dialog has to offer adding another, removing one, and removing all of them. */
+    const unlimited=DBoost.unlimitedFor();
+    const mineCount=DBoost.myBoostCountOn(sid);
+    const freeCount=DBoost.freeSlots();
+    const free=DBoost.freeSlot();
 
     let actions='';
     if(!have){
       actions='<div class="dhint">Server Boosts are an <b>MVP</b> perk — MVP gives you '+DBoost.SLOTS+
         ' of them. MVP is a 0.1% prize on the Daily Spin, or available in the Shop.</div>';
-    }else if(mineHere){
-      const left=mineHere.movableAt-Date.now();
-      actions='<div class="dbst-you">You’re boosting this server.</div>'+
-        '<div class="dhint">'+(left>0
-          ?'This boost can be moved to another server in <b>'+esc(DBoost.describeWait(left))+'</b>. You can take it back at any time.'
-          :'This boost is free to move — open another server and boost it from there.')+'</div>'+
-        '<button type="button" class="dbtn danger" id="bstOff">Remove Boost</button>';
     }else{
-      const free=DBoost.freeSlot();
-      const movable=slots.filter(x=>x.sid&&x.movableAt<=Date.now());
+      if(mineCount){
+        const soonestMine=DBoost.myBoostsOn(sid).slice().sort((a,b)=>a.movableAt-b.movableAt)[0];
+        const left=soonestMine?soonestMine.movableAt-Date.now():0;
+        actions+='<div class="dbst-you">'+(mineCount===1
+          ?'You’re boosting this server.'
+          :'You’re boosting this server <b>'+mineCount+' times</b>.')+'</div>'+
+          '<div class="dhint">'+(left>0
+            ?(mineCount===1?'This boost':'The oldest of them')+' can be moved to another server in <b>'+
+              esc(DBoost.describeWait(left))+'</b>. You can take '+(mineCount===1?'it':'them')+' back at any time.'
+            :(mineCount===1?'This boost is':'The oldest is')+' free to move — open another server and boost it from there.')+
+          '</div>';
+      }
+      /* Adding another, whether or not some of yours are already here. */
       if(free>=0){
-        actions='<button type="button" class="dbtn" id="bstOn">'+
-          'Boost this server <span class="dhint-inline">('+slots.filter(x=>!x.sid).length+' of '+have+' free)</span></button>';
-      }else if(movable.length){
-        actions='<div class="dhint">Both of your boosts are on other servers, but '+
-          (movable.length===1?'one of them has':movable.length+' of them have')+' been there long enough to move.</div>'+
-          movable.map(x=>{
-            const other=DModel.server(x.sid);
-            return '<button type="button" class="dbtn grey" data-move="'+esc(x.sid)+'">Move the boost from '+
-              esc(other?other.name:'a deleted server')+'</button>';
-          }).join('');
+        actions+='<button type="button" class="dbtn" id="bstOn">'+
+          (mineCount?'Boost it again':'Boost this server')+
+          '<span class="dhint-inline">'+(unlimited
+            ?(freeCount===1?' (1 boost free)':' ('+freeCount+' boosts free)')
+            :' ('+freeCount+' of '+have+' free)')+'</span></button>';
       }else{
-        const soonest=slots.filter(x=>x.sid).sort((a,b)=>a.movableAt-b.movableAt)[0];
-        actions='<div class="dhint">Both of your boosts are on other servers. A boost has to sit on a '+
-          'server for 7 days before it can move'+(soonest?'; the next one is free in <b>'+
-          esc(DBoost.describeWait(soonest.movableAt-Date.now()))+'</b>':'')+'.</div>';
+        const movable=slots.filter(x=>x.sid&&x.sid!==sid&&x.movableAt<=Date.now());
+        const elsewhere=slots.filter(x=>x.sid&&x.sid!==sid);
+        if(movable.length){
+          actions+='<div class="dhint">'+(mineCount?'Your other boosts are':'Your boosts are')+
+            ' on other servers, but '+(movable.length===1?'one of them has':movable.length+' of them have')+
+            ' been there long enough to move.</div>'+
+            /* One button per SERVER, not per slot: two boosts on the same server would
+               otherwise produce two identical buttons. */
+            [...new Set(movable.map(x=>x.sid))].map(osid=>{
+              const other=DModel.server(osid);
+              const n=movable.filter(x=>x.sid===osid).length;
+              return '<button type="button" class="dbtn grey" data-move="'+esc(osid)+'">Move a boost from '+
+                esc(other?other.name:'a deleted server')+(n>1?' <span class="dhint-inline">('+n+' movable)</span>':'')+
+                '</button>';
+            }).join('');
+        }else if(elsewhere.length){
+          const soonest=elsewhere.slice().sort((a,b)=>a.movableAt-b.movableAt)[0];
+          actions+='<div class="dhint">'+(mineCount?'Your other boosts are':'Your boosts are')+
+            ' on other servers. A boost has to sit on a server for 7 days before it can move'+
+            (soonest?'; the next one is free in <b>'+esc(DBoost.describeWait(soonest.movableAt-Date.now()))+'</b>':'')+'.</div>';
+        }else if(!mineCount){
+          actions+='<div class="dhint">You have no boosts free.</div>';
+        }
+      }
+      if(mineCount){
+        actions+='<button type="button" class="dbtn danger" id="bstOff">'+
+          (mineCount===1?'Remove Boost':'Remove one boost')+'</button>'+
+          (mineCount>1?'<button type="button" class="dbtn grey" id="bstOffAll">Remove all '+mineCount+'</button>':'');
       }
     }
 
@@ -30637,6 +31278,8 @@ function openBoostDialog(sid){
     if(on)on.onclick=run(()=>DBoost.boost(sid),'Server boosted!');
     const off=body.querySelector('#bstOff');
     if(off)off.onclick=run(()=>DBoost.unboost(sid),'Boost removed.');
+    const offAll=body.querySelector('#bstOffAll');
+    if(offAll)offAll.onclick=run(()=>DBoost.unboostAll(sid),'Boosts removed.');
     body.querySelectorAll('[data-move]').forEach(b=>{
       b.onclick=run(()=>DBoost.move(b.dataset.move,sid),'Boost moved.');
     });
@@ -31318,7 +31961,10 @@ function openMemberManager(sid,uid,after){
 
   function draw(){
     const roles=DModel.roles(sid).filter(r=>!r.everyone);
-    const mineHas=rid=>DModel.rolesOf(sid,uid).some(r=>r.id===rid);
+    /* storedRolesOf, not rolesOf: a site owner effectively holds every role, and showing all
+       of them lit up here would describe the member record as containing rows it does not,
+       so switching one off would appear to do nothing. This pane edits what is stored. */
+    const mineHas=rid=>DModel.storedRolesOf(sid,uid).some(r=>r.id===rid);
     pane.innerHTML=
       '<div class="dfield"><label class="dlabel">Nickname</label>'+
       '<input class="dinput" id="mmNick" maxlength="32" value="'+esc(mem.nick||'')+'" placeholder="'+esc(nameOf())+'">'+
@@ -31401,6 +32047,14 @@ function openMemberManager(sid,uid,after){
  *   always allowed - what the cooldown stops is hopping a boost between servers to farm a
  *   perk, not changing your mind about boosting at all.
  *
+ * STACKING (v54.5)
+ *   Several of your slots may point at the SAME server, exactly as they do on Discord: that is
+ *   how one person moves a server up a level on their own. Each stacked boost is still its own
+ *   slot with its own 7-day clock, so they are added and removed one at a time rather than as a
+ *   block. Nothing in the storage or the rules had to change for this - a slot has always been
+ *   free to name any server, and only a client-side guard stopped two of them naming the same
+ *   one. The guard is gone; the per-slot accounting that makes it safe was already here.
+ *
  * WHEN MVP IS TAKEN AWAY
  *   The slots stop counting immediately, everywhere, because every count filters the boosters
  *   through hasMvpPerks() at read time rather than trusting the stored record. There is no
@@ -31463,14 +32117,23 @@ const DBoost=(()=>{
   }
 
   /* v54.4: site owners get effectively unlimited boosts, and do not need MVP for them.
-     99 rather than Infinity because every slot is a stored key under userBoosts/$id, and the
-     database rules cap the slot index at two digits for exactly that reason - an unbounded
-     number of keys is an unbounded bill on the free plan. Nobody is going to boost 99 servers. */
-  const BOOST_SLOTS_OWNER=99;
+     100 (slots 0-99) rather than Infinity because every slot is a stored key under
+     userBoosts/$id, and the database rules cap the slot index at two digits for exactly that
+     reason - an unbounded number of keys is an unbounded bill on the free plan. An owner can
+     take a server to Level 3 (14 boosts) seven times over and still not reach it, so it is a
+     ceiling in name only; unlimitedFor() below is what the UI asks, so nobody is ever shown
+     "7 of 100" as though it were a budget they could run out of. */
+  const BOOST_SLOTS_OWNER=100;
   function slotsFor(uid){
     uid=Number(uid==null?myId:uid);
     try{if(isOwner(uid))return BOOST_SLOTS_OWNER}catch(_){}
     try{return hasMvpPerks(uid)?BOOST_SLOTS_MVP:0}catch(_){return 0}
+  }
+  /* True for anyone whose slot count is not meant to be read as a limit. The UI shows a plain
+     count for these people rather than "n of m". */
+  function unlimitedFor(uid){
+    uid=Number(uid==null?myId:uid);
+    try{return isOwner(uid)}catch(_){return false}
   }
   /* My slots, always exactly slotsFor(me) of them, each either pointed at a server or free. */
   function mySlots(){
@@ -31485,7 +32148,13 @@ const DBoost=(()=>{
     return out;
   }
   function freeSlot(){const s=mySlots().find(x=>!x.sid);return s?s.slot:-1}
+  function freeSlots(){return mySlots().filter(x=>!x.sid).length}
+  /* The FIRST of my slots on a server - the oldest, since mySlots() is in slot order. Kept
+     because plenty of callers only need to know "one of mine is here". */
   function myBoostOn(sid){return mySlots().find(x=>x.sid===sid)||null}
+  /* All of them, oldest first. Stacking means this can be longer than one. */
+  function myBoostsOn(sid){return mySlots().filter(x=>x.sid===sid)}
+  function myBoostCountOn(sid){return myBoostsOn(sid).length}
   function amBoosting(sid){return !!myBoostOn(sid)}
 
   /* ---- counting ----
@@ -31533,11 +32202,19 @@ const DBoost=(()=>{
     try{if(!DModel.server(sid))throw new Error('That server is gone.')}catch(_){}
   }
 
+  /* v54.5: boosting a server you already boost adds ANOTHER boost to it rather than being
+     refused. The old guard existed only because the first version assumed one slot per server;
+     nothing downstream depended on it - counts come from the slot rows, which have always been
+     counted individually. */
   async function boost(sid){
     assertCanBoost(sid);
-    if(amBoosting(sid))throw new Error('You’re already boosting this server.');
     const slot=freeSlot();
-    if(slot<0)throw new Error('Both of your boosts are already on other servers. Move one instead.');
+    if(slot<0){
+      const n=slotsFor(myId);
+      throw new Error(n===1
+        ?'Your boost is already on another server. Move it instead.'
+        :'All '+n+' of your boosts are already on other servers. Move one instead.');
+    }
     await writeSlot(slot,sid);
   }
 
@@ -31545,23 +32222,51 @@ const DBoost=(()=>{
      separately and the old server's row and the new one are different paths under different
      $sid wildcards. The remove goes first, so a failure half way leaves a FREE slot rather than
      a slot that looks like it is in two places at once. */
+  /* Moving picks the oldest movable boost on the source server, so stacking several on one
+     server and then moving one does not disturb the clocks on the rest. Landing on a server
+     you already boost is fine now - it stacks. */
   async function move(fromSid,toSid){
+    /* Moving a boost to the server it is already on would clear the slot and write it back,
+       resetting its 7-day clock for nothing. Before stacking this was refused as a side
+       effect of "you are already boosting this server"; now that stacking is allowed it has
+       to be said outright. */
+    if(fromSid===toSid)throw new Error('That boost is already on this server.');
     assertCanBoost(toSid);
-    const cur=myBoostOn(fromSid);
-    if(!cur)throw new Error('You aren’t boosting that server.');
-    if(amBoosting(toSid))throw new Error('You’re already boosting this server.');
-    const left=cur.movableAt-Date.now();
-    if(left>0)throw new Error('This boost can be moved in '+describeWait(left)+'. A boost has to sit on a server for 7 days before it can move.');
+    const here=myBoostsOn(fromSid);
+    if(!here.length)throw new Error('You aren’t boosting that server.');
+    const cur=here.filter(x=>x.movableAt<=Date.now()).sort((a,b)=>a.at-b.at)[0];
+    if(!cur){
+      const soonest=here.slice().sort((a,b)=>a.movableAt-b.movableAt)[0];
+      throw new Error('That boost can be moved in '+describeWait(soonest.movableAt-Date.now())+
+        '. A boost has to sit on a server for 7 days before it can move.');
+    }
     await clearSlot(cur.slot,fromSid);
     await writeSlot(cur.slot,toSid);
   }
 
   /* Giving a boost up is always allowed - the 7-day rule exists to stop a boost being shuffled
-     between servers, not to trap it on one. */
+     between servers, not to trap it on one. With stacking, this removes ONE of yours: the
+     newest, so the oldest boost on the server keeps the longest-running clock and stays the
+     one that is free to move soonest. */
   async function unboost(sid){
-    const cur=myBoostOn(sid);
-    if(!cur)throw new Error('You aren’t boosting that server.');
+    const here=myBoostsOn(sid);
+    if(!here.length)throw new Error('You aren’t boosting that server.');
+    const cur=here.slice().sort((a,b)=>b.at-a.at)[0];
     await clearSlot(cur.slot,sid);
+  }
+
+  /* Take every one of my boosts off a server in one go. Each slot is its own pair of writes,
+     so this is a loop rather than one update - and a failure part way leaves the rest in
+     place, which is the same shape as clearing them one at a time by hand. */
+  async function unboostAll(sid){
+    const here=myBoostsOn(sid);
+    if(!here.length)throw new Error('You aren’t boosting that server.');
+    let n=0;
+    for(const x of here.slice().sort((a,b)=>b.at-a.at)){
+      try{await clearSlot(x.slot,sid);n++}catch(e){console.warn('[DBoost] could not clear slot',x.slot,e);break}
+    }
+    if(!n)throw new Error('Those boosts could not be removed.');
+    return n;
   }
 
   async function writeSlot(slot,sid){
@@ -31599,12 +32304,13 @@ const DBoost=(()=>{
       try{await clearSlot(slot,sid||'_')}catch(_){}
     }
   }
-  /* Called when a server is deleted: drop MY slot on it straight away so it is usable again
-     without waiting for the next sign-in. Other people's rows die with their own prune(). */
+  /* Called when a server is deleted: drop MY slots on it straight away so they are usable
+     again without waiting for the next sign-in. Other people's rows die with their own
+     prune(). Every one of mine, not just the first - stacking means there can be several. */
   async function releaseAllFor(sid){
-    const cur=myBoostOn(sid);
-    if(!cur)return;
-    try{await remove(R('userBoosts/'+myId+'/'+cur.slot))}catch(_){}
+    for(const cur of myBoostsOn(sid)){
+      try{await remove(R('userBoosts/'+myId+'/'+cur.slot))}catch(_){}
+    }
   }
 
   function describeWait(ms){
@@ -31619,9 +32325,10 @@ const DBoost=(()=>{
     LEVELS:BOOST_LEVELS,SLOTS:BOOST_SLOTS_MVP,MOVE_MS:BOOST_MOVE_MS,
     start,stop,ensureStarted,attach,detach,
     onChange:f=>{subs.add(f);return()=>subs.delete(f)},
-    slotsFor,mySlots,freeSlot,myBoostOn,amBoosting,
+    slotsFor,unlimitedFor,mySlots,freeSlot,freeSlots,
+    myBoostOn,myBoostsOn,myBoostCountOn,amBoosting,
     boostersOf,countFor,levelFor,nextLevel,hasPerk,
-    boost,move,unboost,prune,releaseAllFor,describeWait
+    boost,move,unboost,unboostAll,prune,releaseAllFor,describeWait
   };
 })();
 
@@ -33658,9 +34365,10 @@ const QuickSwitch=(function(){
       }));
     }catch(_){}
 
-    /* friends, as direct messages */
+    /* direct messages - everyone I have a conversation with, not only friends, so a DM that
+       began as an accepted message request can be jumped to like any other */
     try{
-      (DB.friends(ME.id)||[]).forEach(fid=>{
+      (DB.dmPartners(ME.id)||[]).forEach(fid=>{
         const u=DB.getUser(fid);if(!u)return;
         const n=dispName(u,'User '+fid);
         push({
@@ -34229,6 +34937,9 @@ const BOOTUI=window.ICHBoot||{prog(){},phase(){},step(){},done(){},fail(){},reve
       <div class="banned-banner hidden" id="mutedBanner" style="background:#3a3410;border-color:#6b5d1a;color:#ffe9a8"></div>
       <div class="banned-banner hidden" id="announceBanner" style="background:#132a3a;border-color:#1f4a63;color:#a8d4ff">📢 Only the owner can post here — you can view announcements but not send messages.</div>
       <div class="banned-banner hidden" id="shitBanner" style="background:#2e2410;border-color:#6b4f1a;color:#ffd9a0">💩 Only mods, admins and owners can post here — everyone can read it, but you can't send messages.</div>
+      <!-- v54.5: a DM with somebody who has not accepted the message request yet. Not a lock —
+           you can still type — it just explains why there is no reply. -->
+      <div class="banned-banner hidden" id="dmReqBanner" style="background:#1b2a23;border-color:#2f5a48;color:#a8e6c9"></div>
       <div class="composer">
         <div class="typing-bar" id="typingBar"></div>
         <div class="compose-context" id="composeContext">

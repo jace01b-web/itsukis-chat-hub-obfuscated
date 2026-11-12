@@ -95,9 +95,10 @@ const QuickSwitch=(function(){
       }));
     }catch(_){}
 
-    /* friends, as direct messages */
+    /* direct messages - everyone I have a conversation with, not only friends, so a DM that
+       began as an accepted message request can be jumped to like any other */
     try{
-      (DB.friends(ME.id)||[]).forEach(fid=>{
+      (DB.dmPartners(ME.id)||[]).forEach(fid=>{
         const u=DB.getUser(fid);if(!u)return;
         const n=dispName(u,'User '+fid);
         push({

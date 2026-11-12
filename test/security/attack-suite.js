@@ -217,6 +217,53 @@ attack('fake what Alice is listening to',     'eve', W(UID.eve, 'activity/3', { 
 attack('write into Alice’s private notes','eve', W(UID.eve, 'notes/3/4', 'injected'), 'HIGH');
 attack('read Alice’s private notes',     'eve', Rd(UID.eve, 'notes/3'), 'HIGH');
 attack('read Alice’s saved messages',    'eve', Rd(UID.eve, 'saved/3'), 'MEDIUM');
+
+/* ---- v54.5: message requests ------------------------------------------------
+   The feature's whole promise is that declining somebody ignores them for good. That is not
+   a client-side convention - it is this node refusing the second request - so these cases
+   are what the promise rests on. The fixture has eve(5) waiting on alice(3), and mal(6)
+   already declined by her (the `ignored` marker).                                  */
+attack('read somebody else’s message requests',
+  'eve', Rd(UID.eve, 'dmRequests/3'), 'HIGH');
+attack('read a single request addressed to somebody else',
+  'eve', Rd(UID.eve, 'dmRequests/3/5'), 'HIGH');
+attack('raise a message request in somebody else’s name',
+  'eve', W(UID.eve, 'dmRequests/3/4', { at: NOW, msg: 'not from me' }), 'HIGH');
+/* The one that matters: declined means declined. */
+attack('ask again after being declined',
+  'mal', W(UID.mal, 'dmRequests/3/6', { at: NOW, msg: 'please?' }), 'HIGH');
+attack('clear my own ignored marker so I can ask again',
+  'mal', W(UID.mal, 'dmRequests/3/6', null), 'HIGH');
+attack('clear just the ignored flag and leave the row',
+  'mal', W(UID.mal, 'dmRequests/3/6/ignored', null), 'HIGH');
+attack('mark myself NOT ignored',
+  'mal', W(UID.mal, 'dmRequests/3/6/ignored', false), 'HIGH');
+/* A request is not a channel for arbitrary data, and the preview is length-capped. */
+attack('smuggle an extra field into a request',
+  'eve', W(UID.eve, 'dmRequests/3/5', { at: NOW, admin: true }), 'LOW');
+attack('write a request with no timestamp',
+  'eve', W(UID.eve, 'dmRequests/7/5', { msg: 'hi' }), 'LOW');
+attack('use the preview as bulk storage',
+  'eve', W(UID.eve, 'dmRequests/7/5', { at: NOW, msg: 'x'.repeat(5000) }), 'LOW');
+attack('raise a request against myself',
+  'eve', W(UID.eve, 'dmRequests/5/5', { at: NOW }), 'LOW');
+
+allow('raise a message request on somebody who has not declined me',
+  'eve', W(UID.eve, 'dmRequests/7/5', { at: NOW, msg: 'hello' }));
+allow('read my OWN message requests',
+  'alice', Rd(UID.alice, 'dmRequests/3'));
+allow('accept a request by deleting the row',
+  'alice', W(UID.alice, 'dmRequests/3/5', null));
+allow('decline a request by marking it ignored',
+  'alice', W(UID.alice, 'dmRequests/3/5', { at: NOW, ignored: true }));
+/* Accepting is writing my own dmMembers row - the thing the message rules actually check.
+   It has always been allowed for any key carrying my id, which is why this feature needed
+   no change to the message rules at all. */
+allow('accept by joining the conversation',
+  'alice', W(UID.alice, 'dmMembers/dm_3_5/3', true));
+attack('join a conversation I am not part of',
+  'eve', W(UID.eve, 'dmMembers/dm_3_4/3', true), 'CRITICAL');
+
 attack('read Alice’s notification prefs','eve', Rd(UID.eve, 'notifPrefs/3'), 'LOW');
 expected('read another account’s LEGACY settings copy', 'eve', Rd(UID.eve, 'users/3/settings'),
   'v54.2: this is the RESIDUAL exposure, and it is deliberate. users/.read is gone, so this can '
@@ -300,18 +347,31 @@ attack('read somebody else’s spin claim',
 attack('site owner writes a spin claim by hand (the server owns this node)',
   'owner', W(UID.owner, 'spinClaims/5', { at: NOW, n: 0 }), 'MEDIUM');
 
-/* ---- v54.4: site-owner powers, and the limits that must survive them -------
+/* ---- site-owner powers, and the limits that must survive them -------
    The site owner is meant to outrank every server. These check that is true in the RULES, not
    just in the client - and, just as importantly, that opening it up for owners did not open it
-   for anybody else. */
-allow('site owner deletes somebody else\u2019s server', 'owner', W(UID.owner, 'servers/srvA', null));
-allow('site owner deletes that server\u2019s channels', 'owner', W(UID.owner, 'serverChannels/srvA', null));
-allow('site owner deletes that server\u2019s roles', 'owner', W(UID.owner, 'serverRoles/srvA', null));
-allow('site owner deletes that server\u2019s member list', 'owner', W(UID.owner, 'serverMembers/srvA', null));
-allow('site owner deletes a server\u2019s bans, mutes, invites and screening', 'owner',
-  U(UID.owner, '', { 'serverBans/srvA': null, 'serverMutes/srvA': null,
+   for anybody else.
+
+   v54.5 CARVES ONE POWER BACK OUT: deleting a server.
+   v54.4 had granted it on the grounds that an owner outranks every server. Outranking a server
+   is not owning it - every other staff power is reversible and this one is not - so deleting a
+   server is now the server owner's alone, in the rules and not only in the client
+   (scripts/remove_rules_owner_delete.py). The five cases below used to be allow(); they are
+   attacks now, and they are the proof that the client-side check in DModel.deleteServer()
+   cannot simply be stepped around from a console.
+   Everything the owner SHOULD still be able to do is asserted immediately after them. */
+attack('site owner deletes somebody else\u2019s server',
+  'owner', W(UID.owner, 'servers/srvA', null), 'HIGH');
+attack('site owner deletes that server\u2019s channels',
+  'owner', W(UID.owner, 'serverChannels/srvA', null), 'HIGH');
+attack('site owner deletes that server\u2019s roles',
+  'owner', W(UID.owner, 'serverRoles/srvA', null), 'HIGH');
+attack('site owner deletes that server\u2019s member list',
+  'owner', W(UID.owner, 'serverMembers/srvA', null), 'HIGH');
+attack('site owner deletes a server\u2019s bans, mutes, invites and screening',
+  'owner', U(UID.owner, '', { 'serverBans/srvA': null, 'serverMutes/srvA': null,
     'serverIpBans/srvA': null, 'invites/srvA': null, 'memberScreen/srvA': null,
-    'serverEvents/srvA': null, 'serverEmoji/srvA': null, 'roomMembers/chGen': null }));
+    'serverEvents/srvA': null, 'serverEmoji/srvA': null, 'roomMembers/chGen': null }), 'HIGH');
 allow('SERVER owner can delete their own server end to end', 'alice',
   U(UID.alice, '', { 'servers/srvA': null, 'serverChannels/srvA': null, 'serverRoles/srvA': null,
     'serverMembers/srvA': null, 'serverBans/srvA': null, 'serverMutes/srvA': null,

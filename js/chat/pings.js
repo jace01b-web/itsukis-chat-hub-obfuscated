@@ -93,7 +93,11 @@ function checkPingNotifications(){
   }catch(_){}
   const keys=[...new Set([CFG.GLOBAL_ROOM,CFG.ANNOUNCEMENTS_ROOM,CFG.SHITPOST_ROOM,
     ...chanKeys,
-    ...DB.friends(ME.id).map(f=>DB.dmKey(ME.id,f))])];
+    /* dmPartners, not friends: since v54.5 an accepted message request is a DM like any
+       other, and a notification that only fires for friends would make those conversations
+       silent for no reason the person could see. People whose request was declined are not
+       in this list, so ignoring somebody really does stop the notifications too. */
+    ...DB.dmPartners(ME.id).map(f=>DB.dmKey(ME.id,f))])];
   keys.forEach(key=>{
     const isDM=String(key).startsWith('dm_');
     (DB.messages(key)||[]).forEach(m=>{

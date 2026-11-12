@@ -116,7 +116,15 @@ html.discord-look .dlpo.pf2{width:340px;padding:0}
 
 .pf2-av{position:relative;flex:none;border-radius:50%;
   background:var(--dl-pop,var(--panel));padding:6px;line-height:0}
-.pf2-av .avatar{display:block}
+/* The avatar keeps the flex centring every other copy of it on the site has.
+   This used to be `display:block`, which dropped the centring that .avatar's own rule
+   provides, and the letter initial then laid out as an ordinary line of text: with the
+   line-height:0 inherited from .pf2-av above, that painted the glyph roughly half its own
+   height ABOVE the circle and hard against its left edge - a stray letter floating outside
+   the avatar on every profile belonging to somebody who has not uploaded a picture.
+   An uploaded image filled the box and hid it, which is why it survived this long.
+   line-height is restored alongside, so the glyph box has a height to be centred within. */
+.pf2-av .avatar{display:flex;align-items:center;justify-content:center;line-height:1;text-align:center}
 
 .pf2-acts{display:flex;gap:6px;align-items:center;padding-bottom:6px;flex-wrap:wrap;justify-content:flex-end}
 .pf2-ib{width:32px;height:32px;border:0;border-radius:8px;cursor:pointer;
@@ -668,3 +676,31 @@ html.discord-look .dl-stopt .dl-dot,
 html.discord-look .dl-stgrid .dl-dot{
   position:static;right:auto;bottom:auto;left:auto;top:auto;
   flex:none;margin-top:3px;box-shadow:none}
+
+/* ==========================================================================
+ * 8. MESSAGE REQUESTS  (v54.5)
+ *
+ * Messaging somebody who is not a friend raises a request they accept or decline. Three
+ * surfaces need marking: the inbox row in the sidebar, a conversation of mine they have not
+ * accepted yet, and the rows in the inbox itself.
+ * ========================================================================== */
+
+/* The sidebar inbox row. Tinted like the friend-request row next to it so the two read as
+   the same kind of thing, which they are. */
+.sb-item.sb-dmreq .nm{font-weight:600}
+
+/* A DM I have sent into that has not been accepted. Dimmed rather than badged: it is not
+   waiting on ME, so it must not look like something to action. */
+.sb-item.sb-dm-pending .nm{opacity:.62;font-style:italic}
+.sb-item.sb-dm-pending.active .nm{opacity:1;font-style:italic}
+
+/* Inbox rows. .dl-fr-row already lays the row out (avatar, name, actions); these only add
+   room for two buttons and keep a long first message on one line. */
+.dmreq-row .dl-fr-acts{display:flex;gap:6px;align-items:center;flex:none}
+.dmreq-row .dl-fr-who small{
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:46ch;display:block}
+@media (max-width:620px){
+  .dmreq-row{flex-wrap:wrap}
+  .dmreq-row .dl-fr-who small{max-width:100%}
+  .dmreq-row .dl-fr-acts{width:100%;justify-content:flex-end;margin-top:6px}
+}

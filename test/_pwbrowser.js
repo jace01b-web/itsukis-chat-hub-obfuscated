@@ -35,6 +35,17 @@ function findChromium(){
   return cands[0].p;
 }
 
+/* Last resort: a Chrome installed by the system rather than by Playwright. Same reasoning as
+   above - without it the suites cannot run at all on a machine that has Chrome but no
+   Playwright-managed revision. Only consulted when findChromium() comes up empty. */
+function findSystemChrome(){
+  for(const p of ['/usr/bin/google-chrome','/usr/bin/google-chrome-stable',
+                  '/usr/bin/chromium','/usr/bin/chromium-browser','/opt/google/chrome/chrome']){
+    try{if(fs.existsSync(p))return p}catch(_){}
+  }
+  return null;
+}
+
 try{
   const pw=require('playwright');
   const orig=pw.chromium.launch.bind(pw.chromium);
@@ -44,7 +55,7 @@ try{
       let wanted=null;
       try{wanted=pw.chromium.executablePath()}catch(_){}
       if(!wanted||!fs.existsSync(wanted)){
-        const found=findChromium();
+        const found=findChromium()||findSystemChrome();
         if(found){
           opts.executablePath=found;
           if(!global.__PW_SHIM_SAID){

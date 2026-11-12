@@ -1,6 +1,6 @@
 {
   "name": "itsukis-chat-hub",
-  "version": "54.4.0",
+  "version": "54.5.0",
   "private": true,
   "description": "Itsuki's Chat Hub. The site itself is plain files served from GitHub and needs no build step; this package.json exists only so the test and migration tooling is reproducible.",
   "engines": {
@@ -15,8 +15,9 @@
     "test:spin": "node test/security/spin-concurrency.js && node test/security/spin-states.js && node test/security/spin-failures.js",
     "test:migration": "node test/security/migration-logic.js && node test/security/migration-rollback.js && node test/security/rollback-exit.js",
     "test:secrets": "node test/security/no-secrets.js",
-    "test:browser": "node test/build-harness.js && node -r ./test/_pwbrowser.js test/run-privacy.js && node -r ./test/_pwbrowser.js test/run-v54.js && node -r ./test/_pwbrowser.js test/run-profile-status.js && node -r ./test/_pwbrowser.js test/run-owner-powers.js",
+    "test:browser": "node test/build-harness.js && node -r ./test/_pwbrowser.js test/run-privacy.js && node -r ./test/_pwbrowser.js test/run-v54.js && node -r ./test/_pwbrowser.js test/run-profile-status.js && node -r ./test/_pwbrowser.js test/run-owner-powers.js && node -r ./test/_pwbrowser.js test/run-v54-5.js && node -r ./test/_pwbrowser.js test/run-dm-requests.js",
     "test:v544": "node test/build-harness.js && node -r ./test/_pwbrowser.js test/run-profile-status.js && node -r ./test/_pwbrowser.js test/run-owner-powers.js && node -r ./test/_pwbrowser.js test/run-bigmembers.js",
+    "test:v545": "node test/build-harness.js && node -r ./test/_pwbrowser.js test/run-v54-5.js && node -r ./test/_pwbrowser.js test/run-dm-requests.js && node -r ./test/_pwbrowser.js test/run-boosts.js && node -r ./test/_pwbrowser.js test/run-owner-powers.js",
     "build:single": "node build-single.js",
     "build:harness": "node test/build-harness.js",
     "verify:privacy": "node scripts/verify_privacy.js",

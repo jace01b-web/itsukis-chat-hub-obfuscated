@@ -115,6 +115,17 @@ function extractPings(text){
 }
 let _lastSendAt=0;
 let _sendScanning=false;
+/* The other person in a DM key, or null if this is not a DM. "dm_<a>_<b>" with the two ids
+   sorted, so which half is mine is not fixed - both are checked. */
+function dmPartnerOf(key){
+  const m=/^dm_(\d+)_(\d+)$/.exec(String(key||''));
+  if(!m||!ME)return null;
+  const a=Number(m[1]),b=Number(m[2]);
+  if(a===ME.id)return b;
+  if(b===ME.id)return a;
+  return null;
+}
+
 async function send(){
   const msgLimit=view.roomKey===CFG.ANNOUNCEMENTS_ROOM?Infinity:maxMsgFor(ME.id);
   const text=expandShortcodes(msgIn.value.trim()).slice(0,msgLimit);
@@ -162,6 +173,18 @@ async function send(){
       return;
     }
   }
+  /* v54.5: messaging somebody who is not a friend.
+     My own dmMembers row is what the rules check before letting me send, so it has to exist
+     before the message goes out - and the request on their side is raised from the same
+     call. Both are idempotent, so a conversation already under way just falls through.
+     This is awaited rather than fired off: sending first would be refused by the rules,
+     and the person would see their message bounce for no visible reason. */
+  const _dmOther=dmPartnerOf(view.roomKey);
+  if(_dmOther!=null&&!DB.dmOpenWith(_dmOther)){
+    try{await DB.openDmRequest(_dmOther,text)}
+    catch(e){toast((e&&e.message)||'Could not start that conversation.','bad');return}
+  }
+
   _lastSendAt=Date.now();
   const replyTo=view.replyingTo?{id:view.replyingTo.id,senderId:view.replyingTo.senderId,preview:replyPreviewText(view.replyingTo)}:null;
   const _draftImgs=view.pending.slice();

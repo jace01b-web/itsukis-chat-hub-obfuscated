@@ -32,4 +32,4 @@ const rtdb=getDatabase(fbApp);
 const R=p=>ref(rtdb,p);
 let SKEW=0;
 onValue(ref(rtdb,'.info/serverTimeOffset'),s=>{SKEW=Number(s.val())||0});
-onValue(R('modSettings'),s=>{MODSET={filterEnabled:true,filterNames:true,customNames:true,...(s.val()||{})};MODSET_LOADED=true;if(typeof render==='function')try{render()}catch(_){}if(typeof renderChat==='function')try{renderChat()}catch(_){}});
+onValue(R('modSettings'),s=>{MODSET={filterEnabled:false,filterNames:false,customNames:true,...(s.val()||{})};MODSET_LOADED=true;if(typeof render==='function')try{render()}catch(_){}if(typeof renderChat==='function')try{renderChat()}catch(_){}});

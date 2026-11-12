@@ -47,10 +47,13 @@ function msgNameHTML(id,escapedName){
   return '<span class="nm-user"'+(col?' style="color:'+esc(col)+'"':'')+'>'+escapedName+'</span>';
 }
 function checkMessageText_(text){return text}       // no longer pre-censors at send time — see displayMsgText()
-// Personal, per-viewer filter: ON by default, editable in Settings > Filter, client-side
-// only (each user's own preference for what THEY see; independent of the owner's
+// Personal, per-viewer filter: OFF by default as of v54.5, editable in Settings > Filter,
+// client-side only (each user's own preference for what THEY see; independent of the owner's
 // global filter above, which still applies to everyone regardless of this setting).
-function myFilterOn(){const u=(typeof DB!=='undefined')&&DB.currentUser&&DB.currentUser();return!u||u.settings.filterLocal!==false}
+// Signed out counts as off too - it used to return true for `!u`, which censored the chat for
+// anyone not yet loaded, so the first paint after a reload was filtered and then unfiltered
+// itself a moment later.
+function myFilterOn(){const u=(typeof DB!=='undefined')&&DB.currentUser&&DB.currentUser();return !!u&&u.settings.filterLocal===true}
 // Server-wide filter (owner-controlled) OR the viewer's own local toggle — either one
 // being on censors what THEY see. Text is stored raw (see checkMessageText_) so turning
 // either off actually reveals the original words, instead of unmasking pre-baked '*'s.

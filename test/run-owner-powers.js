@@ -83,7 +83,15 @@ async function boot(browser,email,seed){
      Object.values(perms.got).every(v=>v===true),perms.got);
   ok('and does so without being a member',!perms.stillMember,perms);
 
-  console.log('\n--- deleting a server the owner does not own ---');
+  /* v54.5 REVERSES v54.4 HERE.
+     v54.4 let a site owner delete anybody's server, reasoning that they outrank every server
+     everywhere else. Outranking a server is not owning it: every other staff power is
+     reversible, and this one destroys a server, its channels, its roles and its whole history
+     with no undo. So deleting is the server owner's alone again - in the rules as well as in
+     the client (scripts/remove_rules_owner_delete.py, and the matching cases in
+     test/security/attack-suite.js). The owner keeps every other power over that server, which
+     is what the rest of this file checks. */
+  console.log('\n--- a site owner can NOT delete a server they do not own ---');
   const del=await A.page.evaluate(async(sid)=>{
     const o={before:!!window.__FAKE.at('servers/'+sid)};
     try{await __T.DModel.deleteServer(sid);o.result='deleted'}
@@ -91,14 +99,38 @@ async function boot(browser,email,seed){
     await new Promise(s=>setTimeout(s,700));
     o.after=!!window.__FAKE.at('servers/'+sid);
     o.members=!!window.__FAKE.at('serverMembers/'+sid);
-    o.userRow=!!window.__FAKE.at('userServers/2/'+sid);
+    o.channels=!!window.__FAKE.at('serverChannels/'+sid);
     return o;
   },perms.sid);
-  ok('the server existed first',          del.before===true,del);
-  ok('a site owner can delete it',        del.result==='deleted',del);
-  ok('the server node is gone',           del.after===false,del);
-  ok('its member list is gone',           del.members===false,del);
-  ok("the owner's sidebar row is gone",   del.userRow===false,del);
+  ok('the server existed first',              del.before===true,del);
+  ok('a site owner is refused',               /^threw/.test(del.result),del);
+  ok('the message says who can',              /created this server/i.test(del.result),del);
+  ok('the server is still there',             del.after===true,del);
+  ok('its member list is untouched',          del.members===true,del);
+  ok('its channels are untouched',            del.channels===true,del);
+
+  /* The other half of the same rule: deleting still works for whoever owns the server. The
+     v54.4 fix was that a delete touches fifteen side nodes and used to fail on nine of them,
+     for the server owner as much as anybody - that fix stays, and this is what proves it did
+     not get taken away along with the site-owner grant.
+     Ownership is handed back to suki on this page rather than driven from a second browser,
+     because the fake database is per-page: page B has its own, without this server in it. */
+  console.log('\n--- but the server\'s OWN owner still can ---');
+  const selfDel=await A.page.evaluate(async(sid)=>{
+    await window.__FAKE.set('servers/'+sid+'/ownerId',1);
+    await new Promise(s=>setTimeout(s,600));
+    const o={isOwnerNow:__T.DModel.isServerOwner(sid,1)};
+    try{await __T.DModel.deleteServer(sid);o.result='deleted'}
+    catch(e){o.result='threw: '+e.message}
+    await new Promise(s=>setTimeout(s,700));
+    o.after=!!window.__FAKE.at('servers/'+sid);
+    o.members=!!window.__FAKE.at('serverMembers/'+sid);
+    return o;
+  },perms.sid);
+  ok('they are the server owner now',         selfDel.isOwnerNow===true,selfDel);
+  ok('the person who owns it can delete it',  selfDel.result==='deleted',selfDel);
+  ok('the server node is gone',               selfDel.after===false,selfDel);
+  ok('its member list went with it',          selfDel.members===false,selfDel);
 
   console.log('\n--- the ICH server is still not deletable ---');
   const ich=await A.page.evaluate(async()=>{

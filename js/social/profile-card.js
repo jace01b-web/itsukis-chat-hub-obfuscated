@@ -146,6 +146,14 @@ const PCard=(function(){
       }).join('')+'</div></div>';
   }
 
+  /* A section header with nothing under it is worse than no section at all, so the header and
+     its body are built together here. Every caller used to write the header itself and append
+     the body, which left a bare "MEMBER SINCE" heading on any account with no createdAt - every
+     account made before the field existed, and every stub whose record has not arrived yet. */
+  function memberSinceSection(id){
+    const body=memberSinceHTML(id);
+    return body?'<div class="pf-sec"><div class="pf-sec-h">Member Since</div>'+body+'</div>':'';
+  }
   function memberSinceHTML(id){
     let x=null;try{x=DB.getUser(id)}catch(_){}
     const c=x&&Number(x.createdAt);
@@ -226,7 +234,7 @@ const PCard=(function(){
             activityHTML(id)+
             bioHTML(id)+
             (x.pronouns?'<div class="pf-sec"><div class="pf-sec-h">Pronouns</div><div class="pf-flat">'+esc(x.pronouns)+'</div></div>':'')+
-            '<div class="pf-sec"><div class="pf-sec-h">Member Since</div>'+memberSinceHTML(id)+'</div>'+
+            memberSinceSection(id)+
             (roles?'<div class="pf-sec"><div class="pf-sec-h">Roles</div>'+roles+'</div>':'')+
             noteHTML(id)+
           '</div>')+
@@ -244,7 +252,6 @@ const PCard=(function(){
         e.stopPropagation();
         if(e.key!=='Enter')return;e.preventDefault();
         const txt=mi.value;
-        if(!DB.isFriend(ME.id,id)){toast('You can only message friends. Send a friend request first.','bad');return}
         await openDmWith(id,root);
         if(txt&&typeof msgIn!=='undefined'&&msgIn){msgIn.value=txt;msgIn.focus();const cc=$('#cc');if(cc)cc.textContent=txt.length}
       };
@@ -285,7 +292,14 @@ const PCard=(function(){
         else if(DB.hasIncoming(id))out.push(b('accept','Accept Friend Request',IC.add));
         else if(DB.hasOutgoing(ME.id,id))out.push(b('cancel','Cancel Friend Request',IC.rem));
         else out.push(b('add','Add Friend',IC.add));
-        out.push(b('msg','Message',IC.msg));
+        /* The tooltip says what will actually happen: a non-friend gets a message request
+           rather than a message, and a button that does not say so looks broken when they
+           do not reply. */
+        let msgTip='Message';
+        try{
+          if(!mine&&!DB.dmOpenWith(id))msgTip=DB.dmPendingWith(id)?'Message (request sent)':'Send a message request';
+        }catch(_){}
+        out.push(b('msg',msgTip,IC.msg));
       }
       out.push(iBlocked?b('unblock','Unblock',IC.blk,' on'):b('block','Block',IC.blk));
     }
@@ -320,7 +334,8 @@ const PCard=(function(){
               if(open.id===id)repaint();renderChat();
             });
           }else if(k==='msg'){
-            if(!DB.isFriend(ME.id,id)){toast('You can only message friends. Send a friend request first.','bad');return}
+            /* v54.5: no friendship needed. If they are not a friend the first message raises
+               a request rather than landing in their chat unannounced. */
             close();await openDmWith(id,$('#modalRoot'));
           }else if(k==='block'){
             modalBlockConfirm(id,name,async()=>{
@@ -463,7 +478,7 @@ const PCard=(function(){
     out+=activityHTML(id);
     out+=bioHTML(id);
     if(x.pronouns)out+='<div class="pf-sec"><div class="pf-sec-h">Pronouns</div><div class="pf-flat">'+esc(x.pronouns)+'</div></div>';
-    out+='<div class="pf-sec"><div class="pf-sec-h">Member Since</div>'+memberSinceHTML(id)+'</div>';
+    out+=memberSinceSection(id);
     out+='<div class="pf-sec"><div class="pf-sec-h">User ID</div><div class="pf-flat"><button type="button" class="pf-copy" data-pf-copyid>#'+id+'</button></div></div>';
     if(roles)out+='<div class="pf-sec"><div class="pf-sec-h">Roles</div>'+roles+'</div>';
     out+=connHTML(id);
@@ -498,11 +513,17 @@ const PCard=(function(){
     try{add('Friends',(DB.friends(id)||[]).length)}catch(_){}
     try{add('Servers',DModel.myServers().filter(s=>s.id!==DModel.ICH_ID).length)}catch(_){}
     try{add('Servers you own',DModel.myServers().filter(s=>s.id!==DModel.ICH_ID&&s.ownerId===id).length)}catch(_){}
-    try{add('Boosts in use',DBoost.mySlots().filter(s=>s.sid).length+' of '+DBoost.slotsFor(id))}catch(_){}
+    /* Site owners have no practical slot limit, so "3 of 99" would be a number pretending to be
+       a budget. They see the count on its own. */
+    try{
+      const used=DBoost.mySlots().filter(s=>s.sid).length;
+      add('Boosts in use',DBoost.unlimitedFor(id)?String(used):(used+' of '+DBoost.slotsFor(id)));
+    }catch(_){}
     try{add('Notes you’ve written',PNotes.count())}catch(_){}
     try{
       const ms=PBadges.ageOf(id);
-      add('Account age',ms>=864e5?Math.floor(ms/864e5)+' days':'less than a day');
+      const days=Math.floor(ms/864e5);
+      add('Account age',ms>=864e5?(days+(days===1?' day':' days')):'less than a day');
     }catch(_){}
     let earned=[];try{earned=Object.keys(PAch.haveMine())}catch(_){}
     const ach='<div class="pf-sec"><div class="pf-sec-h">Achievements <small>'+earned.length+' of '+ACHIEVEMENTS.length+'</small></div>'+

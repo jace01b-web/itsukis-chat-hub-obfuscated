@@ -57,15 +57,26 @@ const ok=(name,cond,extra)=>{
     await new Promise(s=>setTimeout(s,400));
     o.one={count:__T.DBoost.countFor(sid),level:__T.DBoost.levelFor(sid)};
 
-    try{await __T.DBoost.boost(sid);o.twice='ALLOWED'}catch(e){o.twice='refused'}
+    /* v54.5: STACKING. A second boost on the same server used to be refused; it is now how
+       one person takes a server up a level on their own. Each is its own slot with its own
+       7-day clock, so they are counted, listed and removed individually. */
+    try{await __T.DBoost.boost(sid);o.twice='ALLOWED'}catch(e){o.twice='refused: '+e.message}
+    await new Promise(s=>setTimeout(s,400));
+    o.stacked={count:__T.DBoost.countFor(sid),level:__T.DBoost.levelFor(sid),
+               mine:__T.DBoost.myBoostCountOn(sid),free:__T.DBoost.freeSlots()};
+
+    // ...but only as far as the slots go: MVP has two, and both are now on this server
+    try{await __T.DBoost.boost(sid);o.third='ALLOWED'}catch(e){o.third='refused'}
     try{await __T.DBoost.boost('ich');o.ich='ALLOWED'}catch(e){o.ich='refused'}
     try{await __T.DBoost.move(sid,sid);o.moveSame='ALLOWED'}catch(e){o.moveSame='refused'}
 
-    // a second MVP boosts it -> Level 1
+    // a second MVP boosts it too
     await window.__FAKE.set('serverBoosts/'+sid+'/4/0',{at:Date.now()});
     await new Promise(s=>setTimeout(s,500));
     o.two={count:__T.DBoost.countFor(sid),level:__T.DBoost.levelFor(sid),next:__T.DBoost.nextLevel(sid)};
     o.boosters=__T.DBoost.boostersOf(sid).map(x=>x.uid).sort();
+    // the dialog lists one row per PERSON, with a count, not one row per slot
+    o.grouped=__T.boostersGrouped(sid).map(x=>x.uid+'x'+x.n).sort();
 
     // the 7-day cooldown is live on a boost that was just placed
     const mine=__T.DBoost.mySlots().find(x=>x.sid===sid);
@@ -85,29 +96,40 @@ const ok=(name,cond,extra)=>{
     try{await __T.DModel.updateServer(sid,{banner:'not-an-image'});o.bannerLv0='ALLOWED'}
     catch(e){o.bannerLv0=/Boost Level/.test(e.message)?'refused-by-level':'refused-by-image'}
 
-    // giving a boost up is always allowed, cooldown or not
+    // giving a boost up is always allowed, cooldown or not - and removes exactly ONE of mine
     try{await __T.DBoost.unboost(sid);o.unboost='ok'}catch(e){o.unboost='ERR '+e.message}
     await new Promise(s=>setTimeout(s,400));
     o.afterUnboost=__T.DBoost.countFor(sid);
+    o.mineAfterUnboost=__T.DBoost.myBoostCountOn(sid);
+    // and unboostAll clears whatever is left of mine in one go
+    try{o.removedAll=await __T.DBoost.unboostAll(sid)}catch(e){o.removedAll='ERR '+e.message}
+    await new Promise(s=>setTimeout(s,400));
+    o.mineAfterAll=__T.DBoost.myBoostCountOn(sid);
     return o;
   });
 
   ok('MVP gets 2 boost slots',          b.slotsMvp===2, b.slotsMvp);
   ok('a non-MVP gets none',             b.slotsPlain===0, b.slotsPlain);
   ok('one boost = 1, no level yet',     b.one.count===1&&b.one.level===0, b.one);
-  ok('cannot boost the same server twice', b.twice==='refused', b.twice);
+  ok('the same server CAN be boosted twice', b.twice==='ALLOWED', b.twice);
+  ok('…and both are counted',           b.stacked.count===2&&b.stacked.mine===2, b.stacked);
+  ok('…which is enough for Level 1 alone', b.stacked.level===1, b.stacked);
+  ok('…and uses up both slots',         b.stacked.free===0, b.stacked);
+  ok('a third is refused, there are no slots left', b.third==='refused', b.third);
   ok('cannot boost ICH',                b.ich==='refused', b.ich);
   ok('cannot move a boost onto itself', b.moveSame==='refused', b.moveSame);
-  ok('two boosts = Level 1',            b.two.count===2&&b.two.level===1, b.two);
+  ok('a third booster makes 3',         b.two.count===3&&b.two.level===1, b.two);
   ok('next level is 2, needing 7',      b.two.next&&b.two.next.level===2&&b.two.next.need===7, b.two.next);
-  ok('both boosters counted',           JSON.stringify(b.boosters)==='[3,4]', b.boosters);
+  ok('every slot is counted, stacked or not', JSON.stringify(b.boosters)==='[3,3,4]', b.boosters);
+  ok('but the list shows one row per person', JSON.stringify(b.grouped)==='["3x2","4x1"]', b.grouped);
   ok('a fresh boost is on cooldown',    b.cooldownAhead===true, b.cooldownAhead);
   ok('banner passes the level at Lv1',  b.bannerLv1==='refused-by-image', b.bannerLv1);
-  ok('revoking MVP drops the count',    b.afterRevoke.count===1&&b.afterRevoke.level===0, b.afterRevoke);
+  ok('revoking MVP drops the count',    b.afterRevoke.count===2&&b.afterRevoke.level===1, b.afterRevoke);
   ok('…without deleting the row',       b.rowStillStored===true, b.rowStillStored);
-  ok('banner blocked again below Lv1',  b.bannerLv0==='refused-by-level', b.bannerLv0);
+  ok('still Level 1 on my two alone',   b.bannerLv0==='refused-by-image', b.bannerLv0);
   ok('giving up a boost is allowed',    b.unboost==='ok', b.unboost);
-  ok('…and the count follows',          b.afterUnboost===0, b.afterUnboost);
+  ok('…and removes exactly one of mine', b.mineAfterUnboost===1&&b.afterUnboost===1, b);
+  ok('removing all clears the rest',    b.removedAll===1&&b.mineAfterAll===0, b);
 
   console.log('\n--- join messages ---');
   const j=await page.evaluate(async()=>{

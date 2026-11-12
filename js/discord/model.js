@@ -412,11 +412,18 @@ const DModel=(()=>{
     /* The ICH server stays undeletable even for a site owner. Everything on the site lives in
        it; there is no undo, and no reason to allow it by accident. Delete its channels instead. */
     if(isSystem(sid))throw new Error('The ICH server cannot be deleted.');
-    /* v54.4: site owners can delete any server. They already outrank every server everywhere
-       else - can() short-circuits on isOwner - and the database rules already allowed this;
-       only this line stopped it. */
-    if(!isServerOwner(sid,myId)&&!isOwner(myId))
-      throw new Error('Only the server owner, or a site owner, can delete this server.');
+    /* v54.5: deleting a server belongs to the person who made it, and to nobody else.
+       v54.4 had handed this to site owners on the grounds that they outrank every server
+       everywhere else. Outranking a server is not the same as owning it: every other staff
+       power is reversible - a ban is lifted, a role is given back, a channel is remade - and
+       this one destroys the server, its channels, its roles and its entire history for
+       everybody in it, with no undo and no copy kept. A site owner who needs a server gone
+       can still moderate it, or ask the person who owns it.
+       Site owners keep every other power here, including deleting their OWN servers. */
+    if(!isServerOwner(sid,myId))
+      throw new Error(isOwner(myId)
+        ?'Only the person who created this server can delete it — site owners included. You can still moderate it, or ask its owner to remove it.'
+        :'Only the server owner can delete this server.');
     const chans=channels(sid);
     const patch={};
     patch['servers/'+sid]=null;patch['serverChannels/'+sid]=null;patch['serverCats/'+sid]=null;
@@ -926,14 +933,36 @@ const DModel=(()=>{
   }
   function role(sid,rid){return roles(sid).find(r=>r.id===rid)||null}
 
-  // The roles one member has, highest first.
-  function rolesOf(sid,uid){
+  /* The roles STORED against one member - what the member record actually says, with no site
+     rank folded in. The member manager edits this list, so it has to show what a change would
+     write rather than what the person effectively holds. */
+  function storedRolesOf(sid,uid){
     uid=Number(uid);
     const mine=(S.members[sid]&&S.members[sid][uid]&&S.members[sid][uid].roles)||{};
     return roles(sid).filter(r=>{
       if(r.everyone)return true;
       if(r.virtual)return typeof r.test==='function'&&r.test(uid);
       return mine[r.id]===true;
+    });
+  }
+  /* The roles one member HAS, highest first.
+     v54.5: a site owner holds every role in every server. They already outranked every server
+     - can() short-circuits on isOwner - but the roles themselves were never granted, so their
+     name carried no role colour, they sat in the plain Online group of the member list instead
+     of the top hoisted one, and their own profile showed no server roles at all. Granting the
+     list here rather than writing rows into every server keeps it true the moment ownership
+     changes and leaves nothing behind if it is taken away, which is the same approach the
+     virtual ranks and the boost counts already take.
+     Virtual roles stay conditional even for an owner: those are site ranks with their own
+     tests (MVP, VIP, a custom role), and claiming them would be a lie rather than a power. */
+  function rolesOf(sid,uid){
+    uid=Number(uid);
+    let owner=false;try{owner=isOwner(uid)}catch(_){}
+    if(!owner)return storedRolesOf(sid,uid);
+    return roles(sid).filter(r=>{
+      if(r.everyone)return true;
+      if(r.virtual)return typeof r.test==='function'&&r.test(uid);
+      return true;
     });
   }
   // Their highest role that has a colour — that's the name colour, same as Discord.
@@ -944,6 +973,11 @@ const DModel=(()=>{
   function topRole(sid,uid){const l=rolesOf(sid,uid).filter(r=>!r.everyone);return l[0]||null}
   function highestPos(sid,uid){
     if(isServerOwner(sid,uid))return Infinity;
+    /* A site owner now holds every role, so their highest would be whatever the top role in
+       the server happens to be - which a server owner could out-position by making a higher
+       one. They outrank every server by definition, so they are placed above the ladder
+       outright, the same as the server's own owner. */
+    try{if(isOwner(uid))return Infinity}catch(_){}
     const l=rolesOf(sid,uid).filter(r=>!r.everyone);
     return l.length?l[0].pos:0;
   }
@@ -1364,7 +1398,7 @@ const DModel=(()=>{
     cats,channels,channel,channelByKey,visibleChannels,
     createChannel,updateChannel,deleteChannel,
     createCategory,updateCategory,deleteCategory,
-    roles,role,rolesOf,colorOf,topRole,highestPos,
+    roles,role,rolesOf,storedRolesOf,colorOf,topRole,highestPos,
     can,canIn,canManageRole,canManageMember,basePerms,
     createRole,updateRole,deleteRole,reorderRoles,setMemberRole,setChannelOverride,
     memberIds,member,memberCount,setNick,kickMember,groupedMembers,syncPerms,

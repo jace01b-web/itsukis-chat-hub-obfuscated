@@ -34,6 +34,27 @@ function updateMuteLock(){
   if(mutedBanner)mutedBanner.classList.toggle('hidden',!muted);
   if(announceBanner)announceBanner.classList.toggle('hidden',!announceLocked);
   if(shitBanner)shitBanner.classList.toggle('hidden',!shitLocked);
+  /* v54.5: a DM the other person has not accepted. The composer stays usable - this explains
+     the silence rather than enforcing it. Nothing is shown once they accept, or for a friend,
+     because then there is nothing to explain. */
+  {
+    const dmBanner=$('#dmReqBanner');
+    if(dmBanner){
+      let show='';
+      try{
+        const other=(typeof dmPartnerOf==='function')?dmPartnerOf(view.roomKey):null;
+        if(other!=null&&!DB.dmOpenWith(other)){
+          const u=DB.getUser(other);
+          const nm=u?dispName(u,'They'):'They';
+          show=DB.dmPendingWith(other)
+            ?'✉️ Message request sent to '+nm+'. They’ll see your messages once they accept.'
+            :'✉️ '+nm+' isn’t a friend yet — your first message will arrive as a message request they can accept or decline.';
+        }
+      }catch(_){}
+      dmBanner.textContent=show;
+      dmBanner.classList.toggle('hidden',!show);
+    }
+  }
   const tosReason=(typeof chatBlockReason==='function')?chatBlockReason():null;
   if(typeof tosBannerSync==='function')tosBannerSync(tosReason);
   /* A timeout or ban issued in a server applies to that server's channels only, so it is checked
@@ -120,6 +141,22 @@ function renderChat(){
   }else{
     const inc=DB.incoming(ME.id);
     list.appendChild(sbItem('👥',(typeof DiscordLook!=='undefined'&&DiscordLook.on())?'Friends':'Friends & Requests',view.dmView==='friends',()=>{view.dmView='friends';view.roomKey=null;renderChat()},inc.length));
+    /* Message requests get their own row, above the conversations, and only when there are
+       any - an always-present empty inbox is one more thing to scan past every day. */
+    {
+      let dmReq=0;try{dmReq=DB.dmRequestCount()}catch(_){}
+      if(dmReq){
+        const it=sbItem('✉️','Message Requests',view.dmView==='dmreq',
+          ()=>{view.dmView='dmreq';view.roomKey=null;renderChat()},dmReq);
+        it.classList.add('sb-dmreq');
+        /* The sidebar is narrow enough to clip the label, so the full text and the count go
+           in a tooltip rather than only in the truncated row. */
+        it.title=dmReq+' message request'+(dmReq===1?'':'s')+' waiting';
+        list.appendChild(it);
+      }else if(view.dmView==='dmreq'){
+        view.dmView='friends';            // the last one was just dealt with
+      }
+    }
     /* The Shop sits here, under Friends, which is where Discord puts its own - it is a site
        feature rather than a server, so it has no business on the server rail. It is also listed
        inside ICH, for anyone who looks there first. */
@@ -130,18 +167,26 @@ function renderChat(){
     }
     addHTML(list,`<div class="sb-section">Direct Messages<button type="button" class="sb-plus" id="sbPlus" title="Add a friend" aria-label="Add a friend">+</button></div>`);
     {const pl=document.getElementById('sbPlus');if(pl)pl.onclick=e=>{e.stopPropagation();modalAddFriend()}}
-    if(!ME.friends.length)addHTML(list,`<div class="hint" style="padding:6px 10px">Add friends to start chatting.</div>`);
-    if(ME.friends.length){
+    const _dmRows=dmSortedFriends();
+    if(!_dmRows.length)addHTML(list,`<div class="hint" style="padding:6px 10px">Add friends to start chatting.</div>`);
+    if(_dmRows.length){
       const sr=document.createElement('div');sr.className='sb-search';
       sr.innerHTML='<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4-4"/></svg><input id="sbFriendQ" type="text" placeholder="Search friends" autocomplete="off" spellcheck="false" aria-label="Search friends"><button type="button" class="sb-search-x" id="sbFriendX" aria-label="Clear search" hidden>✕</button>';
       if(typeof DiscordLook!=='undefined'&&DiscordLook.on()){const si=sr.querySelector('input');si.placeholder='Find or start a conversation';si.setAttribute('aria-label','Find or start a conversation')}
       list.appendChild(sr);
     }
-    ME.friends.forEach(fid=>{
-      const f=DB.getUser(fid);if(!f)return;const k=DB.dmKey(ME.id,fid);
+    /* Most recently active conversation first, the way Discord orders its DM list: whoever
+       just messaged you is at the top instead of wherever they happen to sit in the friends
+       list. Conversations with nothing in them have no time to sort by, so they fall to the
+       bottom in alphabetical order rather than being scattered through the list at the
+       arbitrary positions their friend-ids give them. */
+    _dmRows.forEach(({fid,f,k,pending})=>{
       const unread=DB.unreadIn(k,ME.id);
       const it=sbItem(null,f.username,view.roomKey===k,()=>{view.dmView='chat';selectRoom(k)},unread,f);
       it.classList.add('sb-friend');it.dataset.fname=String(f.username).toLowerCase();
+      /* A conversation they have not accepted is marked, so an unanswered message reads as
+         "not accepted yet" rather than "ignoring me". */
+      if(pending){it.classList.add('sb-dm-pending');it.title='Waiting for them to accept your message request'}
       list.appendChild(it);
     });
     {
@@ -167,6 +212,107 @@ function renderChat(){
   renderMain();
   if(typeof DiscordShell!=='undefined')DiscordShell.refresh();
 }
+/* ---- DM list order ------------------------------------------------------------------
+   The friends you can DM, newest conversation first. Returns {fid,f,k} so the caller does
+   not look each person up twice.
+
+   Ties and empties: a conversation with no messages sorts last, alphabetically, because
+   ordering a dozen never-used DMs by friend-id looks random to the person reading it.
+
+   The open DM is NOT held in place. It sorts on its own timestamps like every other row, so
+   sending a message in it moves it to the top immediately - which is what Discord does, and
+   what somebody watching the list expects to see. */
+function dmSortedFriends(){
+  const out=[];
+  let ids=[];
+  /* dmPartners, not ME.friends: since v54.5 a DM can exist with somebody who is not a friend
+     - one I accepted, or one I started and am waiting on. Those belong in this list too. */
+  try{ids=DB.dmPartners(ME.id)}catch(_){ids=(ME.friends||[]).slice()}
+  ids.forEach(fid=>{
+    const f=DB.getUser(fid);if(!f)return;
+    const k=DB.dmKey(ME.id,fid);
+    let at=0;try{at=DB.lastMsgAt(k)||0}catch(_){}
+    let pending=false;try{pending=DB.dmPendingWith(fid)}catch(_){}
+    out.push({fid,f,k,at,pending});
+  });
+  const name=x=>String((x.f&&x.f.username)||'').toLowerCase();
+  out.sort((a,b)=>{
+    if(a.at&&b.at)return b.at-a.at;      // both have history: newest first
+    if(a.at)return -1;                    // anything beats nothing
+    if(b.at)return 1;
+    return name(a).localeCompare(name(b));
+  });
+  return out;
+}
+/* ---- the message-request inbox ------------------------------------------------------
+   Everyone who has asked to message me, with what they said and the two things I can do
+   about it. Accept opens the conversation; Decline ignores them, and because the ignore
+   marker is what the database rules consult, that person cannot raise the request again.
+   Deliberately says so on the button's tooltip rather than hiding it behind a confirm. */
+function renderDmRequests(){
+  const box=$('#messages');if(!box)return;
+  let reqs=[];try{reqs=DB.dmRequestsIn()}catch(_){}
+  /* "Who can DM me" is applied here, on the receiving side. The sender cannot read this
+     setting - it is private - so it could never have been enforced when the request was
+     made; see the note in scripts/add_rules_dm_requests.py. */
+  let who='all';try{who=Prefs.get('dmFrom')||'all'}catch(_){}
+  if(who==='none')reqs=[];
+  else if(who==='friends')reqs=reqs.filter(r=>DB.isFriend(ME.id,r.from));
+
+  box.innerHTML='<div class="dl-fr" id="dmReqWrap">'+
+    '<div class="dl-fr-tabs"><span class="dl-fr-title">✉️ Message Requests</span></div>'+
+    '<div id="dmReqBody"></div></div>';
+  const body=$('#dmReqBody');
+
+  if(!reqs.length){
+    body.innerHTML='<div class="dl-fr-empty">'+(who==='none'
+      ? 'You have turned off direct messages from people you are not friends with. Settings → Privacy & Safety changes that.'
+      : 'No message requests.')+'</div>';
+    return;
+  }
+
+  const head=document.createElement('div');
+  head.className='dl-fr-h';head.textContent='Requests — '+reqs.length;
+  body.appendChild(head);
+
+  reqs.forEach(r=>{
+    const u=DB.getUser(r.from)||{id:r.from,username:'User '+r.from};
+    const row=document.createElement('div');
+    row.className='dl-fr-row dmreq-row';
+    const when=r.at?new Date(r.at).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'';
+    row.innerHTML=
+      '<span class="dl-fr-av" data-open-profile="'+r.from+'">'+
+        avatarHtml(u,u.username,'width:32px;height:32px;font-size:13px')+'</span>'+
+      '<div class="dl-fr-who"><b>'+esc(dispName(u))+'</b>'+
+        '<small>'+(r.msg?esc(r.msg):'wants to send you a message')+(when?' · '+esc(when):'')+'</small></div>'+
+      '<div class="dl-fr-acts"></div>';
+    row.querySelector('[data-open-profile]').onclick=e=>{e.stopPropagation();openUserProfile(r.from)};
+    const acts=row.querySelector('.dl-fr-acts');
+    const btn=(label,title,cls,fn)=>{
+      const b=document.createElement('button');
+      b.type='button';b.className='btn small'+(cls?' '+cls:'');
+      b.textContent=label;b.title=title;
+      b.onclick=async e=>{
+        e.stopPropagation();
+        b.disabled=true;
+        try{await fn()}catch(err){toast((err&&err.message)||'That did not work.','bad');b.disabled=false}
+      };
+      return b;
+    };
+    acts.appendChild(btn('Accept','Open the conversation','',async()=>{
+      const k=await DB.acceptDmRequest(r.from);
+      toast('Message request accepted.');
+      view.dmView='chat';selectRoom(k);
+    }));
+    acts.appendChild(btn('Decline','Ignores them — they cannot ask again','sec',async()=>{
+      await DB.declineDmRequest(r.from);
+      toast('Request declined. They won’t be able to ask again.');
+      renderChat();
+    }));
+    body.appendChild(row);
+  });
+}
+
 function addHTML(parent,html){const t=document.createElement('template');t.innerHTML=html.trim();parent.appendChild(t.content)}
 // Plays the shared modal-close animation (.modal-bg.closing — see the
 // "===== Modals =====" CSS block) before actually clearing the modal root,

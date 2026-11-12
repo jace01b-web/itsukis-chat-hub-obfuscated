@@ -143,6 +143,12 @@ function data(){
     friends:{ 4:{7:true}, 7:{4:true} },
     friendRequests:{}, blocked:{}, blockedBy:{},
 
+    /* v54.5 message requests. eve(5) has asked to message alice(3) and is waiting; alice has
+       already DECLINED mal(6), which is what the `ignored` marker records. The rules read
+       that marker to refuse a second request, so these two rows are what the
+       "cannot ask again" cases in the attack suite are measured against. */
+    dmRequests:{ 3:{ 5:{at:NOW-DAY, msg:'hello'}, 6:{at:NOW-2*DAY, ignored:true} } },
+
     /* The TOS gate. messages/$key/$msg/.write requires tosAccepted/<sender>/v >= 1, so a
        fixture without this cannot send a single message - which looks like a broken rule and
        is not one. */

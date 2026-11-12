@@ -150,9 +150,9 @@ function openSettings(fromChat,startTab){
         <div class="toggle-row" style="margin-bottom:0">
           <div>
             <div style="font-weight:600;font-size:14px">Censor inappropriate words in chat</div>
-            <div class="hint" style="margin-top:2px">On by default. This only changes what YOU see — it censors messages client-side as you read them, and doesn't affect what other people see or what's stored.</div>
+            <div class="hint" style="margin-top:2px">Off by default. This only changes what YOU see — it censors messages client-side as you read them, and doesn't affect what other people see or what's stored.</div>
           </div>
-          <label class="switch"><input type="checkbox" id="sFilterLocal" ${s.filterLocal!==false?'checked':''}><span class="slider"></span></label>
+          <label class="switch"><input type="checkbox" id="sFilterLocal" ${s.filterLocal===true?'checked':''}><span class="slider"></span></label>
         </div>
       </div>
       <div class="hint">Server-wide username filtering is controlled separately by the server owners.</div>
@@ -1234,7 +1234,10 @@ function openSettings(fromChat,startTab){
     root.querySelectorAll('#sTabs .dl-set-h,#sTabs .dl-set-sep').forEach(h=>{h.style.display=q?'none':''});
   });
   $$('#sReset').onclick=()=>{
-    Object.assign(s,{meBubble:'#7c6cff',meText:'#ffffff',radius:16,font:'system',customFont:'',size:15,bold:false,italic:false,bgType:'gradient',bgColor:'#2a1f5c',bgColor2:'#7c2f66',bgImage:'',bgFit:'cover',bgBlur:0,bgDim:30,uiOpacity:50,uiBlur:18,autoScrollBottom:true,filterLocal:true,pings:{everyone:true,sound:true,desktop:true},music:{enabled:true,volume:15,shuffle:true}});
+    /* Keep this list in step with defaultSettings() in js/core/database.js - "Reset" has to
+       land on the same values a new account gets, and filterLocal/music.enabled are off there
+       as of v54.5. */
+    Object.assign(s,{meBubble:'#7c6cff',meText:'#ffffff',radius:16,font:'system',customFont:'',size:15,bold:false,italic:false,bgType:'gradient',bgColor:'#2a1f5c',bgColor2:'#7c2f66',bgImage:'',bgFit:'cover',bgBlur:0,bgDim:30,uiOpacity:50,uiBlur:18,autoScrollBottom:true,filterLocal:false,pings:{everyone:true,sound:true,desktop:true},music:{enabled:false,volume:15,shuffle:true}});
     if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();if(banListStop){banListStop();banListStop=null}if(muteListTimer){clearInterval(muteListTimer);muteListTimer=null}
     MusicPlayer.setBackground(false);
     DB.updateSettings(ME.id,s).catch(()=>{});

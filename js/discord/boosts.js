@@ -14,6 +14,14 @@
  *   always allowed - what the cooldown stops is hopping a boost between servers to farm a
  *   perk, not changing your mind about boosting at all.
  *
+ * STACKING (v54.5)
+ *   Several of your slots may point at the SAME server, exactly as they do on Discord: that is
+ *   how one person moves a server up a level on their own. Each stacked boost is still its own
+ *   slot with its own 7-day clock, so they are added and removed one at a time rather than as a
+ *   block. Nothing in the storage or the rules had to change for this - a slot has always been
+ *   free to name any server, and only a client-side guard stopped two of them naming the same
+ *   one. The guard is gone; the per-slot accounting that makes it safe was already here.
+ *
  * WHEN MVP IS TAKEN AWAY
  *   The slots stop counting immediately, everywhere, because every count filters the boosters
  *   through hasMvpPerks() at read time rather than trusting the stored record. There is no
@@ -76,14 +84,23 @@ const DBoost=(()=>{
   }
 
   /* v54.4: site owners get effectively unlimited boosts, and do not need MVP for them.
-     99 rather than Infinity because every slot is a stored key under userBoosts/$id, and the
-     database rules cap the slot index at two digits for exactly that reason - an unbounded
-     number of keys is an unbounded bill on the free plan. Nobody is going to boost 99 servers. */
-  const BOOST_SLOTS_OWNER=99;
+     100 (slots 0-99) rather than Infinity because every slot is a stored key under
+     userBoosts/$id, and the database rules cap the slot index at two digits for exactly that
+     reason - an unbounded number of keys is an unbounded bill on the free plan. An owner can
+     take a server to Level 3 (14 boosts) seven times over and still not reach it, so it is a
+     ceiling in name only; unlimitedFor() below is what the UI asks, so nobody is ever shown
+     "7 of 100" as though it were a budget they could run out of. */
+  const BOOST_SLOTS_OWNER=100;
   function slotsFor(uid){
     uid=Number(uid==null?myId:uid);
     try{if(isOwner(uid))return BOOST_SLOTS_OWNER}catch(_){}
     try{return hasMvpPerks(uid)?BOOST_SLOTS_MVP:0}catch(_){return 0}
+  }
+  /* True for anyone whose slot count is not meant to be read as a limit. The UI shows a plain
+     count for these people rather than "n of m". */
+  function unlimitedFor(uid){
+    uid=Number(uid==null?myId:uid);
+    try{return isOwner(uid)}catch(_){return false}
   }
   /* My slots, always exactly slotsFor(me) of them, each either pointed at a server or free. */
   function mySlots(){
@@ -98,7 +115,13 @@ const DBoost=(()=>{
     return out;
   }
   function freeSlot(){const s=mySlots().find(x=>!x.sid);return s?s.slot:-1}
+  function freeSlots(){return mySlots().filter(x=>!x.sid).length}
+  /* The FIRST of my slots on a server - the oldest, since mySlots() is in slot order. Kept
+     because plenty of callers only need to know "one of mine is here". */
   function myBoostOn(sid){return mySlots().find(x=>x.sid===sid)||null}
+  /* All of them, oldest first. Stacking means this can be longer than one. */
+  function myBoostsOn(sid){return mySlots().filter(x=>x.sid===sid)}
+  function myBoostCountOn(sid){return myBoostsOn(sid).length}
   function amBoosting(sid){return !!myBoostOn(sid)}
 
   /* ---- counting ----
@@ -146,11 +169,19 @@ const DBoost=(()=>{
     try{if(!DModel.server(sid))throw new Error('That server is gone.')}catch(_){}
   }
 
+  /* v54.5: boosting a server you already boost adds ANOTHER boost to it rather than being
+     refused. The old guard existed only because the first version assumed one slot per server;
+     nothing downstream depended on it - counts come from the slot rows, which have always been
+     counted individually. */
   async function boost(sid){
     assertCanBoost(sid);
-    if(amBoosting(sid))throw new Error('You’re already boosting this server.');
     const slot=freeSlot();
-    if(slot<0)throw new Error('Both of your boosts are already on other servers. Move one instead.');
+    if(slot<0){
+      const n=slotsFor(myId);
+      throw new Error(n===1
+        ?'Your boost is already on another server. Move it instead.'
+        :'All '+n+' of your boosts are already on other servers. Move one instead.');
+    }
     await writeSlot(slot,sid);
   }
 
@@ -158,23 +189,51 @@ const DBoost=(()=>{
      separately and the old server's row and the new one are different paths under different
      $sid wildcards. The remove goes first, so a failure half way leaves a FREE slot rather than
      a slot that looks like it is in two places at once. */
+  /* Moving picks the oldest movable boost on the source server, so stacking several on one
+     server and then moving one does not disturb the clocks on the rest. Landing on a server
+     you already boost is fine now - it stacks. */
   async function move(fromSid,toSid){
+    /* Moving a boost to the server it is already on would clear the slot and write it back,
+       resetting its 7-day clock for nothing. Before stacking this was refused as a side
+       effect of "you are already boosting this server"; now that stacking is allowed it has
+       to be said outright. */
+    if(fromSid===toSid)throw new Error('That boost is already on this server.');
     assertCanBoost(toSid);
-    const cur=myBoostOn(fromSid);
-    if(!cur)throw new Error('You aren’t boosting that server.');
-    if(amBoosting(toSid))throw new Error('You’re already boosting this server.');
-    const left=cur.movableAt-Date.now();
-    if(left>0)throw new Error('This boost can be moved in '+describeWait(left)+'. A boost has to sit on a server for 7 days before it can move.');
+    const here=myBoostsOn(fromSid);
+    if(!here.length)throw new Error('You aren’t boosting that server.');
+    const cur=here.filter(x=>x.movableAt<=Date.now()).sort((a,b)=>a.at-b.at)[0];
+    if(!cur){
+      const soonest=here.slice().sort((a,b)=>a.movableAt-b.movableAt)[0];
+      throw new Error('That boost can be moved in '+describeWait(soonest.movableAt-Date.now())+
+        '. A boost has to sit on a server for 7 days before it can move.');
+    }
     await clearSlot(cur.slot,fromSid);
     await writeSlot(cur.slot,toSid);
   }
 
   /* Giving a boost up is always allowed - the 7-day rule exists to stop a boost being shuffled
-     between servers, not to trap it on one. */
+     between servers, not to trap it on one. With stacking, this removes ONE of yours: the
+     newest, so the oldest boost on the server keeps the longest-running clock and stays the
+     one that is free to move soonest. */
   async function unboost(sid){
-    const cur=myBoostOn(sid);
-    if(!cur)throw new Error('You aren’t boosting that server.');
+    const here=myBoostsOn(sid);
+    if(!here.length)throw new Error('You aren’t boosting that server.');
+    const cur=here.slice().sort((a,b)=>b.at-a.at)[0];
     await clearSlot(cur.slot,sid);
+  }
+
+  /* Take every one of my boosts off a server in one go. Each slot is its own pair of writes,
+     so this is a loop rather than one update - and a failure part way leaves the rest in
+     place, which is the same shape as clearing them one at a time by hand. */
+  async function unboostAll(sid){
+    const here=myBoostsOn(sid);
+    if(!here.length)throw new Error('You aren’t boosting that server.');
+    let n=0;
+    for(const x of here.slice().sort((a,b)=>b.at-a.at)){
+      try{await clearSlot(x.slot,sid);n++}catch(e){console.warn('[DBoost] could not clear slot',x.slot,e);break}
+    }
+    if(!n)throw new Error('Those boosts could not be removed.');
+    return n;
   }
 
   async function writeSlot(slot,sid){
@@ -212,12 +271,13 @@ const DBoost=(()=>{
       try{await clearSlot(slot,sid||'_')}catch(_){}
     }
   }
-  /* Called when a server is deleted: drop MY slot on it straight away so it is usable again
-     without waiting for the next sign-in. Other people's rows die with their own prune(). */
+  /* Called when a server is deleted: drop MY slots on it straight away so they are usable
+     again without waiting for the next sign-in. Other people's rows die with their own
+     prune(). Every one of mine, not just the first - stacking means there can be several. */
   async function releaseAllFor(sid){
-    const cur=myBoostOn(sid);
-    if(!cur)return;
-    try{await remove(R('userBoosts/'+myId+'/'+cur.slot))}catch(_){}
+    for(const cur of myBoostsOn(sid)){
+      try{await remove(R('userBoosts/'+myId+'/'+cur.slot))}catch(_){}
+    }
   }
 
   function describeWait(ms){
@@ -232,8 +292,9 @@ const DBoost=(()=>{
     LEVELS:BOOST_LEVELS,SLOTS:BOOST_SLOTS_MVP,MOVE_MS:BOOST_MOVE_MS,
     start,stop,ensureStarted,attach,detach,
     onChange:f=>{subs.add(f);return()=>subs.delete(f)},
-    slotsFor,mySlots,freeSlot,myBoostOn,amBoosting,
+    slotsFor,unlimitedFor,mySlots,freeSlot,freeSlots,
+    myBoostOn,myBoostsOn,myBoostCountOn,amBoosting,
     boostersOf,countFor,levelFor,nextLevel,hasPerk,
-    boost,move,unboost,prune,releaseAllFor,describeWait
+    boost,move,unboost,unboostAll,prune,releaseAllFor,describeWait
   };
 })();

@@ -653,15 +653,29 @@ function openCategoryMenu(ev,sid,cat){
  * 12. SERVER BOOSTS
  *     The dialog behind the boost bar in the channel sidebar and the "Server Boost" entry on
  *     the server menu. The rules the user sees here are the ones js/discord/boosts.js enforces:
- *     MVP grants two slots, a boost has to sit somewhere for 7 days before it can be moved, and
- *     giving one up is always allowed.
+ *     MVP grants two slots, a boost has to sit somewhere for 7 days before it can be moved,
+ *     giving one up is always allowed, and (v54.5) several of them may sit on one server.
  * ====================================================================== */
 function boostRowHTML(b){
   const u=DB.getUser(b.uid);
   const nm=u?esc(dispName(u)):('User '+b.uid);
   const since=b.at?new Date(b.at).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'';
+  /* b.n is how many of this person's boosts are on the server; it is absent for a single one. */
+  const many=Number(b.n)>1?'<span class="dbst-x">×'+Number(b.n)+'</span>':'';
   return '<div class="dbst-row"><span class="dbst-av">'+avatarHtml(u||{id:b.uid,username:'?'},(u&&u.username)||'?','width:24px;height:24px;font-size:11px')+'</span>'+
-    '<span class="dbst-nm">'+nm+'</span>'+(since?'<span class="dbst-since">since '+esc(since)+'</span>':'')+'</div>';
+    '<span class="dbst-nm">'+nm+'</span>'+many+(since?'<span class="dbst-since">since '+esc(since)+'</span>':'')+'</div>';
+}
+/* One row per PERSON rather than one per slot: with stacking, boostersOf() returns a row for
+   each boost, and somebody who boosted three times would otherwise be listed three times. */
+function boostersGrouped(sid){
+  let raw=[];try{raw=DBoost.boostersOf(sid)}catch(_){}
+  const by=new Map();
+  raw.forEach(b=>{
+    const cur=by.get(b.uid);
+    if(cur){cur.n++;cur.at=Math.min(cur.at,b.at)}        // "since" is their FIRST boost
+    else by.set(b.uid,{uid:b.uid,at:b.at,n:1});
+  });
+  return [...by.values()].sort((a,b)=>a.at-b.at);
 }
 
 function openBoostDialog(sid){
@@ -678,41 +692,71 @@ function openBoostDialog(sid){
     const body=m.body.querySelector('#bstBody');if(!body)return;
     const n=DBoost.countFor(sid),lv=DBoost.levelFor(sid),nx=DBoost.nextLevel(sid);
     const slots=DBoost.mySlots();
-    const mineHere=DBoost.myBoostOn(sid);
     const have=slots.length;
     const pct=nx?Math.max(0,Math.min(100,Math.round((n/nx.need)*100))):100;
-    const boosters=DBoost.boostersOf(sid);
+    const boosters=boostersGrouped(sid);
+
+    /* v54.5: a server can hold several of your boosts, so this is no longer an either/or
+       between "you boost it" and "you could boost it". Both can be true at once, and the
+       dialog has to offer adding another, removing one, and removing all of them. */
+    const unlimited=DBoost.unlimitedFor();
+    const mineCount=DBoost.myBoostCountOn(sid);
+    const freeCount=DBoost.freeSlots();
+    const free=DBoost.freeSlot();
 
     let actions='';
     if(!have){
       actions='<div class="dhint">Server Boosts are an <b>MVP</b> perk — MVP gives you '+DBoost.SLOTS+
         ' of them. MVP is a 0.1% prize on the Daily Spin, or available in the Shop.</div>';
-    }else if(mineHere){
-      const left=mineHere.movableAt-Date.now();
-      actions='<div class="dbst-you">You’re boosting this server.</div>'+
-        '<div class="dhint">'+(left>0
-          ?'This boost can be moved to another server in <b>'+esc(DBoost.describeWait(left))+'</b>. You can take it back at any time.'
-          :'This boost is free to move — open another server and boost it from there.')+'</div>'+
-        '<button type="button" class="dbtn danger" id="bstOff">Remove Boost</button>';
     }else{
-      const free=DBoost.freeSlot();
-      const movable=slots.filter(x=>x.sid&&x.movableAt<=Date.now());
+      if(mineCount){
+        const soonestMine=DBoost.myBoostsOn(sid).slice().sort((a,b)=>a.movableAt-b.movableAt)[0];
+        const left=soonestMine?soonestMine.movableAt-Date.now():0;
+        actions+='<div class="dbst-you">'+(mineCount===1
+          ?'You’re boosting this server.'
+          :'You’re boosting this server <b>'+mineCount+' times</b>.')+'</div>'+
+          '<div class="dhint">'+(left>0
+            ?(mineCount===1?'This boost':'The oldest of them')+' can be moved to another server in <b>'+
+              esc(DBoost.describeWait(left))+'</b>. You can take '+(mineCount===1?'it':'them')+' back at any time.'
+            :(mineCount===1?'This boost is':'The oldest is')+' free to move — open another server and boost it from there.')+
+          '</div>';
+      }
+      /* Adding another, whether or not some of yours are already here. */
       if(free>=0){
-        actions='<button type="button" class="dbtn" id="bstOn">'+
-          'Boost this server <span class="dhint-inline">('+slots.filter(x=>!x.sid).length+' of '+have+' free)</span></button>';
-      }else if(movable.length){
-        actions='<div class="dhint">Both of your boosts are on other servers, but '+
-          (movable.length===1?'one of them has':movable.length+' of them have')+' been there long enough to move.</div>'+
-          movable.map(x=>{
-            const other=DModel.server(x.sid);
-            return '<button type="button" class="dbtn grey" data-move="'+esc(x.sid)+'">Move the boost from '+
-              esc(other?other.name:'a deleted server')+'</button>';
-          }).join('');
+        actions+='<button type="button" class="dbtn" id="bstOn">'+
+          (mineCount?'Boost it again':'Boost this server')+
+          '<span class="dhint-inline">'+(unlimited
+            ?(freeCount===1?' (1 boost free)':' ('+freeCount+' boosts free)')
+            :' ('+freeCount+' of '+have+' free)')+'</span></button>';
       }else{
-        const soonest=slots.filter(x=>x.sid).sort((a,b)=>a.movableAt-b.movableAt)[0];
-        actions='<div class="dhint">Both of your boosts are on other servers. A boost has to sit on a '+
-          'server for 7 days before it can move'+(soonest?'; the next one is free in <b>'+
-          esc(DBoost.describeWait(soonest.movableAt-Date.now()))+'</b>':'')+'.</div>';
+        const movable=slots.filter(x=>x.sid&&x.sid!==sid&&x.movableAt<=Date.now());
+        const elsewhere=slots.filter(x=>x.sid&&x.sid!==sid);
+        if(movable.length){
+          actions+='<div class="dhint">'+(mineCount?'Your other boosts are':'Your boosts are')+
+            ' on other servers, but '+(movable.length===1?'one of them has':movable.length+' of them have')+
+            ' been there long enough to move.</div>'+
+            /* One button per SERVER, not per slot: two boosts on the same server would
+               otherwise produce two identical buttons. */
+            [...new Set(movable.map(x=>x.sid))].map(osid=>{
+              const other=DModel.server(osid);
+              const n=movable.filter(x=>x.sid===osid).length;
+              return '<button type="button" class="dbtn grey" data-move="'+esc(osid)+'">Move a boost from '+
+                esc(other?other.name:'a deleted server')+(n>1?' <span class="dhint-inline">('+n+' movable)</span>':'')+
+                '</button>';
+            }).join('');
+        }else if(elsewhere.length){
+          const soonest=elsewhere.slice().sort((a,b)=>a.movableAt-b.movableAt)[0];
+          actions+='<div class="dhint">'+(mineCount?'Your other boosts are':'Your boosts are')+
+            ' on other servers. A boost has to sit on a server for 7 days before it can move'+
+            (soonest?'; the next one is free in <b>'+esc(DBoost.describeWait(soonest.movableAt-Date.now()))+'</b>':'')+'.</div>';
+        }else if(!mineCount){
+          actions+='<div class="dhint">You have no boosts free.</div>';
+        }
+      }
+      if(mineCount){
+        actions+='<button type="button" class="dbtn danger" id="bstOff">'+
+          (mineCount===1?'Remove Boost':'Remove one boost')+'</button>'+
+          (mineCount>1?'<button type="button" class="dbtn grey" id="bstOffAll">Remove all '+mineCount+'</button>':'');
       }
     }
 
@@ -736,6 +780,8 @@ function openBoostDialog(sid){
     if(on)on.onclick=run(()=>DBoost.boost(sid),'Server boosted!');
     const off=body.querySelector('#bstOff');
     if(off)off.onclick=run(()=>DBoost.unboost(sid),'Boost removed.');
+    const offAll=body.querySelector('#bstOffAll');
+    if(offAll)offAll.onclick=run(()=>DBoost.unboostAll(sid),'Boosts removed.');
     body.querySelectorAll('[data-move]').forEach(b=>{
       b.onclick=run(()=>DBoost.move(b.dataset.move,sid),'Boost moved.');
     });
