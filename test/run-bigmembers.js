@@ -164,7 +164,7 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
    * build-version in index.html was never bumped) against the new rules: the old client reads
    * the whole `users` branch in one request, the rules refuse it, and its user table stays
    * empty. Reproducing that faithfully needs the Firebase emulator with the real rules, which
-   * is in DEPLOYMENT-GUIDE.md and was not run here.
+   * is in the deployment notes in package.json ("comments" -> "deploy") and was not run here.
    *
    * So treat the two checks below as a REGRESSION GUARD for the defensive fix - names now come
    * from the directory when a profile is unavailable - and not as evidence of the cause.

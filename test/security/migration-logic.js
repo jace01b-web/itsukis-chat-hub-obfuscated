@@ -9,7 +9,7 @@
  * network, no credentials, nothing to set up.
  *
  * What this cannot test is the Firebase REST calls themselves. That is what --dry-run against
- * your own database is for, and it is the first step of the procedure in PRIVACY_MIGRATION.md.
+ * your own database is for, and it is the first step of the procedure in the migration notes in package.json ("comments" -> "migrations").
  */
 'use strict';
 const M = require('../../scripts/migrate_privacy.js');

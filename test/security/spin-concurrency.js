@@ -14,7 +14,7 @@
  * WHAT THIS DOES AND DOES NOT PROVE
  *   It proves api/spin.js's claim logic is correct against a faithful model of the primitive.
  *   It does not exercise Google's servers, Vercel's runtime, or the network. For that, run the
- *   deployed endpoint against the emulator - DEPLOY-SECURITY.md has the command. What it DOES
+ *   deployed endpoint against the emulator - the deployment notes in package.json ("comments" -> "deploy") has the command. What it DOES
  *   catch is the bug that was there: check-then-write with a gap in the middle.
  */
 'use strict';

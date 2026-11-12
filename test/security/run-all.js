@@ -122,13 +122,13 @@ console.log('  checks executed : ' + sum('executed'));
 console.log('  passed          : ' + sum('passed'));
 console.log('  failed          : ' + sum('failed'));
 console.log('  skipped         : ' + sum('skipped') + (sum('skipped') ? '   <- NOT passed' : ''));
-console.log('  accepted risks  : ' + sum('accepted') + '   (succeed BY DESIGN; see REMAINING-RISKS.md)');
+console.log('  accepted risks  : ' + sum('accepted') + '   (succeed BY DESIGN; see the accepted risks listed at the end of test/security/attack-suite.js)');
 
 console.log('\n--- NOT run here ' + '-'.repeat(52));
 console.log('  the browser suites (test/run-*.js) need Chrome and take minutes:');
 console.log('      npm run test:browser');
 console.log('  the Firebase emulator, and the Vercel endpoints over HTTP:');
-console.log('      see SECURITY-TEST-RESULTS.md section "what was NOT executed"');
+console.log('      see the testing notes in package.json ("comments" -> "testing") section "what was NOT executed"');
 console.log('  Treating this summary as complete coverage would be the same mistake the');
 console.log('  zero-case compat-diff made.');
 

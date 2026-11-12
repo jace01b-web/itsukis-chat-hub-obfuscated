@@ -63,7 +63,7 @@
  * WHAT IT COSTS
  *   Nothing. One more Vercel serverless function in the deployment you already have for
  *   /api/tos and /api/totaward, using the FIREBASE_SA service account that is already set. No
- *   Cloud Functions, no Blaze plan, no new service. See DEPLOY-SECURITY.md.
+ *   Cloud Functions, no Blaze plan, no new service. See the deployment notes in package.json ("comments" -> "deploy").
  *
  * IF IT IS NOT DEPLOYED
  *   Leave CFG.SPIN_API empty (the default). The wheel then drops the two jackpot slices and the

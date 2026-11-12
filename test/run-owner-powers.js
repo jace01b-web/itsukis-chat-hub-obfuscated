@@ -83,42 +83,66 @@ async function boot(browser,email,seed){
      Object.values(perms.got).every(v=>v===true),perms.got);
   ok('and does so without being a member',!perms.stillMember,perms);
 
-  /* v54.5 REVERSES v54.4 HERE.
-     v54.4 let a site owner delete anybody's server, reasoning that they outrank every server
-     everywhere else. Outranking a server is not owning it: every other staff power is
-     reversible, and this one destroys a server, its channels, its roles and its whole history
-     with no undo. So deleting is the server owner's alone again - in the rules as well as in
-     the client (scripts/remove_rules_owner_delete.py, and the matching cases in
-     test/security/attack-suite.js). The owner keeps every other power over that server, which
-     is what the rest of this file checks. */
-  console.log('\n--- a site owner can NOT delete a server they do not own ---');
+  /* v54.6 RESTORES THE v54.4 BEHAVIOUR.
+     v54.5 had narrowed deleting to the server's own owner. The site owner runs the site and
+     has to be able to take a server down, so the grant is back - in the client
+     (DModel.deleteServer), in the rules (scripts/add_rules_owner_delete.py) and in the server
+     menu, which is where it was missing even in v54.4: the model allowed it and no button
+     anywhere reached it.
+     What is checked here is the whole thing, not just the return value: the server record,
+     every side node the patch names, and the member's own server list. */
+  console.log('\n--- a site owner CAN delete a server they do not own ---');
   const del=await A.page.evaluate(async(sid)=>{
     const o={before:!!window.__FAKE.at('servers/'+sid)};
     try{await __T.DModel.deleteServer(sid);o.result='deleted'}
     catch(e){o.result='threw: '+e.message}
-    await new Promise(s=>setTimeout(s,700));
-    o.after=!!window.__FAKE.at('servers/'+sid);
-    o.members=!!window.__FAKE.at('serverMembers/'+sid);
-    o.channels=!!window.__FAKE.at('serverChannels/'+sid);
+    await new Promise(s=>setTimeout(s,900));
+    const at=p=>window.__FAKE.at(p);
+    o.after=!!at('servers/'+sid);
+    o.members=!!at('serverMembers/'+sid);
+    o.channels=!!at('serverChannels/'+sid);
+    o.cats=!!at('serverCats/'+sid);
+    o.roles=!!at('serverRoles/'+sid);
+    o.bans=!!at('serverBans/'+sid);
+    o.mutes=!!at('serverMutes/'+sid);
+    o.ipBans=!!at('serverIpBans/'+sid);
+    o.discovery=!!at('serverDiscovery/'+sid);
+    o.invites=!!at('invites/'+sid);
+    o.events=!!at('serverEvents/'+sid);
+    o.emoji=!!at('serverEmoji/'+sid);
+    o.screen=!!at('memberScreen/'+sid);
+    o.audit=!!at('auditLog/'+sid);
+    // the ex-owner's own server list must not keep pointing at it
+    o.vladStillLists=!!at('userServers/2/'+sid);
     return o;
   },perms.sid);
   ok('the server existed first',              del.before===true,del);
-  ok('a site owner is refused',               /^threw/.test(del.result),del);
-  ok('the message says who can',              /created this server/i.test(del.result),del);
-  ok('the server is still there',             del.after===true,del);
-  ok('its member list is untouched',          del.members===true,del);
-  ok('its channels are untouched',            del.channels===true,del);
+  ok('a site owner is allowed',               del.result==='deleted',del);
+  ok('the server node is gone',               del.after===false,del);
+  ok('its member list went with it',          del.members===false,del);
+  ok('its channels went with it',             del.channels===false,del);
+  ok('its categories went with it',           del.cats===false,del);
+  ok('its roles went with it',                del.roles===false,del);
+  ok('its bans went with it',                 del.bans===false,del);
+  ok('its mutes went with it',                del.mutes===false,del);
+  ok('its network bans went with it',         del.ipBans===false,del);
+  ok('its Discover listing went with it',     del.discovery===false,del);
+  ok('its invites went with it',              del.invites===false,del);
+  ok('its events went with it',               del.events===false,del);
+  ok('its custom emoji went with it',         del.emoji===false,del);
+  ok('its screening record went with it',     del.screen===false,del);
+  ok('its audit log went with it',            del.audit===false,del);
+  ok('the ex-owner no longer lists it',       del.vladStillLists===false,del);
 
-  /* The other half of the same rule: deleting still works for whoever owns the server. The
-     v54.4 fix was that a delete touches fifteen side nodes and used to fail on nine of them,
-     for the server owner as much as anybody - that fix stays, and this is what proves it did
-     not get taken away along with the site-owner grant.
-     Ownership is handed back to suki on this page rather than driven from a second browser,
-     because the fake database is per-page: page B has its own, without this server in it. */
-  console.log('\n--- but the server\'s OWN owner still can ---');
-  const selfDel=await A.page.evaluate(async(sid)=>{
-    await window.__FAKE.set('servers/'+sid+'/ownerId',1);
-    await new Promise(s=>setTimeout(s,600));
+  /* The other half: deleting still works for whoever owns the server, which is the fix v54.4
+     made (a delete touches fifteen side nodes and used to fail on nine of them) and which must
+     survive handing the grant back to site owners.
+     Ownership is set up on this page rather than driven from a second browser, because the
+     fake database is per-page: page B has its own, without this server in it. */
+  console.log('\n--- and the server\'s OWN owner still can ---');
+  const selfDel=await A.page.evaluate(async()=>{
+    const sid=await __T.DModel.createServer('My Own Place','');
+    await new Promise(s=>setTimeout(s,900));
     const o={isOwnerNow:__T.DModel.isServerOwner(sid,1)};
     try{await __T.DModel.deleteServer(sid);o.result='deleted'}
     catch(e){o.result='threw: '+e.message}
@@ -126,7 +150,7 @@ async function boot(browser,email,seed){
     o.after=!!window.__FAKE.at('servers/'+sid);
     o.members=!!window.__FAKE.at('serverMembers/'+sid);
     return o;
-  },perms.sid);
+  });
   ok('they are the server owner now',         selfDel.isOwnerNow===true,selfDel);
   ok('the person who owns it can delete it',  selfDel.result==='deleted',selfDel);
   ok('the server node is gone',               selfDel.after===false,selfDel);

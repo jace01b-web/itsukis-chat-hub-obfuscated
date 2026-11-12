@@ -35,7 +35,7 @@
  * WHAT IT COSTS
  *   Nothing. It is one more Vercel serverless function in the deployment you already have for
  *   /api/tos and /api/totaward, using the FIREBASE_SA service account that is already set. No
- *   Cloud Functions, no Blaze plan, no new service. See DEPLOY-API.md.
+ *   Cloud Functions, no Blaze plan, no new service. See the deployment notes in package.json ("comments" -> "deploy").
  *
  * IF IT IS NOT DEPLOYED
  *   Leave CFG.SPIN_API empty (the default). The wheel then drops the two jackpot slices and the
@@ -44,7 +44,7 @@
  *
  * WHAT IT DOES NOT FIX
  *   With this deployed the browser writes nothing and decides nothing, so the spin is sound. The
- *   other browser-decided economies listed in SECURITY_AUDIT.md are untouched by it.
+ *   other browser-decided economies listed in the security notes in package.json ("comments" -> "security") are untouched by it.
  */
 const L = require('./_lib');
 

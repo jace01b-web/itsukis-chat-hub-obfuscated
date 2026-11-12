@@ -293,8 +293,13 @@ head('B5. the exit codes are documented where somebody will find them');
   check('the CLI prints its exit code in its own output', /exit code/.test(src));
   check('the CLI uses the shared EXIT constants rather than literals',
     /L\.EXIT\./.test(src) && /L\.rollbackExit\(/.test(src));
-  const doc = fs.readFileSync(path.join(ROOT, 'MIGRATION-RECOVERY.md'), 'utf8');
-  check('the exit codes are in MIGRATION-RECOVERY.md', /exit code/i.test(doc) && /\b3\b/.test(doc));
+  /* v54.6: the project no longer ships separate markdown documents, so the exit-code table
+     lives in the header of the CLI that produces them - which is where somebody debugging a
+     non-zero exit is already looking. Checked here so it cannot quietly disappear. */
+  check('the exit-code table is in the CLI header',
+    /EXIT CODES/.test(src) && /exit code 3/.test(src) && /VERIFY_FAILED/.test(src));
+  check('every code the library can return is written up',
+    ['OK','CONFLICTS','CANNOT_RUN','VERIFY_FAILED','BOTH'].every(k => src.includes(k)));
 }
 
 try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (_) {}

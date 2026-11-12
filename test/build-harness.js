@@ -56,6 +56,10 @@ const inlined=
   'window.__T={DModel,DB,CFG,openShop,openServerSettings,openAddServer,openCreateServer,'+
   'openJoinServer,openInvite,openCreateChannel,openChannelSettings,openMemberManager,'+
   'openNav,closeNav,openMembersDrawer,closeMembersDrawer,toggleNav,dmodal,openCtx,'+
+  /* v54.6: the server menu, so a suite can check that the entries a site owner is
+     entitled to are actually OFFERED. A permission the model grants and no button
+     reaches is the bug this export exists to catch. */
+  'openServerMenu,closeCtx,'+
   'isOwner,isMod,isAdmin,isMvp,selectRoom,renderChat,openChat,goHome,refreshBadge,'+
   'openSettings,modalGameHubs,openSpin,openUserProfile,openAccount,'+
   'serverLockReason,openDiscover,inviteUrl,readInviteFromUrl,clearInviteFromUrl,'+

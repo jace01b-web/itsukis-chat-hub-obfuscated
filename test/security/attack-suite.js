@@ -18,7 +18,7 @@
  * WHAT THIS CANNOT TELL YOU
  *   targaryen evaluates the rules, so a PASS here is a real property of the rules and not of the
  *   client. It says nothing about anything the rules cannot see: the browser-enforced limits
- *   listed in SECURITY_AUDIT.md stay browser-enforced no matter what this file prints.
+ *   listed in the security notes in package.json ("comments" -> "security") stay browser-enforced no matter what this file prints.
  */
 'use strict';
 
@@ -100,7 +100,7 @@ function run(kind, name, who, fn, severity){
 const attack = (name, who, fn, sev) => run('attack', name, who, fn, sev);
 
 /* An attack that SUCCEEDS on purpose, because closing it is not possible inside this
-   architecture. `why` is printed in the summary and must match SECURITY_AUDIT.md - the point of
+   architecture. `why` is printed in the summary and must match the security notes in package.json ("comments" -> "security") - the point of
    this verdict is that an accepted risk can never be mistaken for a fixed one, and that if one
    of these ever starts being refused, the test says so rather than quietly going green. */
 function expected(name, who, fn, why){
@@ -113,7 +113,7 @@ function expected(name, who, fn, why){
   } else {
     /* It is now refused - better than documented. Flag it so the docs get corrected. */
     passes++;
-    console.log('  PASS      ' + who + ': ' + name + ' \u2014 refused (documented as accepted; update SECURITY_AUDIT.md)');
+    console.log('  PASS      ' + who + ': ' + name + ' \u2014 refused (documented as accepted; update the security notes in package.json ("comments" -> "security"))');
   }
 }
 const allow  = (name, who, fn)      => run('allow',  name, who, fn);
@@ -315,7 +315,7 @@ expected('write myself 50,000,000 event candy and top the leaderboard',
   + 'payout table, and a cap set too low silently breaks the event for honest players. '
   + 'Mitigated by: `tot/awarded` is write:false, prizes are only handed out by an owner pressing '
   + 'a button, and api/totaward.js recomputes the placing itself rather than trusting the page. '
-  + 'The real fix is server-side scoring. See SECURITY_AUDIT.md V1.');
+  + 'The real fix is server-side scoring. See the security notes in package.json ("comments" -> "security") V1.');
 attack('write somebody else’s event score',
   'eve', U(UID.eve, 'tot/p/3', { candy: 1, earned: 1, last: NOW }), 'HIGH');
 attack('mark the event as awarded so nobody else can be',
@@ -360,18 +360,36 @@ attack('site owner writes a spin claim by hand (the server owns this node)',
    attacks now, and they are the proof that the client-side check in DModel.deleteServer()
    cannot simply be stepped around from a console.
    Everything the owner SHOULD still be able to do is asserted immediately after them. */
-attack('site owner deletes somebody else\u2019s server',
-  'owner', W(UID.owner, 'servers/srvA', null), 'HIGH');
-attack('site owner deletes that server\u2019s channels',
-  'owner', W(UID.owner, 'serverChannels/srvA', null), 'HIGH');
-attack('site owner deletes that server\u2019s roles',
-  'owner', W(UID.owner, 'serverRoles/srvA', null), 'HIGH');
-attack('site owner deletes that server\u2019s member list',
-  'owner', W(UID.owner, 'serverMembers/srvA', null), 'HIGH');
-attack('site owner deletes a server\u2019s bans, mutes, invites and screening',
+/* v54.6: these five were `attack` cases in v54.5 - the site owner was deliberately barred from
+   deleting a server they do not own. v54.6 restores the v54.4 behaviour (the site owner runs
+   the site and has to be able to take a server down), so they assert the opposite now. They
+   are kept as named cases rather than deleted because the thing that must stay true is that
+   this is a DELETE-only grant: the four `attack` cases just below check that none of these
+   paths can be OVERWRITTEN by the same person, which is what would turn "remove a server" into
+   "rewrite anybody's member list". */
+allow('site owner deletes somebody else\u2019s server',
+  'owner', W(UID.owner, 'servers/srvA', null));
+allow('site owner deletes that server\u2019s channels',
+  'owner', W(UID.owner, 'serverChannels/srvA', null));
+allow('site owner deletes that server\u2019s roles',
+  'owner', W(UID.owner, 'serverRoles/srvA', null));
+allow('site owner deletes that server\u2019s member list',
+  'owner', W(UID.owner, 'serverMembers/srvA', null));
+allow('site owner deletes a server\u2019s bans, mutes, invites and screening',
   'owner', U(UID.owner, '', { 'serverBans/srvA': null, 'serverMutes/srvA': null,
     'serverIpBans/srvA': null, 'invites/srvA': null, 'memberScreen/srvA': null,
-    'serverEvents/srvA': null, 'serverEmoji/srvA': null, 'roomMembers/chGen': null }), 'HIGH');
+    'serverEvents/srvA': null, 'serverEmoji/srvA': null, 'roomMembers/chGen': null }));
+/* The whole patch DModel.deleteServer() actually sends, as one multi-path write, run as the
+   site owner against a server owned by somebody else. Every path in the client has to be in
+   here: a single refused path takes the entire atomic write down with it, which is exactly how
+   v54.4's delete "worked" in the model and failed at the database. */
+allow('SITE owner can delete somebody else\u2019s server end to end', 'owner',
+  U(UID.owner, '', { 'servers/srvA': null, 'serverChannels/srvA': null, 'serverRoles/srvA': null,
+    'serverMembers/srvA': null, 'serverBans/srvA': null, 'serverMutes/srvA': null,
+    'serverIpBans/srvA': null, 'invites/srvA': null, 'serverDiscovery/srvA': null,
+    'memberScreen/srvA': null, 'serverEvents/srvA': null, 'serverEmoji/srvA': null,
+    'auditLog/srvA': null, 'serverCats/srvA': null,
+    'channelServer/chGen': null, 'roomMembers/chGen': null }));
 allow('SERVER owner can delete their own server end to end', 'alice',
   U(UID.alice, '', { 'servers/srvA': null, 'serverChannels/srvA': null, 'serverRoles/srvA': null,
     'serverMembers/srvA': null, 'serverBans/srvA': null, 'serverMutes/srvA': null,
@@ -508,7 +526,7 @@ attack('add myself to somebody else’s DM',
 expected('list who is in every DM on the site', 'eve', Rd(UID.eve, 'dmMembers'),
   'dmMembers/.read has been auth != null since before the Discord rebuild and the client mirrors '
   + 'the whole node. Message CONTENT stays private; this is the social graph. v54\u2019s mutual-friends '
-  + 'feature is built on it - see SECURITY_AUDIT.md M2 for the trade.');
+  + 'feature is built on it - see the security notes in package.json ("comments" -> "security") M2 for the trade.');
 attack('read somebody else’s friends list',
   'eve', Rd(UID.eve, 'friends/4'), 'MEDIUM');
 attack('read the typing indicator for a DM I am not in',
@@ -614,7 +632,7 @@ attack('store an emoji whose image is a javascript: URI',
 attack('store a 1 MB emoji image',
   'alice', W(UID.alice, 'serverEmoji/srvA/big', { name: 'big', img: 'data:image/png;base64,' + 'A'.repeat(1000000) }), 'LOW');
 
-/* ---- the new avatars/ node (FREE-PLAN-COMPATIBILITY.md step 1) ----------------
+/* ---- the new avatars/ node (the migration notes in package.json ("comments" -> "migrations") step 1) ----------------
    This node exists so a sign-in stops downloading 18 MB of inline images. It is
    only worth adding if it is no weaker than the field it replaces, so every case
    below is the users/$id/style equivalent re-run against the new path. */
@@ -845,7 +863,7 @@ if (findings.length) {
     .forEach(f => console.log('  [' + f.severity.padEnd(8) + '] ' + f.who + ': ' + f.name));
 }
 if (acceptedList.length) {
-  console.log('\naccepted risks \u2014 each one is written up in SECURITY_AUDIT.md:');
+  console.log('\naccepted risks \u2014 each one is written up in the security notes in package.json ("comments" -> "security"):');
   acceptedList.forEach(a => {
     console.log('  \u2022 ' + a.who + ': ' + a.name);
     console.log('      ' + a.why.replace(/\s+/g, ' '));
