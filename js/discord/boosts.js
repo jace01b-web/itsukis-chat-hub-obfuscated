@@ -75,8 +75,14 @@ const DBoost=(()=>{
     delete perServer[sid];delete S.byServer[sid];
   }
 
+  /* v54.4: site owners get effectively unlimited boosts, and do not need MVP for them.
+     99 rather than Infinity because every slot is a stored key under userBoosts/$id, and the
+     database rules cap the slot index at two digits for exactly that reason - an unbounded
+     number of keys is an unbounded bill on the free plan. Nobody is going to boost 99 servers. */
+  const BOOST_SLOTS_OWNER=99;
   function slotsFor(uid){
     uid=Number(uid==null?myId:uid);
+    try{if(isOwner(uid))return BOOST_SLOTS_OWNER}catch(_){}
     try{return hasMvpPerks(uid)?BOOST_SLOTS_MVP:0}catch(_){return 0}
   }
   /* My slots, always exactly slotsFor(me) of them, each either pointed at a server or free. */

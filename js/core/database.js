@@ -35,12 +35,18 @@ const DB=(()=>{
      which is what stops a long session from slowly re-creating the old cost one person at a time.
      Your own record is never evicted. */
   const userWatch=new Map();          // id -> {off, used}
-  const USER_WATCH_MAX=220;           // ~220 live profiles is far more than any one screen shows
+  const USER_WATCH_MAX=400;
+  /* v54.3a: a monotonic tick, NOT Date.now(). A member list calls getUser() for every row in one
+     synchronous pass, so hundreds of entries shared a single millisecond and "least recently
+     used" picked essentially at random - the set churned through the whole list and most rows
+     never kept a subscription. With 1,208 members that meant constant attach/detach and names
+     that never arrived. */
+  let _watchTick=0;
   function watchUser(id){
     id=Number(id);
     if(!Number.isFinite(id)||id<=0)return;
     const w=userWatch.get(id);
-    if(w){w.used=Date.now();return}
+    if(w){w.used=++_watchTick;return}
     if(userWatch.size>=USER_WATCH_MAX){
       let oldest=null,t=Infinity;
       userWatch.forEach((v,k)=>{if(k!==myId&&v.used<t){t=v.used;oldest=k}});
@@ -54,9 +60,9 @@ const DB=(()=>{
       // or the member list would start calling real accounts Deleted User.
       console.warn('profile read denied',id,err&&err.code);
     });
-    userWatch.set(id,{off,used:Date.now()});
+    userWatch.set(id,{off,used:++_watchTick});
   }
-  function stopUserWatch(){userWatch.forEach(v=>{try{v.off()}catch(_){}});userWatch.clear()}
+  function stopUserWatch(){userWatch.forEach(v=>{try{v.off()}catch(_){}});userWatch.clear();_dirById=null}
 
   /* ---------- v54.1: each account moves its OWN private data, once ----------
      scripts/migrate_privacy.js does the whole table in one go, and it is the thing to run.
@@ -367,6 +373,7 @@ const DB=(()=>{
     watchUser(myId);
     listen('usernames',v=>{
       C.usernames=v||{};
+      _dirById=null;                 // the reverse map is rebuilt on next use
       try{
         DB._dirCount=Object.keys(C.usernames).length;
         DB._dirBytes=JSON.stringify(C.usernames).length;
@@ -609,8 +616,34 @@ const DB=(()=>{
   }
 
   // rebuild the {id: user} map in the shape the UI expects
+  /* v54.3a: name -> id reversed, rebuilt whenever the directory changes.
+     The directory is the only thing the client holds for ALL accounts, so it is the only place
+     an unloaded profile's real username can come from. Without it, every account whose record
+     has not been fetched yet renders through dispName(null) as "Deleted User" - which in ICH's
+     UI is exactly what a BANNED account looks like. On a 1,200-member list that reads as "every
+     account got banned", which is what it looked like in production. */
+  let _dirById=null;
+  function dirName(id){
+    if(!_dirById){
+      _dirById={};
+      Object.keys(C.usernames||{}).forEach(n=>{_dirById[String(C.usernames[n])]=n});
+    }
+    return _dirById[String(id)]||null;
+  }
+
   const userView=id=>{
-    const u=C.users[id];if(!u)return undefined;
+    const u=C.users[id];
+    if(!u){
+      /* Not loaded yet. If the directory knows this id, hand back a stub carrying the REAL
+         username rather than undefined, so nothing downstream has to guess at a name.
+         `_stub:true` marks it so anything making a moderation decision can tell the difference
+         between "not loaded" and "loaded and really deleted". */
+      const nm=dirName(id);
+      if(nm==null)return undefined;
+      return {id:Number(id),username:nm,deleted:false,_stub:true,
+        style:{},settings:defaultSettings(),pronouns:'',description:'',banner:'',
+        hiddenTags:'',friends:[],lastRead:{},createdAt:0};
+    }
     const mine=Number(id)===myId;
     const st=u.style||{};
     const base=defaultSettings();
@@ -623,6 +656,9 @@ const DB=(()=>{
     settings.meBubble=st.bubble||own.meBubble||base.meBubble;
     settings.meText=st.text||own.meText||base.meText;
     settings.avatar=st.avatar||(mine?own.avatar:'')||'';
+    /* v54.4: my own private copy wins (it is the one the settings screen edits), then the public
+       mirror, then the default. Without the middle term, other people's banners were invisible. */
+    settings.bannerColor=(mine&&own.bannerColor)||st.bnc||own.bannerColor||base.bannerColor;
     if(st.radius!=null&&!mine)settings.radius=st.radius;
     return{...u,pronouns:String(st.pronouns||''),description:String(st.description||'').slice(0,descMaxFor(id)),banner:String(st.banner||''),hiddenTags:String(st.hiddenTags||''),id:Number(id),friends:mine?(C.friends[myId]||[]):[],
       lastRead:mine?C.lastRead:{},settings};
@@ -781,7 +817,13 @@ const DB=(()=>{
       const s=await get(R(path));return !s.exists();
     },
     currentUser(){return myId?userView(myId):null},
-    getUser:id=>{const v=userView(id);if(!v)fetchUserIfMissing(id);return v},
+    /* v54.3a: a stub is truthy, so the old `if(!v)` would have stopped fetching the real
+       record entirely. Fetch whenever what we have is not the real thing. */
+    getUser:id=>{const v=userView(id);if(!v||v._stub)fetchUserIfMissing(id);return v},
+    /* Same view, WITHOUT subscribing. For code that walks every account - a member list filter,
+       a sort comparator - where opening a listener per row is the whole problem. Only the rows
+       actually drawn should call getUser(). */
+    peekUser:id=>userView(id),
     /* ---------- v54.1: the directory, not the whole table ----------
        This used to be Object.keys(C.users), which only worked because the client had just
        downloaded all 3,100 records (and their avatars) into memory. It is now built from the
@@ -1305,6 +1347,15 @@ const DB=(()=>{
         :String((cur.style&&cur.style.displayName)||'');
       delete merged.displayName;
       const style={bubble:merged.meBubble||'#7c6cff',text:merged.meText||'#ffffff',radius:Number(merged.radius)||16,avatar};
+      /* v54.4: the banner COLOUR is public now.
+         It has always lived in `settings`, which userView only merges for your OWN account - so
+         everybody else's banner fell back to their bubble colour and nobody had ever seen
+         anyone else's chosen banner. Mirroring it into `style` is the same thing `bubble`,
+         `text` and `avatar` already do. Named `bnc` because `style.banner` is the MVP banner
+         IMAGE, which is a different thing. Anything that is not a plain hex colour is dropped
+         rather than sent, because the rules would refuse it and take the whole save with it. */
+      const bnc=String(merged.bannerColor||'');
+      if(/^#[0-9a-fA-F]{3,8}$/.test(bnc))style.bnc=bnc;
       if(displayName)style.displayName=displayName;
       if(pronouns)style.pronouns=pronouns;
       if(description)style.description=description;

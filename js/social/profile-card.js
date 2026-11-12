@@ -49,13 +49,34 @@ const PCard=(function(){
   /* The status dot, as four distinguishable SHAPES rather than four colours - idle is a crescent
      and do-not-disturb is a barred circle, so the four never rely on colour alone. The same
      approach the status picker already takes. */
-  function statusDot(id,cls){
+  /* v54.4: the dot has to agree with presence.
+
+     This used to read style.status alone, and style.status defaults to 'online' for everybody who
+     has never opened the picker - so every single offline account showed a green "Online" dot on
+     its profile forever. Presence decides whether the chosen status is shown at all; the status
+     only decides WHICH of online/idle/dnd it is. Invisible is the one exception: it is already
+     masked to 'offline' for everyone but the person who chose it, and that person should see
+     their own choice rather than being told they are offline. */
+  function statusOfLive(id){
+    id=Number(id);
+    const mine=!!(ME&&id===ME.id);
     let st='offline';
-    try{
-      if(ME&&Number(id)===ME.id)st=normStatus(ME.style&&ME.style.status);
-      else st=DB.statusOf(Number(id));
-    }catch(_){}
+    try{st=mine?normStatus(ME.style&&ME.style.status):DB.statusOf(id)}catch(_){}
+    if(st==='invisible')return 'invisible';
+    let on=mine;
+    if(!on){try{on=DB.onlineIds().indexOf(id)>-1}catch(_){on=false}}
+    return on?st:'offline';
+  }
+  function statusDot(id,cls){
+    const st=statusOfLive(id);
     return '<span class="pf-sd '+(cls||'')+' st-'+esc(st)+'" title="'+esc(statusLabel(st))+'" aria-label="'+esc(statusLabel(st))+'"></span>';
+  }
+  /* The status in words. The dot alone was a 14px shape with a title attribute, which is no
+     status at all on a phone: there is nothing to hover. */
+  function statusLineHTML(id){
+    const st=statusOfLive(id);
+    return '<div class="pf2-status"><span class="pf-sd inline st-'+esc(st)+'" aria-hidden="true"></span>'+
+      '<span>'+esc(statusLabel(st))+'</span></div>';
   }
   function statusLabel(st){
     return st==='dnd'?'Do Not Disturb':st==='idle'?'Idle':st==='invisible'?'Invisible':st==='online'?'Online':'Offline';
@@ -197,6 +218,7 @@ const PCard=(function(){
         '<div class="pf2-body">'+
           '<div class="pf2-ident">'+
             '<div class="pf2-name">'+(deleted?esc(name):fullNameHTML(id,esc(name)))+'</div>'+uname+
+            (deleted?'':statusLineHTML(id))+
             (deleted?'':customStatusHTML(id))+
           '</div>'+
           (deleted?'':badgeTrayHTML(id))+
@@ -409,6 +431,7 @@ const PCard=(function(){
               (banned?' <span class="tag" style="background:var(--danger)">Banned</span>':'')+
               (muted?' <span class="tag" style="background:#555;color:#fff">Timed out</span>':'')+
             '</div>'+uname+
+            (deleted?'':statusLineHTML(id))+
             (deleted?'':customStatusHTML(id))+
             (deleted?'':badgeTrayHTML(id))+
           '</div>'+
@@ -582,7 +605,7 @@ const PCard=(function(){
   function repaintAll(){if(open.id!=null)repaint(open.id)}
   function openedId(){return open.id}
 
-  return{openPopout,openFull,repaint,repaintAll,decoAvatar,statusDot,badgeTrayHTML,openedId,
+  return{openPopout,openFull,repaint,repaintAll,decoAvatar,statusDot,statusOfLive,statusLabel,badgeTrayHTML,openedId,
          PROFILE_DECOS,PROFILE_THEMES};
 })();
 

@@ -792,8 +792,12 @@ const DiscordShell=(function(){
     const onSet=new Set(onIds);
     if(key===CFG.VIP_ROOM)everyone=everyone.filter(id=>{try{return !!DB.vipInfo(id,true)}catch(_){return false}});
     if(key===CFG.MVP_ROOM)everyone=everyone.filter(id=>{try{return hasMvpPerks(id)}catch(_){return false}});
-    const offIds=everyone.filter(id=>!onSet.has(id)&&DB.getUser(id));
-    const nameOf=id=>{const u=DB.getUser(id);return u?dispName(u):'Loading…'};
+    /* v54.3a: peekUser, not getUser. This filter and the comparator below run over EVERY
+       account - 1,200+ on this site - and getUser() opens a live listener per call. That churned
+       the whole subscription set on every render and left most rows without a profile, which is
+       what made them render as "Deleted User". Only the rows actually drawn (memRow) subscribe. */
+    const offIds=everyone.filter(id=>!onSet.has(id)&&DB.peekUser(id));
+    const nameOf=id=>{const u=DB.peekUser(id);return u?dispName(u):'Loading…'};
     const cmp=(a,b)=>nameOf(a).toLowerCase().localeCompare(nameOf(b).toLowerCase());
     const defs=memGroupDefs(),buckets={};defs.forEach(d=>buckets[d[0]]=[]);
     // A group key always exists in defs, but customroles/ can change between the two calls — never throw over it.

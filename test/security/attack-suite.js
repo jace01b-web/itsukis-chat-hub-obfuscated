@@ -300,6 +300,82 @@ attack('read somebody else’s spin claim',
 attack('site owner writes a spin claim by hand (the server owns this node)',
   'owner', W(UID.owner, 'spinClaims/5', { at: NOW, n: 0 }), 'MEDIUM');
 
+/* ---- v54.4: site-owner powers, and the limits that must survive them -------
+   The site owner is meant to outrank every server. These check that is true in the RULES, not
+   just in the client - and, just as importantly, that opening it up for owners did not open it
+   for anybody else. */
+allow('site owner deletes somebody else\u2019s server', 'owner', W(UID.owner, 'servers/srvA', null));
+allow('site owner deletes that server\u2019s channels', 'owner', W(UID.owner, 'serverChannels/srvA', null));
+allow('site owner deletes that server\u2019s roles', 'owner', W(UID.owner, 'serverRoles/srvA', null));
+allow('site owner deletes that server\u2019s member list', 'owner', W(UID.owner, 'serverMembers/srvA', null));
+allow('site owner deletes a server\u2019s bans, mutes, invites and screening', 'owner',
+  U(UID.owner, '', { 'serverBans/srvA': null, 'serverMutes/srvA': null,
+    'serverIpBans/srvA': null, 'invites/srvA': null, 'memberScreen/srvA': null,
+    'serverEvents/srvA': null, 'serverEmoji/srvA': null, 'roomMembers/chGen': null }));
+allow('SERVER owner can delete their own server end to end', 'alice',
+  U(UID.alice, '', { 'servers/srvA': null, 'serverChannels/srvA': null, 'serverRoles/srvA': null,
+    'serverMembers/srvA': null, 'serverBans/srvA': null, 'serverMutes/srvA': null,
+    'serverIpBans/srvA': null, 'invites/srvA': null, 'serverDiscovery/srvA': null,
+    'memberScreen/srvA': null, 'serverEvents/srvA': null, 'serverEmoji/srvA': null,
+    'auditLog/srvA': null, 'serverCats/srvA': null,
+    'channelServer/chGen': null, 'roomMembers/chGen': null }));
+/* Joining a server as a site owner writes a complete member row - `at` is required, so a bare
+   permission write on a non-member is refused, which is correct. */
+allow('site owner joins a server and takes admin in one write', 'owner',
+  W(UID.owner, 'serverMembers/srvA/1', { at: NOW, p: F.allPerms() }));
+
+/* The delete-only grants must never become a way to OVERWRITE a branch. */
+attack('server owner overwrites the whole member list instead of deleting it',
+  'alice', W(UID.alice, 'serverMembers/srvA', { 5: { at: NOW, p: F.allPerms() } }), 'CRITICAL');
+attack('site owner overwrites the whole member list instead of deleting it',
+  'owner', W(UID.owner, 'serverMembers/srvA', { 1: { at: NOW, p: F.allPerms() } }), 'HIGH');
+attack('server owner overwrites the ban list instead of deleting it',
+  'alice', W(UID.alice, 'serverBans/srvA', { 9: { at: NOW } }), 'MEDIUM');
+attack('a member deletes a server\u2019s member list',
+  'eve', W(UID.eve, 'serverMembers/srvA', null), 'CRITICAL');
+attack('a member deletes a channel\u2019s access list',
+  'eve', W(UID.eve, 'roomMembers/chGen', null), 'HIGH');
+allow('site owner assigns a role in somebody else\u2019s server', 'owner',
+  W(UID.owner, 'serverMembers/srvA/5/roles/rMod', true));
+allow('site owner edits somebody else\u2019s server settings', 'owner',
+  W(UID.owner, 'servers/srvA/name', 'Renamed by staff'));
+
+/* Boosts: an owner who is NOT MVP could not boost at all, and nobody could hold more than two. */
+allow('site owner boosts without being MVP', 'owner',
+  W(UID.owner, 'userBoosts/1/0', { sid: 'srvA', at: NOW }));
+allow('site owner uses a slot past the two-slot cap', 'owner',
+  W(UID.owner, 'userBoosts/1/7', { sid: 'srvA', at: NOW }));
+allow('site owner uses slot 99', 'owner',
+  W(UID.owner, 'userBoosts/1/99', { sid: 'srvA', at: NOW }));
+allow('site owner records the matching server-side boost', 'owner',
+  W(UID.owner, 'serverBoosts/srvA/1/7', { at: NOW }));
+
+attack('a plain member deletes somebody else\u2019s server',
+  'eve', W(UID.eve, 'servers/srvA', null), 'CRITICAL');
+attack('a plain member deletes a server\u2019s channels',
+  'eve', W(UID.eve, 'serverChannels/srvA', null), 'CRITICAL');
+attack('the SERVER owner deletes a DIFFERENT owner\u2019s server',
+  'alice', W(UID.alice, 'servers/srvB', null), 'HIGH');
+attack('a non-MVP member boosts',
+  'eve', W(UID.eve, 'userBoosts/5/0', { sid: 'srvA', at: NOW }), 'MEDIUM');
+attack('an MVP hands themselves a third boost slot',
+  'mod', W(UID.mod, 'userBoosts/2/7', { sid: 'srvA', at: NOW }), 'MEDIUM');
+attack('an MVP hands themselves slot 99',
+  'mod', W(UID.mod, 'userBoosts/2/99', { sid: 'srvA', at: NOW }), 'MEDIUM');
+attack('a member writes somebody else\u2019s boost row',
+  'eve', W(UID.eve, 'userBoosts/3/0', { sid: 'srvA', at: NOW }), 'MEDIUM');
+attack('a slot index outside the allowed range',
+  'owner', W(UID.owner, 'userBoosts/1/100', { sid: 'srvA', at: NOW }), 'LOW');
+
+/* The public banner colour is a colour, and nothing else. */
+allow('set my own public banner colour', 'eve', W(UID.eve, 'users/5/style/bnc', '#3ba55d'));
+attack('put a script URL in the public banner colour',
+  'eve', W(UID.eve, 'users/5/style/bnc', 'javascript:alert(1)'), 'HIGH');
+attack('put a 2 MB string in the public banner colour',
+  'eve', W(UID.eve, 'users/5/style/bnc', '#' + 'a'.repeat(2000000)), 'MEDIUM');
+attack('set somebody else\u2019s public banner colour',
+  'eve', W(UID.eve, 'users/3/style/bnc', '#ff0000'), 'MEDIUM');
+
 /* ---- v54.2: the payout markers --------------------------------------------
    api/spin.js resolves an interrupted spin by asking spinPayouts whether the payout landed.
    A browser that could DELETE a marker would turn a paid spin into a refunded one and get a

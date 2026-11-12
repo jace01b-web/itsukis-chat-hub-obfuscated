@@ -409,8 +409,14 @@ const DModel=(()=>{
   }
 
   async function deleteServer(sid){
+    /* The ICH server stays undeletable even for a site owner. Everything on the site lives in
+       it; there is no undo, and no reason to allow it by accident. Delete its channels instead. */
     if(isSystem(sid))throw new Error('The ICH server cannot be deleted.');
-    if(!isServerOwner(sid,myId))throw new Error('Only the server owner can delete it.');
+    /* v54.4: site owners can delete any server. They already outrank every server everywhere
+       else - can() short-circuits on isOwner - and the database rules already allowed this;
+       only this line stopped it. */
+    if(!isServerOwner(sid,myId)&&!isOwner(myId))
+      throw new Error('Only the server owner, or a site owner, can delete this server.');
     const chans=channels(sid);
     const patch={};
     patch['servers/'+sid]=null;patch['serverChannels/'+sid]=null;patch['serverCats/'+sid]=null;

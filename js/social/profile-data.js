@@ -112,11 +112,32 @@ const PData=(function(){
     return false;
   }
 
-  /* The two gradient stops for someone's profile banner. A theme wins; otherwise the accent is
-     darkened into a gradient so a profile with no theme still looks deliberate. */
+  /* v54.4: the banner colour somebody actually picked in Settings.
+
+     This is why banners looked broken. The picker writes `bannerColor`, but the profile card's
+     gradient was built from the ACCENT (the message-bubble colour) and never looked at
+     bannerColor at all - so choosing a banner colour changed nothing on the card. Worse,
+     bannerColor was stored only in the private settings node, so even the code that did read it
+     saw nothing for anybody but the person themself; v54.4 mirrors it to the public
+     users/$id/style/bnc, which is what `bnc` below is.
+
+     safeColor rejects anything that is not a plain hex colour, so a tampered value falls through
+     to the accent instead of reaching a style attribute. */
+  function bannerColorOf(id){
+    const x=u(id);if(!x)return '';
+    const st=x.style||{};
+    const c=st.bnc||(x.settings&&x.settings.bannerColor)||'';
+    return safeColor(c,'')||'';
+  }
+
+  /* The two gradient stops for someone's profile banner. An explicit theme wins, then the banner
+     colour they picked; failing both, the accent is darkened into a gradient so a profile with
+     no choices at all still looks deliberate. */
   function bannerStops(id){
     const t=THEME_BY_ID[themeOf(id)];
     if(t&&t.a)return[t.a,t.b];
+    const bc=bannerColorOf(id);
+    if(bc)return[bc,shade(bc,-0.55)];
     const a=accentOf(id);
     return[a,shade(a,-0.55)];
   }
@@ -146,7 +167,7 @@ const PData=(function(){
     return L>.45?'#101114':'#ffffff';
   }
 
-  return{accentOf,themeOf,decoOf,decoAllowed,bannerStops,shade,readableOn};
+  return{accentOf,themeOf,decoOf,decoAllowed,bannerColorOf,bannerStops,shade,readableOn};
 })();
 
 /* ======================================================================

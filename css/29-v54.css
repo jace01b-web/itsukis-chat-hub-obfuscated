@@ -247,14 +247,23 @@ a.pf-conn:hover{background:var(--dl-hover,rgba(255,255,255,.07))}
 .pf-sd.st-idle{background:var(--dl-yellow,#f0b232);
   -webkit-mask:radial-gradient(circle at 72% 28%,transparent 46%,#000 47%);
   mask:radial-gradient(circle at 72% 28%,transparent 46%,#000 47%)}
-.pf-sd.st-dnd{background:var(--dl-red,#f23f43);
-  -webkit-mask:radial-gradient(circle,#000 99%,#000 100%) ,linear-gradient(#000,#000);
-  mask-composite:exclude}
+/* v54.4: the mask that used to be here composited two identical layers with mask-composite:
+   exclude, which subtracts the shape from itself - the dnd dot rendered as a transparent hole,
+   so "Do Not Disturb" showed no dot at all. The bar below is what makes it read as dnd. */
+.pf-sd.st-dnd{background:var(--dl-red,#f23f43)}
 .pf-sd.st-dnd::after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
   width:62%;height:26%;border-radius:2px;background:var(--dl-pop,var(--panel))}
 .pf-sd.st-invisible,.pf-sd.st-offline{background:var(--dl-grey,#80848e)}
 .pf-sd.st-invisible::after,.pf-sd.st-offline::after{content:"";position:absolute;left:50%;top:50%;
   transform:translate(-50%,-50%);width:48%;height:48%;border-radius:50%;background:var(--dl-pop,var(--panel))}
+
+/* v54.4: the same dot, inline beside the status text instead of pinned to an avatar corner.
+   position stays RELATIVE, not static, because the dnd bar and the offline ring are ::after
+   elements positioned against the dot itself. */
+.pf-sd.inline{position:relative;right:auto;bottom:auto;width:10px;height:10px;flex:none;
+  box-shadow:none}
+.pf2-status{display:flex;align-items:center;gap:6px;margin-top:6px;
+  font-size:13px;color:var(--dl-muted,var(--muted))}
 
 /* ==========================================================================
  * 2c. AVATAR DECORATIONS

@@ -70,6 +70,9 @@ const inlined=
   'chipifyHTML,push,R,set,get,remove,update,updateMentionPop,extractPings,'+
   /* v54.1 security patch */
   'NSFW,'+
+  /* v54.4: the profile-status suite needs the status resolver. dispName is already exported
+     above, for the member-list-at-scale suite. */
+  'pfStatus,'+
   'get view(){return view},get ME(){return ME}};\n};\n'+
   /* about:blank has no query string, so ?manual cannot be expressed there. A page written into
      about:blank is always driven by the test (seed -> sign in -> start), so it must not boot

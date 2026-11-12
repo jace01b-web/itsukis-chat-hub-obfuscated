@@ -68,6 +68,38 @@ function modalGiveVip(id,name){
   document.addEventListener('keydown',onKey);
 }
 
+/* ---------------------------------------------------------------------------
+   v54.4: the profile shows the CHOSEN status and the custom status text.
+
+   Both profile views only ever rendered presence - "Online now" or "Offline" - so a person who
+   had set themselves to Idle or Do Not Disturb, or written a custom status, saw none of it on
+   their own profile or anybody else's. The small hover card (profile-card.js) already showed
+   the custom status, which made the big profile look broken by comparison.
+
+   Presence and chosen status are different things and both matter: somebody can be connected
+   and on Do Not Disturb, or disconnected with a custom status still set. Offline wins for the
+   dot, because a status you picked means nothing while you are not here.
+   -------------------------------------------------------------------------- */
+const PF_STATUS={
+  online  :{c:'#3ddc73',t:'Online'},
+  idle    :{c:'#f0b232',t:'Idle'},
+  dnd     :{c:'#f23f43',t:'Do Not Disturb'},
+  invisible:{c:'var(--muted)',t:'Invisible'},
+  offline :{c:'var(--muted)',t:'Offline'}
+};
+function pfStatus(id,online,deleted){
+  if(deleted)return{color:'var(--muted)',label:'Account deleted',custom:'',on:false};
+  let s='online';
+  try{s=(DB.statusOf?DB.statusOf(id):'online')||'online'}catch(_){}
+  let custom='';
+  try{custom=String((DB.customStatusOf?DB.customStatusOf(id):'')||'')}catch(_){}
+  if(!custom){try{const x=DB.getUser(id);custom=String((x&&x.style&&x.style.customStatus)||'')}catch(_){}}
+  // Not connected: whatever they picked, they are offline to you now.
+  if(!online)return{color:'var(--muted)',label:'Offline',custom,on:false};
+  const d=PF_STATUS[s]||PF_STATUS.online;
+  return{color:d.c,label:d.t,custom,on:s!=='invisible'&&s!=='offline'};
+}
+
 // Click-through profile card: username, avatar, online state, user ID, friend status/actions.
 // Open the DM with someone from anywhere (profile card opened from the home screen, Global Chat, a room...).
 // The old button only swapped the open chat, so it did nothing visible unless you were already inside Itsuki DMs.
@@ -138,7 +170,10 @@ function openProfilePopout(id){
   /* Discord shows the @username on its own line under the display name, and only when the two
      differ \u2014 repeating "suki / @suki" for everyone who never set one is just noise. */
   const uname=(!deleted&&hasDispName(u))?`<div class="dlpo-uname">@${esc(displayUsername(u.username))}</div>`:'';
-  const sub=deleted?'Account deleted':[online?'Online':'Offline',u.pronouns?esc(u.pronouns):''].filter(Boolean).join(' <b>\u2022</b> ');
+  const pst=pfStatus(id,online,deleted);
+  const sub=deleted?'Account deleted':[pst.label,u.pronouns?esc(u.pronouns):''].filter(Boolean).join(' <b>\u2022</b> ');
+  // The custom status is the person's own words, so it is escaped and shown on its own line.
+  const customHtml=(!deleted&&pst.custom)?`<div class="dlpo-custom" style="margin-top:4px;color:var(--text);font-size:13px;opacity:.9;word-break:break-word">${esc(pst.custom)}</div>`:'';
   const roles=deleted?'':profileRolesHTML(id)+serverRolesHTML(id);
   root.innerHTML=`<div class="modal-bg dlpo-bg"><div class="dlpo" role="dialog" aria-label="Profile of ${esc(name)}">
     <div class="dlpo-banner${bannerImgOf(u)?' banner-img':''}" style="background:${bannerBg(u,banner)}"><div class="dlpo-btns">
@@ -146,11 +181,12 @@ function openProfilePopout(id){
       ${canRemove?'<button type="button" class="dlpo-ib" id="poRemove" title="Remove Friend" aria-label="Remove Friend"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 20c0-3.3 3.6-5 8-5s8 1.7 8 5v1H2zM15 9h7v2h-7z"/></svg></button>':''}
       <button type="button" class="dlpo-ib" id="poMore" title="View full profile" aria-label="View full profile"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
     </div></div>
-    <div class="dlpo-av">${av}<span class="dlpo-st"><i class="${online&&!deleted?'on':''}"></i></span></div>
+    <div class="dlpo-av">${av}<span class="dlpo-st"><i class="${pst.on?'on':''}" style="background:${pst.color}"></i></span></div>
     <div class="dlpo-body">
       <div class="dlpo-name">${deleted?esc(name):fullNameHTML(id,esc(name))}</div>
       ${uname}
       <div class="dlpo-sub">${sub}</div>
+      ${customHtml}
       ${(!deleted&&u.description)?`<div class="dlpo-bio">${esc(u.description)}</div>`:''}
       ${deleted?'':'<button type="button" class="dlpo-full" id="poFull">View Full Profile</button>'}
       ${roles}
@@ -286,15 +322,16 @@ function openUserProfile(id,opts){
         ?`<button class="btn sec small" id="pfMvpRemove">Remove MVP</button>`
         :`<button class="btn sec small" id="pfMvpGive">\u{1F3C6} Give MVP</button>`;
     }
-    const statusDot=deleted?'':`<span style="width:9px;height:9px;border-radius:50%;flex:none;${online?'background:#3ddc73;box-shadow:0 0 6px #3ddc73':'background:var(--muted)'}"></span>`;
-    const statusText=deleted?'Account deleted':(online?'Online now':'Offline');
+    const pst2=pfStatus(id,online,deleted);
+    const statusDot=deleted?'':`<span style="width:9px;height:9px;border-radius:50%;flex:none;background:${pst2.color}${pst2.on?';box-shadow:0 0 6px '+pst2.color:''}"></span>`;
+    const statusText=deleted?'Account deleted':(online?pst2.label:'Offline');
 
     root.innerHTML=`<div class="modal-bg"><div class="modal pf-card" style="max-width:340px;padding:0;overflow:hidden">
       <div class="pf-banner${bannerImgOf(u)?' banner-img':' banner-anim'}" style="background:${bannerBg(u,bannerBase)}">
         <button class="pf-x" id="pfClose" title="Close">✕</button>
       </div>
       <div class="pf-body" style="padding:0 24px 24px;margin-top:-46px">
-        <div class="pf-avwrap" style="position:relative;width:fit-content">${av}${online&&!deleted?'<span class="pf-stat" style="position:absolute;bottom:4px;right:4px;width:18px;height:18px;border-radius:50%;background:#3ddc73;box-shadow:0 0 8px #3ddc73;border:3px solid var(--panel)"></span>':''}</div>
+        <div class="pf-avwrap" style="position:relative;width:fit-content">${av}${(pst2.on&&!deleted)?`<span class="pf-stat" style="position:absolute;bottom:4px;right:4px;width:18px;height:18px;border-radius:50%;background:${pst2.color};box-shadow:0 0 8px ${pst2.color};border:3px solid var(--panel)"></span>`:''}</div>
         <div class="pf-namerow" style="display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap">
           <h2 style="margin:0;font-size:20px">${deleted?esc(name):fullNameHTML(id,esc(name))}</h2>
           ${admin&&!owner?'<span class="tag" style="background:#e8503a">Admin</span>':(mod&&!owner?'<span class="tag" style="background:var(--accent)">Mod</span>':'')}
@@ -304,7 +341,9 @@ function openUserProfile(id,opts){
         <div class="pf-sub">${(!deleted&&u.pronouns)?`<div class="pf-pron">${esc(u.pronouns)}</div>`:''}
         <div class="pf-status" style="display:flex;align-items:center;gap:6px;margin-top:6px;color:var(--muted);font-size:13px">
           ${statusDot}<span>${statusText}</span>
-        </div></div>
+        </div>
+        ${(!deleted&&pst2.custom)?`<div class="pf-custom" style="margin-top:6px;font-size:13px;word-break:break-word">${esc(pst2.custom)}</div>`:''}
+        </div>
         ${deleted?'':profileRolesHTML(id)+serverRolesHTML(id)}
         ${vipTimerHTML}
         ${(!deleted&&u.description)?`<div class="pf-desc">${esc(u.description)}</div>`:''}
