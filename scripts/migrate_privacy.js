@@ -22,7 +22,7 @@
  * test/security/migration-rollback.js scenario 12 reproduces this rollback to demonstrate the
  * failure. Its --dry-run and --verify are still accurate and harmless.
  *
- * DO NOT use its --clear-source or --rollback. See MIGRATION-RECOVERY.md.
+ * DO NOT use its --clear-source or --rollback. See the EXIT CODES table at the top of scripts/rollback.js.
  * ============================================================================ */
 /* scripts/migrate_privacy.js — v54.1 finding #2: move private account data out of the
  * world-readable `users` branch.

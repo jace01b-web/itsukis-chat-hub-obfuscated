@@ -8021,6 +8021,78 @@ html.discord-look .dl-stgrid .dl-dot{
   .dmreq-row .dl-fr-acts{width:100%;justify-content:flex-end;margin-top:6px}
 }
 
+/* ==========================================================================
+ * v54.6 — Discover
+ * The toolbar (search + sort + refresh), the skeleton shown while the server list is still
+ * loading, and the marker on a member count that is still the stored placeholder rather than
+ * a live one. Kept here, in the last stylesheet, so it sits above 99-discord-shell.css's
+ * .dvgrid/.dvcard block without needing !important.
+ * ========================================================================== */
+.dvbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.dvbar #dvQ{flex:1 1 180px;min-width:0}
+.dvbar .dvsort{flex:0 0 auto;width:auto;min-width:148px}
+.dvbar .dbtn{flex:0 0 auto}
+
+/* A count that has not been confirmed against the real membership records yet. It is shown
+   rather than hidden - a number that is probably right beats a blank - but it is dimmed, so
+   nobody reads a placeholder as a confirmed figure. */
+.dvcount.pending{opacity:.55}
+
+.dvcard.skel{pointer-events:none;min-height:148px;border-style:dashed}
+.dvcard.skel::before{
+  content:"";display:block;height:48px;width:48px;border-radius:16px;
+  background:var(--dl-bg3,rgba(255,255,255,.06));
+}
+.dvcard.skel::after{
+  content:"";display:block;height:10px;border-radius:5px;
+  background:var(--dl-bg3,rgba(255,255,255,.06));
+}
+@media (prefers-reduced-motion:no-preference){
+  .dvcard.skel::before,.dvcard.skel::after{animation:dvskel 1.2s ease-in-out infinite}
+}
+@keyframes dvskel{0%,100%{opacity:.35}50%{opacity:.8}}
+
+/* Phones: the toolbar stacks instead of squeezing the search box down to nothing, and the
+   sort control takes the full width rather than overflowing the pane. */
+@media (max-width:620px){
+  .dvbar{gap:6px}
+  .dvbar #dvQ{flex:1 1 100%}
+  .dvbar .dvsort{flex:1 1 auto;min-width:0}
+  .dvbar .dbtn{flex:1 1 auto}
+}
+
+/* A Discover card can carry two actions now (Join/Open, plus Manage for a site owner), so the
+   buttons get their own row rather than relying on the card being a column of single children. */
+.dvacts{display:flex;gap:8px;flex-wrap:wrap}
+.dvacts .dbtn{flex:1 1 auto}
+
+/* ==========================================================================
+ * v54.6 — the .dset panes on phones
+ *
+ * At <=820px, 27-discord-exact.css stacks the nav and the main pane into the same grid cell
+ * and shows exactly one of them: `.dset:not(.dset-paned) .dset-main{display:none}`. Server
+ * Settings drives that class when you tap a section, so it works there. Two other panes built
+ * on .dset never did:
+ *
+ *   Discover  has a single, non-clickable nav entry, so nothing could ever add the class and
+ *             the whole page was a heading with blank space under it on every phone.
+ *   The Shop   has clickable sections, but tapping one only changed which section would be
+ *             drawn - into a pane that was still display:none. Tiers, perks and the owner's
+ *             grant form were all unreachable on a phone.
+ *
+ * `dset-solo` is for a pane with nothing to choose between: show the content, drop the nav and
+ * the back arrow that would have nowhere to go back to. The Shop gets the normal paned
+ * behaviour instead, driven from its nav in js/discord/shop.js.
+ * ========================================================================== */
+@media (max-width:820px){
+  html.discord-look .dset.dset-solo .dset-nav{display:none}
+  html.discord-look .dset.dset-solo .dset-main{display:block}
+  html.discord-look .dset.dset-solo .dset-back-mobile{display:none}
+  /* The close button sits top-right over the content, so the first thing in the pane needs
+     room not to run under it. */
+  html.discord-look .dset.dset-solo .dset-main-inner>:first-child{margin-top:4px}
+}
+
 </style>
 <script>
 /* ==========================================================================
@@ -8763,7 +8835,7 @@ function explain(e){
     o.title='Wrong Agora App ID';o.msg=own?'Agora doesn\'t recognise the App ID in voice-channel.js. Copy it again from the Agora Console (it is all lowercase).':'Voice isn\'t set up correctly yet. Please tell an owner.';o.retry=false;
   }else if(/dynamic use static key/i.test(all)){
     o.title=own?'Voice needs a token':'Voice isn\'t ready yet';
-    o.msg=own?(CFG.TOKEN_URL?'Agora got no usable token even though TOKEN_URL is set. Reload the page and retry.':'Your Agora project has the App Certificate turned on, but no token server is configured. Either switch the project to "App ID" mode in the Agora Console, or deploy worker/agora-token-worker.js and set TOKEN_URL (see VOICE-SETUP.md).'):'The owner still has to finish setting up voice. Try again later.';o.retry=!!own;
+    o.msg=own?(CFG.TOKEN_URL?'Agora got no usable token even though TOKEN_URL is set. Reload the page and retry.':'Your Agora project has the App Certificate turned on, but no token server is configured. Either switch the project to "App ID" mode in the Agora Console, or deploy worker/agora-token-worker.js and set TOKEN_URL (see the setup notes in package.json ("comments" -> "setup")).'):'The owner still has to finish setting up voice. Try again later.';o.retry=!!own;
   }else if(/invalid token|token.*(expire|invalid|fail)|authorized failed|DYNAMIC_KEY|TOKEN_EXPIRED/i.test(all)&&!/^TOKEN_(SERVER|DENIED|AUTH)$/.test(code)){
     o.title='Voice token was rejected';o.msg=own?'The token server answered, but Agora refused the token. Check that AGORA_APP_ID and AGORA_APP_CERTIFICATE in the Worker belong to this same project.':'Voice had a hiccup. Try again in a moment.';
   }else if(code==='TOKEN_DENIED'){
@@ -9743,7 +9815,7 @@ const CFG={
   MAX_IMG_DATAURL_CHARS:700000,
   // --- File uploads (GIF / video / audio / text / other) ---
   // Default: Firebase Storage (needs the Blaze plan). FREE alternative with no card: Cloudinary.
-  // Fill BOTH of these in (see SETUP-FILES.md, "No Blaze plan?") and uploads go to Cloudinary instead.
+  // Fill BOTH of these in (see the setup notes in package.json ("comments" -> "setup"), "No Blaze plan?") and uploads go to Cloudinary instead.
   CLOUDINARY_CLOUD:'itsukischathub',     // your Cloudinary "cloud name", e.g. 'dab12xyz'
   CLOUDINARY_PRESET:'itsukischathub',    // name of an UNSIGNED upload preset, e.g. 'ich_chat'
   MIN_PW:6,
@@ -9783,7 +9855,7 @@ const CFG={
      ships with: with it off, the Daily Spin cannot award VIP Forever or MVP at all, because the
      database rules refuse a browser that tries to write either to itself. Set this to the same
      origin as TOS_API once api/spin.js is deployed there, and the two jackpots come back -
-     decided and written by the server. See SECURITY_AUDIT.md (H2) and DEPLOY-API.md. */
+     decided and written by the server. See the security notes in package.json ("comments" -> "security") (H2) and the deployment notes in package.json ("comments" -> "deploy"). */
   SPIN_API:'',
   /* Where POST /api/login lives. EMPTY = off, which is the default.
      Only accounts whose Firebase Auth email is a REAL address need it: their address is no
@@ -9801,7 +9873,7 @@ const CFG={
      There is no secret-keeping version of the fallback. A URL the browser can post to is a URL
      the browser can read, so if /api is unreachable there is simply no Discord post - the
      database receipt is still written. The old webhook must be deleted and recreated: see
-     SECURITY_AUDIT.md, "credential rotation". */
+     the security notes in package.json ("comments" -> "security"), "credential rotation". */
   ATTEST_EVERY_MS:4*60*1000,      // how often the browser asks the server to re-clear this login (server grants 8 min at a time)
   IP_BAN_FULL_LOCK:false,         // false = an IP-banned network can't CHAT. true = it is locked out of the whole menu like a banned account
   // --- NSFW image detection (Nyckel) ---
@@ -9810,7 +9882,7 @@ const CFG={
      It was a live API secret in a file served to every visitor. Scanning now goes through
      POST /api/nsfw, which holds the credential in the Vercel environment and returns only a
      verdict. The old secret is compromised and must be rotated in the Nyckel dashboard -
-     moving it server-side does not un-publish it. See SECURITY_AUDIT.md.
+     moving it server-side does not un-publish it. See the security notes in package.json ("comments" -> "security").
      The two ids below are not secrets: they name which account and which function to call, and
      they are useless without the secret. Kept so the client can tell whether scanning is set
      up at all, and so the diagnostics can say which function it would use. */
@@ -10089,7 +10161,7 @@ onValue(R('modSettings'),s=>{MODSET={filterEnabled:false,filterNames:false,custo
  *      file card (name, size, snippet, Download) for text files and everything else.
  *
  * Normal (non-GIF) pictures keep using the old compress-to-database path in attachments.js.
- * Needs: storage.rules + the `files` rule in database.rules.json (see SETUP-FILES.md).
+ * Needs: storage.rules + the `files` rule in database.rules.json (see the setup notes in package.json ("comments" -> "setup")).
  * Loaded by js/loader.js (load order lives in js/manifest.js).
  * ========================================================================== */
 'use strict';
@@ -10296,7 +10368,7 @@ FILES._upload=async function(ent,rerender){
     ent.state='error';ent.task=null;
     const c=err&&err.code;
     ent.error=c==='storage/unauthorized'?'Not allowed (rules / file type / size)':c==='storage/canceled'?'Cancelled':c==='storage/retry-limit-exceeded'?'Network problem':(c||err.message||'Upload failed');
-    if(c==='storage/unauthorized')toast('Upload was refused by Firebase Storage. If this keeps happening, the Storage rules from SETUP-FILES.md still need to be published.','bad');
+    if(c==='storage/unauthorized')toast('Upload was refused by Firebase Storage. If this keeps happening, the Storage rules from the setup notes in package.json ("comments" -> "setup") still need to be published.','bad');
   }
   rerender();
 };
@@ -10561,7 +10633,7 @@ function outranks(actor,target){
  *       rank:   50                 (optional; higher sits higher in the member list. Default 0)
  *       members: { "7": 1, "12": 1 }   (user IDs -> 1)
  *
- * Database rules must make it world-readable and client-unwritable (see SETUP-CUSTOMROLES.md):
+ * Database rules must make it world-readable and client-unwritable (see the setup notes in package.json ("comments" -> "setup")):
  *   "customroles": { ".read": true, ".write": false }
  * ========================================================================== */
 let CUSTOM_ROLES_CACHE={};
@@ -10743,7 +10815,58 @@ const DModel=(()=>{
     if(sid!==ICH_ID)w('servers/'+sid,v=>{if(v)S.servers[sid]=v;else{delete S.servers[sid]}});
     perServerUnsubs[sid]=list;
   }
+  /* ---------- holding a server you are not in (v54.6) ----------
+
+     attachServer() is driven by userServers/$me: you get listeners for the servers you have
+     joined and for no others, which is what keeps a member of two servers from paying for two
+     hundred. The consequence nobody had chased down is that a SITE OWNER looking at somebody
+     else's server had no data about it at all - DModel.roles() returned a lone synthesised
+     @everyone, DModel.server() returned null, and so:
+
+       - rolesOf() handed the owner "every role in the server" out of an empty list, which is
+         every role of nothing. Their name had no colour, they sat in no role group, and the
+         role manager had nothing to manage - all while can() cheerfully returned true.
+       - openServerMenu() begins `const srv=DModel.server(sid); if(!srv)return;`, so the menu
+         for such a server was not merely missing Delete Server, it did not open at all.
+
+     The database already allows the reads (serverRoles/$sid, serverChannels/$sid,
+     serverMembers/$sid and servers/$sid are readable by any signed-in account). What was
+     missing was somewhere to ask for them. holdServer() is that: a reference-counted,
+     explicitly temporary attachment, taken by the pieces of UI that need to show or edit a
+     server the viewer has not joined and released when they close. Nothing holds one by
+     default, so the cost model for ordinary members is exactly what it was. */
+  const heldServers={};        // sid -> hold count
+  function holdServer(sid){
+    if(!sid||sid===ICH_ID)return()=>{};
+    heldServers[sid]=(heldServers[sid]||0)+1;
+    attachServer(sid);
+    let done=false;
+    return()=>{
+      if(done)return;done=true;
+      heldServers[sid]=Math.max(0,(heldServers[sid]||1)-1);
+      if(!heldServers[sid]){delete heldServers[sid];if(!S.myServers[sid])detachServer(sid)}
+    };
+  }
+  /* Hold a server and resolve once its core data has actually arrived, so a caller can open a
+     menu or a settings pane against it instead of against nothing. Resolves with the release
+     function either way - a server that never answers (deleted, or a read refused) still has to
+     be let go of. */
+  function holdServerReady(sid,ms){
+    const release=holdServer(sid);
+    if(sid===ICH_ID||S.servers[sid])return Promise.resolve(release);
+    const deadline=Date.now()+(Number(ms)||2500);
+    return new Promise(res=>{
+      (function poll(){
+        if(S.servers[sid]||Date.now()>deadline)return res(release);
+        setTimeout(poll,60);
+      })();
+    });
+  }
+
   function detachServer(sid){
+    /* A held server stays attached even when the membership watcher says it is not mine -
+       being held is the whole point. */
+    if(heldServers[sid])return;
     const l=perServerUnsubs[sid];if(!l)return;
     l.forEach(u=>{try{u()}catch(_){}});delete perServerUnsubs[sid];
     delete S.channels[sid];delete S.cats[sid];delete S.roles[sid];delete S.members[sid];
@@ -10773,7 +10896,7 @@ const DModel=(()=>{
     });
     watch('channelServer',v=>{S.chanServer=v||{};emitSoon()});
     watch('serverOrder/'+myId,v=>{S.order=v||{};emitSoon()});
-    watch('serverDiscovery',v=>{S.discovery=v||{};emitSoon()});
+    watch('serverDiscovery',v=>{S.discovery=v||{};syncDiscoveryWatchers();emitSoon()});
     emitSoon();
     /* Housekeeping, once the first round of listeners has had time to deliver: drop servers
        that were deleted while I was away, and re-assert my channel access everywhere in case a
@@ -10789,8 +10912,16 @@ const DModel=(()=>{
   }
   function stop(){
     unsubs.splice(0).forEach(u=>{try{u()}catch(_){}});
+    /* Drop the holds BEFORE detaching: detachServer() refuses to touch a held server, so
+       clearing them afterwards would leave its listeners running against a signed-out session. */
+    Object.keys(heldServers).forEach(sid=>delete heldServers[sid]);
     Object.keys(perServerUnsubs).forEach(detachServer);
-    S.myServers={};S.chanServer={};S.order={};
+    /* v54.6: the Discover count listeners are per-account too. Left attached across a sign-out
+       they would keep firing against the previous session's auth - which is how a count could
+       still be the old account's answer after signing back in as somebody else. */
+    Object.keys(discUnsub).forEach(sid=>{try{discUnsub[sid]()}catch(_){}delete discUnsub[sid];delete discCounts[sid]});
+    discHolders=0;
+    S.myServers={};S.chanServer={};S.order={};S.discovery={};
   }
 
   /* ======================================================================
@@ -11017,33 +11148,61 @@ const DModel=(()=>{
     /* The ICH server stays undeletable even for a site owner. Everything on the site lives in
        it; there is no undo, and no reason to allow it by accident. Delete its channels instead. */
     if(isSystem(sid))throw new Error('The ICH server cannot be deleted.');
-    /* v54.5: deleting a server belongs to the person who made it, and to nobody else.
-       v54.4 had handed this to site owners on the grounds that they outrank every server
-       everywhere else. Outranking a server is not the same as owning it: every other staff
-       power is reversible - a ban is lifted, a role is given back, a channel is remade - and
-       this one destroys the server, its channels, its roles and its entire history for
-       everybody in it, with no undo and no copy kept. A site owner who needs a server gone
-       can still moderate it, or ask the person who owns it.
-       Site owners keep every other power here, including deleting their OWN servers. */
-    if(!isServerOwner(sid,myId))
-      throw new Error(isOwner(myId)
-        ?'Only the person who created this server can delete it — site owners included. You can still moderate it, or ask its owner to remove it.'
-        :'Only the server owner can delete this server.');
-    const chans=channels(sid);
+    /* v54.6: the site owner can delete ANY custom server again, and the server's own owner can
+       still delete theirs. v54.5 had narrowed this to the server's own owner on the grounds
+       that destroying somebody's server is irreversible. That is true, and it is why the
+       confirmation in the UI names the server and its member count out loud - but the site
+       owner runs the site, and "I can moderate it but not remove it" left no way to take down
+       a server that has to go. Both halves of the rules were narrowed with it
+       (scripts/remove_rules_owner_delete.py); scripts/add_rules_owner_delete.py puts them back,
+       so the client and the database agree again rather than the client asking for writes the
+       rules refuse.
+       ICH is still exempt, above, for everybody. */
+    const siteOwner=(()=>{try{return isOwner(myId)}catch(_){return false}})();
+    if(!isServerOwner(sid,myId)&&!siteOwner)
+      throw new Error('Only the server owner, or a site owner, can delete this server.');
+    /* A site owner is usually NOT a member of the server they are removing, so S.members[sid]
+       is empty for them - nothing is listening to a server they never joined. Read the member
+       list directly rather than trusting the cache, or every member keeps a dead entry in their
+       own server list and the server reappears in their rail until pruneDeadServers() catches
+       it. Same reasoning for the channel list. */
+    let memberIdsLive=Object.keys(S.members[sid]||{});
+    try{
+      const live=(await get(R('serverMembers/'+sid))).val();
+      if(live&&typeof live==='object')memberIdsLive=Object.keys(live);
+    }catch(_){}
+    let chans=channels(sid);
+    if(!chans.length){
+      try{
+        const raw=(await get(R('serverChannels/'+sid))).val()||{};
+        chans=Object.keys(raw).map(cid=>({id:cid,...raw[cid]})).filter(c=>c&&c.key);
+      }catch(_){}
+    }
     const patch={};
     patch['servers/'+sid]=null;patch['serverChannels/'+sid]=null;patch['serverCats/'+sid]=null;
     patch['serverRoles/'+sid]=null;patch['serverBans/'+sid]=null;patch['serverMutes/'+sid]=null;
     patch['serverIpBans/'+sid]=null;patch['serverDiscovery/'+sid]=null;
+    /* v54.6: the server-scoped nodes added after v54.4 were never in this patch, so a deleted
+       server left its events, its custom emoji, its membership-screening record and its audit
+       log behind for ever - orphans keyed by an id nothing resolves any more. */
+    patch['serverEvents/'+sid]=null;patch['serverEmoji/'+sid]=null;
+    patch['memberScreen/'+sid]=null;patch['auditLog/'+sid]=null;
     // the per-code lookups have to go individually; the invites themselves go with the server
     try{
       const codes=Object.keys((await get(R('invites/'+sid))).val()||{});
       codes.forEach(c=>{patch['inviteCodes/'+c]=null});
     }catch(_){}
     patch['invites/'+sid]=null;
-    Object.keys(S.members[sid]||{}).forEach(uid=>{patch['userServers/'+uid+'/'+sid]=null});
+    memberIdsLive.forEach(uid=>{patch['userServers/'+uid+'/'+sid]=null});
     patch['serverMembers/'+sid]=null;
     chans.forEach(c=>{patch['channelServer/'+c.key]=null;patch['roomMembers/'+c.key]=null});
     await update(ref(rtdb),patch);
+    /* Everything above is one atomic multi-path write, so the server is either wholly gone or
+       wholly still there. The two clean-ups below are deliberately outside it: each touches a
+       node whose rules scope writes to their own owner, so folding them in would make the whole
+       delete fail for anyone but that person. They are best-effort by design. */
+    // Each member keeps their own rail order; only they may write it, so only mine goes here.
+    try{await remove(R('serverOrder/'+myId+'/'+sid))}catch(_){}
     /* Boosts are released separately and AFTER the server is gone, not in the patch above:
        serverBoosts/$sid/$uid is writable only by $uid, so an owner deleting a server they do not
        boost cannot clear other people's records inside their own write - the whole multi-path
@@ -11063,6 +11222,7 @@ const DModel=(()=>{
     patch['userServers/'+myId+'/'+sid]=null;
     channels(sid).forEach(c=>{patch['roomMembers/'+c.key+'/'+myId]=null});
     await update(ref(rtdb),patch);
+    try{await refreshDiscoveryCount(sid)}catch(_){}
   }
 
   async function setServerOrder(ids){
@@ -11587,9 +11747,37 @@ const DModel=(()=>{
     return l.length?l[0].pos:0;
   }
 
-  /* ---------- permission resolution ---------- */
+  /* ---------- permission resolution ----------
+
+     Two different questions get asked of this layer, and v54.6 stops answering them with one
+     function, because the single answer was wrong for one of them:
+
+       storedPerms()  "what do this member's ACTUAL role assignments grant?"
+                      Site ownership is deliberately NOT folded in. This is what gets flattened
+                      into serverMembers/$sid/$uid/p for the database rules to read, and writing
+                      an all-true row there for a site owner would be exactly the fake role
+                      assignment that must not be left behind: take site ownership away and the
+                      rules would keep honouring the stale cache. The rules already test
+                      owners/$id themselves, so a site owner never needs a row.
+
+       basePerms()    "what can this person actually DO here, right now?"
+                      Site ownership IS folded in, because that is the honest answer and it is
+                      the one every UI gate wants. Before v54.6 this returned the union of the
+                      roles a site owner virtually holds, so a server whose roles happened not to
+                      include, say, manageEmoji left the owner's button greyed out while can()
+                      said yes - the exact "model says true, interface hides it" split.
+  */
+  function storedPerms(sid,uid){
+    uid=Number(uid==null?myId:uid);
+    if(isServerOwner(sid,uid))return permsAll();
+    const out={};
+    storedRolesOf(sid,uid).forEach(r=>{PERM_KEYS.forEach(k=>{if(r.perms&&r.perms[k])out[k]=true})});
+    if(out.admin)return permsAll();
+    return out;
+  }
   function basePerms(sid,uid){
     uid=Number(uid==null?myId:uid);
+    try{if(isOwner(uid))return permsAll()}catch(_){}
     if(isServerOwner(sid,uid))return permsAll();
     const out={};
     rolesOf(sid,uid).forEach(r=>{PERM_KEYS.forEach(k=>{if(r.perms&&r.perms[k])out[k]=true})});
@@ -11665,7 +11853,10 @@ const DModel=(()=>{
      cannot be self-granted. Anything that changes who has what must call syncPerms afterwards,
      or the rules will keep enforcing the old answer. */
   function effectiveFor(sid,uid){
-    const p=basePerms(sid,uid);
+    /* storedPerms, NOT basePerms: this row is a cache of what the member's real roles grant.
+       A site owner's powers come from owners/$id, which the rules read directly, so folding
+       them in here would write a row that outlives the ownership that justified it. */
+    const p=storedPerms(sid,uid);
     const out={};
     PERM_KEYS.forEach(k=>{out[k]=p[k]===true?true:null});
     return out;
@@ -11800,7 +11991,16 @@ const DModel=(()=>{
     const m=(S.members[sid]||{})[uid]||{};
     return{id:uid,at:m.at||0,nick:m.nick?String(m.nick).slice(0,32):'',roles:m.roles||{}};
   }
-  function memberCount(sid){return sid===ICH_ID?memberIds(sid).length:Object.keys(S.members[sid]||{}).length}
+  /* v54.6: counts the membership RECORDS, and falls back to the Discover listener for a server
+     this account is not in - a site owner looking at somebody else's server has no
+     serverMembers listener of their own, and used to be told it had 0 members. */
+  function memberCount(sid){
+    if(sid===ICH_ID)return memberIds(sid).length;
+    const map=S.members[sid];
+    if(map&&typeof map==='object'&&Object.keys(map).length)return countMembership(map);
+    if(Object.prototype.hasOwnProperty.call(discCounts,sid))return discCounts[sid];
+    return countMembership(map);
+  }
   async function setNick(sid,uid,nick){
     uid=Number(uid);
     if(uid===Number(myId)){if(!can(sid,'changeNick'))throw new Error('You cannot change your nickname here.')}
@@ -11816,6 +12016,7 @@ const DModel=(()=>{
     const patch={['serverMembers/'+sid+'/'+uid]:null,['userServers/'+uid+'/'+sid]:null};
     channels(sid).forEach(c=>{patch['roomMembers/'+c.key+'/'+uid]=null});
     await update(ref(rtdb),patch);
+    try{await refreshDiscoveryCount(sid)}catch(_){}
   }
   /* ======================================================================
    *  PER-SERVER MODERATION
@@ -11869,6 +12070,7 @@ const DModel=(()=>{
     const patch={['serverMembers/'+sid+'/'+uid]:null,['userServers/'+uid+'/'+sid]:null};
     channels(sid).forEach(c=>{patch['roomMembers/'+c.key+'/'+uid]=null});
     await update(ref(rtdb),patch);
+    try{await refreshDiscoveryCount(sid)}catch(_){}
   }
   async function unbanMember(sid,uid){
     uid=Number(uid);
@@ -11922,15 +12124,92 @@ const DModel=(()=>{
   /* ======================================================================
    *  DISCOVERY  (opt-in public listing)
    * ====================================================================== */
+  /* ---------- live member counts for Discover (v54.6) ----------
+
+     serverDiscovery/$sid/members is a NUMBER COPIED INTO THE LISTING when the server was
+     published. Nothing updated it afterwards: joining, leaving, a kick, a ban and a member
+     whose account was deleted all left it exactly as it was the day the owner ticked the box,
+     and the rules only let that server's own staff write it, so a joiner could not correct it
+     even in principle. Discover was therefore showing a number that was right once.
+
+     The fix is not to try harder to keep the copy in step - it is to stop reading it. The real
+     membership records ARE readable by any signed-in account (serverMembers/$sid/.read), so the
+     count shown is derived from them, live. One listener per listed server, attached while
+     Discover is open and dropped when it closes, which also makes "updates without a refresh",
+     "accurate across two different browsers" and "accurate after signing out and back in" the
+     same single mechanism rather than three.
+
+     The stored copy is kept only as the ordering hint used for the very first paint, before any
+     live count has arrived, and is never allowed to override one that has.
+  */
+  const discCounts={};        // sid -> live member count
+  const discUnsub={};         // sid -> unsubscribe
+  let discHolders=0;          // how many open Discover views want these listeners
+  function countMembership(v){
+    if(!v||typeof v!=='object')return 0;
+    /* Count membership RECORDS, not keys: a half-written or nulled child is not a member, and
+       the same uid can only appear once as a key, so duplicates are impossible by construction. */
+    return Object.keys(v).filter(k=>{
+      const m=v[k];
+      return !!m&&(typeof m==='object'||m===true);
+    }).length;
+  }
+  function syncDiscoveryWatchers(){
+    const want=discHolders>0?Object.keys(S.discovery||{}):[];
+    want.forEach(sid=>{
+      if(discUnsub[sid])return;
+      discUnsub[sid]=onValue(R('serverMembers/'+sid),
+        s=>{const n=countMembership(s.val());if(discCounts[sid]!==n){discCounts[sid]=n;emitSoon()}},
+        e=>console.warn('[DModel] discover count denied',sid,e&&e.code));
+    });
+    Object.keys(discUnsub).forEach(sid=>{
+      if(want.indexOf(sid)>=0)return;
+      try{discUnsub[sid]()}catch(_){}
+      delete discUnsub[sid];delete discCounts[sid];
+    });
+  }
+  /* Called by the Discover view when it opens; the returned function is called when it closes.
+     Reference-counted so two open views (desktop pane + quick switcher) do not fight. */
+  function holdDiscoveryCounts(){
+    discHolders++;syncDiscoveryWatchers();
+    let done=false;
+    return()=>{if(done)return;done=true;discHolders=Math.max(0,discHolders-1);syncDiscoveryWatchers()};
+  }
+  /* The number to SHOW for a server. In order of trust:
+       1. the full membership map, if I am in the server and already listening to it;
+       2. the Discover listener's live count;
+       3. the stored copy, as a first-paint placeholder only.
+     `live` says which of those it was, so the view can avoid re-sorting on a placeholder. */
+  function discoveryCount(sid){
+    if(S.members[sid]&&typeof S.members[sid]==='object'&&Object.keys(S.members[sid]).length)
+      return{n:countMembership(S.members[sid]),live:true};
+    if(Object.prototype.hasOwnProperty.call(discCounts,sid))return{n:discCounts[sid],live:true};
+    const v=(S.discovery||{})[sid]||{};
+    return{n:Math.max(0,Number(v.members)||0),live:false};
+  }
+
   function discoveryList(){
     const raw=S.discovery||{};
     return Object.keys(raw).map(sid=>{
       const v=raw[sid];if(!v||!v.name)return null;
+      const c=discoveryCount(sid);
       return{id:sid,name:String(v.name).slice(0,40),icon:String(v.icon||'').slice(0,8),
              // the listing is world-writable by its own server's staff, so validate before use
              img:isSafeServerImg(v.img)?v.img:'',desc:String(v.desc||'').slice(0,200),
-             members:Number(v.members)||0,at:Number(v.at)||0};
+             members:c.n,liveMembers:c.live,storedMembers:Number(v.members)||0,at:Number(v.at)||0};
     }).filter(Boolean).sort((a,b)=>b.members-a.members||a.name.localeCompare(b.name));
+  }
+  /* Best-effort refresh of the stored copy, for whoever happens to be able to write it. Called
+     after the membership of a listed server changes under someone with the right to correct it,
+     and when its own staff open Discover. It can never be the thing the UI reads - see above -
+     it only stops the placeholder being wildly wrong for a brand-new visitor's first paint. */
+  async function refreshDiscoveryCount(sid){
+    if(!isPublic(sid))return false;
+    const c=discoveryCount(sid);
+    if(!c.live)return false;
+    if(Number((S.discovery[sid]||{}).members)===c.n)return false;
+    try{await set(R('serverDiscovery/'+sid+'/members'),c.n);return true}
+    catch(_){return false}        // not ours to write; the derived count is still what shows
   }
   function isPublic(sid){return !!(S.discovery&&S.discovery[sid])}
   async function setPublic(sid,on,desc){
@@ -11938,7 +12217,12 @@ const DModel=(()=>{
     if(sid===ICH_ID)throw new Error('ICH is not listed in Discover — everyone is already in it.');
     if(!on){await remove(R('serverDiscovery/'+sid));return}
     const srv=server(sid);if(!srv)throw new Error('That server is gone.');
-    const rec={name:srv.name,at:Date.now()+SKEW,members:memberCount(sid)};
+    /* Read the membership straight from the database rather than from whatever this client
+       happens to have cached, so a server listed by a site owner who is not in it does not get
+       published advertising zero members. */
+    let n=memberCount(sid);
+    try{const live=(await get(R('serverMembers/'+sid))).val();if(live!==undefined)n=countMembership(live)}catch(_){}
+    const rec={name:srv.name,at:Date.now()+SKEW,members:n};
     if(srv.icon)rec.icon=srv.icon;
     if(srv.img)rec.img=srv.img;
     if(desc)rec.desc=String(desc).slice(0,200);
@@ -11963,6 +12247,11 @@ const DModel=(()=>{
     Object.keys(chans).forEach(cid=>{const k=chans[cid]&&chans[cid].key;if(k)access['roomMembers/'+k+'/'+myId]=true});
     if(Object.keys(access).length){try{await update(ref(rtdb),access)}catch(e){console.warn('[DModel] access write failed',e&&e.code)}}
     await postJoinMessage(sid);
+    /* The listing's stored count is now one behind. Correcting it is not what makes Discover
+       right - the derived count already moved the moment the membership record landed, in this
+       browser and in everybody else's - this just keeps the placeholder honest for whoever
+       loads Discover next. It is refused for an ordinary joiner by the rules, which is fine. */
+    try{await refreshDiscoveryCount(sid)}catch(_){}
     return sid;
   }
 
@@ -12004,7 +12293,7 @@ const DModel=(()=>{
     createChannel,updateChannel,deleteChannel,
     createCategory,updateCategory,deleteCategory,
     roles,role,rolesOf,storedRolesOf,colorOf,topRole,highestPos,
-    can,canIn,canManageRole,canManageMember,basePerms,
+    can,canIn,canManageRole,canManageMember,basePerms,storedPerms,
     createRole,updateRole,deleteRole,reorderRoles,setMemberRole,setChannelOverride,
     memberIds,member,memberCount,setNick,kickMember,groupedMembers,syncPerms,
     systemChannel,joinMessagesOn,
@@ -12012,8 +12301,9 @@ const DModel=(()=>{
     muteUntil,isServerMuted,timeoutMember,
     myIpHash,ipBannedHere,ipBanHash,ipUnbanHash,ipBanList,
     discoveryList,isPublic,setPublic,joinPublic,
+    discoveryCount,holdDiscoveryCounts,refreshDiscoveryCount,
     joinLimit,ownLimit,joinedCount,ownedCount,limitInfo,
-    grantAccess,pruneDeadServers,isDenied,
+    grantAccess,pruneDeadServers,isDenied,holdServer,holdServerReady,
     _state:S
   };
 })();
@@ -12038,7 +12328,7 @@ const NSFW={
      readable by anyone who viewed the source - and with it, anybody could spend the Nyckel
      account's quota or lock it out. The credential now lives only in the Vercel environment and
      this file asks POST /api/nsfw for a verdict. It never sees a credential.
-     (The old secret is compromised and has to be rotated; see SECURITY_AUDIT.md.) */
+     (The old secret is compromised and has to be rotated; see the security notes in package.json ("comments" -> "security").) */
   api(){
     const base=String(CFG.NSFW_API||CFG.TOS_API||'').replace(/\/$/,'');
     return base?base+'/api/nsfw':'';
@@ -12290,7 +12580,7 @@ const DB=(()=>{
      Until v54.1 this file opened a listener on the whole `users` branch, which worked because
      the rules carried `users/.read = auth != null`. That single grant was two problems at once:
        * privacy  - it handed every signed-in account everybody's email and private settings
-       * quota    - avatars are stored inline, so a sign-in downloaded ~18 MB (FREE-PLAN-COMPATIBILITY.md)
+       * quota    - avatars are stored inline, so a sign-in downloaded ~18 MB (the migration notes in package.json ("comments" -> "migrations"))
      `users/.read` is gone. A read must now name one account, so the cache is filled on demand.
 
      Each account that appears on screen gets its own listener, so statuses, avatars and display
@@ -12512,7 +12802,7 @@ const DB=(()=>{
      itself, and mints the token. Returns null when the endpoint is not configured or not
      deployed, so the caller can fall back to "sign in with your email instead".
      This is the ONLY place a password leaves the page for anywhere other than Google, which is
-     why it is opt-in: LOGIN_API is empty unless you set it. See SECURITY_AUDIT.md. */
+     why it is opt-in: LOGIN_API is empty unless you set it. See the security notes in package.json ("comments" -> "security"). */
   async function serverLogin(username,password){
     const base=String(CFG.LOGIN_API||'').replace(/\/$/,'');
     if(!base)return null;
@@ -14278,7 +14568,7 @@ const DB=(()=>{
       return newName;
     },
     /* Owner-only TOS acceptance log (tosLog/, written by /api/tos with the Admin SDK — see
-       SETUP-SECURITY.md). It holds the raw IP, so the rules let only owners read it, and it is
+       the setup notes in package.json ("comments" -> "setup")). It holds the raw IP, so the rules let only owners read it, and it is
        fetched on demand rather than watched: a non-owner's listener would just be denied. */
     async tosLog(){
       if(!isOwner(myId))throw new Error('Only owners can see the TOS log.');
@@ -14569,13 +14859,13 @@ const DB=(()=>{
       if(isOwner(id))throw new Error('Owners already have every MVP perk.');
       if(mvpOn(id))throw new Error('That user is already an MVP.');
       try{await update(ref(rtdb),{['mvp/'+id]:Math.round(Date.now()+SKEW)})}
-      catch(e){throw new Error(e.code==='PERMISSION_DENIED'?'Database refused it. Publish the MVP database rules (see SETUP-MVP.md).':'Could not grant MVP: '+(e.code||e.message))}
+      catch(e){throw new Error(e.code==='PERMISSION_DENIED'?'Database refused it. Publish the MVP database rules (see the setup notes in package.json ("comments" -> "setup")).':'Could not grant MVP: '+(e.code||e.message))}
     },
     async removeMvp(id){
       if(!isOwner(myId))throw new Error('Only owners can remove MVP.');
       id=Number(id);if(!id)throw new Error('Enter a valid user ID.');
       try{await update(ref(rtdb),{['mvp/'+id]:null,['spinWin/'+id]:null})}
-      catch(e){throw new Error(e.code==='PERMISSION_DENIED'?'Database refused it. Publish the MVP database rules (see SETUP-MVP.md).':'Could not remove MVP: '+(e.code||e.message))}
+      catch(e){throw new Error(e.code==='PERMISSION_DENIED'?'Database refused it. Publish the MVP database rules (see the setup notes in package.json ("comments" -> "setup")).':'Could not remove MVP: '+(e.code||e.message))}
     },
     /* --- Version history / forced updates --- */
     // The build this tab is actually running, from the <meta name="build-version"> tag
@@ -16972,7 +17262,7 @@ const SPIN_PRIZES=[
  *        api/spin.js follows api/totaward.js, which already decides Trick-or-Treat placings
  *        server-side for exactly this reason.
  *
- *  See SECURITY_AUDIT.md (H2) and DEPLOY-API.md.
+ *  See the security notes in package.json ("comments" -> "security") (H2) and the deployment notes in package.json ("comments" -> "deploy").
  * ====================================================================== */
 /* v54.1: nonce plumbing for the server-authoritative spin (see api/spin.js). */
 let _spinNonce='';
@@ -17263,7 +17553,7 @@ function openSpin(){
     <div class="spin-res" id="spinRes" aria-live="polite"></div>
     <button class="btn spin-go" id="spinBtn" type="button"></button>
     <div class="odds-grid">${spinPrizes().map(p=>'<div class="odd'+(p.id==='vip1'||p.id==='vipperm'?' vip':'')+(p.id==='mvp'?' mvp':'')+'"><span>'+p.e+' '+p.name+'</span><b>'+fmtPct(p.pct)+'%</b></div>').join('')}</div>
-    ${spinServer()?'':'<div class="hint" style="margin-top:8px">VIP Forever and MVP are not on the wheel on this install. They can only be awarded by the server, so that nobody can hand them to themselves \u2014 see DEPLOY-API.md to switch them on.</div>'}
+    ${spinServer()?'':'<div class="hint" style="margin-top:8px">VIP Forever and MVP are not on the wheel on this install. They can only be awarded by the server, so that nobody can hand them to themselves \u2014 see the deployment notes in package.json ("comments" -> "deploy") to switch them on.</div>'}
     ${mvpPerksHTML()}
     <div class="spin-roles" id="spinRoles">${spinRolesHTML()}</div>
     <div class="mvp-hall" id="mvpHall">${mvpHallHTML()}</div>
@@ -17380,7 +17670,7 @@ async function doSpin(){
     console.error('spin write failed',e,Object.keys(up));
     _spinBusy=false;setSpinBtn();
     res.className='spin-res bad';
-    res.textContent='The spin could not be saved ('+(e.code||e.message)+'). Blocked paths: '+Object.keys(up).join(', ')+'.'+(/mvp|spinWin/.test(Object.keys(up).join(','))?' If this is about MVP, publish the MVP database rules (SETUP-MVP.md).':'');
+    res.textContent='The spin could not be saved ('+(e.code||e.message)+'). Blocked paths: '+Object.keys(up).join(', ')+'.'+(/mvp|spinWin/.test(Object.keys(up).join(','))?' If this is about MVP, publish the MVP database rules (the setup notes in package.json ("comments" -> "setup")).':'');
     return;
   }
   animateTo(prize,wasMvp);
@@ -22212,7 +22502,7 @@ const DPolls=(function(){
 
   /* Creates the message and then the poll, in that order and not atomically, because the rules
      for `q` read the message's senderId - which does not exist until the message does. The same
-     staged-writes rule the server model lives by; see section 4 of DISCORD-REBUILD.md. */
+     staged-writes rule the server model lives by; see section 4 of the design notes at the top of js/discord/model.js. */
   async function create(key,{question,options,multi,hours}){
     if(!ME)throw new Error('Not signed in.');
     /* Options are checked FIRST: "a poll needs two options" is the more useful complaint when
@@ -23027,7 +23317,7 @@ function openAccountLegacy(){
       const out=await mvpBannerFromFile(f);
       await DB.updateSettings(ME.id,{banner:out});
       ME=DB.currentUser();toast('Image banner saved!');openAccountLegacy();
-    }catch(e){err.textContent=e.message||('Could not save: '+(e.code||e))+(/PERMISSION/i.test(e.code||e.message||'')?' \u2014 publish the MVP database rules (SETUP-MVP.md).':'')}
+    }catch(e){err.textContent=e.message||('Could not save: '+(e.code||e))+(/PERMISSION/i.test(e.code||e.message||'')?' \u2014 publish the MVP database rules (the setup notes in package.json ("comments" -> "setup")).':'')}
   };
   if($('#acBnRemove'))$('#acBnRemove').onclick=async()=>{
     try{await DB.updateSettings(ME.id,{banner:''});ME=DB.currentUser();toast('Image banner removed.');openAccountLegacy()}
@@ -25863,7 +26153,7 @@ function rulesHint(e,what){
   const code=(e&&(e.code||e.message))||'';
   if(/permission|denied/i.test(String(code))){
     return isOwner(ME.id)
-      ? 'Saving the '+what+' was refused. The published database rules are older than this build — republish firebase-rules.json (see DEPLOY.md).'
+      ? 'Saving the '+what+' was refused. The published database rules are older than this build — republish firebase-rules.json (see the deployment notes in package.json ("comments" -> "deploy")).'
       : 'Saving the '+what+' was refused. This is a setup problem on the site, not something you did — tell an owner.';
   }
   return 'Could not save the '+what+' ('+String(code).slice(0,80)+').';
@@ -27413,7 +27703,7 @@ const TOT_GAMES=[
  * site is run from than it needs to.
  *
  * Everything lives under tot/p/<id> in the database and is written by the player's own client
- * (the rules allow only that, and rate-limit it — see SETUP-TRICKORTREAT.md). Nothing here
+ * (the rules allow only that, and rate-limit it — see the setup notes in package.json ("comments" -> "setup")). Nothing here
  * touches the existing Halloween Pass in js/features/halloween.js; that uses HW_/hw*, this uses
  * TOT_/tot*.
  * Loaded by js/loader.js (load order lives in js/manifest.js).
@@ -28842,7 +29132,7 @@ async function tosClientHash(ip){
 async function tosClientDiscord(f){
   return 'server-only';
 }
-// Used by tosCheckIp when the server cannot answer: is THIS network in ipBans? (needs the ipBans/$h read rule - see RULES-PATCH.md)
+// Used by tosCheckIp when the server cannot answer: is THIS network in ipBans? (needs the ipBans/$h read rule - see the rules notes in package.json ("comments" -> "rules"))
 async function tosClientBanCheck(){
   try{
     const ip=await tosClientIp();if(!ip)return;
@@ -30430,10 +30720,18 @@ const DiscordShell=(function(){
           const mine=DModel.myServers().map(s=>s.id);
           if(view.mode==='global'&&view.sid&&mine.indexOf(view.sid)<0){
             const was=view.sid;
+            /* v54.6: a settings pane open on that server is now closed with it. It outlived the
+               server before, leaving a full-screen editor whose every save bounced off the
+               rules with no explanation - and it sits above the shell, so the fallback below
+               repainted invisibly underneath it. */
+            try{if(typeof closeServerSettings==='function')closeServerSettings()}catch(_){}
+            /* Gone from my list and gone from the database are different things: deleted, or
+               just no longer mine. Say which. */
+            const deleted=!DModel.server(was);
             view.sid=DModel.ICH_ID;
             try{localStorage.setItem('ich.sid',DModel.ICH_ID)}catch(_){}
             if(view.roomKey&&DModel.channels(DModel.ICH_ID).every(c=>c.key!==view.roomKey))selectRoom(CFG.GLOBAL_ROOM);
-            if(was)toast('You are no longer in that server.');
+            if(was)toast(deleted?'That server was deleted.':'You are no longer in that server.');
           }
           if(view.page==='chatPage'&&typeof renderChat==='function')renderChat();
           else refresh();
@@ -30528,15 +30826,25 @@ const DI={
  * 2. CONTEXT MENU
  * ====================================================================== */
 let _dctx=null;
-function closeCtx(){if(_dctx){_dctx.remove();_dctx=null}}
+/* v54.6: a menu may be holding a temporary attachment to a server the viewer has not joined
+   (see DModel.holdServer). Whatever closes the menu - a click outside, Escape, a resize, an
+   item being chosen - has to let that go, so the release lives here with the element rather
+   than at any one of those call sites. */
+let _dctxClose=null;
+function closeCtx(){
+  if(_dctx){_dctx.remove();_dctx=null}
+  if(_dctxClose){const f=_dctxClose;_dctxClose=null;try{f()}catch(_){}}
+}
 document.addEventListener('click',e=>{if(_dctx&&!e.target.closest('.dctx'))closeCtx()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeCtx()});
 window.addEventListener('resize',closeCtx);
 window.addEventListener('scroll',closeCtx,{passive:true,capture:true});
 
-/* items: [{label, icon, danger, disabled, onClick} | {sep:true} | {label:'...', head:true}] */
-function openCtx(anchorOrEvent,items){
+/* items: [{label, icon, danger, disabled, onClick} | {sep:true} | {label:'...', head:true}]
+   opts.onClose: called once, whenever this menu goes away. */
+function openCtx(anchorOrEvent,items,opts){
   closeCtx();
+  _dctxClose=(opts&&typeof opts.onClose==='function')?opts.onClose:null;
   const el=document.createElement('div');
   el.className='dctx';
   items.forEach(it=>{
@@ -30794,8 +31102,21 @@ function openJoinServer(){
 /* ======================================================================
  * 6. SERVER MENU  (the dropdown under the server name)
  * ====================================================================== */
-function openServerMenu(anchor,sid,ev){
-  const srv=DModel.server(sid);if(!srv)return;
+async function openServerMenu(anchor,sid,ev){
+  /* v54.6: a site owner can be asked for this menu on a server they have never joined - from
+     Discover, or from a server that was handed to somebody else. The model has no data about
+     such a server until it is asked for, and this function used to give up silently on the very
+     first line, so the menu did not open at all. Ask for the data, wait briefly, and release
+     the hold when the menu closes. Members are unaffected: holdServerReady() resolves
+     immediately for a server that is already attached. */
+  let release=null;
+  if(!DModel.server(sid)&&sid!==DModel.ICH_ID){
+    let siteOwner=false;try{siteOwner=isOwner(ME&&ME.id)}catch(_){}
+    if(!siteOwner)return;
+    try{release=await DModel.holdServerReady(sid)}catch(_){}
+  }
+  const srv=DModel.server(sid);
+  if(!srv){if(release)release();return}
   const sys=DModel.isSystem(sid);
   const items=[];
   if(DModel.can(sid,'invite',ME.id))items.push({label:'Invite People',icon:DI.invite,onClick:()=>openInvite(sid)});
@@ -30827,33 +31148,52 @@ function openServerMenu(anchor,sid,ev){
       }
     });
   }});
+  /* v54.6. Two things changed here.
+
+     1. The entry is shown to a SITE OWNER as well, for any custom server. deleteServer() had
+        allowed it again, but this menu still asked isServerOwner() and nothing else - so the
+        power existed in the model and there was no button anywhere that reached it, which is
+        the same as not having it.
+     2. The confirmation now names what is about to be destroyed - the server, by name, and how
+        many members lose it - and says whose server it is when it is not yours. An
+        irreversible action on somebody else's property should not look identical to one on
+        your own. */
   const deleteItem=()=>({label:'Delete Server',icon:DI.trash,danger:true,onClick:()=>{
+    const mine=DModel.isServerOwner(sid,ME.id);
+    let n=0;try{n=DModel.memberCount(sid)}catch(_){}
+    let ownerName='';
+    if(!mine){
+      try{const u=DB.getUser(srv.ownerId);ownerName=u?dispName(u,'User '+srv.ownerId):''}catch(_){}
+    }
     dconfirm({
       title:'Delete ‘'+srv.name+'’',
-      sub:'Are you sure you want to delete <b>'+esc(srv.name)+'</b>? This cannot be undone, and every '+
-          'channel, role, message and member in it goes with it.',
+      sub:'<b>'+esc(srv.name)+'</b> will be permanently deleted'+
+          (n?' for its <b>'+n+'</b> member'+(n===1?'':'s'):'')+'. Its channels, roles, invites, '+
+          'messages and member list all go with it. <b>This cannot be undone.</b>'+
+          (mine?'':'<div class="dnote" style="margin-top:10px">You are deleting this as a <b>site owner</b>'+
+               (ownerName?' — it belongs to <b>'+esc(ownerName)+'</b>':'')+', not as its owner.</div>'),
       confirm:'Delete Server',danger:true,
       onConfirm:async()=>{
         await DModel.deleteServer(sid);
         goHomeAfter();
-        toast('Server deleted.');
+        toast('‘'+srv.name+'’ was deleted.','good');
       }
     });
   }});
   if(sys){
-    // ICH is the site itself - there is deliberately no way out of it.
+    // ICH is the site itself - there is deliberately no way out of it, for anybody.
     items.push({label:'Home server — can’t be left',disabled:true});
-  }else if(DModel.isServerOwner(sid,ME.id)){
-    /* The owner gets BOTH, with Delete underneath Leave, which is where it was asked for.
-       Leaving your own server is still refused in the model (it would orphan the place), and
-       the entry says so rather than disappearing - otherwise an owner who wants out has no idea
-       that deleting is the way to do it. */
-    items.push(leaveItem());
-    items.push(deleteItem());
   }else{
-    items.push(leaveItem());
+    const srvOwner=DModel.isServerOwner(sid,ME.id);
+    let siteOwner=false;try{siteOwner=isOwner(ME.id)}catch(_){}
+    /* Leaving your own server is refused in the model (it would orphan the place) and the entry
+       says so rather than disappearing - otherwise an owner who wants out has no idea that
+       deleting is the way. A site owner who is not a member has nothing to leave. */
+    if(!srvOwner&&!DModel.inServer(sid,ME.id)&&siteOwner){/* nothing to leave */}
+    else items.push(leaveItem());
+    if(srvOwner||siteOwner)items.push(deleteItem());
   }
-  openCtx(ev||anchor,items);
+  openCtx(ev||anchor,items,release?{onClose:release}:null);
 }
 
 /* ======================================================================
@@ -31333,7 +31673,14 @@ function registerServerSection(def){
 }
 
 let _dset=null;
-function closeServerSettings(){if(_dset){_dset.remove();_dset=null;document.removeEventListener('keydown',_dsetKey)}}
+/* v54.6: when this pane was opened on a server the viewer has not joined (a site owner
+   managing somebody else's), it is holding a temporary attachment to that server's data.
+   Releasing it belongs here, with the close, so every way out releases it exactly once. */
+let _dsetRelease=null;
+function closeServerSettings(){
+  if(_dset){_dset.remove();_dset=null;document.removeEventListener('keydown',_dsetKey)}
+  if(_dsetRelease){const f=_dsetRelease;_dsetRelease=null;try{f()}catch(_){}}
+}
 function _dsetKey(e){
   if(e.key!=='Escape')return;
   // on a phone, Escape backs out of a section to the list before it closes the whole panel
@@ -31344,9 +31691,20 @@ function _dsetKey(e){
   closeServerSettings();
 }
 
-function openServerSettings(sid,section){
+async function openServerSettings(sid,section){
   closeServerSettings();
-  const srv=DModel.server(sid);if(!srv)return;
+  /* A site owner can legitimately be managing a server they are not a member of. The model
+     only listens to servers you have joined, so ask for this one and wait for it before
+     drawing a pane that would otherwise have no roles, no channels and no members in it. */
+  let release=null;
+  if(!DModel.server(sid)&&sid!==DModel.ICH_ID){
+    let siteOwner=false;try{siteOwner=isOwner(ME&&ME.id)}catch(_){}
+    if(!siteOwner)return;
+    try{release=await DModel.holdServerReady(sid)}catch(_){}
+  }
+  const srv=DModel.server(sid);
+  if(!srv){if(release)release();return}
+  _dsetRelease=release;
   let sec=section||'overview';
 
   const el=document.createElement('div');
@@ -32410,13 +32768,25 @@ function openShop(){
     '<div class="dset-main"><div class="dset-main-inner" id="shMain"></div></div>'+
     '<div class="dset-close-col"><button type="button" class="dset-close" id="shX" aria-label="Close">'+DI.x+
       '</button><div class="dset-close-lbl">ESC</div></div>'+
-    '<button type="button" class="dset-x-mobile" id="shXm" aria-label="Close">'+DI.x+'</button>';
+    '<button type="button" class="dset-x-mobile" id="shXm" aria-label="Close">'+DI.x+'</button>'+
+    /* v54.6, phone only (CSS hides it elsewhere): back to the section list. Without the paned
+       behaviour below, every section of the Shop was display:none on a phone. */
+    '<button type="button" class="dset-back-mobile" id="shBack" aria-label="Back to the shop menu">'+
+      '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>'+
+      '<span>Shop</span></button>';
   document.body.appendChild(el);
   const close=()=>{el.remove();document.removeEventListener('keydown',onKey)};
-  function onKey(e){if(e.key==='Escape')close()}
+  const narrow=()=>!!(window.matchMedia&&window.matchMedia('(max-width:820px)').matches);
+  function onKey(e){
+    if(e.key!=='Escape')return;
+    // on a phone, Escape backs out of a section to the list before it closes the whole panel
+    if(narrow()&&el.classList.contains('dset-paned')){el.classList.remove('dset-paned');return}
+    close();
+  }
   document.addEventListener('keydown',onKey);
   el.querySelector('#shX').onclick=close;
   el.querySelector('#shXm').onclick=close;
+  el.querySelector('#shBack').onclick=()=>el.classList.remove('dset-paned');
 
   const nav=el.querySelector('#shNav'),main=el.querySelector('#shMain');
   let sec='shop';
@@ -32428,7 +32798,12 @@ function openShop(){
     nav.innerHTML=items.map(it=>it.cat
       ?'<div class="dset-cat">'+esc(it.cat)+'</div>'
       :'<div class="dset-item'+(sec===it.k?' active':'')+'" data-k="'+it.k+'">'+esc(it.n)+'</div>').join('');
-    nav.querySelectorAll('[data-k]').forEach(n=>n.onclick=()=>{sec=n.dataset.k;draw()});
+    nav.querySelectorAll('[data-k]').forEach(n=>n.onclick=()=>{
+      sec=n.dataset.k;
+      // phones show one pane at a time; picking a section is what reveals it
+      if(narrow())el.classList.add('dset-paned');
+      draw();
+    });
     if(sec==='shop')drawShop();
     else if(sec==='perks')drawCompare();
     else drawGrant();
@@ -32803,9 +33178,27 @@ async function handleInviteLink(){
 /* ======================================================================
  * 3. DISCOVER
  * ====================================================================== */
+/* v54.6 — rebuilt.
+
+   What was wrong, and what each piece here is for:
+
+   - The member count came from serverDiscovery/$sid/members, a number written once when the
+     server was published and never again. It is now derived from the real membership records,
+     live, through DModel.holdDiscoveryCounts(): one listener per listed server for as long as
+     this view is open, dropped the moment it closes. Joins, leaves, kicks, bans and removals
+     all move it, in every open browser at once, with no refresh and nothing cached to go stale.
+   - There was no loading state, so an empty database and a database that had not answered yet
+     looked identical ("No servers are listed yet") - which is also what a PERMISSION ERROR
+     looked like.
+   - There was no sort control and no refresh.
+   - Redrawing on every model change threw away what was typed in the search box; the draw is
+     now split so the list repaints under a search field that is left alone.
+*/
 function openDiscover(){
   const el=document.createElement('div');
-  el.className='dset';
+  /* dset-solo: Discover has one section and no list to choose from, so on a phone the pane
+     shows its content instead of an empty nav column. See css/29-v54.css. */
+  el.className='dset dset-discover dset-solo';
   el.innerHTML=
     '<div class="dset-nav"><div class="dset-nav-inner">'+
       '<div class="dset-cat">Discover</div>'+
@@ -32816,71 +33209,189 @@ function openDiscover(){
       '</button><div class="dset-close-lbl">ESC</div></div>'+
     '<button type="button" class="dset-x-mobile" id="dvXm" aria-label="Close">'+DI.x+'</button>';
   document.body.appendChild(el);
-  const close=()=>{el.remove();document.removeEventListener('keydown',onKey)};
+
+  /* Hold the live-count listeners for exactly as long as this view exists, and let go of them
+     on every way out - the X, the mobile X, Escape, and following a server into the app. */
+  let release=null;
+  try{release=DModel.holdDiscoveryCounts()}catch(_){}
+  let offModel=null;
+  const close=()=>{
+    document.removeEventListener('keydown',onKey);
+    if(offModel){try{offModel()}catch(_){}offModel=null}
+    if(release){try{release()}catch(_){}release=null}
+    el.remove();
+  };
   function onKey(e){if(e.key==='Escape')close()}
   document.addEventListener('keydown',onKey);
   el.querySelector('#dvX').onclick=close;
   el.querySelector('#dvXm').onclick=close;
   const main=el.querySelector('#dvMain');
-  let q='';
 
-  function draw(){
-    let list=DModel.discoveryList();
+  let q='';
+  let sort='members';                       // members | name | new
+  /* 'loading' until the discovery node has answered once. DModel subscribes to serverDiscovery
+     at sign-in, so the answer is usually already here; this covers the cold case and, just as
+     importantly, stops "nothing is listed" being shown for a read that was refused. */
+  let phase=(DModel._state&&DModel._state.discovery&&Object.keys(DModel._state.discovery).length)?'ready':'loading';
+  let errMsg='';
+  const settle=setTimeout(()=>{if(phase==='loading'){phase='ready';paint()}},4000);
+
+  const SORTS=[['members','Most members'],['name','Name'],['new','Newest']];
+
+  function sorted(list){
+    const l=list.slice();
+    if(sort==='name')l.sort((a,b)=>a.name.localeCompare(b.name));
+    else if(sort==='new')l.sort((a,b)=>(b.at||0)-(a.at||0)||a.name.localeCompare(b.name));
+    else l.sort((a,b)=>b.members-a.members||a.name.localeCompare(b.name));
+    return l;
+  }
+
+  function cardHTML(s){
+    const mine=DModel.inServer(s.id,ME.id);
+    const banned=DModel.isServerBanned(s.id,ME.id);
+    const ic=s.img?'<img src="'+esc(s.img)+'" alt="">':esc(s.icon||s.name.slice(0,2).toUpperCase());
+    /* The count is marked while it is still the stored placeholder, so nobody is shown a stale
+       number as if it were confirmed. In practice it is replaced within a frame or two. */
+    const n=s.members;
+    const cnt='<span class="dvcount'+(s.liveMembers?'':' pending')+'" data-count="'+esc(s.id)+'">'+
+      n+' member'+(n===1?'':'s')+'</span>';
+    /* A site owner gets a way in that does not require joining. Site ownership is read from
+       owners/ - never from anything the browser can set - so this button appears for the
+       person who runs the site and for nobody else, and it opens the SAME settings pane with
+       the same permission checks inside it; it is a route to the pane, not a bypass of it. */
+    let siteOwner=false;try{siteOwner=isOwner(ME.id)}catch(_){}
+    const manage=(siteOwner&&!mine)
+      ?'<button type="button" class="dbtn sm sec" data-manage="'+esc(s.id)+'">Manage</button>':'';
+    return '<div class="dvcard" data-card="'+esc(s.id)+'">'+
+      '<div class="dvtop"><div class="dvic">'+ic+'</div>'+
+        '<div class="dvmeta"><div class="dvname">'+esc(s.name)+'</div>'+
+        '<div class="dvsub">'+cnt+'</div></div></div>'+
+      '<div class="dvdesc">'+(s.desc?esc(s.desc):'<i>No description.</i>')+'</div>'+
+      '<div class="dvacts">'+
+        (banned
+          ?'<button type="button" class="dbtn sm grey" disabled>Banned</button>'
+          :mine
+            ?'<button type="button" class="dbtn sm grey" data-go="'+esc(s.id)+'">Open</button>'
+            :'<button type="button" class="dbtn sm" data-join="'+esc(s.id)+'">Join</button>')+
+        manage+
+      '</div>'+
+    '</div>';
+  }
+
+  /* The list only. Called on every model change, and deliberately does NOT touch the search
+     field or the sort control above it, so typing survives a count arriving. */
+  function paintList(){
+    const box=main.querySelector('#dvList');
+    if(!box)return;
+    if(phase==='error'){
+      box.innerHTML='<div class="dempty"><b>Discover could not be loaded.</b><div class="dhint" style="margin-top:6px">'+
+        esc(errMsg||'The server list could not be read. Check your connection and try again.')+
+        '</div><button type="button" class="dbtn sec sm" id="dvRetry" style="margin-top:12px">Try again</button></div>';
+      const r=box.querySelector('#dvRetry');if(r)r.onclick=()=>{phase='loading';errMsg='';paint();setTimeout(()=>{phase='ready';paint()},600)};
+      return;
+    }
+    if(phase==='loading'){
+      box.innerHTML='<div class="dvgrid">'+'<div class="dvcard skel"></div>'.repeat(6)+'</div>';
+      return;
+    }
+    let list;
+    try{list=DModel.discoveryList()}
+    catch(e){phase='error';errMsg=(e&&e.message)||'';paintList();return}
     const needle=q.trim().toLowerCase();
     if(needle)list=list.filter(s=>s.name.toLowerCase().includes(needle)||(s.desc||'').toLowerCase().includes(needle));
+    list=sorted(list);
+    box.innerHTML=list.length
+      ?'<div class="dvgrid">'+list.map(cardHTML).join('')+'</div>'
+      :'<div class="dempty">'+(needle
+          ?'No public servers match “'+esc(q.trim())+'”.'
+          :'No servers are listed yet. A server owner can list theirs in Server Settings → Overview.')+'</div>';
+    wireCards(box);
+  }
+
+  function wireCards(box){
+    box.querySelectorAll('[data-join]').forEach(b=>b.onclick=async()=>{
+      const sid=b.dataset.join;
+      b.disabled=true;b.textContent='Joining…';
+      try{
+        await DModel.joinPublic(sid);
+        toast('Joined.','good');
+        close();
+        enterServer(sid);
+      }catch(e){
+        toast((e&&e.message)||'Could not join','bad');
+        b.disabled=false;b.textContent='Join';
+      }
+    });
+    box.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{const sid=b.dataset.go;close();enterServer(sid)});
+    /* Manage keeps Discover open underneath, so closing the settings pane puts the site owner
+       back where they were instead of at the top of the app. */
+    box.querySelectorAll('[data-manage]').forEach(b=>b.onclick=async()=>{
+      const sid=b.dataset.manage;
+      b.disabled=true;const was=b.textContent;b.textContent='Opening…';
+      try{await openServerSettings(sid)}
+      catch(e){toast((e&&e.message)||'Could not open that server','bad')}
+      b.disabled=false;b.textContent=was;
+    });
+  }
+
+  /* One place that actually moves the app into a server, used by both Join and Open, so the
+     two can never drift apart. The channel list for a server joined a moment ago may not have
+     arrived yet, so this waits for it rather than landing on a blank chat. */
+  function enterServer(sid){
+    view.mode='global';view.sid=sid;
+    try{localStorage.setItem('ich.sid',sid)}catch(_){}
+    let tries=0;
+    (function go(){
+      const c=DModel.channels(sid).find(x=>x.type!=='voice');
+      if(c){selectRoom(c.key)}
+      else if(tries++<12){setTimeout(go,250);return}
+      else renderChat();
+      try{if(typeof DiscordShell!=='undefined')DiscordShell.refresh()}catch(_){}
+    })();
+  }
+
+  // The whole pane. Only called when the chrome itself has to change.
+  function paint(){
     main.innerHTML=
       '<div class="dshop-hero" style="background:linear-gradient(135deg,#5865f2 0%,#3ba55d 100%)">'+
         '<h1>Find your community</h1>'+
         '<p>Public servers anyone on ICH can join. A server only appears here if its owner has listed it.</p>'+
       '</div>'+
-      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px">'+
-        '<input class="dinput" id="dvQ" placeholder="Search public servers" value="'+esc(q)+'" style="flex:1;min-width:180px">'+
-        '<button type="button" class="dbtn grey" id="dvCode">Have a code?</button>'+
+      '<div class="dvbar">'+
+        '<input class="dinput" id="dvQ" placeholder="Search public servers" value="'+esc(q)+'">'+
+        '<select class="dinput dvsort" id="dvSort" aria-label="Sort public servers">'+
+          SORTS.map(([v,l])=>'<option value="'+v+'"'+(sort===v?' selected':'')+'>'+l+'</option>').join('')+
+        '</select>'+
+        '<button type="button" class="dbtn grey sm" id="dvRefresh">Refresh</button>'+
+        '<button type="button" class="dbtn grey sm" id="dvCode">Have a code?</button>'+
       '</div>'+
-      (list.length?'<div class="dvgrid">'+list.map(s=>{
-        const mine=DModel.inServer(s.id,ME.id);
-        const banned=DModel.isServerBanned(s.id,ME.id);
-        const ic=s.img?'<img src="'+esc(s.img)+'" alt="">':esc(s.icon||s.name.slice(0,2).toUpperCase());
-        return '<div class="dvcard">'+
-          '<div class="dvtop"><div class="dvic">'+ic+'</div>'+
-            '<div class="dvmeta"><div class="dvname">'+esc(s.name)+'</div>'+
-            '<div class="dvsub">'+s.members+' member'+(s.members===1?'':'s')+'</div></div></div>'+
-          '<div class="dvdesc">'+(s.desc?esc(s.desc):'<i>No description.</i>')+'</div>'+
-          (banned
-            ?'<button type="button" class="dbtn sm grey" disabled>Banned</button>'
-            :mine
-              ?'<button type="button" class="dbtn sm grey" data-go="'+esc(s.id)+'">Open</button>'
-              :'<button type="button" class="dbtn sm" data-join="'+esc(s.id)+'">Join</button>')+
-        '</div>';
-      }).join('')+'</div>'
-      :'<div class="dempty">'+(needle?'No public servers match that.':'No servers are listed yet. A server owner can list theirs in Server Settings → Overview.')+'</div>');
-
+      '<div id="dvList"></div>';
     const qi=main.querySelector('#dvQ');
-    qi.oninput=()=>{q=qi.value;const at=qi.selectionStart;draw();const n=main.querySelector('#dvQ');n.focus();try{n.setSelectionRange(at,at)}catch(_){}};
+    qi.oninput=()=>{q=qi.value;paintList()};
+    main.querySelector('#dvSort').onchange=e=>{sort=e.target.value;paintList()};
     main.querySelector('#dvCode').onclick=()=>{close();openJoinServer()};
-    main.querySelectorAll('[data-join]').forEach(b=>b.onclick=async()=>{
-      b.disabled=true;b.textContent='Joining…';
+    const rb=main.querySelector('#dvRefresh');
+    rb.onclick=async()=>{
+      rb.disabled=true;const was=rb.textContent;rb.textContent='Refreshing…';
+      /* The listeners are live, so there is nothing to re-fetch - what this does is push the
+         derived counts back into the stored copies for any server this account is allowed to
+         correct, then repaint. For everybody else it is simply a repaint, which is honest:
+         the numbers on screen were already current. */
       try{
-        const sid=await DModel.joinPublic(b.dataset.join);
-        toast('Joined.','good');close();
-        view.mode='global';view.sid=sid;
-        try{localStorage.setItem('ich.sid',sid)}catch(_){}
-        setTimeout(()=>{
-          const c=DModel.channels(sid).find(x=>x.type!=='voice');
-          if(c)selectRoom(c.key);else renderChat();
-          if(typeof DiscordShell!=='undefined')DiscordShell.refresh();
-        },450);
-      }catch(e){toast(e.message||'Could not join','bad');b.disabled=false;b.textContent='Join'}
-    });
-    main.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{
-      const sid=b.dataset.go;close();
-      view.mode='global';view.sid=sid;
-      try{localStorage.setItem('ich.sid',sid)}catch(_){}
-      const c=DModel.channels(sid).find(x=>x.type!=='voice');
-      if(c)selectRoom(c.key);else renderChat();
-    });
+        const ids=DModel.discoveryList().map(s=>s.id);
+        for(const sid of ids){try{await DModel.refreshDiscoveryCount(sid)}catch(_){}}
+      }catch(_){}
+      paintList();
+      rb.disabled=false;rb.textContent=was;
+    };
+    paintList();
   }
-  draw();
+
+  paint();
+  /* Repaint the list - and only the list - whenever the model changes: a count moving, a server
+     being listed or unlisted, somebody else deleting one while this is open. */
+  try{offModel=DModel.onChange(()=>{if(!el.isConnected){close();return}if(phase==='loading'){phase='ready'}paintList()})}catch(_){}
+  el.addEventListener('remove',()=>clearTimeout(settle));
 }
 
 /* ======================================================================

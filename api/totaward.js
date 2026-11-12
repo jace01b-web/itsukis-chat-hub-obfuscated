@@ -13,7 +13,7 @@
  *   1st      MVP + permanent VIP + the "Halloween Champion" role
  *   2nd-5th  permanent VIP + "Halloween Legend"
  *   6th-10th 24h VIP + "Halloween Top 10"
- * See SETUP-TRICKORTREAT.md. Awarding twice is harmless - every write is idempotent.
+ * See the setup notes in package.json ("comments" -> "setup"). Awarding twice is harmless - every write is idempotent.
  */
 const L = require('./_lib');
 

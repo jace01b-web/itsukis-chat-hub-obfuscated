@@ -37,7 +37,7 @@ WHAT CHANGES
 RUN THE SUITES AFTERWARDS
   The attack suite carries cases that assert the v54.4 behaviour; they are updated in the same
   patch to assert this one instead. compat-diff reports these as changes against the baseline,
-  which is correct and intended - see V54-5-CHANGES.md.
+  which is correct and intended - see the v54.5 notes in package.json ("comments" -> "history").
 """
 import json, sys, collections, re
 

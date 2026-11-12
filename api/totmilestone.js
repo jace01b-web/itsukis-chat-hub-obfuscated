@@ -7,7 +7,7 @@
  * of the database and decides from that, so a tampered client can't claim a milestone it hasn't
  * reached. The browser sends no figure at all.
  *
- * This exists because custom roles are `.write:false` for every client (see SETUP-CUSTOMROLES.md).
+ * This exists because custom roles are `.write:false` for every client (see the setup notes in package.json ("comments" -> "setup")).
  * The Admin SDK is the only thing that can write them, and it only runs here.
  * Thresholds and ids must match TOT_MILES in js/features/trick-or-treat.js.
  */

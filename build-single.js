@@ -57,3 +57,18 @@ html=html.slice(0,a)+'<!-- single-file build: css + js inlined by build-single.j
 fs.mkdirSync(path.join(__dirname,'dist'),{recursive:true});
 fs.writeFileSync(path.join(__dirname,'dist/index.single.html'),html);
 console.log('wrote dist/index.single.html ('+Math.round(html.length/1024)+' KB)');
+
+/* v54.6. The build label in index.html is BOTH the cache-buster (js/loader.js appends it as
+   ?v= to every file) and half of an HMAC pair the API checks - the other half is the
+   build-token meta tag, which is HMAC(BUILD_SECRET, label). Editing the label by hand breaks
+   the pair and api/_lib.js then answers 'forged' for every attestation call, so a release
+   that forgets to re-stamp either serves stale JavaScript or loses TOS/IP checking. Neither
+   failure is loud, which is why this prints every time. */
+const stamped=(html.match(/name="build-version" content="([^"]+)"/)||[])[1]||'(none)';
+console.log('');
+console.log('  build label in this file : '+stamped);
+console.log('  BEFORE DEPLOYING, re-stamp it so the cache-buster changes and the token still matches:');
+console.log('      BUILD_SECRET=<the same value as in Vercel> node tools/stamp-build.js');
+console.log('      node build-single.js          # rebuild this file with the new label');
+console.log('  then set MIN_BUILD in Vercel to the label it printed.');
+console.log('  Do NOT edit the label by hand: the token is an HMAC of it and the API will reject the pair.');

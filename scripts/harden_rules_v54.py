@@ -47,7 +47,7 @@ WHAT IT FIXES
 
       This is a rules change AND a client change. js/features/vip-and-spin.js had to change in
       the same breath, or a spin that landed on the jackpot would be refused and the whole
-      atomic update - including the spin marker - would fail. See SECURITY_AUDIT.md section H2.
+      atomic update - including the spin marker - would fail. See the security notes in package.json ("comments" -> "security") section H2.
 
   H3  FUNCTIONAL  "Clear the audit log" could never have worked
       DAudit.clear() removes auditLog/$sid, but the only .write rule under auditLog was on
@@ -70,7 +70,7 @@ WHAT IT FIXES
 WHAT IT DELIBERATELY DOES NOT CHANGE
   The broad `users/.read`, the globally readable `dmMembers`, joining by server id, and the
   pre-authentication usernameLogin lookup. Each is a real finding, each is written up in
-  SECURITY_AUDIT.md with what it would cost to fix, and each would break something that 3,100
+  the security notes in package.json ("comments" -> "security") with what it would cost to fix, and each would break something that 3,100
   existing accounts rely on if changed without the migration described there. Fixing them
   quietly in a rules file would be the wrong way round.
 """

@@ -135,7 +135,7 @@ function fromFile(p) {
       console.log('  ' + a.invalidOrConflicting + ' record(s) hold different values in the public and private copies.'
         + '\n  Which one is live is not for a script to decide — look at these yourself.');
     console.log('');
-    console.log('  Fix: PRIVACY_MIGRATION.md, or in short');
+    console.log('  Fix: the migration notes in package.json ("comments" -> "migrations"), or in short');
     console.log('    node scripts/migration-backup.js        (first, always)');
     console.log('    node scripts/migration.js --dry-run');
     console.log('    node scripts/migration.js');

@@ -13,7 +13,7 @@
  *
  *   TREAT THE OLD SECRET AS COMPROMISED. Moving it here does not un-publish it - it was in
  *   public JavaScript and in the single-file build, and both are on GitHub. Rotate it in the
- *   Nyckel dashboard. See SECURITY_AUDIT.md, "credential rotation".
+ *   Nyckel dashboard. See the security notes in package.json ("comments" -> "security"), "credential rotation".
  *
  * ENVIRONMENT (Vercel > Settings > Environment Variables)
  *   NYCKEL_CLIENT_ID       required

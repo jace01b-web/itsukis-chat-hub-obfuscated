@@ -6,6 +6,30 @@
  *   FIREBASE_SA="$(cat service-account.json)" node scripts/rollback.js --force
  *   FIREBASE_SA="$(cat service-account.json)" node scripts/rollback.js --verify-only
  *
+ * EXIT CODES  (the single source of truth is EXIT in scripts/_migration_lib.js; this table is
+ *             the human-readable copy, kept here rather than in a separate document so it
+ *             cannot drift away from the script it describes. test/security/rollback-exit.js
+ *             checks that both exist and agree.)
+ *
+ *     exit code 0  OK            everything in the backup came back, and verification agreed.
+ *     exit code 1  CONFLICTS     one or more records had changed since the backup and were
+ *                                left alone. The rollback is real but INCOMPLETE: the run
+ *                                prints each conflicting path. Re-run with --force to
+ *                                overwrite them deliberately.
+ *     exit code 2  CANNOT_RUN    the rollback never started - no backup file, unreadable or
+ *                                invalid JSON, no credentials, or a refused connection.
+ *                                Nothing was written. This is the code that must never be
+ *                                confused with success.
+ *     exit code 3  VERIFY_FAILED the writes went in, but reading them back did not match the
+ *                                backup, and no skipped conflict explains the difference.
+ *                                Treat the database as half-restored and investigate before
+ *                                running anything else.
+ *     exit code 4  BOTH          conflicts were skipped AND verification failed for records
+ *                                those conflicts do not account for.
+ *
+ *   --dry-run reports the code a real run WOULD end with, so a deployment script can gate on
+ *   it without changing anything.
+ *
  * WHAT WAS WRONG BEFORE
  *   The v54.1 rollback restored `users/$id/email` and `users/$id/settings` from the `userPrivate`
  *   copies, and never touched `usernameLogin`. But `usernameLogin` is what the migration

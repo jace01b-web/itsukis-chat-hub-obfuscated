@@ -78,6 +78,6 @@ console.log('  Moving avatars out of the users node makes it about '
   + Math.round(fixed.signins / Math.max(1, now.signins)) + 'x cheaper ('
   + fixed.signins.toLocaleString() + ' loads/month),');
 console.log('  with avatars then fetched only for the faces actually on screen.');
-console.log('\n  The migration is described in FREE-PLAN-COMPATIBILITY.md. It is additive and');
+console.log('\n  The migration is described in the migration notes in package.json ("comments" -> "migrations"). It is additive and');
 console.log('  reversible: new avatars are written to the new place AND read with a fallback to');
 console.log('  the old one, so nothing breaks while the copy is still going on.');

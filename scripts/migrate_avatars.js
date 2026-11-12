@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* scripts/migrate_avatars.js — step 4 of the avatar migration in FREE-PLAN-COMPATIBILITY.md
+/* scripts/migrate_avatars.js — step 4 of the avatar migration in the migration notes in package.json ("comments" -> "migrations")
  *
  *   FIREBASE_SA="$(cat service-account.json)" node scripts/migrate_avatars.js --dry-run
  *   FIREBASE_SA="$(cat service-account.json)" node scripts/migrate_avatars.js
@@ -135,7 +135,7 @@ const MB = 1048576;
     }
     if (!haveAvatar) { console.log('nothing in the source to clear.'); return; }
     console.log('Clearing users/$id/style/{avatar,banner} for ' + haveAvatar + ' accounts.');
-    console.log('Your way back is the JSON export from step 2 of FREE-PLAN-COMPATIBILITY.md.');
+    console.log('Your way back is the JSON export from step 2 of the migration notes in package.json ("comments" -> "migrations").');
     console.log('Starting in 10 seconds — Ctrl+C to stop.');
     await sleep(10000);
     let n = 0;

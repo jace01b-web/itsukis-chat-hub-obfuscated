@@ -704,3 +704,75 @@ html.discord-look .dl-stgrid .dl-dot{
   .dmreq-row .dl-fr-who small{max-width:100%}
   .dmreq-row .dl-fr-acts{width:100%;justify-content:flex-end;margin-top:6px}
 }
+
+/* ==========================================================================
+ * v54.6 — Discover
+ * The toolbar (search + sort + refresh), the skeleton shown while the server list is still
+ * loading, and the marker on a member count that is still the stored placeholder rather than
+ * a live one. Kept here, in the last stylesheet, so it sits above 99-discord-shell.css's
+ * .dvgrid/.dvcard block without needing !important.
+ * ========================================================================== */
+.dvbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.dvbar #dvQ{flex:1 1 180px;min-width:0}
+.dvbar .dvsort{flex:0 0 auto;width:auto;min-width:148px}
+.dvbar .dbtn{flex:0 0 auto}
+
+/* A count that has not been confirmed against the real membership records yet. It is shown
+   rather than hidden - a number that is probably right beats a blank - but it is dimmed, so
+   nobody reads a placeholder as a confirmed figure. */
+.dvcount.pending{opacity:.55}
+
+.dvcard.skel{pointer-events:none;min-height:148px;border-style:dashed}
+.dvcard.skel::before{
+  content:"";display:block;height:48px;width:48px;border-radius:16px;
+  background:var(--dl-bg3,rgba(255,255,255,.06));
+}
+.dvcard.skel::after{
+  content:"";display:block;height:10px;border-radius:5px;
+  background:var(--dl-bg3,rgba(255,255,255,.06));
+}
+@media (prefers-reduced-motion:no-preference){
+  .dvcard.skel::before,.dvcard.skel::after{animation:dvskel 1.2s ease-in-out infinite}
+}
+@keyframes dvskel{0%,100%{opacity:.35}50%{opacity:.8}}
+
+/* Phones: the toolbar stacks instead of squeezing the search box down to nothing, and the
+   sort control takes the full width rather than overflowing the pane. */
+@media (max-width:620px){
+  .dvbar{gap:6px}
+  .dvbar #dvQ{flex:1 1 100%}
+  .dvbar .dvsort{flex:1 1 auto;min-width:0}
+  .dvbar .dbtn{flex:1 1 auto}
+}
+
+/* A Discover card can carry two actions now (Join/Open, plus Manage for a site owner), so the
+   buttons get their own row rather than relying on the card being a column of single children. */
+.dvacts{display:flex;gap:8px;flex-wrap:wrap}
+.dvacts .dbtn{flex:1 1 auto}
+
+/* ==========================================================================
+ * v54.6 — the .dset panes on phones
+ *
+ * At <=820px, 27-discord-exact.css stacks the nav and the main pane into the same grid cell
+ * and shows exactly one of them: `.dset:not(.dset-paned) .dset-main{display:none}`. Server
+ * Settings drives that class when you tap a section, so it works there. Two other panes built
+ * on .dset never did:
+ *
+ *   Discover  has a single, non-clickable nav entry, so nothing could ever add the class and
+ *             the whole page was a heading with blank space under it on every phone.
+ *   The Shop   has clickable sections, but tapping one only changed which section would be
+ *             drawn - into a pane that was still display:none. Tiers, perks and the owner's
+ *             grant form were all unreachable on a phone.
+ *
+ * `dset-solo` is for a pane with nothing to choose between: show the content, drop the nav and
+ * the back arrow that would have nowhere to go back to. The Shop gets the normal paned
+ * behaviour instead, driven from its nav in js/discord/shop.js.
+ * ========================================================================== */
+@media (max-width:820px){
+  html.discord-look .dset.dset-solo .dset-nav{display:none}
+  html.discord-look .dset.dset-solo .dset-main{display:block}
+  html.discord-look .dset.dset-solo .dset-back-mobile{display:none}
+  /* The close button sits top-right over the content, so the first thing in the pane needs
+     room not to run under it. */
+  html.discord-look .dset.dset-solo .dset-main-inner>:first-child{margin-top:4px}
+}

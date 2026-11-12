@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Adds the `avatars/$id` node to the rules. Step 1 of the avatar migration in FREE-PLAN-COMPATIBILITY.md.
+Adds the `avatars/$id` node to the rules. Step 1 of the avatar migration in the migration notes in package.json ("comments" -> "migrations").
 
     python3 scripts/add_rules_avatars.py firebase-rules.json firebase-rules.json
 
@@ -82,4 +82,4 @@ with open(OUT, "w") as f:
 
 print("wrote", OUT)
 print("added avatars/$id/{a,b} - self-write, authed-read, same caps as users/$id/style")
-print("inert until the client change in FREE-PLAN-COMPATIBILITY.md step 3 ships")
+print("inert until the client change in the migration notes in package.json ("comments" -> "migrations") step 3 ships")
