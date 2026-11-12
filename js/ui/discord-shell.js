@@ -911,10 +911,18 @@ const DiscordShell=(function(){
           const mine=DModel.myServers().map(s=>s.id);
           if(view.mode==='global'&&view.sid&&mine.indexOf(view.sid)<0){
             const was=view.sid;
+            /* v54.6: a settings pane open on that server is now closed with it. It outlived the
+               server before, leaving a full-screen editor whose every save bounced off the
+               rules with no explanation - and it sits above the shell, so the fallback below
+               repainted invisibly underneath it. */
+            try{if(typeof closeServerSettings==='function')closeServerSettings()}catch(_){}
+            /* Gone from my list and gone from the database are different things: deleted, or
+               just no longer mine. Say which. */
+            const deleted=!DModel.server(was);
             view.sid=DModel.ICH_ID;
             try{localStorage.setItem('ich.sid',DModel.ICH_ID)}catch(_){}
             if(view.roomKey&&DModel.channels(DModel.ICH_ID).every(c=>c.key!==view.roomKey))selectRoom(CFG.GLOBAL_ROOM);
-            if(was)toast('You are no longer in that server.');
+            if(was)toast(deleted?'That server was deleted.':'You are no longer in that server.');
           }
           if(view.page==='chatPage'&&typeof renderChat==='function')renderChat();
           else refresh();

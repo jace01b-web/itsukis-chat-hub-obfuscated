@@ -25,7 +25,7 @@ const CFG={
   MAX_IMG_DATAURL_CHARS:700000,
   // --- File uploads (GIF / video / audio / text / other) ---
   // Default: Firebase Storage (needs the Blaze plan). FREE alternative with no card: Cloudinary.
-  // Fill BOTH of these in (see SETUP-FILES.md, "No Blaze plan?") and uploads go to Cloudinary instead.
+  // Fill BOTH of these in (see the setup notes in package.json ("comments" -> "setup"), "No Blaze plan?") and uploads go to Cloudinary instead.
   CLOUDINARY_CLOUD:'itsukischathub',     // your Cloudinary "cloud name", e.g. 'dab12xyz'
   CLOUDINARY_PRESET:'itsukischathub',    // name of an UNSIGNED upload preset, e.g. 'ich_chat'
   MIN_PW:6,
@@ -65,7 +65,7 @@ const CFG={
      ships with: with it off, the Daily Spin cannot award VIP Forever or MVP at all, because the
      database rules refuse a browser that tries to write either to itself. Set this to the same
      origin as TOS_API once api/spin.js is deployed there, and the two jackpots come back -
-     decided and written by the server. See SECURITY_AUDIT.md (H2) and DEPLOY-API.md. */
+     decided and written by the server. See the security notes in package.json ("comments" -> "security") (H2) and the deployment notes in package.json ("comments" -> "deploy"). */
   SPIN_API:'',
   /* Where POST /api/login lives. EMPTY = off, which is the default.
      Only accounts whose Firebase Auth email is a REAL address need it: their address is no
@@ -83,7 +83,7 @@ const CFG={
      There is no secret-keeping version of the fallback. A URL the browser can post to is a URL
      the browser can read, so if /api is unreachable there is simply no Discord post - the
      database receipt is still written. The old webhook must be deleted and recreated: see
-     SECURITY_AUDIT.md, "credential rotation". */
+     the security notes in package.json ("comments" -> "security"), "credential rotation". */
   ATTEST_EVERY_MS:4*60*1000,      // how often the browser asks the server to re-clear this login (server grants 8 min at a time)
   IP_BAN_FULL_LOCK:false,         // false = an IP-banned network can't CHAT. true = it is locked out of the whole menu like a banned account
   // --- NSFW image detection (Nyckel) ---
@@ -92,7 +92,7 @@ const CFG={
      It was a live API secret in a file served to every visitor. Scanning now goes through
      POST /api/nsfw, which holds the credential in the Vercel environment and returns only a
      verdict. The old secret is compromised and must be rotated in the Nyckel dashboard -
-     moving it server-side does not un-publish it. See SECURITY_AUDIT.md.
+     moving it server-side does not un-publish it. See the security notes in package.json ("comments" -> "security").
      The two ids below are not secrets: they name which account and which function to call, and
      they are useless without the secret. Kept so the client can tell whether scanning is set
      up at all, and so the diagnostics can say which function it would use. */

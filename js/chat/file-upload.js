@@ -11,7 +11,7 @@
  *      file card (name, size, snippet, Download) for text files and everything else.
  *
  * Normal (non-GIF) pictures keep using the old compress-to-database path in attachments.js.
- * Needs: storage.rules + the `files` rule in database.rules.json (see SETUP-FILES.md).
+ * Needs: storage.rules + the `files` rule in database.rules.json (see the setup notes in package.json ("comments" -> "setup")).
  * Loaded by js/loader.js (load order lives in js/manifest.js).
  * ========================================================================== */
 'use strict';
@@ -218,7 +218,7 @@ FILES._upload=async function(ent,rerender){
     ent.state='error';ent.task=null;
     const c=err&&err.code;
     ent.error=c==='storage/unauthorized'?'Not allowed (rules / file type / size)':c==='storage/canceled'?'Cancelled':c==='storage/retry-limit-exceeded'?'Network problem':(c||err.message||'Upload failed');
-    if(c==='storage/unauthorized')toast('Upload was refused by Firebase Storage. If this keeps happening, the Storage rules from SETUP-FILES.md still need to be published.','bad');
+    if(c==='storage/unauthorized')toast('Upload was refused by Firebase Storage. If this keeps happening, the Storage rules from the setup notes in package.json ("comments" -> "setup") still need to be published.','bad');
   }
   rerender();
 };

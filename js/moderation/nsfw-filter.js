@@ -18,7 +18,7 @@ const NSFW={
      readable by anyone who viewed the source - and with it, anybody could spend the Nyckel
      account's quota or lock it out. The credential now lives only in the Vercel environment and
      this file asks POST /api/nsfw for a verdict. It never sees a credential.
-     (The old secret is compromised and has to be rotated; see SECURITY_AUDIT.md.) */
+     (The old secret is compromised and has to be rotated; see the security notes in package.json ("comments" -> "security").) */
   api(){
     const base=String(CFG.NSFW_API||CFG.TOS_API||'').replace(/\/$/,'');
     return base?base+'/api/nsfw':'';

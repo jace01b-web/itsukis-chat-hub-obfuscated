@@ -543,7 +543,7 @@ function rulesHint(e,what){
   const code=(e&&(e.code||e.message))||'';
   if(/permission|denied/i.test(String(code))){
     return isOwner(ME.id)
-      ? 'Saving the '+what+' was refused. The published database rules are older than this build — republish firebase-rules.json (see DEPLOY.md).'
+      ? 'Saving the '+what+' was refused. The published database rules are older than this build — republish firebase-rules.json (see the deployment notes in package.json ("comments" -> "deploy")).'
       : 'Saving the '+what+' was refused. This is a setup problem on the site, not something you did — tell an owner.';
   }
   return 'Could not save the '+what+' ('+String(code).slice(0,80)+').';

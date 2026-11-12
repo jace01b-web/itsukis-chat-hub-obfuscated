@@ -50,7 +50,7 @@ const SPIN_PRIZES=[
  *        api/spin.js follows api/totaward.js, which already decides Trick-or-Treat placings
  *        server-side for exactly this reason.
  *
- *  See SECURITY_AUDIT.md (H2) and DEPLOY-API.md.
+ *  See the security notes in package.json ("comments" -> "security") (H2) and the deployment notes in package.json ("comments" -> "deploy").
  * ====================================================================== */
 /* v54.1: nonce plumbing for the server-authoritative spin (see api/spin.js). */
 let _spinNonce='';
@@ -341,7 +341,7 @@ function openSpin(){
     <div class="spin-res" id="spinRes" aria-live="polite"></div>
     <button class="btn spin-go" id="spinBtn" type="button"></button>
     <div class="odds-grid">${spinPrizes().map(p=>'<div class="odd'+(p.id==='vip1'||p.id==='vipperm'?' vip':'')+(p.id==='mvp'?' mvp':'')+'"><span>'+p.e+' '+p.name+'</span><b>'+fmtPct(p.pct)+'%</b></div>').join('')}</div>
-    ${spinServer()?'':'<div class="hint" style="margin-top:8px">VIP Forever and MVP are not on the wheel on this install. They can only be awarded by the server, so that nobody can hand them to themselves \u2014 see DEPLOY-API.md to switch them on.</div>'}
+    ${spinServer()?'':'<div class="hint" style="margin-top:8px">VIP Forever and MVP are not on the wheel on this install. They can only be awarded by the server, so that nobody can hand them to themselves \u2014 see the deployment notes in package.json ("comments" -> "deploy") to switch them on.</div>'}
     ${mvpPerksHTML()}
     <div class="spin-roles" id="spinRoles">${spinRolesHTML()}</div>
     <div class="mvp-hall" id="mvpHall">${mvpHallHTML()}</div>
@@ -458,7 +458,7 @@ async function doSpin(){
     console.error('spin write failed',e,Object.keys(up));
     _spinBusy=false;setSpinBtn();
     res.className='spin-res bad';
-    res.textContent='The spin could not be saved ('+(e.code||e.message)+'). Blocked paths: '+Object.keys(up).join(', ')+'.'+(/mvp|spinWin/.test(Object.keys(up).join(','))?' If this is about MVP, publish the MVP database rules (SETUP-MVP.md).':'');
+    res.textContent='The spin could not be saved ('+(e.code||e.message)+'). Blocked paths: '+Object.keys(up).join(', ')+'.'+(/mvp|spinWin/.test(Object.keys(up).join(','))?' If this is about MVP, publish the MVP database rules (the setup notes in package.json ("comments" -> "setup")).':'');
     return;
   }
   animateTo(prize,wasMvp);

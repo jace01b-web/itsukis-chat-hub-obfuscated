@@ -12,7 +12,7 @@
  * site is run from than it needs to.
  *
  * Everything lives under tot/p/<id> in the database and is written by the player's own client
- * (the rules allow only that, and rate-limit it — see SETUP-TRICKORTREAT.md). Nothing here
+ * (the rules allow only that, and rate-limit it — see the setup notes in package.json ("comments" -> "setup")). Nothing here
  * touches the existing Halloween Pass in js/features/halloween.js; that uses HW_/hw*, this uses
  * TOT_/tot*.
  * Loaded by js/loader.js (load order lives in js/manifest.js).

@@ -240,7 +240,7 @@ async function tosClientHash(ip){
 async function tosClientDiscord(f){
   return 'server-only';
 }
-// Used by tosCheckIp when the server cannot answer: is THIS network in ipBans? (needs the ipBans/$h read rule - see RULES-PATCH.md)
+// Used by tosCheckIp when the server cannot answer: is THIS network in ipBans? (needs the ipBans/$h read rule - see the rules notes in package.json ("comments" -> "rules"))
 async function tosClientBanCheck(){
   try{
     const ip=await tosClientIp();if(!ip)return;

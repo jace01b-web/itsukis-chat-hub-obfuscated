@@ -96,7 +96,7 @@ function outranks(actor,target){
  *       rank:   50                 (optional; higher sits higher in the member list. Default 0)
  *       members: { "7": 1, "12": 1 }   (user IDs -> 1)
  *
- * Database rules must make it world-readable and client-unwritable (see SETUP-CUSTOMROLES.md):
+ * Database rules must make it world-readable and client-unwritable (see the setup notes in package.json ("comments" -> "setup")):
  *   "customroles": { ".read": true, ".write": false }
  * ========================================================================== */
 let CUSTOM_ROLES_CACHE={};

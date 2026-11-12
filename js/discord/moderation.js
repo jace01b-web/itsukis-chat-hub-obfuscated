@@ -233,9 +233,27 @@ async function handleInviteLink(){
 /* ======================================================================
  * 3. DISCOVER
  * ====================================================================== */
+/* v54.6 — rebuilt.
+
+   What was wrong, and what each piece here is for:
+
+   - The member count came from serverDiscovery/$sid/members, a number written once when the
+     server was published and never again. It is now derived from the real membership records,
+     live, through DModel.holdDiscoveryCounts(): one listener per listed server for as long as
+     this view is open, dropped the moment it closes. Joins, leaves, kicks, bans and removals
+     all move it, in every open browser at once, with no refresh and nothing cached to go stale.
+   - There was no loading state, so an empty database and a database that had not answered yet
+     looked identical ("No servers are listed yet") - which is also what a PERMISSION ERROR
+     looked like.
+   - There was no sort control and no refresh.
+   - Redrawing on every model change threw away what was typed in the search box; the draw is
+     now split so the list repaints under a search field that is left alone.
+*/
 function openDiscover(){
   const el=document.createElement('div');
-  el.className='dset';
+  /* dset-solo: Discover has one section and no list to choose from, so on a phone the pane
+     shows its content instead of an empty nav column. See css/29-v54.css. */
+  el.className='dset dset-discover dset-solo';
   el.innerHTML=
     '<div class="dset-nav"><div class="dset-nav-inner">'+
       '<div class="dset-cat">Discover</div>'+
@@ -246,71 +264,189 @@ function openDiscover(){
       '</button><div class="dset-close-lbl">ESC</div></div>'+
     '<button type="button" class="dset-x-mobile" id="dvXm" aria-label="Close">'+DI.x+'</button>';
   document.body.appendChild(el);
-  const close=()=>{el.remove();document.removeEventListener('keydown',onKey)};
+
+  /* Hold the live-count listeners for exactly as long as this view exists, and let go of them
+     on every way out - the X, the mobile X, Escape, and following a server into the app. */
+  let release=null;
+  try{release=DModel.holdDiscoveryCounts()}catch(_){}
+  let offModel=null;
+  const close=()=>{
+    document.removeEventListener('keydown',onKey);
+    if(offModel){try{offModel()}catch(_){}offModel=null}
+    if(release){try{release()}catch(_){}release=null}
+    el.remove();
+  };
   function onKey(e){if(e.key==='Escape')close()}
   document.addEventListener('keydown',onKey);
   el.querySelector('#dvX').onclick=close;
   el.querySelector('#dvXm').onclick=close;
   const main=el.querySelector('#dvMain');
-  let q='';
 
-  function draw(){
-    let list=DModel.discoveryList();
+  let q='';
+  let sort='members';                       // members | name | new
+  /* 'loading' until the discovery node has answered once. DModel subscribes to serverDiscovery
+     at sign-in, so the answer is usually already here; this covers the cold case and, just as
+     importantly, stops "nothing is listed" being shown for a read that was refused. */
+  let phase=(DModel._state&&DModel._state.discovery&&Object.keys(DModel._state.discovery).length)?'ready':'loading';
+  let errMsg='';
+  const settle=setTimeout(()=>{if(phase==='loading'){phase='ready';paint()}},4000);
+
+  const SORTS=[['members','Most members'],['name','Name'],['new','Newest']];
+
+  function sorted(list){
+    const l=list.slice();
+    if(sort==='name')l.sort((a,b)=>a.name.localeCompare(b.name));
+    else if(sort==='new')l.sort((a,b)=>(b.at||0)-(a.at||0)||a.name.localeCompare(b.name));
+    else l.sort((a,b)=>b.members-a.members||a.name.localeCompare(b.name));
+    return l;
+  }
+
+  function cardHTML(s){
+    const mine=DModel.inServer(s.id,ME.id);
+    const banned=DModel.isServerBanned(s.id,ME.id);
+    const ic=s.img?'<img src="'+esc(s.img)+'" alt="">':esc(s.icon||s.name.slice(0,2).toUpperCase());
+    /* The count is marked while it is still the stored placeholder, so nobody is shown a stale
+       number as if it were confirmed. In practice it is replaced within a frame or two. */
+    const n=s.members;
+    const cnt='<span class="dvcount'+(s.liveMembers?'':' pending')+'" data-count="'+esc(s.id)+'">'+
+      n+' member'+(n===1?'':'s')+'</span>';
+    /* A site owner gets a way in that does not require joining. Site ownership is read from
+       owners/ - never from anything the browser can set - so this button appears for the
+       person who runs the site and for nobody else, and it opens the SAME settings pane with
+       the same permission checks inside it; it is a route to the pane, not a bypass of it. */
+    let siteOwner=false;try{siteOwner=isOwner(ME.id)}catch(_){}
+    const manage=(siteOwner&&!mine)
+      ?'<button type="button" class="dbtn sm sec" data-manage="'+esc(s.id)+'">Manage</button>':'';
+    return '<div class="dvcard" data-card="'+esc(s.id)+'">'+
+      '<div class="dvtop"><div class="dvic">'+ic+'</div>'+
+        '<div class="dvmeta"><div class="dvname">'+esc(s.name)+'</div>'+
+        '<div class="dvsub">'+cnt+'</div></div></div>'+
+      '<div class="dvdesc">'+(s.desc?esc(s.desc):'<i>No description.</i>')+'</div>'+
+      '<div class="dvacts">'+
+        (banned
+          ?'<button type="button" class="dbtn sm grey" disabled>Banned</button>'
+          :mine
+            ?'<button type="button" class="dbtn sm grey" data-go="'+esc(s.id)+'">Open</button>'
+            :'<button type="button" class="dbtn sm" data-join="'+esc(s.id)+'">Join</button>')+
+        manage+
+      '</div>'+
+    '</div>';
+  }
+
+  /* The list only. Called on every model change, and deliberately does NOT touch the search
+     field or the sort control above it, so typing survives a count arriving. */
+  function paintList(){
+    const box=main.querySelector('#dvList');
+    if(!box)return;
+    if(phase==='error'){
+      box.innerHTML='<div class="dempty"><b>Discover could not be loaded.</b><div class="dhint" style="margin-top:6px">'+
+        esc(errMsg||'The server list could not be read. Check your connection and try again.')+
+        '</div><button type="button" class="dbtn sec sm" id="dvRetry" style="margin-top:12px">Try again</button></div>';
+      const r=box.querySelector('#dvRetry');if(r)r.onclick=()=>{phase='loading';errMsg='';paint();setTimeout(()=>{phase='ready';paint()},600)};
+      return;
+    }
+    if(phase==='loading'){
+      box.innerHTML='<div class="dvgrid">'+'<div class="dvcard skel"></div>'.repeat(6)+'</div>';
+      return;
+    }
+    let list;
+    try{list=DModel.discoveryList()}
+    catch(e){phase='error';errMsg=(e&&e.message)||'';paintList();return}
     const needle=q.trim().toLowerCase();
     if(needle)list=list.filter(s=>s.name.toLowerCase().includes(needle)||(s.desc||'').toLowerCase().includes(needle));
+    list=sorted(list);
+    box.innerHTML=list.length
+      ?'<div class="dvgrid">'+list.map(cardHTML).join('')+'</div>'
+      :'<div class="dempty">'+(needle
+          ?'No public servers match “'+esc(q.trim())+'”.'
+          :'No servers are listed yet. A server owner can list theirs in Server Settings → Overview.')+'</div>';
+    wireCards(box);
+  }
+
+  function wireCards(box){
+    box.querySelectorAll('[data-join]').forEach(b=>b.onclick=async()=>{
+      const sid=b.dataset.join;
+      b.disabled=true;b.textContent='Joining…';
+      try{
+        await DModel.joinPublic(sid);
+        toast('Joined.','good');
+        close();
+        enterServer(sid);
+      }catch(e){
+        toast((e&&e.message)||'Could not join','bad');
+        b.disabled=false;b.textContent='Join';
+      }
+    });
+    box.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{const sid=b.dataset.go;close();enterServer(sid)});
+    /* Manage keeps Discover open underneath, so closing the settings pane puts the site owner
+       back where they were instead of at the top of the app. */
+    box.querySelectorAll('[data-manage]').forEach(b=>b.onclick=async()=>{
+      const sid=b.dataset.manage;
+      b.disabled=true;const was=b.textContent;b.textContent='Opening…';
+      try{await openServerSettings(sid)}
+      catch(e){toast((e&&e.message)||'Could not open that server','bad')}
+      b.disabled=false;b.textContent=was;
+    });
+  }
+
+  /* One place that actually moves the app into a server, used by both Join and Open, so the
+     two can never drift apart. The channel list for a server joined a moment ago may not have
+     arrived yet, so this waits for it rather than landing on a blank chat. */
+  function enterServer(sid){
+    view.mode='global';view.sid=sid;
+    try{localStorage.setItem('ich.sid',sid)}catch(_){}
+    let tries=0;
+    (function go(){
+      const c=DModel.channels(sid).find(x=>x.type!=='voice');
+      if(c){selectRoom(c.key)}
+      else if(tries++<12){setTimeout(go,250);return}
+      else renderChat();
+      try{if(typeof DiscordShell!=='undefined')DiscordShell.refresh()}catch(_){}
+    })();
+  }
+
+  // The whole pane. Only called when the chrome itself has to change.
+  function paint(){
     main.innerHTML=
       '<div class="dshop-hero" style="background:linear-gradient(135deg,#5865f2 0%,#3ba55d 100%)">'+
         '<h1>Find your community</h1>'+
         '<p>Public servers anyone on ICH can join. A server only appears here if its owner has listed it.</p>'+
       '</div>'+
-      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px">'+
-        '<input class="dinput" id="dvQ" placeholder="Search public servers" value="'+esc(q)+'" style="flex:1;min-width:180px">'+
-        '<button type="button" class="dbtn grey" id="dvCode">Have a code?</button>'+
+      '<div class="dvbar">'+
+        '<input class="dinput" id="dvQ" placeholder="Search public servers" value="'+esc(q)+'">'+
+        '<select class="dinput dvsort" id="dvSort" aria-label="Sort public servers">'+
+          SORTS.map(([v,l])=>'<option value="'+v+'"'+(sort===v?' selected':'')+'>'+l+'</option>').join('')+
+        '</select>'+
+        '<button type="button" class="dbtn grey sm" id="dvRefresh">Refresh</button>'+
+        '<button type="button" class="dbtn grey sm" id="dvCode">Have a code?</button>'+
       '</div>'+
-      (list.length?'<div class="dvgrid">'+list.map(s=>{
-        const mine=DModel.inServer(s.id,ME.id);
-        const banned=DModel.isServerBanned(s.id,ME.id);
-        const ic=s.img?'<img src="'+esc(s.img)+'" alt="">':esc(s.icon||s.name.slice(0,2).toUpperCase());
-        return '<div class="dvcard">'+
-          '<div class="dvtop"><div class="dvic">'+ic+'</div>'+
-            '<div class="dvmeta"><div class="dvname">'+esc(s.name)+'</div>'+
-            '<div class="dvsub">'+s.members+' member'+(s.members===1?'':'s')+'</div></div></div>'+
-          '<div class="dvdesc">'+(s.desc?esc(s.desc):'<i>No description.</i>')+'</div>'+
-          (banned
-            ?'<button type="button" class="dbtn sm grey" disabled>Banned</button>'
-            :mine
-              ?'<button type="button" class="dbtn sm grey" data-go="'+esc(s.id)+'">Open</button>'
-              :'<button type="button" class="dbtn sm" data-join="'+esc(s.id)+'">Join</button>')+
-        '</div>';
-      }).join('')+'</div>'
-      :'<div class="dempty">'+(needle?'No public servers match that.':'No servers are listed yet. A server owner can list theirs in Server Settings → Overview.')+'</div>');
-
+      '<div id="dvList"></div>';
     const qi=main.querySelector('#dvQ');
-    qi.oninput=()=>{q=qi.value;const at=qi.selectionStart;draw();const n=main.querySelector('#dvQ');n.focus();try{n.setSelectionRange(at,at)}catch(_){}};
+    qi.oninput=()=>{q=qi.value;paintList()};
+    main.querySelector('#dvSort').onchange=e=>{sort=e.target.value;paintList()};
     main.querySelector('#dvCode').onclick=()=>{close();openJoinServer()};
-    main.querySelectorAll('[data-join]').forEach(b=>b.onclick=async()=>{
-      b.disabled=true;b.textContent='Joining…';
+    const rb=main.querySelector('#dvRefresh');
+    rb.onclick=async()=>{
+      rb.disabled=true;const was=rb.textContent;rb.textContent='Refreshing…';
+      /* The listeners are live, so there is nothing to re-fetch - what this does is push the
+         derived counts back into the stored copies for any server this account is allowed to
+         correct, then repaint. For everybody else it is simply a repaint, which is honest:
+         the numbers on screen were already current. */
       try{
-        const sid=await DModel.joinPublic(b.dataset.join);
-        toast('Joined.','good');close();
-        view.mode='global';view.sid=sid;
-        try{localStorage.setItem('ich.sid',sid)}catch(_){}
-        setTimeout(()=>{
-          const c=DModel.channels(sid).find(x=>x.type!=='voice');
-          if(c)selectRoom(c.key);else renderChat();
-          if(typeof DiscordShell!=='undefined')DiscordShell.refresh();
-        },450);
-      }catch(e){toast(e.message||'Could not join','bad');b.disabled=false;b.textContent='Join'}
-    });
-    main.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{
-      const sid=b.dataset.go;close();
-      view.mode='global';view.sid=sid;
-      try{localStorage.setItem('ich.sid',sid)}catch(_){}
-      const c=DModel.channels(sid).find(x=>x.type!=='voice');
-      if(c)selectRoom(c.key);else renderChat();
-    });
+        const ids=DModel.discoveryList().map(s=>s.id);
+        for(const sid of ids){try{await DModel.refreshDiscoveryCount(sid)}catch(_){}}
+      }catch(_){}
+      paintList();
+      rb.disabled=false;rb.textContent=was;
+    };
+    paintList();
   }
-  draw();
+
+  paint();
+  /* Repaint the list - and only the list - whenever the model changes: a count moving, a server
+     being listed or unlisted, somebody else deleting one while this is open. */
+  try{offModel=DModel.onChange(()=>{if(!el.isConnected){close();return}if(phase==='loading'){phase='ready'}paintList()})}catch(_){}
+  el.addEventListener('remove',()=>clearTimeout(settle));
 }
 
 /* ======================================================================

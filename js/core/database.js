@@ -26,7 +26,7 @@ const DB=(()=>{
      Until v54.1 this file opened a listener on the whole `users` branch, which worked because
      the rules carried `users/.read = auth != null`. That single grant was two problems at once:
        * privacy  - it handed every signed-in account everybody's email and private settings
-       * quota    - avatars are stored inline, so a sign-in downloaded ~18 MB (FREE-PLAN-COMPATIBILITY.md)
+       * quota    - avatars are stored inline, so a sign-in downloaded ~18 MB (the migration notes in package.json ("comments" -> "migrations"))
      `users/.read` is gone. A read must now name one account, so the cache is filled on demand.
 
      Each account that appears on screen gets its own listener, so statuses, avatars and display
@@ -248,7 +248,7 @@ const DB=(()=>{
      itself, and mints the token. Returns null when the endpoint is not configured or not
      deployed, so the caller can fall back to "sign in with your email instead".
      This is the ONLY place a password leaves the page for anywhere other than Google, which is
-     why it is opt-in: LOGIN_API is empty unless you set it. See SECURITY_AUDIT.md. */
+     why it is opt-in: LOGIN_API is empty unless you set it. See the security notes in package.json ("comments" -> "security"). */
   async function serverLogin(username,password){
     const base=String(CFG.LOGIN_API||'').replace(/\/$/,'');
     if(!base)return null;
@@ -2014,7 +2014,7 @@ const DB=(()=>{
       return newName;
     },
     /* Owner-only TOS acceptance log (tosLog/, written by /api/tos with the Admin SDK — see
-       SETUP-SECURITY.md). It holds the raw IP, so the rules let only owners read it, and it is
+       the setup notes in package.json ("comments" -> "setup")). It holds the raw IP, so the rules let only owners read it, and it is
        fetched on demand rather than watched: a non-owner's listener would just be denied. */
     async tosLog(){
       if(!isOwner(myId))throw new Error('Only owners can see the TOS log.');
@@ -2305,13 +2305,13 @@ const DB=(()=>{
       if(isOwner(id))throw new Error('Owners already have every MVP perk.');
       if(mvpOn(id))throw new Error('That user is already an MVP.');
       try{await update(ref(rtdb),{['mvp/'+id]:Math.round(Date.now()+SKEW)})}
-      catch(e){throw new Error(e.code==='PERMISSION_DENIED'?'Database refused it. Publish the MVP database rules (see SETUP-MVP.md).':'Could not grant MVP: '+(e.code||e.message))}
+      catch(e){throw new Error(e.code==='PERMISSION_DENIED'?'Database refused it. Publish the MVP database rules (see the setup notes in package.json ("comments" -> "setup")).':'Could not grant MVP: '+(e.code||e.message))}
     },
     async removeMvp(id){
       if(!isOwner(myId))throw new Error('Only owners can remove MVP.');
       id=Number(id);if(!id)throw new Error('Enter a valid user ID.');
       try{await update(ref(rtdb),{['mvp/'+id]:null,['spinWin/'+id]:null})}
-      catch(e){throw new Error(e.code==='PERMISSION_DENIED'?'Database refused it. Publish the MVP database rules (see SETUP-MVP.md).':'Could not remove MVP: '+(e.code||e.message))}
+      catch(e){throw new Error(e.code==='PERMISSION_DENIED'?'Database refused it. Publish the MVP database rules (see the setup notes in package.json ("comments" -> "setup")).':'Could not remove MVP: '+(e.code||e.message))}
     },
     /* --- Version history / forced updates --- */
     // The build this tab is actually running, from the <meta name="build-version"> tag

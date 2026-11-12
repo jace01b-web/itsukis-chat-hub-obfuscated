@@ -138,7 +138,58 @@ const DModel=(()=>{
     if(sid!==ICH_ID)w('servers/'+sid,v=>{if(v)S.servers[sid]=v;else{delete S.servers[sid]}});
     perServerUnsubs[sid]=list;
   }
+  /* ---------- holding a server you are not in (v54.6) ----------
+
+     attachServer() is driven by userServers/$me: you get listeners for the servers you have
+     joined and for no others, which is what keeps a member of two servers from paying for two
+     hundred. The consequence nobody had chased down is that a SITE OWNER looking at somebody
+     else's server had no data about it at all - DModel.roles() returned a lone synthesised
+     @everyone, DModel.server() returned null, and so:
+
+       - rolesOf() handed the owner "every role in the server" out of an empty list, which is
+         every role of nothing. Their name had no colour, they sat in no role group, and the
+         role manager had nothing to manage - all while can() cheerfully returned true.
+       - openServerMenu() begins `const srv=DModel.server(sid); if(!srv)return;`, so the menu
+         for such a server was not merely missing Delete Server, it did not open at all.
+
+     The database already allows the reads (serverRoles/$sid, serverChannels/$sid,
+     serverMembers/$sid and servers/$sid are readable by any signed-in account). What was
+     missing was somewhere to ask for them. holdServer() is that: a reference-counted,
+     explicitly temporary attachment, taken by the pieces of UI that need to show or edit a
+     server the viewer has not joined and released when they close. Nothing holds one by
+     default, so the cost model for ordinary members is exactly what it was. */
+  const heldServers={};        // sid -> hold count
+  function holdServer(sid){
+    if(!sid||sid===ICH_ID)return()=>{};
+    heldServers[sid]=(heldServers[sid]||0)+1;
+    attachServer(sid);
+    let done=false;
+    return()=>{
+      if(done)return;done=true;
+      heldServers[sid]=Math.max(0,(heldServers[sid]||1)-1);
+      if(!heldServers[sid]){delete heldServers[sid];if(!S.myServers[sid])detachServer(sid)}
+    };
+  }
+  /* Hold a server and resolve once its core data has actually arrived, so a caller can open a
+     menu or a settings pane against it instead of against nothing. Resolves with the release
+     function either way - a server that never answers (deleted, or a read refused) still has to
+     be let go of. */
+  function holdServerReady(sid,ms){
+    const release=holdServer(sid);
+    if(sid===ICH_ID||S.servers[sid])return Promise.resolve(release);
+    const deadline=Date.now()+(Number(ms)||2500);
+    return new Promise(res=>{
+      (function poll(){
+        if(S.servers[sid]||Date.now()>deadline)return res(release);
+        setTimeout(poll,60);
+      })();
+    });
+  }
+
   function detachServer(sid){
+    /* A held server stays attached even when the membership watcher says it is not mine -
+       being held is the whole point. */
+    if(heldServers[sid])return;
     const l=perServerUnsubs[sid];if(!l)return;
     l.forEach(u=>{try{u()}catch(_){}});delete perServerUnsubs[sid];
     delete S.channels[sid];delete S.cats[sid];delete S.roles[sid];delete S.members[sid];
@@ -168,7 +219,7 @@ const DModel=(()=>{
     });
     watch('channelServer',v=>{S.chanServer=v||{};emitSoon()});
     watch('serverOrder/'+myId,v=>{S.order=v||{};emitSoon()});
-    watch('serverDiscovery',v=>{S.discovery=v||{};emitSoon()});
+    watch('serverDiscovery',v=>{S.discovery=v||{};syncDiscoveryWatchers();emitSoon()});
     emitSoon();
     /* Housekeeping, once the first round of listeners has had time to deliver: drop servers
        that were deleted while I was away, and re-assert my channel access everywhere in case a
@@ -184,8 +235,16 @@ const DModel=(()=>{
   }
   function stop(){
     unsubs.splice(0).forEach(u=>{try{u()}catch(_){}});
+    /* Drop the holds BEFORE detaching: detachServer() refuses to touch a held server, so
+       clearing them afterwards would leave its listeners running against a signed-out session. */
+    Object.keys(heldServers).forEach(sid=>delete heldServers[sid]);
     Object.keys(perServerUnsubs).forEach(detachServer);
-    S.myServers={};S.chanServer={};S.order={};
+    /* v54.6: the Discover count listeners are per-account too. Left attached across a sign-out
+       they would keep firing against the previous session's auth - which is how a count could
+       still be the old account's answer after signing back in as somebody else. */
+    Object.keys(discUnsub).forEach(sid=>{try{discUnsub[sid]()}catch(_){}delete discUnsub[sid];delete discCounts[sid]});
+    discHolders=0;
+    S.myServers={};S.chanServer={};S.order={};S.discovery={};
   }
 
   /* ======================================================================
@@ -412,33 +471,61 @@ const DModel=(()=>{
     /* The ICH server stays undeletable even for a site owner. Everything on the site lives in
        it; there is no undo, and no reason to allow it by accident. Delete its channels instead. */
     if(isSystem(sid))throw new Error('The ICH server cannot be deleted.');
-    /* v54.5: deleting a server belongs to the person who made it, and to nobody else.
-       v54.4 had handed this to site owners on the grounds that they outrank every server
-       everywhere else. Outranking a server is not the same as owning it: every other staff
-       power is reversible - a ban is lifted, a role is given back, a channel is remade - and
-       this one destroys the server, its channels, its roles and its entire history for
-       everybody in it, with no undo and no copy kept. A site owner who needs a server gone
-       can still moderate it, or ask the person who owns it.
-       Site owners keep every other power here, including deleting their OWN servers. */
-    if(!isServerOwner(sid,myId))
-      throw new Error(isOwner(myId)
-        ?'Only the person who created this server can delete it — site owners included. You can still moderate it, or ask its owner to remove it.'
-        :'Only the server owner can delete this server.');
-    const chans=channels(sid);
+    /* v54.6: the site owner can delete ANY custom server again, and the server's own owner can
+       still delete theirs. v54.5 had narrowed this to the server's own owner on the grounds
+       that destroying somebody's server is irreversible. That is true, and it is why the
+       confirmation in the UI names the server and its member count out loud - but the site
+       owner runs the site, and "I can moderate it but not remove it" left no way to take down
+       a server that has to go. Both halves of the rules were narrowed with it
+       (scripts/remove_rules_owner_delete.py); scripts/add_rules_owner_delete.py puts them back,
+       so the client and the database agree again rather than the client asking for writes the
+       rules refuse.
+       ICH is still exempt, above, for everybody. */
+    const siteOwner=(()=>{try{return isOwner(myId)}catch(_){return false}})();
+    if(!isServerOwner(sid,myId)&&!siteOwner)
+      throw new Error('Only the server owner, or a site owner, can delete this server.');
+    /* A site owner is usually NOT a member of the server they are removing, so S.members[sid]
+       is empty for them - nothing is listening to a server they never joined. Read the member
+       list directly rather than trusting the cache, or every member keeps a dead entry in their
+       own server list and the server reappears in their rail until pruneDeadServers() catches
+       it. Same reasoning for the channel list. */
+    let memberIdsLive=Object.keys(S.members[sid]||{});
+    try{
+      const live=(await get(R('serverMembers/'+sid))).val();
+      if(live&&typeof live==='object')memberIdsLive=Object.keys(live);
+    }catch(_){}
+    let chans=channels(sid);
+    if(!chans.length){
+      try{
+        const raw=(await get(R('serverChannels/'+sid))).val()||{};
+        chans=Object.keys(raw).map(cid=>({id:cid,...raw[cid]})).filter(c=>c&&c.key);
+      }catch(_){}
+    }
     const patch={};
     patch['servers/'+sid]=null;patch['serverChannels/'+sid]=null;patch['serverCats/'+sid]=null;
     patch['serverRoles/'+sid]=null;patch['serverBans/'+sid]=null;patch['serverMutes/'+sid]=null;
     patch['serverIpBans/'+sid]=null;patch['serverDiscovery/'+sid]=null;
+    /* v54.6: the server-scoped nodes added after v54.4 were never in this patch, so a deleted
+       server left its events, its custom emoji, its membership-screening record and its audit
+       log behind for ever - orphans keyed by an id nothing resolves any more. */
+    patch['serverEvents/'+sid]=null;patch['serverEmoji/'+sid]=null;
+    patch['memberScreen/'+sid]=null;patch['auditLog/'+sid]=null;
     // the per-code lookups have to go individually; the invites themselves go with the server
     try{
       const codes=Object.keys((await get(R('invites/'+sid))).val()||{});
       codes.forEach(c=>{patch['inviteCodes/'+c]=null});
     }catch(_){}
     patch['invites/'+sid]=null;
-    Object.keys(S.members[sid]||{}).forEach(uid=>{patch['userServers/'+uid+'/'+sid]=null});
+    memberIdsLive.forEach(uid=>{patch['userServers/'+uid+'/'+sid]=null});
     patch['serverMembers/'+sid]=null;
     chans.forEach(c=>{patch['channelServer/'+c.key]=null;patch['roomMembers/'+c.key]=null});
     await update(ref(rtdb),patch);
+    /* Everything above is one atomic multi-path write, so the server is either wholly gone or
+       wholly still there. The two clean-ups below are deliberately outside it: each touches a
+       node whose rules scope writes to their own owner, so folding them in would make the whole
+       delete fail for anyone but that person. They are best-effort by design. */
+    // Each member keeps their own rail order; only they may write it, so only mine goes here.
+    try{await remove(R('serverOrder/'+myId+'/'+sid))}catch(_){}
     /* Boosts are released separately and AFTER the server is gone, not in the patch above:
        serverBoosts/$sid/$uid is writable only by $uid, so an owner deleting a server they do not
        boost cannot clear other people's records inside their own write - the whole multi-path
@@ -458,6 +545,7 @@ const DModel=(()=>{
     patch['userServers/'+myId+'/'+sid]=null;
     channels(sid).forEach(c=>{patch['roomMembers/'+c.key+'/'+myId]=null});
     await update(ref(rtdb),patch);
+    try{await refreshDiscoveryCount(sid)}catch(_){}
   }
 
   async function setServerOrder(ids){
@@ -982,9 +1070,37 @@ const DModel=(()=>{
     return l.length?l[0].pos:0;
   }
 
-  /* ---------- permission resolution ---------- */
+  /* ---------- permission resolution ----------
+
+     Two different questions get asked of this layer, and v54.6 stops answering them with one
+     function, because the single answer was wrong for one of them:
+
+       storedPerms()  "what do this member's ACTUAL role assignments grant?"
+                      Site ownership is deliberately NOT folded in. This is what gets flattened
+                      into serverMembers/$sid/$uid/p for the database rules to read, and writing
+                      an all-true row there for a site owner would be exactly the fake role
+                      assignment that must not be left behind: take site ownership away and the
+                      rules would keep honouring the stale cache. The rules already test
+                      owners/$id themselves, so a site owner never needs a row.
+
+       basePerms()    "what can this person actually DO here, right now?"
+                      Site ownership IS folded in, because that is the honest answer and it is
+                      the one every UI gate wants. Before v54.6 this returned the union of the
+                      roles a site owner virtually holds, so a server whose roles happened not to
+                      include, say, manageEmoji left the owner's button greyed out while can()
+                      said yes - the exact "model says true, interface hides it" split.
+  */
+  function storedPerms(sid,uid){
+    uid=Number(uid==null?myId:uid);
+    if(isServerOwner(sid,uid))return permsAll();
+    const out={};
+    storedRolesOf(sid,uid).forEach(r=>{PERM_KEYS.forEach(k=>{if(r.perms&&r.perms[k])out[k]=true})});
+    if(out.admin)return permsAll();
+    return out;
+  }
   function basePerms(sid,uid){
     uid=Number(uid==null?myId:uid);
+    try{if(isOwner(uid))return permsAll()}catch(_){}
     if(isServerOwner(sid,uid))return permsAll();
     const out={};
     rolesOf(sid,uid).forEach(r=>{PERM_KEYS.forEach(k=>{if(r.perms&&r.perms[k])out[k]=true})});
@@ -1060,7 +1176,10 @@ const DModel=(()=>{
      cannot be self-granted. Anything that changes who has what must call syncPerms afterwards,
      or the rules will keep enforcing the old answer. */
   function effectiveFor(sid,uid){
-    const p=basePerms(sid,uid);
+    /* storedPerms, NOT basePerms: this row is a cache of what the member's real roles grant.
+       A site owner's powers come from owners/$id, which the rules read directly, so folding
+       them in here would write a row that outlives the ownership that justified it. */
+    const p=storedPerms(sid,uid);
     const out={};
     PERM_KEYS.forEach(k=>{out[k]=p[k]===true?true:null});
     return out;
@@ -1195,7 +1314,16 @@ const DModel=(()=>{
     const m=(S.members[sid]||{})[uid]||{};
     return{id:uid,at:m.at||0,nick:m.nick?String(m.nick).slice(0,32):'',roles:m.roles||{}};
   }
-  function memberCount(sid){return sid===ICH_ID?memberIds(sid).length:Object.keys(S.members[sid]||{}).length}
+  /* v54.6: counts the membership RECORDS, and falls back to the Discover listener for a server
+     this account is not in - a site owner looking at somebody else's server has no
+     serverMembers listener of their own, and used to be told it had 0 members. */
+  function memberCount(sid){
+    if(sid===ICH_ID)return memberIds(sid).length;
+    const map=S.members[sid];
+    if(map&&typeof map==='object'&&Object.keys(map).length)return countMembership(map);
+    if(Object.prototype.hasOwnProperty.call(discCounts,sid))return discCounts[sid];
+    return countMembership(map);
+  }
   async function setNick(sid,uid,nick){
     uid=Number(uid);
     if(uid===Number(myId)){if(!can(sid,'changeNick'))throw new Error('You cannot change your nickname here.')}
@@ -1211,6 +1339,7 @@ const DModel=(()=>{
     const patch={['serverMembers/'+sid+'/'+uid]:null,['userServers/'+uid+'/'+sid]:null};
     channels(sid).forEach(c=>{patch['roomMembers/'+c.key+'/'+uid]=null});
     await update(ref(rtdb),patch);
+    try{await refreshDiscoveryCount(sid)}catch(_){}
   }
   /* ======================================================================
    *  PER-SERVER MODERATION
@@ -1264,6 +1393,7 @@ const DModel=(()=>{
     const patch={['serverMembers/'+sid+'/'+uid]:null,['userServers/'+uid+'/'+sid]:null};
     channels(sid).forEach(c=>{patch['roomMembers/'+c.key+'/'+uid]=null});
     await update(ref(rtdb),patch);
+    try{await refreshDiscoveryCount(sid)}catch(_){}
   }
   async function unbanMember(sid,uid){
     uid=Number(uid);
@@ -1317,15 +1447,92 @@ const DModel=(()=>{
   /* ======================================================================
    *  DISCOVERY  (opt-in public listing)
    * ====================================================================== */
+  /* ---------- live member counts for Discover (v54.6) ----------
+
+     serverDiscovery/$sid/members is a NUMBER COPIED INTO THE LISTING when the server was
+     published. Nothing updated it afterwards: joining, leaving, a kick, a ban and a member
+     whose account was deleted all left it exactly as it was the day the owner ticked the box,
+     and the rules only let that server's own staff write it, so a joiner could not correct it
+     even in principle. Discover was therefore showing a number that was right once.
+
+     The fix is not to try harder to keep the copy in step - it is to stop reading it. The real
+     membership records ARE readable by any signed-in account (serverMembers/$sid/.read), so the
+     count shown is derived from them, live. One listener per listed server, attached while
+     Discover is open and dropped when it closes, which also makes "updates without a refresh",
+     "accurate across two different browsers" and "accurate after signing out and back in" the
+     same single mechanism rather than three.
+
+     The stored copy is kept only as the ordering hint used for the very first paint, before any
+     live count has arrived, and is never allowed to override one that has.
+  */
+  const discCounts={};        // sid -> live member count
+  const discUnsub={};         // sid -> unsubscribe
+  let discHolders=0;          // how many open Discover views want these listeners
+  function countMembership(v){
+    if(!v||typeof v!=='object')return 0;
+    /* Count membership RECORDS, not keys: a half-written or nulled child is not a member, and
+       the same uid can only appear once as a key, so duplicates are impossible by construction. */
+    return Object.keys(v).filter(k=>{
+      const m=v[k];
+      return !!m&&(typeof m==='object'||m===true);
+    }).length;
+  }
+  function syncDiscoveryWatchers(){
+    const want=discHolders>0?Object.keys(S.discovery||{}):[];
+    want.forEach(sid=>{
+      if(discUnsub[sid])return;
+      discUnsub[sid]=onValue(R('serverMembers/'+sid),
+        s=>{const n=countMembership(s.val());if(discCounts[sid]!==n){discCounts[sid]=n;emitSoon()}},
+        e=>console.warn('[DModel] discover count denied',sid,e&&e.code));
+    });
+    Object.keys(discUnsub).forEach(sid=>{
+      if(want.indexOf(sid)>=0)return;
+      try{discUnsub[sid]()}catch(_){}
+      delete discUnsub[sid];delete discCounts[sid];
+    });
+  }
+  /* Called by the Discover view when it opens; the returned function is called when it closes.
+     Reference-counted so two open views (desktop pane + quick switcher) do not fight. */
+  function holdDiscoveryCounts(){
+    discHolders++;syncDiscoveryWatchers();
+    let done=false;
+    return()=>{if(done)return;done=true;discHolders=Math.max(0,discHolders-1);syncDiscoveryWatchers()};
+  }
+  /* The number to SHOW for a server. In order of trust:
+       1. the full membership map, if I am in the server and already listening to it;
+       2. the Discover listener's live count;
+       3. the stored copy, as a first-paint placeholder only.
+     `live` says which of those it was, so the view can avoid re-sorting on a placeholder. */
+  function discoveryCount(sid){
+    if(S.members[sid]&&typeof S.members[sid]==='object'&&Object.keys(S.members[sid]).length)
+      return{n:countMembership(S.members[sid]),live:true};
+    if(Object.prototype.hasOwnProperty.call(discCounts,sid))return{n:discCounts[sid],live:true};
+    const v=(S.discovery||{})[sid]||{};
+    return{n:Math.max(0,Number(v.members)||0),live:false};
+  }
+
   function discoveryList(){
     const raw=S.discovery||{};
     return Object.keys(raw).map(sid=>{
       const v=raw[sid];if(!v||!v.name)return null;
+      const c=discoveryCount(sid);
       return{id:sid,name:String(v.name).slice(0,40),icon:String(v.icon||'').slice(0,8),
              // the listing is world-writable by its own server's staff, so validate before use
              img:isSafeServerImg(v.img)?v.img:'',desc:String(v.desc||'').slice(0,200),
-             members:Number(v.members)||0,at:Number(v.at)||0};
+             members:c.n,liveMembers:c.live,storedMembers:Number(v.members)||0,at:Number(v.at)||0};
     }).filter(Boolean).sort((a,b)=>b.members-a.members||a.name.localeCompare(b.name));
+  }
+  /* Best-effort refresh of the stored copy, for whoever happens to be able to write it. Called
+     after the membership of a listed server changes under someone with the right to correct it,
+     and when its own staff open Discover. It can never be the thing the UI reads - see above -
+     it only stops the placeholder being wildly wrong for a brand-new visitor's first paint. */
+  async function refreshDiscoveryCount(sid){
+    if(!isPublic(sid))return false;
+    const c=discoveryCount(sid);
+    if(!c.live)return false;
+    if(Number((S.discovery[sid]||{}).members)===c.n)return false;
+    try{await set(R('serverDiscovery/'+sid+'/members'),c.n);return true}
+    catch(_){return false}        // not ours to write; the derived count is still what shows
   }
   function isPublic(sid){return !!(S.discovery&&S.discovery[sid])}
   async function setPublic(sid,on,desc){
@@ -1333,7 +1540,12 @@ const DModel=(()=>{
     if(sid===ICH_ID)throw new Error('ICH is not listed in Discover — everyone is already in it.');
     if(!on){await remove(R('serverDiscovery/'+sid));return}
     const srv=server(sid);if(!srv)throw new Error('That server is gone.');
-    const rec={name:srv.name,at:Date.now()+SKEW,members:memberCount(sid)};
+    /* Read the membership straight from the database rather than from whatever this client
+       happens to have cached, so a server listed by a site owner who is not in it does not get
+       published advertising zero members. */
+    let n=memberCount(sid);
+    try{const live=(await get(R('serverMembers/'+sid))).val();if(live!==undefined)n=countMembership(live)}catch(_){}
+    const rec={name:srv.name,at:Date.now()+SKEW,members:n};
     if(srv.icon)rec.icon=srv.icon;
     if(srv.img)rec.img=srv.img;
     if(desc)rec.desc=String(desc).slice(0,200);
@@ -1358,6 +1570,11 @@ const DModel=(()=>{
     Object.keys(chans).forEach(cid=>{const k=chans[cid]&&chans[cid].key;if(k)access['roomMembers/'+k+'/'+myId]=true});
     if(Object.keys(access).length){try{await update(ref(rtdb),access)}catch(e){console.warn('[DModel] access write failed',e&&e.code)}}
     await postJoinMessage(sid);
+    /* The listing's stored count is now one behind. Correcting it is not what makes Discover
+       right - the derived count already moved the moment the membership record landed, in this
+       browser and in everybody else's - this just keeps the placeholder honest for whoever
+       loads Discover next. It is refused for an ordinary joiner by the rules, which is fine. */
+    try{await refreshDiscoveryCount(sid)}catch(_){}
     return sid;
   }
 
@@ -1399,7 +1616,7 @@ const DModel=(()=>{
     createChannel,updateChannel,deleteChannel,
     createCategory,updateCategory,deleteCategory,
     roles,role,rolesOf,storedRolesOf,colorOf,topRole,highestPos,
-    can,canIn,canManageRole,canManageMember,basePerms,
+    can,canIn,canManageRole,canManageMember,basePerms,storedPerms,
     createRole,updateRole,deleteRole,reorderRoles,setMemberRole,setChannelOverride,
     memberIds,member,memberCount,setNick,kickMember,groupedMembers,syncPerms,
     systemChannel,joinMessagesOn,
@@ -1407,8 +1624,9 @@ const DModel=(()=>{
     muteUntil,isServerMuted,timeoutMember,
     myIpHash,ipBannedHere,ipBanHash,ipUnbanHash,ipBanList,
     discoveryList,isPublic,setPublic,joinPublic,
+    discoveryCount,holdDiscoveryCounts,refreshDiscoveryCount,
     joinLimit,ownLimit,joinedCount,ownedCount,limitInfo,
-    grantAccess,pruneDeadServers,isDenied,
+    grantAccess,pruneDeadServers,isDenied,holdServer,holdServerReady,
     _state:S
   };
 })();

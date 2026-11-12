@@ -41,7 +41,14 @@ function registerServerSection(def){
 }
 
 let _dset=null;
-function closeServerSettings(){if(_dset){_dset.remove();_dset=null;document.removeEventListener('keydown',_dsetKey)}}
+/* v54.6: when this pane was opened on a server the viewer has not joined (a site owner
+   managing somebody else's), it is holding a temporary attachment to that server's data.
+   Releasing it belongs here, with the close, so every way out releases it exactly once. */
+let _dsetRelease=null;
+function closeServerSettings(){
+  if(_dset){_dset.remove();_dset=null;document.removeEventListener('keydown',_dsetKey)}
+  if(_dsetRelease){const f=_dsetRelease;_dsetRelease=null;try{f()}catch(_){}}
+}
 function _dsetKey(e){
   if(e.key!=='Escape')return;
   // on a phone, Escape backs out of a section to the list before it closes the whole panel
@@ -52,9 +59,20 @@ function _dsetKey(e){
   closeServerSettings();
 }
 
-function openServerSettings(sid,section){
+async function openServerSettings(sid,section){
   closeServerSettings();
-  const srv=DModel.server(sid);if(!srv)return;
+  /* A site owner can legitimately be managing a server they are not a member of. The model
+     only listens to servers you have joined, so ask for this one and wait for it before
+     drawing a pane that would otherwise have no roles, no channels and no members in it. */
+  let release=null;
+  if(!DModel.server(sid)&&sid!==DModel.ICH_ID){
+    let siteOwner=false;try{siteOwner=isOwner(ME&&ME.id)}catch(_){}
+    if(!siteOwner)return;
+    try{release=await DModel.holdServerReady(sid)}catch(_){}
+  }
+  const srv=DModel.server(sid);
+  if(!srv){if(release)release();return}
+  _dsetRelease=release;
   let sec=section||'overview';
 
   const el=document.createElement('div');

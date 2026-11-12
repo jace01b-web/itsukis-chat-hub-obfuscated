@@ -159,7 +159,7 @@ function openAccountLegacy(){
       const out=await mvpBannerFromFile(f);
       await DB.updateSettings(ME.id,{banner:out});
       ME=DB.currentUser();toast('Image banner saved!');openAccountLegacy();
-    }catch(e){err.textContent=e.message||('Could not save: '+(e.code||e))+(/PERMISSION/i.test(e.code||e.message||'')?' \u2014 publish the MVP database rules (SETUP-MVP.md).':'')}
+    }catch(e){err.textContent=e.message||('Could not save: '+(e.code||e))+(/PERMISSION/i.test(e.code||e.message||'')?' \u2014 publish the MVP database rules (the setup notes in package.json ("comments" -> "setup")).':'')}
   };
   if($('#acBnRemove'))$('#acBnRemove').onclick=async()=>{
     try{await DB.updateSettings(ME.id,{banner:''});ME=DB.currentUser();toast('Image banner removed.');openAccountLegacy()}

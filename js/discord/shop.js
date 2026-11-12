@@ -76,13 +76,25 @@ function openShop(){
     '<div class="dset-main"><div class="dset-main-inner" id="shMain"></div></div>'+
     '<div class="dset-close-col"><button type="button" class="dset-close" id="shX" aria-label="Close">'+DI.x+
       '</button><div class="dset-close-lbl">ESC</div></div>'+
-    '<button type="button" class="dset-x-mobile" id="shXm" aria-label="Close">'+DI.x+'</button>';
+    '<button type="button" class="dset-x-mobile" id="shXm" aria-label="Close">'+DI.x+'</button>'+
+    /* v54.6, phone only (CSS hides it elsewhere): back to the section list. Without the paned
+       behaviour below, every section of the Shop was display:none on a phone. */
+    '<button type="button" class="dset-back-mobile" id="shBack" aria-label="Back to the shop menu">'+
+      '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>'+
+      '<span>Shop</span></button>';
   document.body.appendChild(el);
   const close=()=>{el.remove();document.removeEventListener('keydown',onKey)};
-  function onKey(e){if(e.key==='Escape')close()}
+  const narrow=()=>!!(window.matchMedia&&window.matchMedia('(max-width:820px)').matches);
+  function onKey(e){
+    if(e.key!=='Escape')return;
+    // on a phone, Escape backs out of a section to the list before it closes the whole panel
+    if(narrow()&&el.classList.contains('dset-paned')){el.classList.remove('dset-paned');return}
+    close();
+  }
   document.addEventListener('keydown',onKey);
   el.querySelector('#shX').onclick=close;
   el.querySelector('#shXm').onclick=close;
+  el.querySelector('#shBack').onclick=()=>el.classList.remove('dset-paned');
 
   const nav=el.querySelector('#shNav'),main=el.querySelector('#shMain');
   let sec='shop';
@@ -94,7 +106,12 @@ function openShop(){
     nav.innerHTML=items.map(it=>it.cat
       ?'<div class="dset-cat">'+esc(it.cat)+'</div>'
       :'<div class="dset-item'+(sec===it.k?' active':'')+'" data-k="'+it.k+'">'+esc(it.n)+'</div>').join('');
-    nav.querySelectorAll('[data-k]').forEach(n=>n.onclick=()=>{sec=n.dataset.k;draw()});
+    nav.querySelectorAll('[data-k]').forEach(n=>n.onclick=()=>{
+      sec=n.dataset.k;
+      // phones show one pane at a time; picking a section is what reveals it
+      if(narrow())el.classList.add('dset-paned');
+      draw();
+    });
     if(sec==='shop')drawShop();
     else if(sec==='perks')drawCompare();
     else drawGrant();

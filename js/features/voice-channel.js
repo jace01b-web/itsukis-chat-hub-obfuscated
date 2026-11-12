@@ -352,7 +352,7 @@ function explain(e){
     o.title='Wrong Agora App ID';o.msg=own?'Agora doesn\'t recognise the App ID in voice-channel.js. Copy it again from the Agora Console (it is all lowercase).':'Voice isn\'t set up correctly yet. Please tell an owner.';o.retry=false;
   }else if(/dynamic use static key/i.test(all)){
     o.title=own?'Voice needs a token':'Voice isn\'t ready yet';
-    o.msg=own?(CFG.TOKEN_URL?'Agora got no usable token even though TOKEN_URL is set. Reload the page and retry.':'Your Agora project has the App Certificate turned on, but no token server is configured. Either switch the project to "App ID" mode in the Agora Console, or deploy worker/agora-token-worker.js and set TOKEN_URL (see VOICE-SETUP.md).'):'The owner still has to finish setting up voice. Try again later.';o.retry=!!own;
+    o.msg=own?(CFG.TOKEN_URL?'Agora got no usable token even though TOKEN_URL is set. Reload the page and retry.':'Your Agora project has the App Certificate turned on, but no token server is configured. Either switch the project to "App ID" mode in the Agora Console, or deploy worker/agora-token-worker.js and set TOKEN_URL (see the setup notes in package.json ("comments" -> "setup")).'):'The owner still has to finish setting up voice. Try again later.';o.retry=!!own;
   }else if(/invalid token|token.*(expire|invalid|fail)|authorized failed|DYNAMIC_KEY|TOKEN_EXPIRED/i.test(all)&&!/^TOKEN_(SERVER|DENIED|AUTH)$/.test(code)){
     o.title='Voice token was rejected';o.msg=own?'The token server answered, but Agora refused the token. Check that AGORA_APP_ID and AGORA_APP_CERTIFICATE in the Worker belong to this same project.':'Voice had a hiccup. Try again in a moment.';
   }else if(code==='TOKEN_DENIED'){

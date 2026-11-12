@@ -97,7 +97,7 @@ const DPolls=(function(){
 
   /* Creates the message and then the poll, in that order and not atomically, because the rules
      for `q` read the message's senderId - which does not exist until the message does. The same
-     staged-writes rule the server model lives by; see section 4 of DISCORD-REBUILD.md. */
+     staged-writes rule the server model lives by; see section 4 of the design notes at the top of js/discord/model.js. */
   async function create(key,{question,options,multi,hours}){
     if(!ME)throw new Error('Not signed in.');
     /* Options are checked FIRST: "a poll needs two options" is the more useful complaint when

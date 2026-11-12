@@ -30,15 +30,25 @@ const DI={
  * 2. CONTEXT MENU
  * ====================================================================== */
 let _dctx=null;
-function closeCtx(){if(_dctx){_dctx.remove();_dctx=null}}
+/* v54.6: a menu may be holding a temporary attachment to a server the viewer has not joined
+   (see DModel.holdServer). Whatever closes the menu - a click outside, Escape, a resize, an
+   item being chosen - has to let that go, so the release lives here with the element rather
+   than at any one of those call sites. */
+let _dctxClose=null;
+function closeCtx(){
+  if(_dctx){_dctx.remove();_dctx=null}
+  if(_dctxClose){const f=_dctxClose;_dctxClose=null;try{f()}catch(_){}}
+}
 document.addEventListener('click',e=>{if(_dctx&&!e.target.closest('.dctx'))closeCtx()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeCtx()});
 window.addEventListener('resize',closeCtx);
 window.addEventListener('scroll',closeCtx,{passive:true,capture:true});
 
-/* items: [{label, icon, danger, disabled, onClick} | {sep:true} | {label:'...', head:true}] */
-function openCtx(anchorOrEvent,items){
+/* items: [{label, icon, danger, disabled, onClick} | {sep:true} | {label:'...', head:true}]
+   opts.onClose: called once, whenever this menu goes away. */
+function openCtx(anchorOrEvent,items,opts){
   closeCtx();
+  _dctxClose=(opts&&typeof opts.onClose==='function')?opts.onClose:null;
   const el=document.createElement('div');
   el.className='dctx';
   items.forEach(it=>{
@@ -296,8 +306,21 @@ function openJoinServer(){
 /* ======================================================================
  * 6. SERVER MENU  (the dropdown under the server name)
  * ====================================================================== */
-function openServerMenu(anchor,sid,ev){
-  const srv=DModel.server(sid);if(!srv)return;
+async function openServerMenu(anchor,sid,ev){
+  /* v54.6: a site owner can be asked for this menu on a server they have never joined - from
+     Discover, or from a server that was handed to somebody else. The model has no data about
+     such a server until it is asked for, and this function used to give up silently on the very
+     first line, so the menu did not open at all. Ask for the data, wait briefly, and release
+     the hold when the menu closes. Members are unaffected: holdServerReady() resolves
+     immediately for a server that is already attached. */
+  let release=null;
+  if(!DModel.server(sid)&&sid!==DModel.ICH_ID){
+    let siteOwner=false;try{siteOwner=isOwner(ME&&ME.id)}catch(_){}
+    if(!siteOwner)return;
+    try{release=await DModel.holdServerReady(sid)}catch(_){}
+  }
+  const srv=DModel.server(sid);
+  if(!srv){if(release)release();return}
   const sys=DModel.isSystem(sid);
   const items=[];
   if(DModel.can(sid,'invite',ME.id))items.push({label:'Invite People',icon:DI.invite,onClick:()=>openInvite(sid)});
@@ -329,33 +352,52 @@ function openServerMenu(anchor,sid,ev){
       }
     });
   }});
+  /* v54.6. Two things changed here.
+
+     1. The entry is shown to a SITE OWNER as well, for any custom server. deleteServer() had
+        allowed it again, but this menu still asked isServerOwner() and nothing else - so the
+        power existed in the model and there was no button anywhere that reached it, which is
+        the same as not having it.
+     2. The confirmation now names what is about to be destroyed - the server, by name, and how
+        many members lose it - and says whose server it is when it is not yours. An
+        irreversible action on somebody else's property should not look identical to one on
+        your own. */
   const deleteItem=()=>({label:'Delete Server',icon:DI.trash,danger:true,onClick:()=>{
+    const mine=DModel.isServerOwner(sid,ME.id);
+    let n=0;try{n=DModel.memberCount(sid)}catch(_){}
+    let ownerName='';
+    if(!mine){
+      try{const u=DB.getUser(srv.ownerId);ownerName=u?dispName(u,'User '+srv.ownerId):''}catch(_){}
+    }
     dconfirm({
       title:'Delete ‘'+srv.name+'’',
-      sub:'Are you sure you want to delete <b>'+esc(srv.name)+'</b>? This cannot be undone, and every '+
-          'channel, role, message and member in it goes with it.',
+      sub:'<b>'+esc(srv.name)+'</b> will be permanently deleted'+
+          (n?' for its <b>'+n+'</b> member'+(n===1?'':'s'):'')+'. Its channels, roles, invites, '+
+          'messages and member list all go with it. <b>This cannot be undone.</b>'+
+          (mine?'':'<div class="dnote" style="margin-top:10px">You are deleting this as a <b>site owner</b>'+
+               (ownerName?' — it belongs to <b>'+esc(ownerName)+'</b>':'')+', not as its owner.</div>'),
       confirm:'Delete Server',danger:true,
       onConfirm:async()=>{
         await DModel.deleteServer(sid);
         goHomeAfter();
-        toast('Server deleted.');
+        toast('‘'+srv.name+'’ was deleted.','good');
       }
     });
   }});
   if(sys){
-    // ICH is the site itself - there is deliberately no way out of it.
+    // ICH is the site itself - there is deliberately no way out of it, for anybody.
     items.push({label:'Home server — can’t be left',disabled:true});
-  }else if(DModel.isServerOwner(sid,ME.id)){
-    /* The owner gets BOTH, with Delete underneath Leave, which is where it was asked for.
-       Leaving your own server is still refused in the model (it would orphan the place), and
-       the entry says so rather than disappearing - otherwise an owner who wants out has no idea
-       that deleting is the way to do it. */
-    items.push(leaveItem());
-    items.push(deleteItem());
   }else{
-    items.push(leaveItem());
+    const srvOwner=DModel.isServerOwner(sid,ME.id);
+    let siteOwner=false;try{siteOwner=isOwner(ME.id)}catch(_){}
+    /* Leaving your own server is refused in the model (it would orphan the place) and the entry
+       says so rather than disappearing - otherwise an owner who wants out has no idea that
+       deleting is the way. A site owner who is not a member has nothing to leave. */
+    if(!srvOwner&&!DModel.inServer(sid,ME.id)&&siteOwner){/* nothing to leave */}
+    else items.push(leaveItem());
+    if(srvOwner||siteOwner)items.push(deleteItem());
   }
-  openCtx(ev||anchor,items);
+  openCtx(ev||anchor,items,release?{onClose:release}:null);
 }
 
 /* ======================================================================
