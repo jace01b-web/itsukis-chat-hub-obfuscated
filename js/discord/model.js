@@ -31,20 +31,20 @@ const PERMS=[
   {k:'admin',      n:'Administrator',        cat:'Advanced', d:'Members with this permission have every permission and bypass all channel restrictions. This is a dangerous permission to grant.',danger:true},
   {k:'view',       n:'View Channels',        cat:'General',  d:'Allows members to view channels by default (excluding private channels).'},
   {k:'manageCh',   n:'Manage Channels',      cat:'General',  d:'Allows members to create, edit or delete channels.'},
-  {k:'manageRoles',n:'Manage Roles',         cat:'General',  d:'Allows members to create new roles and edit or delete roles lower than their highest role.'},
+  {k:'manageRoles',n:'Manage Roles',         cat:'Membership',  d:'Allows members to create new roles and edit or delete roles lower than their highest role.'},
   {k:'manageSrv',  n:'Manage Server',        cat:'General',  d:'Allows members to change the server name, icon and other settings.'},
-  {k:'invite',     n:'Create Invite',        cat:'Membership',d:'Allows members to invite new people to this server.'},
+  {k:'invite',     n:'Create Invite',        cat:'General',d:'Allows members to invite new people to this server.'},
   {k:'changeNick', n:'Change Nickname',      cat:'Membership',d:'Allows members to change their own nickname.'},
   {k:'manageNick', n:'Manage Nicknames',     cat:'Membership',d:'Allows members to change the nicknames of other members.'},
   {k:'kick',       n:'Kick Members',         cat:'Membership',d:'Allows members to remove other members from this server. Kicked members can rejoin with a new invite.'},
   {k:'ban',        n:'Ban Members',          cat:'Membership',d:'Allows members to permanently ban other members from this server.'},
-  {k:'timeout',    n:'Timeout Members',      cat:'Membership',d:'Allows members to temporarily stop other members from sending messages.'},
-  {k:'send',       n:'Send Messages',        cat:'Text',     d:'Allows members to send messages in text channels.'},
-  {k:'files',      n:'Attach Files',         cat:'Text',     d:'Allows members to upload images, videos and files.'},
-  {k:'react',      n:'Add Reactions',        cat:'Text',     d:'Allows members to add new emoji reactions to a message.'},
-  {k:'history',    n:'Read Message History', cat:'Text',     d:'Allows members to read previous messages sent in channels.'},
-  {k:'mentionAll', n:'Mention @everyone',    cat:'Text',     d:'Allows members to use @everyone and @here, and to mention all roles.'},
-  {k:'manageMsg',  n:'Manage Messages',      cat:'Text',     d:'Allows members to delete messages by other members, and to pin any message.'},
+  {k:'timeout',    n:'Timeout Members',      cat:'Moderation',d:'Allows members to temporarily stop other members from sending messages.'},
+  {k:'send',       n:'Send Messages',        cat:'Messaging',     d:'Allows members to send messages in text channels.'},
+  {k:'files',      n:'Attach Files',         cat:'Messaging',     d:'Allows members to upload images, videos and files.'},
+  {k:'react',      n:'Add Reactions',        cat:'Messaging',     d:'Allows members to add new emoji reactions to a message.'},
+  {k:'history',    n:'Read Message History', cat:'Messaging',     d:'Allows members to read previous messages sent in channels.'},
+  {k:'mentionAll', n:'Mention @everyone',    cat:'Messaging',     d:'Allows members to use @everyone and @here, and to mention all roles.'},
+  {k:'manageMsg',  n:'Manage Messages',      cat:'Messaging',     d:'Allows members to delete messages by other members, and to pin any message.'},
   {k:'voiceJoin',  n:'Connect',              cat:'Voice',    d:'Allows members to join voice channels and hear others.'},
   {k:'voiceSpeak', n:'Speak',                cat:'Voice',    d:'Allows members to talk in voice channels.'},
   {k:'voiceMute',  n:'Mute Members',         cat:'Voice',    d:'Allows members to mute other members in voice channels for everyone.'},
@@ -54,10 +54,19 @@ const PERMS=[
      enforced in the browser only, which is not enforcement. */
   {k:'manageEmoji', n:'Manage Expressions',  cat:'General',  d:'Allows members to add, rename and remove this server\'s custom emoji.'},
   {k:'manageEvents',n:'Manage Events',       cat:'General',  d:'Allows members to create, edit and cancel server events.'},
-  {k:'viewAudit',   n:'View Audit Log',      cat:'Advanced', d:'Allows members to read this server\'s audit log — who changed what, and when.'}
+  {k:'viewAudit',   n:'View Audit Log',      cat:'Moderation', d:'Allows members to read this server\'s audit log — who changed what, and when.'}
 ];
 const PERM_KEYS=PERMS.map(p=>p.k);
-const PERM_CATS=['General','Membership','Text','Voice','Advanced'];
+/* v54.7: regrouped into the four headings the role manager is asked to present, plus Voice and
+   Advanced, which are real groups of real permissions and would be dishonest to fold away.
+   Only the GROUPING moved - not one permission key changed, was added, or was removed, so the
+   database rules (which name every key in two places) and every existing role record are
+   untouched. "Text" became "Messaging"; Timeout and View Audit Log moved out of Membership and
+   Advanced into Moderation, where people look for them; Manage Roles moved to Membership.
+   There is deliberately no entry here for a permission ICH does not actually enforce: a toggle
+   for, say, "Pin Messages" would be a switch wired to nothing, since pinning is part of Manage
+   Messages. */
+const PERM_CATS=['General','Membership','Messaging','Moderation','Voice','Advanced'];
 const PERM_BY_KEY={};PERMS.forEach(p=>{PERM_BY_KEY[p.k]=p});
 // What a brand-new @everyone role can do.
 const EVERYONE_DEFAULT={view:true,send:true,files:true,react:true,history:true,changeNick:true,invite:true,voiceJoin:true,voiceSpeak:true};
@@ -581,6 +590,110 @@ const DModel=(()=>{
     await set(R('invites/'+sid+'/'+code),rec);
     return code;
   }
+
+  /* ---------- resolving an invite WITHOUT spending it (v54.7) ----------
+
+     Opening an invite link has to show the person what they are being invited to before they
+     agree to it: the name, the icon, the description, how many members it really has, whether
+     it is public, and who invited them. None of that may consume a use - a link with one use
+     left must survive being looked at, or sharing it in a group chat where three people click
+     through burns it before anybody joins.
+
+     So previewing and redeeming are two separate calls. This one only reads. redeemInvite()
+     below is the only thing that spends a use, and it does so atomically.
+
+     The member count comes from the membership records, like everywhere else since v54.6 -
+     never from the Discover listing's stored copy, which may be stale and does not exist at
+     all for a private server. */
+  async function previewInvite(code){
+    code=normalizeInviteCode(code);
+    if(!code)return{ok:false,why:'empty',msg:'Paste an invite code first.'};
+    let sid=null;
+    try{sid=(await get(R('inviteCodes/'+code))).val()}
+    catch(e){return{ok:false,why:'denied',msg:'Could not check that invite. Check your connection.'}}
+    if(!sid)return{ok:false,why:'unknown',msg:'That invite link is not valid.'};
+    let rec=null;
+    try{rec=(await get(R('invites/'+sid+'/'+code))).val()}catch(_){}
+    /* The lookup existing while the invite record does not is precisely what a REVOKED invite
+       looks like for a moment, and what a half-deleted one looks like for ever. Either way the
+       honest answer is that it no longer works. */
+    if(!rec)return{ok:false,why:'revoked',msg:'That invite has been revoked.',sid};
+    let srv=null;
+    try{srv=(await get(R('servers/'+sid))).val()}catch(_){}
+    if(!srv)return{ok:false,why:'gone',msg:'That server no longer exists.',sid};
+    let members=0;
+    try{members=countMembership((await get(R('serverMembers/'+sid))).val())}catch(_){}
+    let inviter=null;
+    if(rec.by!=null){try{inviter=DB.getUser(rec.by)||null}catch(_){}}
+    const out={
+      ok:true,code,sid,
+      name:String(srv.name||'that server').slice(0,40),
+      icon:String(srv.icon||'').slice(0,8),
+      img:isSafeServerImg(srv.img)?srv.img:'',
+      desc:String(srv.desc||'').slice(0,200),
+      members,
+      isPublic:isPublic(sid),
+      ownerId:srv.ownerId,
+      by:rec.by,inviter,
+      uses:Number(rec.uses)||0,
+      max:Number(rec.max)||0,
+      exp:Number(rec.exp)||0,
+      alreadyIn:inServer(sid,myId)
+    };
+    /* Expiry and exhaustion are reported as part of a SUCCESSFUL preview, not as a failure:
+       the person should still be shown which server it was and told why they cannot use it,
+       rather than a bare "invalid". redeemInvite() re-checks both atomically - this is for
+       the message, never for the decision. */
+    if(out.exp&&out.exp<Date.now()+SKEW){out.dead='expired';out.deadMsg='This invite has expired.'}
+    else if(out.max&&out.uses>=out.max){out.dead='used-up';out.deadMsg='This invite has run out of uses.'}
+    try{if(!out.alreadyIn&&(await get(R('serverBans/'+sid+'/'+myId))).val()){out.dead='banned';out.deadMsg='You are banned from this server.'}}catch(_){}
+    return out;
+  }
+  function normalizeInviteCode(code){
+    /* Accepts a bare code, a full invite URL, or anything with the code as its last path or
+       fragment component - people paste all three. */
+    let s=String(code||'').trim();
+    const m=s.match(/[#?&]invite=([A-Za-z0-9]{4,32})/);
+    if(m)return m[1].toUpperCase();
+    s=s.replace(/^.*[\/#]/,'');
+    return s.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,32);
+  }
+
+  /* ---------- spending a use, atomically (v54.7) ----------
+
+     The old code did this, AFTER joining and with its failure swallowed:
+
+         set(R('invites/'+sid+'/'+code+'/uses'), (rec.uses||0)+1)
+
+     rec.uses came from a read taken before the join. Two people redeeming a one-use invite at
+     the same moment both read 0, both passed the `uses >= max` check, both joined, and both
+     wrote 1. The database rules only accept `uses === data.uses + 1`, so the second write was
+     refused - and the refusal was caught and discarded, so the count silently stopped moving
+     while people kept joining. A 1-use invite was effectively unlimited under any concurrency,
+     and the log of how many times it had been used was wrong.
+
+     This reserves the use FIRST, inside a transaction that re-reads the record and re-checks
+     expiry and the limit on every attempt, so the decision and the increment are one
+     indivisible step. Whoever loses the race is told the invite is used up, which is true.
+
+     The deliberate trade: if the join itself then fails, the use has been spent. That is the
+     safe direction to fail - the rules let a member increment `uses` and nothing else, so a
+     decrement is impossible for an ordinary joiner, and the alternative ordering is the
+     unlimited-invite bug above. A spent use on a failed join costs the inviter one slot; the
+     other way round costs them the limit entirely. */
+  async function reserveInviteUse(sid,code){
+    const r=R('invites/'+sid+'/'+code);
+    let why='revoked';
+    const res=await runTransaction(r,cur=>{
+      if(!cur){why='revoked';return undefined}            // undefined = abort
+      const uses=Number(cur.uses)||0,max=Number(cur.max)||0,exp=Number(cur.exp)||0;
+      if(exp&&exp<Date.now()+SKEW){why='expired';return undefined}
+      if(max&&uses>=max){why='used-up';return undefined}
+      return{...cur,uses:uses+1};
+    });
+    if(!res||!res.committed)return{ok:false,why};
+    return{ok:true,uses:(res.snapshot&&res.snapshot.val&&(Number(res.snapshot.val().uses)||0))||0};
+  }
   async function listInvites(sid){
     try{
       const v=(await get(R('invites/'+sid))).val()||{};
@@ -594,7 +707,7 @@ const DModel=(()=>{
   }
   async function joinByInvite(code){
     if(myId==null)throw new Error('Sign in first.');
-    code=String(code||'').trim().toUpperCase().replace(/^.*\//,'');
+    code=normalizeInviteCode(code);
     if(!code)throw new Error('Paste an invite code first.');
     let sid=null;
     try{sid=(await get(R('inviteCodes/'+code))).val()}
@@ -602,10 +715,8 @@ const DModel=(()=>{
     if(!sid)throw new Error('That invite is invalid or has expired.');
     let rec=null;
     try{rec=(await get(R('invites/'+sid+'/'+code))).val()}catch(_){}
-    if(!rec)throw new Error('That invite is invalid or has expired.');
-    if(rec.exp&&rec.exp<Date.now()+SKEW)throw new Error('That invite has expired.');
-    if(rec.max&&rec.uses>=rec.max)throw new Error('That invite has run out of uses.');
-    if(inServer(sid,myId))return sid;
+    if(!rec)throw new Error('That invite has been revoked.');
+    if(inServer(sid,myId))return sid;                 // already a member: nothing to spend
     assertCanJoin();
     // The rules already refuse to recreate a banned member's record; check here too so the
     // person gets told why instead of a bare permission error.
@@ -617,6 +728,23 @@ const DModel=(()=>{
     if(!srv)throw new Error('That server no longer exists.');
     let chans;
     try{chans=(await get(R('serverChannels/'+sid))).val()||{}}catch(_){chans={}}
+
+    /* Spend the use BEFORE joining, atomically - see reserveInviteUse() for why this order and
+       what it costs. Expiry and the usage limit are enforced inside the transaction, so these
+       are the authoritative checks; the ones in previewInvite() only choose the wording. */
+    let reserved=null;
+    try{reserved=await reserveInviteUse(sid,code)}
+    catch(e){
+      throw new Error(isDenied(e)
+        ? 'The database refused the invite. The published rules are out of date — tell an owner to publish the current firebase-rules.json.'
+        : 'Could not check that invite. Check your connection and try again.');
+    }
+    if(!reserved.ok){
+      if(reserved.why==='expired')throw new Error('That invite has expired.');
+      if(reserved.why==='used-up')throw new Error('That invite has run out of uses.');
+      throw new Error('That invite has been revoked.');
+    }
+
     // Staged for the same reason as createServer: roomMembers only accepts me once my
     // serverMembers record already exists in the committed data.
     try{
@@ -625,6 +753,10 @@ const DModel=(()=>{
         ['userServers/'+myId+'/'+sid]:true
       }));
     }catch(e){
+      /* The use is already spent. Say so rather than letting the inviter wonder why the count
+         moved without anybody arriving - and do not pretend it can be given back: the rules
+         allow a member to increment `uses` and nothing else. */
+      console.warn('[DModel] invite use spent but join failed',code,e&&e.code);
       throw new Error(isDenied(e)
         ? 'The database refused to add you to that server. The published rules are out of date — tell an owner to publish the current firebase-rules.json.'
         : 'Joining failed. Check your connection and try again.');
@@ -638,8 +770,7 @@ const DModel=(()=>{
       catch(e){console.warn('[DModel] channel access write failed',e&&e.code)}
     }
     delete _accessDone[sid];
-    // count the use; a failure here must not undo a successful join
-    try{await set(R('invites/'+sid+'/'+code+'/uses'),(rec.uses||0)+1)}catch(_){}
+    try{await refreshDiscoveryCount(sid)}catch(_){}
     await postJoinMessage(sid);
     return sid;
   }
@@ -1034,22 +1165,21 @@ const DModel=(()=>{
     });
   }
   /* The roles one member HAS, highest first.
-     v54.5: a site owner holds every role in every server. They already outranked every server
-     - can() short-circuits on isOwner - but the roles themselves were never granted, so their
-     name carried no role colour, they sat in the plain Online group of the member list instead
-     of the top hoisted one, and their own profile showed no server roles at all. Granting the
-     list here rather than writing rows into every server keeps it true the moment ownership
-     changes and leaves nothing behind if it is taken away, which is the same approach the
-     virtual ranks and the boost counts already take.
-     Virtual roles stay conditional even for an owner: those are site ranks with their own
-     tests (MVP, VIP, a custom role), and claiming them would be a lie rather than a power. */
+     A site owner effectively holds every role in every server, including every virtual ICH
+     rank. This is a DISPLAY/permission view only: storedRolesOf() remains the authoritative
+     record of actual assignments, and the effective permission cache is built from stored
+     roles so a site-owner privilege can never survive removal from owners/ or secretowner/.
+     On custom servers, roles() is made up of that server's own real roles. On ICH, it also
+     contains the built-in Owner/Admin/Mod/MVP/Developer/VIP ranks; the site owner needs to see
+     and inherit all of those in the role list and member grouping, not merely have can() return
+     true behind the scenes. Normal accounts still get only the virtual ranks whose tests pass. */
   function rolesOf(sid,uid){
     uid=Number(uid);
     let owner=false;try{owner=isOwner(uid)}catch(_){}
     if(!owner)return storedRolesOf(sid,uid);
     return roles(sid).filter(r=>{
       if(r.everyone)return true;
-      if(r.virtual)return typeof r.test==='function'&&r.test(uid);
+      if(r.virtual)return sid===ICH_ID||typeof r.test==='function'&&r.test(uid);
       return true;
     });
   }
@@ -1093,6 +1223,9 @@ const DModel=(()=>{
   function storedPerms(sid,uid){
     uid=Number(uid==null?myId:uid);
     if(isServerOwner(sid,uid))return permsAll();
+    // Same gate as basePerms: a non-member's cached permission row must be empty, not the
+    // @everyone defaults, or syncPerms would write those defaults into the database.
+    if(sid!==ICH_ID&&!inServer(sid,uid))return{};
     const out={};
     storedRolesOf(sid,uid).forEach(r=>{PERM_KEYS.forEach(k=>{if(r.perms&&r.perms[k])out[k]=true})});
     if(out.admin)return permsAll();
@@ -1102,6 +1235,17 @@ const DModel=(()=>{
     uid=Number(uid==null?myId:uid);
     try{if(isOwner(uid))return permsAll()}catch(_){}
     if(isServerOwner(sid,uid))return permsAll();
+    /* v54.7: somebody who is not in the server has no permissions in it.
+       This had been granting them the @everyone DEFAULTS. roles() synthesises an @everyone
+       carrying EVERYONE_DEFAULT whenever a server has no stored roles - which is the right
+       thing for a brand-new server, but it is also what a client sees for a server it has no
+       data about at all, because nothing is listening to a server you have not joined. So
+       can('someServer','invite') answered true for a complete stranger, and the UI offered
+       them Invite People on a server they were not in. The database rules refused the write,
+       so this was never an escalation - it was the worse-than-useless kind of bug: a button
+       that works right up until it doesn't, and a model that disagrees with the rules.
+       ICH is exempt because every account with a profile is a member of it by definition. */
+    if(sid!==ICH_ID&&!inServer(sid,uid))return{};
     const out={};
     rolesOf(sid,uid).forEach(r=>{PERM_KEYS.forEach(k=>{if(r.perms&&r.perms[k])out[k]=true})});
     if(out.admin)return permsAll();
@@ -1447,6 +1591,27 @@ const DModel=(()=>{
   /* ======================================================================
    *  DISCOVERY  (opt-in public listing)
    * ====================================================================== */
+  /* v54.7: the fixed category vocabulary. A FIXED list rather than free text, because a free
+     field produces "Gaming", "gaming", "GAMING " and "games" and a filter that matches none of
+     them. Stored as the label itself, not an index, so reordering this array can never silently
+     recategorise every server that is already listed. */
+  const SRV_CATS=['Gaming','Community','Music','Art & Design','Tech','Study','Sport','Anime',
+                  'Roleplay','Other'];
+  function normalizeTags(v){
+    /* One short comma-separated string rather than a map: it validates in the database rules
+       with a single length check, and a map of tag->true would have needed its own $other rule
+       and a way to delete individual keys. Lower-cased and de-duplicated so the filter does not
+       have to be clever later. */
+    return String(v||'')
+      .split(',')
+      .map(t=>t.trim().toLowerCase().replace(/[^a-z0-9 +#-]/g,'').replace(/\s+/g,' ').slice(0,20))
+      .filter(Boolean)
+      .filter((t,i,a)=>a.indexOf(t)===i)
+      .slice(0,6)
+      .join(',');
+  }
+  const tagsOf=v=>String(v||'').split(',').map(t=>t.trim()).filter(Boolean).slice(0,6);
+
   /* ---------- live member counts for Discover (v54.6) ----------
 
      serverDiscovery/$sid/members is a NUMBER COPIED INTO THE LISTING when the server was
@@ -1519,6 +1684,10 @@ const DModel=(()=>{
       return{id:sid,name:String(v.name).slice(0,40),icon:String(v.icon||'').slice(0,8),
              // the listing is world-writable by its own server's staff, so validate before use
              img:isSafeServerImg(v.img)?v.img:'',desc:String(v.desc||'').slice(0,200),
+             /* Same reasoning for the category: only a value from the fixed list is believed,
+                so a hand-written listing cannot put an arbitrary string into the filter bar. */
+             cat:(v.cat&&SRV_CATS.indexOf(String(v.cat))>=0)?String(v.cat):'',
+             tags:tagsOf(v.tags),
              members:c.n,liveMembers:c.live,storedMembers:Number(v.members)||0,at:Number(v.at)||0};
     }).filter(Boolean).sort((a,b)=>b.members-a.members||a.name.localeCompare(b.name));
   }
@@ -1535,6 +1704,8 @@ const DModel=(()=>{
     catch(_){return false}        // not ours to write; the derived count is still what shows
   }
   function isPublic(sid){return !!(S.discovery&&S.discovery[sid])}
+  /* opts (v54.7): {desc, cat, tags}. Still accepts a bare description string as the third
+     argument, because that is what every existing caller passes. */
   async function setPublic(sid,on,desc){
     assertPerm(sid,'manageSrv');
     if(sid===ICH_ID)throw new Error('ICH is not listed in Discover — everyone is already in it.');
@@ -1545,10 +1716,17 @@ const DModel=(()=>{
        published advertising zero members. */
     let n=memberCount(sid);
     try{const live=(await get(R('serverMembers/'+sid))).val();if(live!==undefined)n=countMembership(live)}catch(_){}
+    const opts=(desc&&typeof desc==='object')?desc:{desc:desc};
     const rec={name:srv.name,at:Date.now()+SKEW,members:n};
     if(srv.icon)rec.icon=srv.icon;
     if(srv.img)rec.img=srv.img;
-    if(desc)rec.desc=String(desc).slice(0,200);
+    if(opts.desc)rec.desc=String(opts.desc).slice(0,200);
+    /* Only a category from the fixed list is stored. Anything else is dropped rather than
+       written through, so a tampered client cannot invent a category that then appears as a
+       filter chip for everybody. */
+    if(opts.cat&&SRV_CATS.indexOf(String(opts.cat))>=0)rec.cat=String(opts.cat);
+    const tags=normalizeTags(opts.tags);
+    if(tags)rec.tags=tags;
     await set(R('serverDiscovery/'+sid),rec);
   }
   /* Joining straight from Discover - no invite code involved. */
@@ -1624,7 +1802,8 @@ const DModel=(()=>{
     muteUntil,isServerMuted,timeoutMember,
     myIpHash,ipBannedHere,ipBanHash,ipUnbanHash,ipBanList,
     discoveryList,isPublic,setPublic,joinPublic,
-    discoveryCount,holdDiscoveryCounts,refreshDiscoveryCount,
+    previewInvite,normalizeInviteCode,
+    discoveryCount,holdDiscoveryCounts,refreshDiscoveryCount,SRV_CATS,normalizeTags,
     joinLimit,ownLimit,joinedCount,ownedCount,limitInfo,
     grantAccess,pruneDeadServers,isDenied,holdServer,holdServerReady,
     _state:S

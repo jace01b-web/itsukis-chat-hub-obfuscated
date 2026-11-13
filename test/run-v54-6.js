@@ -263,6 +263,15 @@ function readCounts(page){
   ok('they can manage every role in pubA',      roles.manage.every(([,v])=>v===true),roles.manage);
   ok('and every role in pubB',                  roles.manageB.every(([,v])=>v===true),roles.manageB);
   ok('pubA really has four roles to hold',      roles.allRoleIds.length===4,roles.allRoleIds);
+  const ichRanks=await A.page.evaluate(()=>({
+    all:__T.DModel.roles('ich').filter(r=>r.virtual).map(r=>r.id).sort(),
+    effective:__T.DModel.rolesOf('ich',1).filter(r=>r.virtual).map(r=>r.id).sort(),
+    stored:__T.DModel.storedRolesOf('ich',1).filter(r=>r.virtual).map(r=>r.id).sort()
+  }));
+  ok('the site owner effectively holds every ICH rank',
+     JSON.stringify(ichRanks.effective)===JSON.stringify(ichRanks.all),ichRanks);
+  ok('those extra ICH ranks are NOT written as fake assignments',
+     JSON.stringify(ichRanks.stored)===JSON.stringify(['@owner']),ichRanks);
   ok('and the hierarchy, hoist and positions came through',
      await A.page.evaluate(()=>{
        const r=__T.DModel.roles('pubA');

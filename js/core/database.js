@@ -854,6 +854,13 @@ const DB=(()=>{
     customRolesOf:(id)=>customRolesOf(id),
     topCustomRole:(id)=>topCustomRole(id),
     customRolesLoaded:()=>CUSTOM_ROLES_LOADED,
+    /* v54.7: when a timed grant runs out (0 = permanent). The owner panel shows the term
+       beside the grant; everything else just asks customRolesOf(), which already drops a
+       grant whose term has passed. */
+    customRoleExpiry:(roleId,id)=>{
+      const r=customRoleList().find(x=>x.id===String(roleId));
+      return r?crExpiresAt(r,id):0;
+    },
     isMvp:mvpOn,
     mvpAccess,
     mvpSince:(id)=>{const v=C.mvp[Number(id)];return(typeof v==='number'&&v>1)?v:0},

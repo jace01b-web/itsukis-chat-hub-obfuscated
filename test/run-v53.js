@@ -225,7 +225,12 @@ const ok=(name,cond,extra)=>{
   await page.evaluate(()=>{const b=document.querySelector('#dlRail [data-rail="srv:ich"]');if(b)b.click()});
   await page.waitForTimeout(1200);
 
-  // invite links say "coming soon"; the CODE still works
+  /* v54.7: invite links WORK now, so this case was inverted rather than deleted.
+     The links were never unfinished - inviteUrl() and the boot handler both existed in v53;
+     the redemption side looked the code up at the wrong path and could not succeed, so the UI
+     had been changed to say "coming soon" to match the symptom. What this case guards now is
+     that both halves are offered: the code, which works in a launcher window with no address
+     of its own, AND a real link when there is an address to build one from. */
   const inv=await page.evaluate(async()=>{
     const sid=await __T.DModel.createServer('InviteTest','');
     await new Promise(s=>setTimeout(s,800));
@@ -235,12 +240,15 @@ const ok=(name,cond,extra)=>{
     if(go)go.click();
     await new Promise(s=>setTimeout(s,700));
     const out=document.querySelector('#ivOut');
-    const o={html:out?out.textContent:'',code:!!(out&&out.querySelector('[data-cp]'))};
+    const o={html:out?out.textContent:'',
+             code:!!(out&&out.querySelector('[data-cp]')),
+             link:!!(out&&out.querySelector('[data-cpl]'))};
     const x=document.querySelector('[data-x]');if(x)x.click();
     return o;
   });
-  ok('the invite dialog says coming soon', /coming soon/i.test(inv.html), inv.html.slice(0,80));
-  ok('…but still gives a working code',    inv.code===true, inv.code);
+  ok('the invite dialog no longer says coming soon', !/coming soon/i.test(inv.html), inv.html.slice(0,90));
+  ok('it gives a working code',            inv.code===true, inv.code);
+  ok('and a copyable link',                inv.link===true, inv.html.slice(0,160));
 
   // an owner sees Leave Server AND Delete Server, with Delete underneath
   const menu=await page.evaluate(async()=>{

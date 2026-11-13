@@ -33,8 +33,14 @@ const DAudit=(function(){
   /* act -> how it reads, and which icon. Kept in one table so the log and any future filter
      agree on the vocabulary. */
   const ACTS={
+    'srv.create'   :{n:'Server created',        ic:'\u{2728}'},
     'srv.update'   :{n:'Server updated',        ic:'⚙'},
     'srv.public'   :{n:'Discovery changed',     ic:'\u{1F9ED}'},
+    /* srv.delete is in this table so the label exists, but NOTHING EVER WRITES IT and nothing
+       can: deleting a server deletes auditLog/$sid along with it, so an entry recording the
+       deletion would be destroyed by the very action it describes. Recording it would need a
+       site-wide log node, which does not exist and would need its own rules and retention
+       story. Said plainly here rather than left as a mystery for whoever greps for it. */
     'srv.delete'   :{n:'Server deleted',        ic:'\u{1F5D1}'},
     'ch.create'    :{n:'Channel created',       ic:'➕'},
     'ch.update'    :{n:'Channel updated',       ic:'✎'},
@@ -275,6 +281,11 @@ registerServerSection({
   const catName=(sid,cid)=>{try{const c=(DModel.cats(sid)||[]).find(x=>x.id===cid);return c?c.name:String(cid)}catch(_){return String(cid)}};
 
   /* ---- the server itself ---- */
+  /* v54.7: a new server's log began empty, so there was no record of when it came into being
+     or who made it - the one entry every other action is implicitly dated against. It is also
+     the only act whose sid comes from the RESULT rather than the arguments, since the server
+     does not exist until the call resolves. */
+  wrap('createServer','srv.create',{sid:(a,out)=>out,fields:(a)=>({name:String(a[0]||'')})});
   wrap('updateServer','srv.update',{fields:(a)=>{
     const f=a[1]||{};
     const changed=Object.keys(f).filter(k=>f[k]!==undefined);

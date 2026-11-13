@@ -187,7 +187,15 @@ const DiscordShell=(function(){
     {name:'Trick or Treat',ic:'\u{1F383}',
      when:()=>{try{return typeof totVisible==='function'&&totVisible()}catch(_){return false}},
      go:()=>{closeExtras();if(typeof totOpen==='function')totOpen()}},
-    {name:'Join our Discord',ic:DISCORD_IC,go:()=>{closeExtras();openDiscord()}}
+    {name:'Join our Discord',ic:DISCORD_IC,go:()=>{closeExtras();openDiscord()}},
+    /* v54.7. `when` is how every other conditional row here works, and site ownership comes
+       from owners//secretowner/ in the database - so this row is absent for everybody else
+       rather than present-and-refused. Hiding it is not the security boundary though: the
+       panel re-checks ownership on open, per section and before every action, and cannot do
+       anything the database rules would not already allow. */
+    {name:'Control Center',ic:'\u{1F6E0}',
+     when:()=>{try{return !!(ME&&isOwner(ME.id))}catch(_){return false}},
+     go:()=>{closeExtras();openOwnerCenter()}}
   ];
 
   function railClick(e){

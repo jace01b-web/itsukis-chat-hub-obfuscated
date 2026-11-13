@@ -453,28 +453,52 @@ function openInvite(sid){
     const err=m.body.querySelector('#ivErr');err.textContent='';go.disabled=true;
     try{
       const code=await DModel.createInvite(sid,{expiresMs:exp||undefined,maxUses:max||undefined});
-      /* The CODE comes first, deliberately. The site is usually opened inside an about:blank or
-         blob launcher window, where a link to "this page" is meaningless - the code is the thing
-         that always works, pasted into Add a Server -> Join a Server. The link is offered second,
-         and only when there is a real address to point at. */
-      /* Invite CODES are the product. Invite LINKS are marked coming soon on purpose: the site
-         is normally opened from an about:blank or blob launcher window, where the page has no
-         address of its own and a "link to this page" is either meaningless or points at whichever
-         deployment CFG.SITE_URL happens to name - which is not necessarily the one the person is
-         using. Until there is one address that is always right, the link would be a feature that
-         works for some people and silently fails for others. The code works everywhere. */
+      /* v54.7: the code AND a real link.
+
+         The code still comes first and is still the thing that always works: ICH is usually
+         opened from an about:blank or blob launcher window, where the page has no address of
+         its own, and a code pasted into Join a Server needs none.
+
+         The link is no longer "coming soon". It was never unfinished - inviteUrl() and the
+         boot handler both existed; the redemption side was simply broken (it looked the code
+         up at the wrong path and could not succeed), so the button had been disabled to match
+         the symptom. With that fixed, a link is offered whenever there is a genuine address to
+         hang it off: this page when it is really http(s), otherwise the configured CFG.SITE_URL.
+         When neither is usable the link section says so and the code stands alone, rather than
+         handing out something like "nullblank#invite=ABC". */
+      const url=inviteUrl(code);
+      const canShare=!!(navigator.share&&url);
       m.body.querySelector('#ivOut').innerHTML=
         '<div class="dlabel" style="margin-top:4px">Invite code</div>'+
         '<div class="dcode"><span style="font-size:20px;letter-spacing:2px">'+esc(code)+'</span>'+
         '<button type="button" class="dbtn sm grey cp" data-cp>Copy code</button></div>'+
         '<div class="dhint">They join with <b>+</b> on the left → <b>Join a Server</b> → paste this. '+
         'This works everywhere, including launcher windows.</div>'+
-        '<div class="dlabel" style="margin-top:16px">Or send a link</div>'+
-        '<div class="dcode soon"><span>Invite links — <b>coming soon</b></span>'+
-        '<button type="button" class="dbtn sm grey" disabled>Copy link</button></div>'+
-        '<div class="dhint">Share the code above for now.</div>';
+        '<div class="dlabel" style="margin-top:16px">Invite link</div>'+
+        (url
+          ?'<div class="dcode"><span class="ivlink" title="'+esc(url)+'">'+esc(url)+'</span>'+
+             '<button type="button" class="dbtn sm grey" data-cpl>Copy link</button></div>'+
+           (canShare?'<button type="button" class="dbtn sec sm" data-share style="margin-top:8px;width:100%">Share…</button>':'')+
+           '<div class="dhint">Opening this link shows them '+esc(srv.name)+' and asks before they join. '+
+           'Looking at it doesn’t use up the invite — only joining does.</div>'
+          :'<div class="dcode soon"><span>No shareable address for this window</span></div>'+
+           '<div class="dhint">ICH is open in a launcher window with no address of its own, and no '+
+           '<b>SITE_URL</b> is configured, so a link would point nowhere. Share the code above — it works everywhere.</div>')+
+        (max?'<div class="dhint" style="margin-top:10px">Good for <b>'+max+'</b> use'+(max===1?'':'s')+'.</div>':'');
       m.body.querySelector('[data-cp]').onclick=async()=>{
         const ok=await copyText(code);toast(ok?'Invite code copied':'Could not copy',ok?'good':'bad');
+      };
+      const cpl=m.body.querySelector('[data-cpl]');
+      if(cpl)cpl.onclick=async()=>{
+        const ok=await copyText(url);toast(ok?'Invite link copied':'Could not copy',ok?'good':'bad');
+      };
+      const sh=m.body.querySelector('[data-share]');
+      if(sh)sh.onclick=async()=>{
+        /* The share sheet is cancellable, and a cancel arrives as a rejected promise with
+           name AbortError. Treating that as a failure would show an error for the ordinary act
+           of changing your mind. */
+        try{await navigator.share({title:'Join '+srv.name+' on ICH',text:'Join '+srv.name+' on Itsukis Chat Hub',url})}
+        catch(e){if(e&&e.name!=='AbortError')toast('Could not open the share sheet','bad')}
       };
       go.textContent='Generate Another';
     }catch(e){err.textContent=e.message||'Could not create an invite.'}

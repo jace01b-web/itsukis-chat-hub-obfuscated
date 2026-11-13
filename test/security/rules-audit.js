@@ -82,6 +82,16 @@ const BRANCH_READ_OK = {
   roles: 'cosmetic roles are rendered from it',
   customroles: 'backend-only roles; write is false',
   usernames: 'the username directory, name -> id. Tiny, and the thing that REPLACED the whole-users download',
+  /* v54.7. All three are site-owner-gated at this level, which is why they are here rather
+     than being refused outright. Read the reasons, not just the names. */
+  servers: 'v54.7, SITE OWNERS ONLY: enumeration for the owner control center. servers/$sid was '
+    + 'already readable by every signed-in account, so this grants the ability to LIST and no new '
+    + 'content. Ordinary members still cannot read the collection',
+  serverMembers: 'v54.7, SITE OWNERS ONLY: same reasoning — serverMembers/$sid was already '
+    + 'readable by every signed-in account (that is what Discover derives live counts from). '
+    + 'Enumeration only, for the dashboard total',
+  customroleLog: 'v54.7, SITE OWNERS ONLY: the global custom-role grant history. write is false '
+    + 'for every client; api/customrole.js appends it with the Admin SDK',
   onlineUsers: 'presence counts',
   appVersion: 'the build check',
   liveAnnouncement: 'a site-wide banner, meant to be seen by everybody',

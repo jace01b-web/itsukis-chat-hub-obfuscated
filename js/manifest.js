@@ -49,7 +49,8 @@ window.APP_MANIFEST={
     /* Last. Owns everything v54 added: the preference classes js/core/prefs.js sets on <html>,
        the rebuilt profile cards, pins, search, polls, the quick switcher, and the new settings
        and server panes. Last so it can correct the layers above it without !important wars. */
-    "29-v54.css"
+    "29-v54.css",
+    "30-v547.css"
   ],
   /* Not loaded on purpose: 23-lockdown.css belongs to js/features/lockdown.js, which is kept in the
      repo but left out of the load list (its master switch is ON, so loading it would lock the site). */
@@ -141,6 +142,7 @@ window.APP_MANIFEST={
     "discord/audit.js",
     "discord/emoji.js",
     "discord/server-plus.js",
+    "discord/owner-center.js",
     /* v54: Ctrl+K. After the shell (it calls DiscordShell.openServer) and after the settings
        files (it lists every settings pane by reading SET_NAV). */
     "ui/quick-switcher.js",

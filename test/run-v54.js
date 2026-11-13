@@ -449,7 +449,11 @@ const head=t=>console.log('\n--- '+t+' ---');
     const tab=document.querySelector('#rmEdit .drm-tab[data-t="perms"]');
     if(tab)tab.click();
     await new Promise(r=>setTimeout(r,400));
-    const names=[...document.querySelectorAll('.dperm-nm')].map(e=>e.textContent.trim());
+    /* v54.7 rebuilt the permission matrix and its markup: the rows are .rm-perm/.rm-perm-nm now.
+       Both selectors are accepted so this check keeps testing the THING (every permission is
+       offered, by name, in the editor) rather than a class name that was free to change. */
+    const names=[...document.querySelectorAll('.rm-perm-nm,.dperm-nm')]
+      .map(e=>e.textContent.replace(/Dangerous|Unsaved/g,'').trim());
     return{count:document.querySelectorAll('[data-perm]').length,names,
       rows:rows.length,tabs,editHtml:(document.querySelector('#rmEdit')||{}).innerHTML?
         String(document.querySelector('#rmEdit').innerHTML).slice(0,200):'(no #rmEdit)'};

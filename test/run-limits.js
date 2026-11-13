@@ -111,7 +111,11 @@ async function boot(page,who,seed){
   const errs2=[];p2.on('pageerror',e=>errs2.push(e.message));
   await p2.goto('about:blank');
   await p2.evaluate(h=>{document.open();document.write(h);document.close()},html.replace('?manual',''));
-  await p2.waitForTimeout(400);
+  /* Wait for the written document to have actually evaluated its scripts, rather than for a
+     fixed 400ms. The harness is ~2MB and grows every release; a fixed wait that happened to be
+     long enough once becomes a flake the next time something is added to it, and the symptom
+     is a bare "cannot read properties of undefined (reading 'seed')". */
+  await p2.waitForFunction(()=>!!(window.__FAKE&&window.__FAKE.seed),{timeout:20000});
   const loc=await p2.evaluate(()=>({href:location.href,origin:location.origin,proto:location.protocol}));
   ok('the window really has no usable address',loc.href==='about:blank'&&(loc.origin==='null'||loc.origin===''),loc);
 

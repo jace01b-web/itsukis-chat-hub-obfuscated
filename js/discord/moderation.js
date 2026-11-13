@@ -183,51 +183,145 @@ function clearInviteFromUrl(){
     history.replaceState(null,'',location.pathname+location.search+(h&&h!=='#'?h:''));
   }catch(_){}
 }
-/* Called once from boot, after the account is known. */
-async function handleInviteLink(){
-  // The link may have been opened while signed out. Park the code so it survives the sign-in,
-  // and only consume it once there is an account to join with.
-  let code=readInviteFromUrl();
-  if(code){clearInviteFromUrl();try{sessionStorage.setItem('ich.invite',code)}catch(_){}}
-  if(!code){try{code=sessionStorage.getItem('ich.invite')||''}catch(_){}}
-  if(!code||!ME)return;
+/* ---------- opening an invite link (v54.7, rewritten) ----------
+
+   WHAT WAS BROKEN
+     This ran on every boot and could never once have succeeded. It resolved the code with
+
+         get(R('invites/' + code))            ->  always null
+
+     but invites live at invites/$sid/$code, keyed by server, with inviteCodes/$code -> sid as
+     the lookup. It then read `rec.sid`, a field that does not exist in the record. So every
+     invite link anybody has ever opened produced "That invite is invalid or has expired",
+     which is exactly why the generator offered codes and called links "coming soon": the links
+     were not unfinished, they were broken, and the UI had been changed to match the symptom
+     rather than the cause being found.
+
+   WHAT IT DOES NOW
+     Resolves through DModel.previewInvite(), which READS ONLY - opening a link, or three people
+     opening the same link out of a group chat, cannot spend a use. The person is shown what
+     they are being invited to (name, icon, description, real member count, public or private,
+     who invited them) and decides. Only pressing Join spends anything, and that goes through a
+     transaction - see DModel.reserveInviteUse().
+
+     An invite that cannot be used is still shown with the server on it and the reason spelled
+     out, rather than collapsing to "invalid": "expired", "run out of uses", "revoked" and "you
+     are banned" are four different things and the person can act on three of them.
+*/
+
+/* Parked across a sign-in, so a signed-out person who opens a link lands on the invite after
+   authenticating instead of on the home server with no idea what happened. sessionStorage
+   rather than localStorage: an invite should not reappear in a new tab days later. */
+function stashInvite(code){try{sessionStorage.setItem('ich.invite',String(code||''))}catch(_){}}
+function takeStashedInvite(){
+  let c='';try{c=sessionStorage.getItem('ich.invite')||''}catch(_){}
   try{sessionStorage.removeItem('ich.invite')}catch(_){}
-  let rec=null;
-  try{rec=(await get(R('invites/'+code))).val()}catch(_){}
-  if(!rec){toast('That invite is invalid or has expired.','bad');return}
-  let srv=null;
-  try{srv=(await get(R('servers/'+rec.sid))).val()}catch(_){}
-  if(!srv){toast('That server no longer exists.','bad');return}
-  if(DModel.inServer(rec.sid,ME.id)){
-    view.mode='global';view.sid=rec.sid;
-    try{localStorage.setItem('ich.sid',rec.sid)}catch(_){}
-    renderChat();
-    toast('You are already in '+srv.name+'.');
-    return;
-  }
+  return c;
+}
+/* Called from boot once the account is known, and from the Join-a-Server dialog. */
+async function handleInviteLink(){
+  let code=readInviteFromUrl();
+  /* Take it out of the address bar immediately, whether or not we can act on it yet: leaving it
+     there means a refresh re-triggers the whole flow, and a shared screenshot leaks the code. */
+  if(code)clearInviteFromUrl();
+  if(code)stashInvite(code);
+  if(!code)code=takeStashedInvite();
+  if(!code)return;
+  if(!ME){stashInvite(code);return}          // signed out: wait for boot to call us again
+  return openInvitePreview(code);
+}
+
+async function openInvitePreview(code){
   const m=dmodal({
     center:true,
-    title:'You’ve been invited to join',
-    sub:'<b>'+esc(srv.name)+'</b>',
-    body:'<div class="derr" id="ilErr"></div>',
-    footer:'<button type="button" class="dbtn sec" data-no>No Thanks</button>'+
-           '<button type="button" class="dbtn" data-yes>Accept Invite</button>'
+    title:'Invite',
+    body:'<div class="ivp-load"><div class="ivp-spin" aria-hidden="true"></div>'+
+         '<div>Checking that invite…</div></div>',
+    footer:'<button type="button" class="dbtn sec" data-no>Close</button>'
   });
   m.foot.querySelector('[data-no]').onclick=m.close;
-  m.foot.querySelector('[data-yes]').onclick=async()=>{
-    const b=m.foot.querySelector('[data-yes]');b.disabled=true;
-    try{
-      const sid=await DModel.joinByInvite(code);
-      m.close();toast('Joined '+srv.name+'.','good');
-      view.mode='global';view.sid=sid;
-      try{localStorage.setItem('ich.sid',sid)}catch(_){}
-      setTimeout(()=>{
-        const c=DModel.channels(sid).find(x=>x.type!=='voice');
-        if(c)selectRoom(c.key);else renderChat();
-        if(typeof DiscordShell!=='undefined')DiscordShell.refresh();
-      },450);
-    }catch(e){m.body.querySelector('#ilErr').textContent=e.message||'Could not join.';b.disabled=false}
-  };
+
+  let p=null;
+  try{p=await DModel.previewInvite(code)}
+  catch(e){p={ok:false,msg:(e&&e.message)||'Could not check that invite.'}}
+  /* dmodal returns {close,root,body,foot} - `root` is the box. Guarding on a
+     property it does not have would mean this always bailed out and never drew. */
+  if(!m.root||!m.root.isConnected)return;         // closed while we were waiting
+
+  if(!p.ok){
+    m.body.innerHTML='<div class="ivp-bad"><div class="ivp-bad-ic" aria-hidden="true">✕</div>'+
+      '<div class="ivp-bad-t">'+esc(p.msg||'That invite is not valid.')+'</div>'+
+      '<div class="dhint">Ask whoever invited you for a new link, or join with a code from '+
+      '<b>+</b> → <b>Join a Server</b>.</div></div>';
+    return;
+  }
+
+  const ic=p.img?'<img src="'+esc(p.img)+'" alt="">'
+                :'<span>'+esc(p.icon||p.name.slice(0,2).toUpperCase())+'</span>';
+  const inviter=p.inviter?dispName(p.inviter,'User '+p.by):(p.by!=null?'User '+p.by:'');
+  const left=(p.max?Math.max(0,p.max-p.uses):0);
+  m.body.innerHTML=
+    '<div class="ivp">'+
+      '<div class="ivp-ic">'+ic+'</div>'+
+      '<div class="ivp-eyebrow">'+(p.alreadyIn?'You’re already a member of':'You’ve been invited to join')+'</div>'+
+      '<div class="ivp-name">'+esc(p.name)+'</div>'+
+      '<div class="ivp-stats">'+
+        '<span class="ivp-dot '+(p.members>0?'on':'')+'"></span>'+
+        '<b>'+p.members+'</b> member'+(p.members===1?'':'s')+
+        '<span class="ivp-sep">·</span>'+
+        (p.isPublic?'Public server':'Private server')+
+      '</div>'+
+      (p.desc?'<div class="ivp-desc">'+esc(p.desc)+'</div>':'')+
+      (inviter?'<div class="ivp-by">Invited by <b>'+esc(inviter)+'</b></div>':'')+
+      (p.dead?'<div class="ivp-dead">'+esc(p.deadMsg||'This invite can no longer be used.')+'</div>':'')+
+      (!p.dead&&!p.alreadyIn&&p.max?'<div class="dhint" style="text-align:center">'+
+        left+' of '+p.max+' use'+(p.max===1?'':'s')+' left</div>':'')+
+      '<div class="derr" id="ivpErr"></div>'+
+    '</div>';
+
+  /* The action depends on the state, and so does whether there is one at all. An invite that
+     cannot be used gets no Join button rather than a button that is certain to fail. */
+  const foot=m.foot;
+  if(p.alreadyIn){
+    foot.innerHTML='<button type="button" class="dbtn sec" data-no>Close</button>'+
+                   '<button type="button" class="dbtn" data-go>Open '+esc(p.name)+'</button>';
+    foot.querySelector('[data-go]').onclick=()=>{m.close();gotoServer(p.sid)};
+  }else if(p.dead){
+    foot.innerHTML='<button type="button" class="dbtn sec" data-no>Close</button>';
+  }else{
+    foot.innerHTML='<button type="button" class="dbtn sec" data-no>No Thanks</button>'+
+                   '<button type="button" class="dbtn" data-go>Accept Invite</button>';
+    const b=foot.querySelector('[data-go]');
+    b.onclick=async()=>{
+      b.disabled=true;b.textContent='Joining…';
+      try{
+        const sid=await DModel.joinByInvite(p.code);
+        m.close();
+        toast('Joined '+p.name+'.','good');
+        gotoServer(sid);
+      }catch(e){
+        m.body.querySelector('#ivpErr').textContent=(e&&e.message)||'Could not join.';
+        b.disabled=false;b.textContent='Accept Invite';
+      }
+    };
+  }
+  foot.querySelector('[data-no]').onclick=m.close;
+}
+
+/* Move the app into a server and open a channel in it. The channel list for a server joined a
+   moment ago may not have arrived yet, so this waits for it rather than landing on a blank
+   chat. Shared by the invite flow and Discover so the two cannot drift apart. */
+function gotoServer(sid){
+  view.mode='global';view.sid=sid;
+  try{localStorage.setItem('ich.sid',sid)}catch(_){}
+  let tries=0;
+  (function go(){
+    const c=DModel.channels(sid).find(x=>x.type!=='voice');
+    if(c){selectRoom(c.key)}
+    else if(tries++<12){setTimeout(go,250);return}
+    else renderChat();
+    try{if(typeof DiscordShell!=='undefined')DiscordShell.refresh()}catch(_){}
+  })();
 }
 
 /* ======================================================================
@@ -284,6 +378,7 @@ function openDiscover(){
 
   let q='';
   let sort='members';                       // members | name | new
+  let cat='';                               // '' = every category
   /* 'loading' until the discovery node has answered once. DModel subscribes to serverDiscovery
      at sign-in, so the answer is usually already here; this covers the cold case and, just as
      importantly, stops "nothing is listed" being shown for a read that was refused. */
@@ -317,10 +412,13 @@ function openDiscover(){
     let siteOwner=false;try{siteOwner=isOwner(ME.id)}catch(_){}
     const manage=(siteOwner&&!mine)
       ?'<button type="button" class="dbtn sm sec" data-manage="'+esc(s.id)+'">Manage</button>':'';
+    const chips=(s.cat?'<span class="dvchip cat">'+esc(s.cat)+'</span>':'')+
+      (s.tags||[]).slice(0,3).map(t=>'<span class="dvchip">'+esc(t)+'</span>').join('');
     return '<div class="dvcard" data-card="'+esc(s.id)+'">'+
       '<div class="dvtop"><div class="dvic">'+ic+'</div>'+
         '<div class="dvmeta"><div class="dvname">'+esc(s.name)+'</div>'+
         '<div class="dvsub">'+cnt+'</div></div></div>'+
+      (chips?'<div class="dvchips">'+chips+'</div>':'')+
       '<div class="dvdesc">'+(s.desc?esc(s.desc):'<i>No description.</i>')+'</div>'+
       '<div class="dvacts">'+
         (banned
@@ -328,6 +426,7 @@ function openDiscover(){
           :mine
             ?'<button type="button" class="dbtn sm grey" data-go="'+esc(s.id)+'">Open</button>'
             :'<button type="button" class="dbtn sm" data-join="'+esc(s.id)+'">Join</button>')+
+        '<button type="button" class="dbtn sec sm" data-peek="'+esc(s.id)+'">Details</button>'+
         manage+
       '</div>'+
     '</div>';
@@ -353,13 +452,23 @@ function openDiscover(){
     try{list=DModel.discoveryList()}
     catch(e){phase='error';errMsg=(e&&e.message)||'';paintList();return}
     const needle=q.trim().toLowerCase();
-    if(needle)list=list.filter(s=>s.name.toLowerCase().includes(needle)||(s.desc||'').toLowerCase().includes(needle));
+    if(cat)list=list.filter(s=>s.cat===cat);
+    /* Name, description AND tags: somebody searching "minecraft" means any of the three, and
+       a search that only looked at the name would miss a server whose whole point is in its
+       description. */
+    if(needle)list=list.filter(s=>
+      s.name.toLowerCase().includes(needle)||
+      (s.desc||'').toLowerCase().includes(needle)||
+      (s.tags||[]).some(t=>t.includes(needle))||
+      (s.cat||'').toLowerCase().includes(needle));
     list=sorted(list);
     box.innerHTML=list.length
       ?'<div class="dvgrid">'+list.map(cardHTML).join('')+'</div>'
       :'<div class="dempty">'+(needle
-          ?'No public servers match “'+esc(q.trim())+'”.'
-          :'No servers are listed yet. A server owner can list theirs in Server Settings → Overview.')+'</div>';
+          ?'No public servers match “'+esc(q.trim())+'”'+(cat?' in '+esc(cat):'')+'.'
+          :cat
+            ?'No public servers in '+esc(cat)+' yet.'
+            :'No servers are listed yet. A server owner can list theirs in Server Settings → Overview.')+'</div>';
     wireCards(box);
   }
 
@@ -378,6 +487,65 @@ function openDiscover(){
       }
     });
     box.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{const sid=b.dataset.go;close();enterServer(sid)});
+
+    /* The server detail preview. Everything in it is already on the card or already readable -
+       this is a bigger look at real data, not a second source of it, and it shows the SAME live
+       count the card does rather than re-reading anything. Joining from here goes through a
+       confirmation, because from a details pane the button is further from the "I know what
+       this is" moment than it is on a card. */
+    box.querySelectorAll('[data-peek]').forEach(b=>b.onclick=()=>{
+      const sid=b.dataset.peek;
+      const s=(DModel.discoveryList().find(x=>x.id===sid));
+      if(!s){toast('That server is no longer listed.','bad');paintList();return}
+      const mine=DModel.inServer(s.id,ME.id);
+      const banned=DModel.isServerBanned(s.id,ME.id);
+      const ic=s.img?'<img src="'+esc(s.img)+'" alt="">':'<span>'+esc(s.icon||s.name.slice(0,2).toUpperCase())+'</span>';
+      const m=dmodal({
+        center:true,
+        title:'Server details',
+        body:'<div class="ivp">'+
+            '<div class="ivp-ic">'+ic+'</div>'+
+            '<div class="ivp-eyebrow">'+(mine?'You’re a member of':'Public server')+'</div>'+
+            '<div class="ivp-name">'+esc(s.name)+'</div>'+
+            '<div class="ivp-stats"><span class="ivp-dot'+(s.members>0?' on':'')+'"></span>'+
+              '<b>'+s.members+'</b> member'+(s.members===1?'':'s')+
+              '<span class="ivp-sep">·</span>Listed '+esc(s.at?new Date(s.at).toLocaleDateString():'recently')+
+            '</div>'+
+            (s.cat||(s.tags||[]).length
+              ?'<div class="dvchips" style="justify-content:center;margin-top:12px">'+
+                 (s.cat?'<span class="dvchip cat">'+esc(s.cat)+'</span>':'')+
+                 (s.tags||[]).map(t=>'<span class="dvchip">'+esc(t)+'</span>').join('')+'</div>'
+              :'')+
+            (s.desc?'<div class="ivp-desc">'+esc(s.desc)+'</div>'
+                   :'<div class="ivp-desc"><i>This server hasn’t written a description.</i></div>')+
+            (banned?'<div class="ivp-dead">You are banned from this server.</div>':'')+
+            '<div class="derr" id="pkErr"></div>'+
+          '</div>',
+        footer:'<button type="button" class="dbtn sec" data-x>Close</button>'+
+               (banned?''
+                 :mine?'<button type="button" class="dbtn" data-open>Open</button>'
+                      :'<button type="button" class="dbtn" data-join>Join Server</button>')
+      });
+      m.foot.querySelector('[data-x]').onclick=m.close;
+      const op=m.foot.querySelector('[data-open]');
+      if(op)op.onclick=()=>{m.close();close();enterServer(s.id)};
+      const jn=m.foot.querySelector('[data-join]');
+      if(jn)jn.onclick=()=>{
+        m.close();
+        dconfirm({
+          title:'Join ‘'+s.name+'’?',
+          sub:'You’ll appear in its member list and it will show up in your server list. '+
+              'You can leave again at any time from the server menu.',
+          confirm:'Join Server',
+          onConfirm:async()=>{
+            await DModel.joinPublic(s.id);
+            toast('Joined '+s.name+'.','good');
+            close();
+            enterServer(s.id);
+          }
+        });
+      };
+    });
     /* Manage keeps Discover open underneath, so closing the settings pane puts the site owner
        back where they were instead of at the top of the app. */
     box.querySelectorAll('[data-manage]').forEach(b=>b.onclick=async()=>{
@@ -389,21 +557,10 @@ function openDiscover(){
     });
   }
 
-  /* One place that actually moves the app into a server, used by both Join and Open, so the
-     two can never drift apart. The channel list for a server joined a moment ago may not have
-     arrived yet, so this waits for it rather than landing on a blank chat. */
-  function enterServer(sid){
-    view.mode='global';view.sid=sid;
-    try{localStorage.setItem('ich.sid',sid)}catch(_){}
-    let tries=0;
-    (function go(){
-      const c=DModel.channels(sid).find(x=>x.type!=='voice');
-      if(c){selectRoom(c.key)}
-      else if(tries++<12){setTimeout(go,250);return}
-      else renderChat();
-      try{if(typeof DiscordShell!=='undefined')DiscordShell.refresh()}catch(_){}
-    })();
-  }
+  /* v54.7: this was a second copy of what the invite flow also needed. Both now call the one
+     gotoServer() above, so "what happens after you join" cannot differ depending on which door
+     you came through. */
+  const enterServer=sid=>gotoServer(sid);
 
   // The whole pane. Only called when the chrome itself has to change.
   function paint(){
@@ -420,11 +577,25 @@ function openDiscover(){
         '<button type="button" class="dbtn grey sm" id="dvRefresh">Refresh</button>'+
         '<button type="button" class="dbtn grey sm" id="dvCode">Have a code?</button>'+
       '</div>'+
+      /* Only categories that actually have a server in them get a chip. A filter bar listing
+         ten categories, nine of which lead to "nothing here", is worse than no filter bar. */
+      (function(){
+        let list=[];try{list=DModel.discoveryList()}catch(_){return ''}
+        const used=DModel.SRV_CATS.filter(c=>list.some(s=>s.cat===c));
+        if(!used.length)return '';
+        const n=c=>list.filter(s=>s.cat===c).length;
+        return '<div class="dvcats">'+
+          '<button type="button" class="dvchip btn'+(cat?'':' on')+'" data-cat="">All <b>'+list.length+'</b></button>'+
+          used.map(c=>'<button type="button" class="dvchip btn'+(cat===c?' on':'')+'" data-cat="'+esc(c)+'">'+
+            esc(c)+' <b>'+n(c)+'</b></button>').join('')+
+        '</div>';
+      })()+
       '<div id="dvList"></div>';
     const qi=main.querySelector('#dvQ');
     qi.oninput=()=>{q=qi.value;paintList()};
     main.querySelector('#dvSort').onchange=e=>{sort=e.target.value;paintList()};
     main.querySelector('#dvCode').onclick=()=>{close();openJoinServer()};
+    main.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{cat=b.dataset.cat;paint()});
     const rb=main.querySelector('#dvRefresh');
     rb.onclick=async()=>{
       rb.disabled=true;const was=rb.textContent;rb.textContent='Refreshing…';

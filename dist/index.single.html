@@ -8093,6 +8093,195 @@ html.discord-look .dl-stgrid .dl-dot{
   html.discord-look .dset.dset-solo .dset-main-inner>:first-child{margin-top:4px}
 }
 
+/* ==========================================================================
+ * css/30-v547.css — v54.7
+ *
+ * New in this release, kept in its own last-loaded stylesheet so nothing above it had to be
+ * touched and the cascade order stays obvious:
+ *   1. the invite preview (what somebody sees when they open an invite link)
+ *   2. the invite manager rows in Server Settings
+ *   3. the role manager's permission matrix
+ *   4. the site-owner control center
+ * Everything uses the existing theme variables, so light, dark and the special themes all
+ * follow without a second set of rules.
+ * ========================================================================== */
+
+/* ---------------------------------------------------------------- 1. invite preview --------- */
+.ivp-load{display:flex;flex-direction:column;align-items:center;gap:12px;padding:28px 0;color:var(--dl-tx3,#949ba4)}
+.ivp-spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--dl-bg3,rgba(255,255,255,.1));
+  border-top-color:var(--dl-acc,#5865f2)}
+@media (prefers-reduced-motion:no-preference){.ivp-spin{animation:ivpspin .8s linear infinite}}
+@keyframes ivpspin{to{transform:rotate(360deg)}}
+
+.ivp{display:flex;flex-direction:column;align-items:center;text-align:center;padding:4px 0 2px}
+.ivp-ic{width:72px;height:72px;border-radius:24px;overflow:hidden;flex:0 0 auto;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--dl-acc,#5865f2);color:#fff;font-weight:800;font-size:24px;letter-spacing:.5px;
+  margin-bottom:14px}
+.ivp-ic img{width:100%;height:100%;object-fit:cover;display:block}
+.ivp-eyebrow{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--dl-tx3,#949ba4)}
+.ivp-name{font-size:22px;font-weight:800;line-height:1.2;margin:4px 0 8px;color:var(--dl-tx1,#f2f3f5);
+  overflow-wrap:anywhere}
+.ivp-stats{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;
+  font-size:13px;color:var(--dl-tx2,#b5bac1)}
+.ivp-stats b{color:var(--dl-tx1,#f2f3f5)}
+.ivp-sep{opacity:.5}
+.ivp-dot{width:8px;height:8px;border-radius:50%;background:var(--dl-tx3,#949ba4);flex:0 0 auto}
+.ivp-dot.on{background:#3ba55d}
+.ivp-desc{margin-top:12px;font-size:14px;line-height:1.45;color:var(--dl-tx2,#b5bac1);
+  max-width:38ch;overflow-wrap:anywhere}
+.ivp-by{margin-top:12px;font-size:13px;color:var(--dl-tx3,#949ba4)}
+.ivp-by b{color:var(--dl-tx2,#b5bac1)}
+/* An invite that cannot be used. Stated, not hidden: the person still gets to see which
+   server it was and why it failed, because "expired" and "revoked" are actionable and
+   "invalid" is not. */
+.ivp-dead{margin-top:14px;width:100%;padding:10px 12px;border-radius:8px;font-size:13px;font-weight:600;
+  background:rgba(237,66,69,.12);color:#f58d8f;border:1px solid rgba(237,66,69,.3)}
+.ivp-bad{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:18px 0 6px}
+.ivp-bad-ic{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:22px;background:rgba(237,66,69,.14);color:#f58d8f}
+.ivp-bad-t{font-size:16px;font-weight:700;color:var(--dl-tx1,#f2f3f5)}
+.ivlink{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;min-width:0;font-size:13px}
+
+/* ------------------------------------------------------- 2. invite manager rows ------------- */
+.iv-row .drow-nm{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.iv-code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:1px;
+  background:var(--dl-bg3,rgba(255,255,255,.06));padding:2px 7px;border-radius:5px;font-size:13px}
+.iv-pill{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  padding:2px 7px;border-radius:999px}
+.iv-pill.live{background:rgba(59,165,93,.16);color:#4fc47b}
+.iv-pill.dead{background:rgba(237,66,69,.14);color:#f58d8f}
+/* Dimmed rather than removed: a used-up invite is still a record of what happened, and the
+   owner is the one who decides when it stops being listed. */
+.iv-dead{opacity:.62}
+
+/* --------------------------------------------------- 3. role manager / permission matrix ---- */
+.rm{display:grid;grid-template-columns:minmax(180px,230px) minmax(0,1fr);gap:0;
+  border:1px solid var(--dl-bd,rgba(255,255,255,.08));border-radius:10px;overflow:hidden}
+.rm-list{border-right:1px solid var(--dl-bd,rgba(255,255,255,.08));min-width:0;
+  background:var(--dl-bg2,rgba(0,0,0,.14))}
+.rm-list-hd{display:flex;align-items:center;gap:8px;padding:10px;border-bottom:1px solid var(--dl-bd,rgba(255,255,255,.08))}
+.rm-list-hd .dinput{height:32px;font-size:13px;padding:0 8px}
+.rm-roles{max-height:420px;overflow:auto;overscroll-behavior:contain}
+.rm-role{display:flex;align-items:center;gap:9px;padding:9px 11px;cursor:pointer;border:0;width:100%;
+  background:none;text-align:left;color:var(--dl-tx2,#b5bac1);font:inherit;min-width:0}
+.rm-role:hover{background:var(--dl-bg3,rgba(255,255,255,.04));color:var(--dl-tx1,#f2f3f5)}
+.rm-role.sel{background:var(--dl-acc-soft,rgba(88,101,242,.16));color:var(--dl-tx1,#f2f3f5)}
+.rm-role.sel .rm-role-nm{font-weight:700}
+.rm-swatch{width:12px;height:12px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 0 1px rgba(0,0,0,.25) inset}
+.rm-role-nm{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rm-role-n{font-size:11px;color:var(--dl-tx3,#949ba4);flex:0 0 auto;font-variant-numeric:tabular-nums}
+.rm-main{padding:14px 16px;min-width:0}
+.rm-tabs{display:flex;gap:4px;flex-wrap:wrap;margin:-2px 0 14px;border-bottom:1px solid var(--dl-bd,rgba(255,255,255,.08))}
+.rm-tab{border:0;background:none;color:var(--dl-tx3,#949ba4);font:inherit;font-weight:600;font-size:13px;
+  padding:8px 10px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.rm-tab:hover{color:var(--dl-tx1,#f2f3f5)}
+.rm-tab.on{color:var(--dl-tx1,#f2f3f5);border-bottom-color:var(--dl-acc,#5865f2)}
+.rm-cat{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--dl-tx3,#949ba4);margin:16px 0 6px;padding-top:12px;
+  border-top:1px solid var(--dl-bd,rgba(255,255,255,.07))}
+.rm-cat:first-child{margin-top:4px;padding-top:0;border-top:0}
+.rm-perm{display:flex;align-items:flex-start;gap:12px;padding:9px 0;
+  border-bottom:1px solid var(--dl-bd,rgba(255,255,255,.05))}
+.rm-perm:last-child{border-bottom:0}
+.rm-perm-txt{flex:1 1 auto;min-width:0}
+.rm-perm-nm{font-size:14px;font-weight:600;color:var(--dl-tx1,#f2f3f5)}
+.rm-perm-nm .rm-danger{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  color:#f58d8f;background:rgba(237,66,69,.14);padding:2px 6px;border-radius:999px;margin-left:7px}
+.rm-perm-d{font-size:12px;line-height:1.4;color:var(--dl-tx3,#949ba4);margin-top:2px}
+/* A permission this account cannot grant is shown and disabled, not hidden: knowing the
+   permission exists and is out of your reach beats it being invisible. */
+.rm-perm.locked{opacity:.5}
+.rm-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px;padding-top:14px;
+  border-top:1px solid var(--dl-bd,rgba(255,255,255,.08))}
+.rm-dirty{font-size:13px;font-weight:600;color:#faa61a;margin-right:auto}
+.rm-ro{margin-top:4px;padding:10px 12px;border-radius:8px;font-size:13px;
+  background:var(--dl-bg3,rgba(255,255,255,.05));color:var(--dl-tx2,#b5bac1)}
+.rm-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.rm-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;font-size:12px;
+  background:var(--dl-bg3,rgba(255,255,255,.06));color:var(--dl-tx2,#b5bac1);border:0;font:inherit;cursor:pointer}
+.rm-chip:hover{color:var(--dl-tx1,#f2f3f5)}
+.rm-chip.on{background:var(--dl-acc,#5865f2);color:#fff}
+.rm-mem{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--dl-bd,rgba(255,255,255,.05))}
+.rm-mem:last-child{border-bottom:0}
+.rm-mem-nm{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+
+/* Phones: the two-pane matrix becomes one column. The role list keeps its own scroll so the
+   page does not become one enormous scroll of every role and every permission. */
+@media (max-width:760px){
+  .rm{grid-template-columns:minmax(0,1fr)}
+  .rm-list{border-right:0;border-bottom:1px solid var(--dl-bd,rgba(255,255,255,.08))}
+  .rm-roles{max-height:220px}
+  .rm-main{padding:12px}
+  .rm-perm{gap:10px}
+  .rm-bar .dbtn{flex:1 1 auto}
+}
+
+/* ------------------------------------------------------- 4. owner control center ------------ */
+.oc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+.oc-stat{padding:13px 14px;border-radius:10px;background:var(--dl-bg2,rgba(0,0,0,.14));
+  border:1px solid var(--dl-bd,rgba(255,255,255,.07));min-width:0}
+.oc-stat-n{font-size:24px;font-weight:800;line-height:1.1;color:var(--dl-tx1,#f2f3f5);
+  font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.oc-stat-l{font-size:12px;color:var(--dl-tx3,#949ba4);margin-top:3px}
+.oc-stat-sub{font-size:11px;color:var(--dl-tx3,#949ba4);opacity:.8;margin-top:2px}
+.oc-row{display:flex;align-items:center;gap:10px;padding:10px 0;
+  border-bottom:1px solid var(--dl-bd,rgba(255,255,255,.06));min-width:0}
+.oc-row:last-child{border-bottom:0}
+.oc-row-txt{flex:1 1 auto;min-width:0}
+.oc-row-nm{font-size:14px;font-weight:600;color:var(--dl-tx1,#f2f3f5);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.oc-row-d{font-size:12px;color:var(--dl-tx3,#949ba4);margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.oc-ic{width:34px;height:34px;border-radius:11px;flex:0 0 auto;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;
+  background:var(--dl-acc,#5865f2);color:#fff}
+.oc-ic img{width:100%;height:100%;object-fit:cover;display:block}
+.oc-tag{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  padding:2px 6px;border-radius:999px;background:var(--dl-bg3,rgba(255,255,255,.07));
+  color:var(--dl-tx3,#949ba4);white-space:nowrap}
+.oc-tag.ok{background:rgba(59,165,93,.16);color:#4fc47b}
+.oc-tag.warn{background:rgba(250,166,26,.15);color:#f0b232}
+.oc-tag.bad{background:rgba(237,66,69,.14);color:#f58d8f}
+.oc-tag.off{background:var(--dl-bg3,rgba(255,255,255,.07));color:var(--dl-tx3,#949ba4)}
+.oc-diag{display:flex;align-items:center;gap:10px;padding:9px 0;
+  border-bottom:1px solid var(--dl-bd,rgba(255,255,255,.06))}
+.oc-diag:last-child{border-bottom:0}
+.oc-diag-l{flex:1 1 auto;min-width:0;font-size:14px;color:var(--dl-tx2,#b5bac1)}
+.oc-diag-v{font-size:12px;color:var(--dl-tx3,#949ba4);text-align:right;
+  overflow-wrap:anywhere;max-width:52%}
+.oc-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.oc-bar .dinput{flex:1 1 180px;min-width:0}
+.oc-note{font-size:12px;line-height:1.45;color:var(--dl-tx3,#949ba4);margin:-4px 0 14px}
+@media (max-width:620px){
+  .oc-grid{grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:8px}
+  .oc-stat-n{font-size:20px}
+  .oc-bar .dinput{flex:1 1 100%}
+  .oc-bar .dbtn{flex:1 1 auto}
+  .oc-diag-v{max-width:46%}
+}
+
+/* --------------------------------------------- 5. Discover categories, tags and details ----- */
+.dvcats{display:flex;gap:6px;flex-wrap:wrap;margin:-6px 0 14px}
+.dvchip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;
+  font-size:11px;font-weight:600;background:var(--dl-bg3,rgba(255,255,255,.06));
+  color:var(--dl-tx3,#949ba4);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.dvchip b{font-weight:800;opacity:.65;font-variant-numeric:tabular-nums}
+.dvchip.cat{background:var(--dl-acc-soft,rgba(88,101,242,.16));color:var(--dl-acc-tx,#aab1ff)}
+/* The clickable variant used by the filter bar. A chip on a card is a label, not a control, so
+   only this one gets a pointer and a hover state. */
+.dvchip.btn{border:0;font:inherit;cursor:pointer}
+.dvchip.btn:hover{background:var(--dl-bg4,rgba(255,255,255,.1));color:var(--dl-tx1,#f2f3f5)}
+.dvchip.btn.on{background:var(--dl-acc,#5865f2);color:#fff}
+.dvchip.btn.on b{opacity:.8}
+.dvchips{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0 0}
+@media (max-width:620px){
+  .dvcats{gap:5px;margin-bottom:12px}
+  /* Touch targets: 11px text in a 6px pill is readable but not tappable. */
+  .dvchip.btn{padding:6px 11px;font-size:12px}
+}
+
 </style>
 <script>
 /* ==========================================================================
@@ -8278,8 +8467,36 @@ window.FBS=null;import("https://www.gstatic.com/firebasejs/10.12.2/firebase-stor
     // never leave the app hidden behind a dead loading screen
     try{window.ICHBoot.fail();window.ICHBoot.reveal()}catch(_){document.documentElement.classList.remove('booting')}
   }
-  window.addEventListener('error',function(e){show(e.message||(e.error&&e.error.message))});
-  window.addEventListener('unhandledrejection',function(e){show(e.reason&&e.reason.message||e.reason)});
+  /* v54.7: as well as rescuing the boot screen, keep the last few failures so the Diagnostics
+     section of the owner control center can show "what actually went wrong" instead of asking
+     somebody to reproduce it with the console open.
+
+     Deliberately small and deliberately local: a capped ring buffer in memory, never written to
+     the database and never sent anywhere. It holds a message, a source location and a time -
+     nothing from the page's state, no user data, and nothing a bug report should not contain.
+     This file is loaded in place while the page is parsed, so it is recording before the app
+     exists, which is exactly when the interesting failures happen. */
+  var ERRS=[];
+  window.__ICH_ERRORS=ERRS;
+  function record(msg,src){
+    try{
+      var m=String(msg==null?'unknown error':msg).slice(0,300);
+      if(src)m+=' ('+String(src).replace(/^.*\//,'').slice(0,60)+')';
+      /* Collapse a repeat rather than letting one error in a loop push everything else out. */
+      var last=ERRS[ERRS.length-1];
+      if(last&&last.msg===m){last.n=(last.n||1)+1;last.at=Date.now();return}
+      ERRS.push({msg:m,at:Date.now(),n:1});
+      if(ERRS.length>25)ERRS.shift();
+    }catch(_){}
+  }
+  window.addEventListener('error',function(e){
+    record(e.message||(e.error&&e.error.message),e.filename);
+    show(e.message||(e.error&&e.error.message));
+  });
+  window.addEventListener('unhandledrejection',function(e){
+    record((e.reason&&e.reason.message)||e.reason,'promise');
+    show(e.reason&&e.reason.message||e.reason);
+  });
 })();
 
 /* Adds a "Download Launcher" item to the Extras menu on the home page.
@@ -10632,6 +10849,15 @@ function outranks(actor,target){
  *       icon:   "\u{1F6E0}"        (optional emoji or up to 3 characters)
  *       rank:   50                 (optional; higher sits higher in the member list. Default 0)
  *       members: { "7": 1, "12": 1 }   (user IDs -> 1)
+ *       expires: { "12": 1764547200000 }  (optional, v54.7; user ID -> ms timestamp)
+ *
+ * v54.7 added TIMED grants, additively. members/<id> is unchanged and still the thing that
+ * makes somebody a member; a grant with a term additionally records when it ends under
+ * expires/<id>. A role whose term has passed stops being drawn here, and api/customrole.js
+ * deletes the grant outright the next time an owner lists or changes anything - so the display
+ * rule below is tidiness, and the endpoint is what actually enforces the term. Putting the
+ * timestamp inside members/<id> would have been simpler and was wrong: crHasMember() tests for
+ * 1 or true, so every existing reader would have treated a timed grant as no grant at all.
  *
  * Database rules must make it world-readable and client-unwritable (see the setup notes in package.json ("comments" -> "setup")):
  *   "customroles": { ".read": true, ".write": false }
@@ -10654,7 +10880,8 @@ function crClean(id,v){
     color:CR_HEX_RE.test(v.color||'')?v.color:'#7c6cff',
     icon:(typeof v.icon==='string'&&v.icon.trim())?Array.from(v.icon.trim()).slice(0,3).join(''):'',
     rank:Number.isFinite(Number(v.rank))?Number(v.rank):0,
-    members:(v.members&&typeof v.members==='object')?v.members:{}
+    members:(v.members&&typeof v.members==='object')?v.members:{},
+    expires:(v.expires&&typeof v.expires==='object')?v.expires:{}
   };
 }
 // Every custom role, highest rank first (ties broken by name) — the order they are listed in.
@@ -10663,7 +10890,20 @@ function customRoleList(){
   for(const k in CUSTOM_ROLES_CACHE){const r=crClean(k,CUSTOM_ROLES_CACHE[k]);if(r)out.push(r)}
   return out.sort((a,b)=>b.rank-a.rank||a.name.localeCompare(b.name));
 }
-function crHasMember(r,id){const m=r.members[String(Number(id))];return m===1||m===true}
+function crHasMember(r,id){
+  const k=String(Number(id));
+  const m=r.members[k];
+  if(m!==1&&m!==true)return false;
+  /* A term that has passed means the role is no longer theirs. Clock skew is not worth
+     worrying about here: custom roles grant nothing but a colour and a tag, so being a minute
+     out either way has no consequence beyond when the tag stops being drawn. */
+  const exp=r.expires?Number(r.expires[k]):0;
+  if(exp>0&&exp<=Date.now())return false;
+  return true;
+}
+/* When a timed grant runs out, or 0 for a permanent one. Used by the owner panel to show the
+   term next to the grant rather than leaving "why did this disappear" to be worked out. */
+function crExpiresAt(r,id){const e=r&&r.expires?Number(r.expires[String(Number(id))]):0;return e>0?e:0}
 // Which custom roles this person has, in listing order.
 function customRolesOf(id){id=Number(id);if(!id&&id!==0)return[];return customRoleList().filter(r=>crHasMember(r,id))}
 // The one that represents them (their highest-ranked), used for the name tag and member group.
@@ -10708,20 +10948,20 @@ const PERMS=[
   {k:'admin',      n:'Administrator',        cat:'Advanced', d:'Members with this permission have every permission and bypass all channel restrictions. This is a dangerous permission to grant.',danger:true},
   {k:'view',       n:'View Channels',        cat:'General',  d:'Allows members to view channels by default (excluding private channels).'},
   {k:'manageCh',   n:'Manage Channels',      cat:'General',  d:'Allows members to create, edit or delete channels.'},
-  {k:'manageRoles',n:'Manage Roles',         cat:'General',  d:'Allows members to create new roles and edit or delete roles lower than their highest role.'},
+  {k:'manageRoles',n:'Manage Roles',         cat:'Membership',  d:'Allows members to create new roles and edit or delete roles lower than their highest role.'},
   {k:'manageSrv',  n:'Manage Server',        cat:'General',  d:'Allows members to change the server name, icon and other settings.'},
-  {k:'invite',     n:'Create Invite',        cat:'Membership',d:'Allows members to invite new people to this server.'},
+  {k:'invite',     n:'Create Invite',        cat:'General',d:'Allows members to invite new people to this server.'},
   {k:'changeNick', n:'Change Nickname',      cat:'Membership',d:'Allows members to change their own nickname.'},
   {k:'manageNick', n:'Manage Nicknames',     cat:'Membership',d:'Allows members to change the nicknames of other members.'},
   {k:'kick',       n:'Kick Members',         cat:'Membership',d:'Allows members to remove other members from this server. Kicked members can rejoin with a new invite.'},
   {k:'ban',        n:'Ban Members',          cat:'Membership',d:'Allows members to permanently ban other members from this server.'},
-  {k:'timeout',    n:'Timeout Members',      cat:'Membership',d:'Allows members to temporarily stop other members from sending messages.'},
-  {k:'send',       n:'Send Messages',        cat:'Text',     d:'Allows members to send messages in text channels.'},
-  {k:'files',      n:'Attach Files',         cat:'Text',     d:'Allows members to upload images, videos and files.'},
-  {k:'react',      n:'Add Reactions',        cat:'Text',     d:'Allows members to add new emoji reactions to a message.'},
-  {k:'history',    n:'Read Message History', cat:'Text',     d:'Allows members to read previous messages sent in channels.'},
-  {k:'mentionAll', n:'Mention @everyone',    cat:'Text',     d:'Allows members to use @everyone and @here, and to mention all roles.'},
-  {k:'manageMsg',  n:'Manage Messages',      cat:'Text',     d:'Allows members to delete messages by other members, and to pin any message.'},
+  {k:'timeout',    n:'Timeout Members',      cat:'Moderation',d:'Allows members to temporarily stop other members from sending messages.'},
+  {k:'send',       n:'Send Messages',        cat:'Messaging',     d:'Allows members to send messages in text channels.'},
+  {k:'files',      n:'Attach Files',         cat:'Messaging',     d:'Allows members to upload images, videos and files.'},
+  {k:'react',      n:'Add Reactions',        cat:'Messaging',     d:'Allows members to add new emoji reactions to a message.'},
+  {k:'history',    n:'Read Message History', cat:'Messaging',     d:'Allows members to read previous messages sent in channels.'},
+  {k:'mentionAll', n:'Mention @everyone',    cat:'Messaging',     d:'Allows members to use @everyone and @here, and to mention all roles.'},
+  {k:'manageMsg',  n:'Manage Messages',      cat:'Messaging',     d:'Allows members to delete messages by other members, and to pin any message.'},
   {k:'voiceJoin',  n:'Connect',              cat:'Voice',    d:'Allows members to join voice channels and hear others.'},
   {k:'voiceSpeak', n:'Speak',                cat:'Voice',    d:'Allows members to talk in voice channels.'},
   {k:'voiceMute',  n:'Mute Members',         cat:'Voice',    d:'Allows members to mute other members in voice channels for everyone.'},
@@ -10731,10 +10971,19 @@ const PERMS=[
      enforced in the browser only, which is not enforcement. */
   {k:'manageEmoji', n:'Manage Expressions',  cat:'General',  d:'Allows members to add, rename and remove this server\'s custom emoji.'},
   {k:'manageEvents',n:'Manage Events',       cat:'General',  d:'Allows members to create, edit and cancel server events.'},
-  {k:'viewAudit',   n:'View Audit Log',      cat:'Advanced', d:'Allows members to read this server\'s audit log — who changed what, and when.'}
+  {k:'viewAudit',   n:'View Audit Log',      cat:'Moderation', d:'Allows members to read this server\'s audit log — who changed what, and when.'}
 ];
 const PERM_KEYS=PERMS.map(p=>p.k);
-const PERM_CATS=['General','Membership','Text','Voice','Advanced'];
+/* v54.7: regrouped into the four headings the role manager is asked to present, plus Voice and
+   Advanced, which are real groups of real permissions and would be dishonest to fold away.
+   Only the GROUPING moved - not one permission key changed, was added, or was removed, so the
+   database rules (which name every key in two places) and every existing role record are
+   untouched. "Text" became "Messaging"; Timeout and View Audit Log moved out of Membership and
+   Advanced into Moderation, where people look for them; Manage Roles moved to Membership.
+   There is deliberately no entry here for a permission ICH does not actually enforce: a toggle
+   for, say, "Pin Messages" would be a switch wired to nothing, since pinning is part of Manage
+   Messages. */
+const PERM_CATS=['General','Membership','Messaging','Moderation','Voice','Advanced'];
 const PERM_BY_KEY={};PERMS.forEach(p=>{PERM_BY_KEY[p.k]=p});
 // What a brand-new @everyone role can do.
 const EVERYONE_DEFAULT={view:true,send:true,files:true,react:true,history:true,changeNick:true,invite:true,voiceJoin:true,voiceSpeak:true};
@@ -11258,6 +11507,110 @@ const DModel=(()=>{
     await set(R('invites/'+sid+'/'+code),rec);
     return code;
   }
+
+  /* ---------- resolving an invite WITHOUT spending it (v54.7) ----------
+
+     Opening an invite link has to show the person what they are being invited to before they
+     agree to it: the name, the icon, the description, how many members it really has, whether
+     it is public, and who invited them. None of that may consume a use - a link with one use
+     left must survive being looked at, or sharing it in a group chat where three people click
+     through burns it before anybody joins.
+
+     So previewing and redeeming are two separate calls. This one only reads. redeemInvite()
+     below is the only thing that spends a use, and it does so atomically.
+
+     The member count comes from the membership records, like everywhere else since v54.6 -
+     never from the Discover listing's stored copy, which may be stale and does not exist at
+     all for a private server. */
+  async function previewInvite(code){
+    code=normalizeInviteCode(code);
+    if(!code)return{ok:false,why:'empty',msg:'Paste an invite code first.'};
+    let sid=null;
+    try{sid=(await get(R('inviteCodes/'+code))).val()}
+    catch(e){return{ok:false,why:'denied',msg:'Could not check that invite. Check your connection.'}}
+    if(!sid)return{ok:false,why:'unknown',msg:'That invite link is not valid.'};
+    let rec=null;
+    try{rec=(await get(R('invites/'+sid+'/'+code))).val()}catch(_){}
+    /* The lookup existing while the invite record does not is precisely what a REVOKED invite
+       looks like for a moment, and what a half-deleted one looks like for ever. Either way the
+       honest answer is that it no longer works. */
+    if(!rec)return{ok:false,why:'revoked',msg:'That invite has been revoked.',sid};
+    let srv=null;
+    try{srv=(await get(R('servers/'+sid))).val()}catch(_){}
+    if(!srv)return{ok:false,why:'gone',msg:'That server no longer exists.',sid};
+    let members=0;
+    try{members=countMembership((await get(R('serverMembers/'+sid))).val())}catch(_){}
+    let inviter=null;
+    if(rec.by!=null){try{inviter=DB.getUser(rec.by)||null}catch(_){}}
+    const out={
+      ok:true,code,sid,
+      name:String(srv.name||'that server').slice(0,40),
+      icon:String(srv.icon||'').slice(0,8),
+      img:isSafeServerImg(srv.img)?srv.img:'',
+      desc:String(srv.desc||'').slice(0,200),
+      members,
+      isPublic:isPublic(sid),
+      ownerId:srv.ownerId,
+      by:rec.by,inviter,
+      uses:Number(rec.uses)||0,
+      max:Number(rec.max)||0,
+      exp:Number(rec.exp)||0,
+      alreadyIn:inServer(sid,myId)
+    };
+    /* Expiry and exhaustion are reported as part of a SUCCESSFUL preview, not as a failure:
+       the person should still be shown which server it was and told why they cannot use it,
+       rather than a bare "invalid". redeemInvite() re-checks both atomically - this is for
+       the message, never for the decision. */
+    if(out.exp&&out.exp<Date.now()+SKEW){out.dead='expired';out.deadMsg='This invite has expired.'}
+    else if(out.max&&out.uses>=out.max){out.dead='used-up';out.deadMsg='This invite has run out of uses.'}
+    try{if(!out.alreadyIn&&(await get(R('serverBans/'+sid+'/'+myId))).val()){out.dead='banned';out.deadMsg='You are banned from this server.'}}catch(_){}
+    return out;
+  }
+  function normalizeInviteCode(code){
+    /* Accepts a bare code, a full invite URL, or anything with the code as its last path or
+       fragment component - people paste all three. */
+    let s=String(code||'').trim();
+    const m=s.match(/[#?&]invite=([A-Za-z0-9]{4,32})/);
+    if(m)return m[1].toUpperCase();
+    s=s.replace(/^.*[\/#]/,'');
+    return s.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,32);
+  }
+
+  /* ---------- spending a use, atomically (v54.7) ----------
+
+     The old code did this, AFTER joining and with its failure swallowed:
+
+         set(R('invites/'+sid+'/'+code+'/uses'), (rec.uses||0)+1)
+
+     rec.uses came from a read taken before the join. Two people redeeming a one-use invite at
+     the same moment both read 0, both passed the `uses >= max` check, both joined, and both
+     wrote 1. The database rules only accept `uses === data.uses + 1`, so the second write was
+     refused - and the refusal was caught and discarded, so the count silently stopped moving
+     while people kept joining. A 1-use invite was effectively unlimited under any concurrency,
+     and the log of how many times it had been used was wrong.
+
+     This reserves the use FIRST, inside a transaction that re-reads the record and re-checks
+     expiry and the limit on every attempt, so the decision and the increment are one
+     indivisible step. Whoever loses the race is told the invite is used up, which is true.
+
+     The deliberate trade: if the join itself then fails, the use has been spent. That is the
+     safe direction to fail - the rules let a member increment `uses` and nothing else, so a
+     decrement is impossible for an ordinary joiner, and the alternative ordering is the
+     unlimited-invite bug above. A spent use on a failed join costs the inviter one slot; the
+     other way round costs them the limit entirely. */
+  async function reserveInviteUse(sid,code){
+    const r=R('invites/'+sid+'/'+code);
+    let why='revoked';
+    const res=await runTransaction(r,cur=>{
+      if(!cur){why='revoked';return undefined}            // undefined = abort
+      const uses=Number(cur.uses)||0,max=Number(cur.max)||0,exp=Number(cur.exp)||0;
+      if(exp&&exp<Date.now()+SKEW){why='expired';return undefined}
+      if(max&&uses>=max){why='used-up';return undefined}
+      return{...cur,uses:uses+1};
+    });
+    if(!res||!res.committed)return{ok:false,why};
+    return{ok:true,uses:(res.snapshot&&res.snapshot.val&&(Number(res.snapshot.val().uses)||0))||0};
+  }
   async function listInvites(sid){
     try{
       const v=(await get(R('invites/'+sid))).val()||{};
@@ -11271,7 +11624,7 @@ const DModel=(()=>{
   }
   async function joinByInvite(code){
     if(myId==null)throw new Error('Sign in first.');
-    code=String(code||'').trim().toUpperCase().replace(/^.*\//,'');
+    code=normalizeInviteCode(code);
     if(!code)throw new Error('Paste an invite code first.');
     let sid=null;
     try{sid=(await get(R('inviteCodes/'+code))).val()}
@@ -11279,10 +11632,8 @@ const DModel=(()=>{
     if(!sid)throw new Error('That invite is invalid or has expired.');
     let rec=null;
     try{rec=(await get(R('invites/'+sid+'/'+code))).val()}catch(_){}
-    if(!rec)throw new Error('That invite is invalid or has expired.');
-    if(rec.exp&&rec.exp<Date.now()+SKEW)throw new Error('That invite has expired.');
-    if(rec.max&&rec.uses>=rec.max)throw new Error('That invite has run out of uses.');
-    if(inServer(sid,myId))return sid;
+    if(!rec)throw new Error('That invite has been revoked.');
+    if(inServer(sid,myId))return sid;                 // already a member: nothing to spend
     assertCanJoin();
     // The rules already refuse to recreate a banned member's record; check here too so the
     // person gets told why instead of a bare permission error.
@@ -11294,6 +11645,23 @@ const DModel=(()=>{
     if(!srv)throw new Error('That server no longer exists.');
     let chans;
     try{chans=(await get(R('serverChannels/'+sid))).val()||{}}catch(_){chans={}}
+
+    /* Spend the use BEFORE joining, atomically - see reserveInviteUse() for why this order and
+       what it costs. Expiry and the usage limit are enforced inside the transaction, so these
+       are the authoritative checks; the ones in previewInvite() only choose the wording. */
+    let reserved=null;
+    try{reserved=await reserveInviteUse(sid,code)}
+    catch(e){
+      throw new Error(isDenied(e)
+        ? 'The database refused the invite. The published rules are out of date — tell an owner to publish the current firebase-rules.json.'
+        : 'Could not check that invite. Check your connection and try again.');
+    }
+    if(!reserved.ok){
+      if(reserved.why==='expired')throw new Error('That invite has expired.');
+      if(reserved.why==='used-up')throw new Error('That invite has run out of uses.');
+      throw new Error('That invite has been revoked.');
+    }
+
     // Staged for the same reason as createServer: roomMembers only accepts me once my
     // serverMembers record already exists in the committed data.
     try{
@@ -11302,6 +11670,10 @@ const DModel=(()=>{
         ['userServers/'+myId+'/'+sid]:true
       }));
     }catch(e){
+      /* The use is already spent. Say so rather than letting the inviter wonder why the count
+         moved without anybody arriving - and do not pretend it can be given back: the rules
+         allow a member to increment `uses` and nothing else. */
+      console.warn('[DModel] invite use spent but join failed',code,e&&e.code);
       throw new Error(isDenied(e)
         ? 'The database refused to add you to that server. The published rules are out of date — tell an owner to publish the current firebase-rules.json.'
         : 'Joining failed. Check your connection and try again.');
@@ -11315,8 +11687,7 @@ const DModel=(()=>{
       catch(e){console.warn('[DModel] channel access write failed',e&&e.code)}
     }
     delete _accessDone[sid];
-    // count the use; a failure here must not undo a successful join
-    try{await set(R('invites/'+sid+'/'+code+'/uses'),(rec.uses||0)+1)}catch(_){}
+    try{await refreshDiscoveryCount(sid)}catch(_){}
     await postJoinMessage(sid);
     return sid;
   }
@@ -11711,22 +12082,21 @@ const DModel=(()=>{
     });
   }
   /* The roles one member HAS, highest first.
-     v54.5: a site owner holds every role in every server. They already outranked every server
-     - can() short-circuits on isOwner - but the roles themselves were never granted, so their
-     name carried no role colour, they sat in the plain Online group of the member list instead
-     of the top hoisted one, and their own profile showed no server roles at all. Granting the
-     list here rather than writing rows into every server keeps it true the moment ownership
-     changes and leaves nothing behind if it is taken away, which is the same approach the
-     virtual ranks and the boost counts already take.
-     Virtual roles stay conditional even for an owner: those are site ranks with their own
-     tests (MVP, VIP, a custom role), and claiming them would be a lie rather than a power. */
+     A site owner effectively holds every role in every server, including every virtual ICH
+     rank. This is a DISPLAY/permission view only: storedRolesOf() remains the authoritative
+     record of actual assignments, and the effective permission cache is built from stored
+     roles so a site-owner privilege can never survive removal from owners/ or secretowner/.
+     On custom servers, roles() is made up of that server's own real roles. On ICH, it also
+     contains the built-in Owner/Admin/Mod/MVP/Developer/VIP ranks; the site owner needs to see
+     and inherit all of those in the role list and member grouping, not merely have can() return
+     true behind the scenes. Normal accounts still get only the virtual ranks whose tests pass. */
   function rolesOf(sid,uid){
     uid=Number(uid);
     let owner=false;try{owner=isOwner(uid)}catch(_){}
     if(!owner)return storedRolesOf(sid,uid);
     return roles(sid).filter(r=>{
       if(r.everyone)return true;
-      if(r.virtual)return typeof r.test==='function'&&r.test(uid);
+      if(r.virtual)return sid===ICH_ID||typeof r.test==='function'&&r.test(uid);
       return true;
     });
   }
@@ -11770,6 +12140,9 @@ const DModel=(()=>{
   function storedPerms(sid,uid){
     uid=Number(uid==null?myId:uid);
     if(isServerOwner(sid,uid))return permsAll();
+    // Same gate as basePerms: a non-member's cached permission row must be empty, not the
+    // @everyone defaults, or syncPerms would write those defaults into the database.
+    if(sid!==ICH_ID&&!inServer(sid,uid))return{};
     const out={};
     storedRolesOf(sid,uid).forEach(r=>{PERM_KEYS.forEach(k=>{if(r.perms&&r.perms[k])out[k]=true})});
     if(out.admin)return permsAll();
@@ -11779,6 +12152,17 @@ const DModel=(()=>{
     uid=Number(uid==null?myId:uid);
     try{if(isOwner(uid))return permsAll()}catch(_){}
     if(isServerOwner(sid,uid))return permsAll();
+    /* v54.7: somebody who is not in the server has no permissions in it.
+       This had been granting them the @everyone DEFAULTS. roles() synthesises an @everyone
+       carrying EVERYONE_DEFAULT whenever a server has no stored roles - which is the right
+       thing for a brand-new server, but it is also what a client sees for a server it has no
+       data about at all, because nothing is listening to a server you have not joined. So
+       can('someServer','invite') answered true for a complete stranger, and the UI offered
+       them Invite People on a server they were not in. The database rules refused the write,
+       so this was never an escalation - it was the worse-than-useless kind of bug: a button
+       that works right up until it doesn't, and a model that disagrees with the rules.
+       ICH is exempt because every account with a profile is a member of it by definition. */
+    if(sid!==ICH_ID&&!inServer(sid,uid))return{};
     const out={};
     rolesOf(sid,uid).forEach(r=>{PERM_KEYS.forEach(k=>{if(r.perms&&r.perms[k])out[k]=true})});
     if(out.admin)return permsAll();
@@ -12124,6 +12508,27 @@ const DModel=(()=>{
   /* ======================================================================
    *  DISCOVERY  (opt-in public listing)
    * ====================================================================== */
+  /* v54.7: the fixed category vocabulary. A FIXED list rather than free text, because a free
+     field produces "Gaming", "gaming", "GAMING " and "games" and a filter that matches none of
+     them. Stored as the label itself, not an index, so reordering this array can never silently
+     recategorise every server that is already listed. */
+  const SRV_CATS=['Gaming','Community','Music','Art & Design','Tech','Study','Sport','Anime',
+                  'Roleplay','Other'];
+  function normalizeTags(v){
+    /* One short comma-separated string rather than a map: it validates in the database rules
+       with a single length check, and a map of tag->true would have needed its own $other rule
+       and a way to delete individual keys. Lower-cased and de-duplicated so the filter does not
+       have to be clever later. */
+    return String(v||'')
+      .split(',')
+      .map(t=>t.trim().toLowerCase().replace(/[^a-z0-9 +#-]/g,'').replace(/\s+/g,' ').slice(0,20))
+      .filter(Boolean)
+      .filter((t,i,a)=>a.indexOf(t)===i)
+      .slice(0,6)
+      .join(',');
+  }
+  const tagsOf=v=>String(v||'').split(',').map(t=>t.trim()).filter(Boolean).slice(0,6);
+
   /* ---------- live member counts for Discover (v54.6) ----------
 
      serverDiscovery/$sid/members is a NUMBER COPIED INTO THE LISTING when the server was
@@ -12196,6 +12601,10 @@ const DModel=(()=>{
       return{id:sid,name:String(v.name).slice(0,40),icon:String(v.icon||'').slice(0,8),
              // the listing is world-writable by its own server's staff, so validate before use
              img:isSafeServerImg(v.img)?v.img:'',desc:String(v.desc||'').slice(0,200),
+             /* Same reasoning for the category: only a value from the fixed list is believed,
+                so a hand-written listing cannot put an arbitrary string into the filter bar. */
+             cat:(v.cat&&SRV_CATS.indexOf(String(v.cat))>=0)?String(v.cat):'',
+             tags:tagsOf(v.tags),
              members:c.n,liveMembers:c.live,storedMembers:Number(v.members)||0,at:Number(v.at)||0};
     }).filter(Boolean).sort((a,b)=>b.members-a.members||a.name.localeCompare(b.name));
   }
@@ -12212,6 +12621,8 @@ const DModel=(()=>{
     catch(_){return false}        // not ours to write; the derived count is still what shows
   }
   function isPublic(sid){return !!(S.discovery&&S.discovery[sid])}
+  /* opts (v54.7): {desc, cat, tags}. Still accepts a bare description string as the third
+     argument, because that is what every existing caller passes. */
   async function setPublic(sid,on,desc){
     assertPerm(sid,'manageSrv');
     if(sid===ICH_ID)throw new Error('ICH is not listed in Discover — everyone is already in it.');
@@ -12222,10 +12633,17 @@ const DModel=(()=>{
        published advertising zero members. */
     let n=memberCount(sid);
     try{const live=(await get(R('serverMembers/'+sid))).val();if(live!==undefined)n=countMembership(live)}catch(_){}
+    const opts=(desc&&typeof desc==='object')?desc:{desc:desc};
     const rec={name:srv.name,at:Date.now()+SKEW,members:n};
     if(srv.icon)rec.icon=srv.icon;
     if(srv.img)rec.img=srv.img;
-    if(desc)rec.desc=String(desc).slice(0,200);
+    if(opts.desc)rec.desc=String(opts.desc).slice(0,200);
+    /* Only a category from the fixed list is stored. Anything else is dropped rather than
+       written through, so a tampered client cannot invent a category that then appears as a
+       filter chip for everybody. */
+    if(opts.cat&&SRV_CATS.indexOf(String(opts.cat))>=0)rec.cat=String(opts.cat);
+    const tags=normalizeTags(opts.tags);
+    if(tags)rec.tags=tags;
     await set(R('serverDiscovery/'+sid),rec);
   }
   /* Joining straight from Discover - no invite code involved. */
@@ -12301,7 +12719,8 @@ const DModel=(()=>{
     muteUntil,isServerMuted,timeoutMember,
     myIpHash,ipBannedHere,ipBanHash,ipUnbanHash,ipBanList,
     discoveryList,isPublic,setPublic,joinPublic,
-    discoveryCount,holdDiscoveryCounts,refreshDiscoveryCount,
+    previewInvite,normalizeInviteCode,
+    discoveryCount,holdDiscoveryCounts,refreshDiscoveryCount,SRV_CATS,normalizeTags,
     joinLimit,ownLimit,joinedCount,ownedCount,limitInfo,
     grantAccess,pruneDeadServers,isDenied,holdServer,holdServerReady,
     _state:S
@@ -13408,6 +13827,13 @@ const DB=(()=>{
     customRolesOf:(id)=>customRolesOf(id),
     topCustomRole:(id)=>topCustomRole(id),
     customRolesLoaded:()=>CUSTOM_ROLES_LOADED,
+    /* v54.7: when a timed grant runs out (0 = permanent). The owner panel shows the term
+       beside the grant; everything else just asks customRolesOf(), which already drops a
+       grant whose term has passed. */
+    customRoleExpiry:(roleId,id)=>{
+      const r=customRoleList().find(x=>x.id===String(roleId));
+      return r?crExpiresAt(r,id):0;
+    },
     isMvp:mvpOn,
     mvpAccess,
     mvpSince:(id)=>{const v=C.mvp[Number(id)];return(typeof v==='number'&&v>1)?v:0},
@@ -29996,7 +30422,15 @@ const DiscordShell=(function(){
     {name:'Trick or Treat',ic:'\u{1F383}',
      when:()=>{try{return typeof totVisible==='function'&&totVisible()}catch(_){return false}},
      go:()=>{closeExtras();if(typeof totOpen==='function')totOpen()}},
-    {name:'Join our Discord',ic:DISCORD_IC,go:()=>{closeExtras();openDiscord()}}
+    {name:'Join our Discord',ic:DISCORD_IC,go:()=>{closeExtras();openDiscord()}},
+    /* v54.7. `when` is how every other conditional row here works, and site ownership comes
+       from owners//secretowner/ in the database - so this row is absent for everybody else
+       rather than present-and-refused. Hiding it is not the security boundary though: the
+       panel re-checks ownership on open, per section and before every action, and cannot do
+       anything the database rules would not already allow. */
+    {name:'Control Center',ic:'\u{1F6E0}',
+     when:()=>{try{return !!(ME&&isOwner(ME.id))}catch(_){return false}},
+     go:()=>{closeExtras();openOwnerCenter()}}
   ];
 
   function railClick(e){
@@ -31249,28 +31683,52 @@ function openInvite(sid){
     const err=m.body.querySelector('#ivErr');err.textContent='';go.disabled=true;
     try{
       const code=await DModel.createInvite(sid,{expiresMs:exp||undefined,maxUses:max||undefined});
-      /* The CODE comes first, deliberately. The site is usually opened inside an about:blank or
-         blob launcher window, where a link to "this page" is meaningless - the code is the thing
-         that always works, pasted into Add a Server -> Join a Server. The link is offered second,
-         and only when there is a real address to point at. */
-      /* Invite CODES are the product. Invite LINKS are marked coming soon on purpose: the site
-         is normally opened from an about:blank or blob launcher window, where the page has no
-         address of its own and a "link to this page" is either meaningless or points at whichever
-         deployment CFG.SITE_URL happens to name - which is not necessarily the one the person is
-         using. Until there is one address that is always right, the link would be a feature that
-         works for some people and silently fails for others. The code works everywhere. */
+      /* v54.7: the code AND a real link.
+
+         The code still comes first and is still the thing that always works: ICH is usually
+         opened from an about:blank or blob launcher window, where the page has no address of
+         its own, and a code pasted into Join a Server needs none.
+
+         The link is no longer "coming soon". It was never unfinished - inviteUrl() and the
+         boot handler both existed; the redemption side was simply broken (it looked the code
+         up at the wrong path and could not succeed), so the button had been disabled to match
+         the symptom. With that fixed, a link is offered whenever there is a genuine address to
+         hang it off: this page when it is really http(s), otherwise the configured CFG.SITE_URL.
+         When neither is usable the link section says so and the code stands alone, rather than
+         handing out something like "nullblank#invite=ABC". */
+      const url=inviteUrl(code);
+      const canShare=!!(navigator.share&&url);
       m.body.querySelector('#ivOut').innerHTML=
         '<div class="dlabel" style="margin-top:4px">Invite code</div>'+
         '<div class="dcode"><span style="font-size:20px;letter-spacing:2px">'+esc(code)+'</span>'+
         '<button type="button" class="dbtn sm grey cp" data-cp>Copy code</button></div>'+
         '<div class="dhint">They join with <b>+</b> on the left → <b>Join a Server</b> → paste this. '+
         'This works everywhere, including launcher windows.</div>'+
-        '<div class="dlabel" style="margin-top:16px">Or send a link</div>'+
-        '<div class="dcode soon"><span>Invite links — <b>coming soon</b></span>'+
-        '<button type="button" class="dbtn sm grey" disabled>Copy link</button></div>'+
-        '<div class="dhint">Share the code above for now.</div>';
+        '<div class="dlabel" style="margin-top:16px">Invite link</div>'+
+        (url
+          ?'<div class="dcode"><span class="ivlink" title="'+esc(url)+'">'+esc(url)+'</span>'+
+             '<button type="button" class="dbtn sm grey" data-cpl>Copy link</button></div>'+
+           (canShare?'<button type="button" class="dbtn sec sm" data-share style="margin-top:8px;width:100%">Share…</button>':'')+
+           '<div class="dhint">Opening this link shows them '+esc(srv.name)+' and asks before they join. '+
+           'Looking at it doesn’t use up the invite — only joining does.</div>'
+          :'<div class="dcode soon"><span>No shareable address for this window</span></div>'+
+           '<div class="dhint">ICH is open in a launcher window with no address of its own, and no '+
+           '<b>SITE_URL</b> is configured, so a link would point nowhere. Share the code above — it works everywhere.</div>')+
+        (max?'<div class="dhint" style="margin-top:10px">Good for <b>'+max+'</b> use'+(max===1?'':'s')+'.</div>':'');
       m.body.querySelector('[data-cp]').onclick=async()=>{
         const ok=await copyText(code);toast(ok?'Invite code copied':'Could not copy',ok?'good':'bad');
+      };
+      const cpl=m.body.querySelector('[data-cpl]');
+      if(cpl)cpl.onclick=async()=>{
+        const ok=await copyText(url);toast(ok?'Invite link copied':'Could not copy',ok?'good':'bad');
+      };
+      const sh=m.body.querySelector('[data-share]');
+      if(sh)sh.onclick=async()=>{
+        /* The share sheet is cancellable, and a cancel arrives as a rejected promise with
+           name AbortError. Treating that as a failure would show an error for the ordinary act
+           of changing your mind. */
+        try{await navigator.share({title:'Join '+srv.name+' on ICH',text:'Join '+srv.name+' on Itsukis Chat Hub',url})}
+        catch(e){if(e&&e.name!=='AbortError')toast('Could not open the share sheet','bad')}
       };
       go.textContent='Generate Another';
     }catch(e){err.textContent=e.message||'Could not create an invite.'}
@@ -31679,8 +32137,11 @@ let _dset=null;
 let _dsetRelease=null;
 function closeServerSettings(){
   if(_dset){_dset.remove();_dset=null;document.removeEventListener('keydown',_dsetKey)}
+  _dsetGuard=null;
   if(_dsetRelease){const f=_dsetRelease;_dsetRelease=null;try{f()}catch(_){}}
 }
+/* Set by openServerSettings while a pane is open; see closeGuarded there. */
+let _dsetGuard=null;
 function _dsetKey(e){
   if(e.key!=='Escape')return;
   // on a phone, Escape backs out of a section to the list before it closes the whole panel
@@ -31688,6 +32149,7 @@ function _dsetKey(e){
      window.matchMedia&&window.matchMedia('(max-width:820px)').matches){
     _dset.classList.remove('dset-paned');return;
   }
+  if(_dsetGuard){_dsetGuard();return}
   closeServerSettings();
 }
 
@@ -31722,8 +32184,13 @@ async function openServerSettings(sid,section){
   document.body.appendChild(el);
   _dset=el;
   document.addEventListener('keydown',_dsetKey);
-  el.querySelector('#svX').onclick=closeServerSettings;
-  el.querySelector('#svXm').onclick=closeServerSettings;
+  /* v54.7: closing the pane goes through the same guard as switching role or tab, so a
+     half-finished permission draft cannot be lost to a stray click on the X. _dsetGuard is
+     module-level because _dsetKey (Escape) lives outside this closure and needs it too. */
+  const closeGuarded=()=>guardLeave(closeServerSettings);
+  _dsetGuard=closeGuarded;
+  el.querySelector('#svX').onclick=closeGuarded;
+  el.querySelector('#svXm').onclick=closeGuarded;
   el.querySelector('#svBack').onclick=()=>el.classList.remove('dset-paned');
 
   const nav=el.querySelector('#svNav'),main=el.querySelector('#svMain');
@@ -31828,6 +32295,22 @@ async function openServerSettings(sid,section){
         dtoggleHTML(DModel.isPublic(sid),'id="svPublic"')+'</div>'+
         '<div class="dfield" style="margin-top:12px"><label class="dlabel">Short description</label>'+
         '<input class="dinput" id="svDesc" maxlength="200" value="'+esc((DModel._state.discovery[sid]||{}).desc||'')+'" placeholder="What is this server about?"></div>'+
+        /* v54.7: the category and tags people search Discover by. The category is a fixed list
+           (DModel.SRV_CATS) rather than free text - a free field gives you "Gaming", "gaming"
+           and "GAMING " as three different categories and a filter that matches none of them. */
+        '<div class="dfield"><label class="dlabel">Category</label>'+
+        '<select class="dinput" id="svCat">'+
+          '<option value="">\u2014 none \u2014</option>'+
+          DModel.SRV_CATS.map(c=>'<option value="'+esc(c)+'"'+
+            (((DModel._state.discovery[sid]||{}).cat===c)?' selected':'')+'>'+esc(c)+'</option>').join('')+
+        '</select>'+
+        '<div class="dhint">Puts the server under a filter chip in Discover.</div></div>'+
+        '<div class="dfield"><label class="dlabel">Tags</label>'+
+        '<input class="dinput" id="svTags" maxlength="100" value="'+
+          esc(String((DModel._state.discovery[sid]||{}).tags||''))+
+          '" placeholder="minecraft, chill, uk"></div>'+
+        '<div class="dhint" style="margin:-8px 0 12px">Up to six, comma separated. People searching '+
+        'Discover match against these as well as the name and description.</div>'+
         '<button type="button" class="dbtn grey" id="svPubSave">Save listing</button>')+
       /* ---- v53: the things Discord calls System Messages, plus a server description ---- */
       (sys?'':'<div class="dsep"></div>'+
@@ -31931,8 +32414,20 @@ async function openServerSettings(sid,section){
     if(pb)pb.onclick=async()=>{
       pb.disabled=true;const err=main.querySelector('#svErr');err.textContent='';
       try{
-        await DModel.setPublic(sid,main.querySelector('#svPublic').checked,main.querySelector('#svDesc').value);
-        toast(main.querySelector('#svPublic').checked?'Listed in Discover.':'Removed from Discover.','good');
+        const on=main.querySelector('#svPublic').checked;
+        await DModel.setPublic(sid,on,{
+          desc:main.querySelector('#svDesc').value,
+          cat:main.querySelector('#svCat').value,
+          tags:main.querySelector('#svTags').value
+        });
+        toast(on?'Listed in Discover.':'Removed from Discover.','good');
+        /* Re-read what was actually stored: normalizeTags() drops duplicates, strips odd
+           characters and caps at six, so the field has to show the saved value rather than
+           what was typed - otherwise the next save writes the unnormalised text back. */
+        if(on)setTimeout(()=>{
+          const t=main.querySelector('#svTags');
+          if(t)t.value=String((DModel._state.discovery[sid]||{}).tags||'');
+        },350);
       }catch(e){err.textContent=e.message||'Could not save the listing.'}
       finally{pb.disabled=false}
     };
@@ -31940,6 +32435,26 @@ async function openServerSettings(sid,section){
 
   /* ---------------- Roles ---------------- */
   let selRole=null,roleTab='display',memQ='';
+  /* v54.7 role-manager state. permQ filters the permission list; roleQ filters the role list.
+     permDirty/permDiscard are installed by panePerms so that anything which would NAVIGATE AWAY
+     from a half-finished permission draft can ask first - the role list, the tab strip, and
+     closing the pane. They are reset to no-ops whenever a pane that owns no draft is drawn, so
+     a stale guard can never block navigation after the draft is gone. */
+  let permQ='',roleQ='';
+  let permDirty=()=>0,permDiscard=()=>{};
+  function clearPermGuard(){permDirty=()=>0;permDiscard=()=>{}}
+  /* Runs `go` now if there is nothing to lose, otherwise asks. One place, so every exit from
+     the permission pane behaves the same way. */
+  function guardLeave(go){
+    let n=0;try{n=permDirty()}catch(_){n=0}
+    if(!n)return go();
+    dconfirm({
+      title:'Discard '+n+' unsaved permission change'+(n===1?'':'s')+'?',
+      sub:'You changed this role\u2019s permissions but haven\u2019t saved. Leaving now throws those changes away.',
+      confirm:'Discard Changes',danger:true,
+      onConfirm:()=>{try{permDiscard()}catch(_){}clearPermGuard();go()}
+    });
+  }
   function drawRoles(){
     const roles=DModel.roles(sid);
     if(!selRole||!roles.some(r=>r.id===selRole))selRole=(roles.find(r=>!r.virtual&&!r.everyone)||roles[0]).id;
@@ -31963,16 +32478,29 @@ async function openServerSettings(sid,section){
        so a role created here could never be given to anyone. The + is left out rather than
        offered and then refused. */
     const sysRoles=DModel.isSystem(sid);
-    host.innerHTML='<div class="drm-list-head"><h3>Roles — '+roles.length+'</h3>'+
-      (sysRoles?'':'<button type="button" class="dbtn sm" id="rmNew">'+DI.plus+'</button>')+'</div>'+
+    /* v54.7: a search box over the role list. A server with thirty roles made finding one a
+       scroll, and the list is the only way into everything else on this page. Filtering never
+       hides the SELECTED role, so searching cannot make the pane on the right orphaned. */
+    const rq=roleQ.trim().toLowerCase();
+    host.innerHTML='<div class="drm-list-head"><h3>Roles \u2014 '+roles.length+'</h3>'+
+      (sysRoles?'':'<button type="button" class="dbtn sm" id="rmNew" title="Create a role" aria-label="Create a role">'+DI.plus+'</button>')+'</div>'+
+      (roles.length>6?'<div style="padding:0 8px 8px"><input class="dinput" id="rmQ" placeholder="Search roles" value="'+esc(roleQ)+'" aria-label="Search roles" style="height:30px;font-size:13px"></div>':'')+
       (sysRoles?'<div class="dhint" style="padding:0 10px 8px">ICH\u2019s roles are the site ranks. They\u2019re granted from the owner tools, not created here.</div>':'')+
       '<div id="rmRoles"></div>';
+    const rqi=host.querySelector('#rmQ');
+    if(rqi)rqi.oninput=()=>{
+      roleQ=rqi.value;const at=rqi.selectionStart;
+      drawRoleList();
+      const n=main.querySelector('#rmQ');if(n){n.focus();try{n.setSelectionRange(at,at)}catch(_){}}
+    };
     if(host.querySelector('#rmNew'))host.querySelector('#rmNew').onclick=async()=>{
       try{const rid=await DModel.createRole(sid,'new role');selRole=rid;roleTab='display';setTimeout(drawRoles,250)}
       catch(e){toast(e.message||'Could not create a role','bad')}
     };
     const box=host.querySelector('#rmRoles');
-    roles.forEach(r=>{
+    const shown=roles.filter(r=>!rq||r.id===selRole||String(r.name||'').toLowerCase().includes(rq));
+    if(!shown.length){box.innerHTML='<div class="dhint" style="padding:8px 10px">No role matches.</div>';return}
+    shown.forEach(r=>{
       const row=document.createElement('div');
       const locked=r.virtual||r.everyone||!DModel.canManageRole(sid,r.id);
       row.className='drm-role'+(selRole===r.id?' active':'')+(locked?' locked':'')+(r.virtual?' virtual':'');
@@ -31981,7 +32509,7 @@ async function openServerSettings(sid,section){
         '<span class="dot" style="background:'+esc(r.color||'#99aab5')+'"></span>'+
         '<span class="nm">'+esc(r.name)+'</span>'+
         '<span class="ct">'+roleMemberCount(r)+'</span>';
-      row.onclick=()=>{selRole=r.id;drawRoleList();drawRoleEdit()};
+      row.onclick=()=>guardLeave(()=>{clearPermGuard();selRole=r.id;drawRoleList();drawRoleEdit()});
       if(!locked){
         row.draggable=true;
         row.addEventListener('dragstart',e=>{_dragRid=r.id;row.classList.add('dragging');try{e.dataTransfer.setData('text/plain',r.id)}catch(_){}});
@@ -32024,11 +32552,11 @@ async function openServerSettings(sid,section){
       (r.virtual?'<div class="dnote">‘'+esc(r.name)+'’ is one of the site’s built-in ranks. It is shown here so you can see where it sits in the hierarchy, but it is managed from your backend — the database rules stop the browser changing it.</div>':'')+
       (!r.virtual&&readOnly?'<div class="dnote bad">This role sits above your highest role, so you cannot edit it.</div>':'')+
       '<div id="rmPane"></div>';
-    host.querySelectorAll('[data-t]').forEach(t=>t.onclick=()=>{roleTab=t.dataset.t;drawRoleEdit()});
+    host.querySelectorAll('[data-t]').forEach(t=>t.onclick=()=>guardLeave(()=>{clearPermGuard();roleTab=t.dataset.t;drawRoleEdit()}));
     const pane=host.querySelector('#rmPane');
-    if(roleTab==='display')paneDisplay(pane,r,readOnly);
+    if(roleTab==='display'){clearPermGuard();paneDisplay(pane,r,readOnly)}
     else if(roleTab==='perms')panePerms(pane,r,readOnly);
-    else paneMembers(pane,r);
+    else{clearPermGuard();paneMembers(pane,r)}
   }
 
   function paneDisplay(pane,r,readOnly){
@@ -32093,38 +32621,131 @@ async function openServerSettings(sid,section){
     });
   }
 
+  /* ---------------- the permission matrix (v54.7, reworked) ----------------
+
+     WHAT CHANGED AND WHY
+       Every toggle used to write to the database the instant it moved. Flipping twelve
+       permissions on a role was twelve separate updateRole() calls, and each one re-flattens
+       the permission cache for EVERY member of the server (DModel.syncPerms) - so a routine
+       edit to a role in a 200-member server fired twelve cascades of two hundred writes. It
+       also meant a half-finished edit was already live: turn Administrator on while deciding,
+       and for those few seconds the role really could do everything.
+
+       Now the pane holds the changes, shows what is unsaved, and writes once. Save sends a
+       single updateRole() with all of the changed keys, so one cascade instead of twelve.
+       Reset throws the draft away. Leaving with unsaved changes asks first - the role list,
+       the tab strip and the pane's own Escape all route through guardLeave().
+
+       The search box exists because 23 permissions over six headings is more than anybody
+       wants to scan to find "can they pin things".
+  */
   function panePerms(pane,r,readOnly){
     const mine=DModel.basePerms(sid,ME.id);
-    pane.innerHTML=DModel.PERM_CATS.map(cat=>{
-      const inCat=DModel.PERMS.filter(p=>p.cat===cat);
-      if(!inCat.length)return '';
-      return '<div class="dperm-cat">'+cat+'</div>'+inCat.map(p=>{
-        const on=r.perms&&r.perms[p.k];
-        // You cannot hand out a permission you do not have yourself.
-        const blocked=readOnly||(!mine[p.k]&&!isOwner(ME.id));
-        return '<div class="dperm'+(p.danger?' danger':'')+'">'+
-          '<div class="dperm-txt"><div class="dperm-nm">'+esc(p.n)+
-            (blocked&&!readOnly?' <span class="dhint" style="margin:0">(you don’t have this)</span>':'')+
-          '</div><div class="dperm-d">'+esc(p.d)+'</div></div>'+
-          dtoggleHTML(!!on,'data-perm="'+p.k+'"'+(blocked?' disabled':''))+
-        '</div>';
+    let siteOwner=false;try{siteOwner=isOwner(ME.id)}catch(_){}
+    const saved=()=>{const o={};DModel.PERM_KEYS.forEach(k=>{o[k]=!!(r.perms&&r.perms[k])});return o};
+    let base=saved();                 // what the database says right now
+    let draft={...base};              // what the person has built
+    const changed=()=>DModel.PERM_KEYS.filter(k=>!!draft[k]!==!!base[k]);
+
+    /* Registered so the role list and the tab strip can ask before they discard a draft. */
+    permDirty=()=>changed().length;
+    permDiscard=()=>{draft={...base}};
+
+    function render(){
+      const q=permQ.trim().toLowerCase();
+      const dirty=changed();
+      const cats=DModel.PERM_CATS.map(cat=>{
+        let inCat=DModel.PERMS.filter(p=>p.cat===cat);
+        if(q)inCat=inCat.filter(p=>p.n.toLowerCase().includes(q)||p.d.toLowerCase().includes(q)||p.k.toLowerCase().includes(q));
+        if(!inCat.length)return '';
+        return '<div class="rm-cat">'+esc(cat)+'</div>'+inCat.map(p=>{
+          const on=!!draft[p.k];
+          const moved=!!draft[p.k]!==!!base[p.k];
+          // You cannot hand out a permission you do not hold yourself.
+          const blocked=readOnly||(!mine[p.k]&&!siteOwner);
+          return '<div class="rm-perm'+(blocked?' locked':'')+'">'+
+            '<div class="rm-perm-txt"><div class="rm-perm-nm">'+esc(p.n)+
+              (p.danger?'<span class="rm-danger">Dangerous</span>':'')+
+              (moved?'<span class="rm-danger" style="background:rgba(250,166,26,.16);color:#f0b232">Unsaved</span>':'')+
+            '</div><div class="rm-perm-d">'+esc(p.d)+
+              (blocked&&!readOnly?' <b>You don’t have this permission, so you can’t grant it.</b>':'')+
+            '</div></div>'+
+            dtoggleHTML(on,'data-perm="'+p.k+'"'+(blocked?' disabled':'')+
+              ' aria-label="'+esc(p.n)+'"')+
+          '</div>';
+        }).join('');
       }).join('');
-    }).join('')+'<div class="derr" id="pErr"></div>';
-    if(readOnly)return;
-    pane.querySelectorAll('[data-perm]').forEach(inp=>{
-      inp.onchange=async()=>{
-        const k=inp.dataset.perm;
-        inp.disabled=true;
-        try{
-          await DModel.updateRole(sid,r.id,{perms:{[k]:inp.checked}});
-          if(k==='admin'&&inp.checked)toast('Administrator granted — that role can now do everything.','good');
-          if(typeof renderChat==='function')renderChat();
-        }catch(e){
-          inp.checked=!inp.checked;
-          pane.querySelector('#pErr').textContent=e.message||'Could not save.';
-        }finally{inp.disabled=false}
+
+      pane.innerHTML=
+        '<div class="dfield" style="margin-bottom:4px">'+
+          '<input class="dinput" id="pq" placeholder="Search permissions" value="'+esc(permQ)+'" aria-label="Search permissions">'+
+        '</div>'+
+        (cats||'<div class="dempty">No permission matches “'+esc(permQ.trim())+'”.</div>')+
+        '<div class="derr" id="pErr"></div>'+
+        (readOnly
+          ?'<div class="rm-ro">You can see this role’s permissions but not change them — it sits at or above your own highest role.</div>'
+          :'<div class="rm-bar">'+
+             (dirty.length?'<span class="rm-dirty">'+dirty.length+' unsaved change'+(dirty.length===1?'':'s')+'</span>':'<span class="rm-dirty" style="color:var(--dl-tx3,#949ba4)">Saved</span>')+
+             '<button type="button" class="dbtn grey" id="pReset"'+(dirty.length?'':' disabled')+'>Reset</button>'+
+             '<button type="button" class="dbtn" id="pSave"'+(dirty.length?'':' disabled')+'>Save Permissions</button>'+
+           '</div>');
+
+      const qi=pane.querySelector('#pq');
+      qi.oninput=()=>{
+        permQ=qi.value;
+        const at=qi.selectionStart;
+        render();
+        const n=pane.querySelector('#pq');n.focus();try{n.setSelectionRange(at,at)}catch(_){}
       };
-    });
+      if(readOnly)return;
+      pane.querySelectorAll('[data-perm]').forEach(inp=>{
+        inp.onchange=()=>{draft[inp.dataset.perm]=inp.checked;render()};
+      });
+      const rs=pane.querySelector('#pReset');
+      if(rs)rs.onclick=()=>{draft={...base};render()};
+      const sv=pane.querySelector('#pSave');
+      if(sv)sv.onclick=async()=>{
+        const keys=changed();
+        if(!keys.length)return;
+        const patch={};keys.forEach(k=>{patch[k]=!!draft[k]});
+        const grantingAdmin=patch.admin===true;
+        const commit=async()=>{
+          sv.disabled=true;sv.textContent='Saving…';
+          try{
+            /* One call, all of the changed keys: one permission-cache cascade instead of one
+               per toggle. */
+            await DModel.updateRole(sid,r.id,{perms:patch});
+            base={...draft};
+            toast(keys.length+' permission'+(keys.length===1?'':'s')+' saved.','good');
+            if(typeof renderChat==='function')renderChat();
+            setTimeout(()=>{drawRoleList();render()},200);
+          }catch(e){
+            pane.querySelector('#pErr').textContent=(e&&e.message)||'Could not save.';
+            sv.disabled=false;sv.textContent='Save Permissions';
+          }
+        };
+        /* Administrator is the one permission that cannot be partially understood: it bypasses
+           every other box on this page, including the ones left off. It gets its own
+           confirmation rather than being one switch among twenty-three. */
+        if(grantingAdmin){
+          dconfirm({
+            title:'Grant Administrator to ‘'+r.name+'’',
+            sub:'<b>Administrator</b> gives every permission in this server and bypasses every '+
+                'channel restriction, including private channels and anything you leave switched '+
+                'off on this page. Anyone with ‘'+esc(r.name)+'’ will be able to manage '+
+                'channels, roles and members, and ban people.'+
+                (DModel.roles(sid).find(x=>x.id===r.id)&&roleMemberCount(r)
+                  ?'<div class="dnote" style="margin-top:10px"><b>'+roleMemberCount(r)+'</b> member'+
+                    (roleMemberCount(r)===1?' has':'s have')+' this role right now.</div>':''),
+            confirm:'Grant Administrator',danger:true,
+            onConfirm:commit
+          });
+          return;
+        }
+        commit();
+      };
+    }
+    render();
   }
 
   function paneMembers(pane,r){
@@ -32200,25 +32821,67 @@ async function openServerSettings(sid,section){
       return;
     }
     DModel.listInvites(sid).then(list=>{
+      const now=Date.now()+(typeof SKEW==='number'?SKEW:0);
+      /* v54.7: an invite row used to say only who made it and a raw use count, which left the
+         two questions you actually open this page to answer - is this one still working, and
+         what do I send somebody - unanswered. Each row now carries its state, the link where
+         one can be built, and a confirmation before anything is destroyed. */
+      const state=iv=>{
+        if(iv.exp&&iv.exp<now)return{k:'dead',t:'Expired'};
+        if(iv.max&&(iv.uses||0)>=iv.max)return{k:'dead',t:'Used up'};
+        if(iv.exp)return{k:'live',t:'Expires '+new Date(iv.exp).toLocaleString()};
+        return{k:'live',t:'Never expires'};
+      };
+      const live=list.filter(iv=>state(iv).k==='live');
       main.innerHTML='<div class="dset-h1">Invites</div>'+
+        '<div class="dhint" style="margin:-6px 0 14px">An invite link shows the server and asks before '+
+        'anybody joins. Opening one doesn’t use it up — only joining does.</div>'+
         '<button type="button" class="dbtn" id="ivNew" style="margin-bottom:16px">Create Invite</button>'+
         (list.length?list.map(iv=>{
           const who=DB.getUser(iv.by);
-          const exp=iv.exp?new Date(iv.exp).toLocaleString():'Never';
-          return '<div class="drow"><div class="drow-txt"><div class="drow-nm">'+esc(iv.code)+'</div>'+
-            '<div class="drow-d">By '+esc(who?who.username:'user '+iv.by)+' · '+iv.uses+
-            (iv.max?'/'+iv.max:'')+' uses · Expires: '+esc(exp)+'</div></div>'+
-            '<button type="button" class="dbtn sm grey" data-cp="'+esc(iv.code)+'">Copy</button>'+
+          const st=state(iv);
+          const url=(typeof inviteUrl==='function')?inviteUrl(iv.code):'';
+          const used=(iv.uses||0);
+          const uses=iv.max?(used+' of '+iv.max+' use'+(iv.max===1?'':'s')):(used+' use'+(used===1?'':'s')+' · no limit');
+          return '<div class="drow iv-row'+(st.k==='dead'?' iv-dead':'')+'">'+
+            '<div class="drow-txt"><div class="drow-nm"><code class="iv-code">'+esc(iv.code)+'</code>'+
+              '<span class="iv-pill '+st.k+'">'+esc(st.k==='dead'?st.t:'Active')+'</span></div>'+
+            '<div class="drow-d">'+esc(uses)+' · by '+esc(who?who.username:'user '+iv.by)+
+              ' · '+esc(st.k==='dead'?(iv.exp&&iv.exp<now?'Expired '+new Date(iv.exp).toLocaleString():'Reached its limit'):st.t)+
+            '</div></div>'+
+            '<button type="button" class="dbtn sm grey" data-cp="'+esc(iv.code)+'">Code</button>'+
+            (url?'<button type="button" class="dbtn sm grey" data-cpl="'+esc(iv.code)+'">Link</button>':'')+
             '<button type="button" class="dbtn sm danger" data-rv="'+esc(iv.code)+'">Revoke</button></div>';
-        }).join(''):'<div class="dempty">No active invites.</div>');
+        }).join('')
+         :'<div class="dempty">No invites yet. <b>Create Invite</b> makes a code and a shareable link.</div>')+
+        (list.length?'<div class="dhint" style="margin-top:12px">'+live.length+' of '+list.length+
+          ' still usable.'+(list.length>live.length?' Expired and used-up invites stay listed until you revoke them.':'')+'</div>':'');
       main.querySelector('#ivNew').onclick=()=>openInvite(sid);
       main.querySelectorAll('[data-cp]').forEach(b=>b.onclick=async()=>{
-        const ok=await copyText(b.dataset.cp);toast(ok?'Copied':'Could not copy',ok?'good':'bad');
+        const ok=await copyText(b.dataset.cp);toast(ok?'Invite code copied':'Could not copy',ok?'good':'bad');
       });
-      main.querySelectorAll('[data-rv]').forEach(b=>b.onclick=async()=>{
-        b.disabled=true;
-        try{await DModel.revokeInvite(b.dataset.rv,sid);toast('Invite revoked.');drawInvites()}
-        catch(e){toast(e.message||'Could not revoke','bad');b.disabled=false}
+      main.querySelectorAll('[data-cpl]').forEach(b=>b.onclick=async()=>{
+        const u=(typeof inviteUrl==='function')?inviteUrl(b.dataset.cpl):'';
+        if(!u){toast('No shareable address for this window','bad');return}
+        const ok=await copyText(u);toast(ok?'Invite link copied':'Could not copy',ok?'good':'bad');
+      });
+      main.querySelectorAll('[data-rv]').forEach(b=>b.onclick=()=>{
+        /* Revoking is irreversible and silent from the other side - whoever holds the link just
+           finds it stops working - so it gets a confirmation like any other destructive act. */
+        const code=b.dataset.rv;
+        const iv=list.find(x=>x.code===code)||{};
+        dconfirm({
+          title:'Revoke invite '+code,
+          sub:'Anybody holding this link or code will no longer be able to join with it. '+
+              ((iv.uses||0)?'It has already been used <b>'+iv.uses+'</b> time'+(iv.uses===1?'':'s')+'. ':'')+
+              'Members who already joined are not affected.',
+          confirm:'Revoke Invite',danger:true,
+          onConfirm:async()=>{
+            await DModel.revokeInvite(code,sid);
+            toast('Invite revoked.','good');
+            drawInvites();
+          }
+        });
       });
     }).catch(()=>{
       main.innerHTML='<div class="dset-h1">Invites</div><div class="dnote bad">Could not load invites.</div>';
@@ -33128,51 +33791,145 @@ function clearInviteFromUrl(){
     history.replaceState(null,'',location.pathname+location.search+(h&&h!=='#'?h:''));
   }catch(_){}
 }
-/* Called once from boot, after the account is known. */
-async function handleInviteLink(){
-  // The link may have been opened while signed out. Park the code so it survives the sign-in,
-  // and only consume it once there is an account to join with.
-  let code=readInviteFromUrl();
-  if(code){clearInviteFromUrl();try{sessionStorage.setItem('ich.invite',code)}catch(_){}}
-  if(!code){try{code=sessionStorage.getItem('ich.invite')||''}catch(_){}}
-  if(!code||!ME)return;
+/* ---------- opening an invite link (v54.7, rewritten) ----------
+
+   WHAT WAS BROKEN
+     This ran on every boot and could never once have succeeded. It resolved the code with
+
+         get(R('invites/' + code))            ->  always null
+
+     but invites live at invites/$sid/$code, keyed by server, with inviteCodes/$code -> sid as
+     the lookup. It then read `rec.sid`, a field that does not exist in the record. So every
+     invite link anybody has ever opened produced "That invite is invalid or has expired",
+     which is exactly why the generator offered codes and called links "coming soon": the links
+     were not unfinished, they were broken, and the UI had been changed to match the symptom
+     rather than the cause being found.
+
+   WHAT IT DOES NOW
+     Resolves through DModel.previewInvite(), which READS ONLY - opening a link, or three people
+     opening the same link out of a group chat, cannot spend a use. The person is shown what
+     they are being invited to (name, icon, description, real member count, public or private,
+     who invited them) and decides. Only pressing Join spends anything, and that goes through a
+     transaction - see DModel.reserveInviteUse().
+
+     An invite that cannot be used is still shown with the server on it and the reason spelled
+     out, rather than collapsing to "invalid": "expired", "run out of uses", "revoked" and "you
+     are banned" are four different things and the person can act on three of them.
+*/
+
+/* Parked across a sign-in, so a signed-out person who opens a link lands on the invite after
+   authenticating instead of on the home server with no idea what happened. sessionStorage
+   rather than localStorage: an invite should not reappear in a new tab days later. */
+function stashInvite(code){try{sessionStorage.setItem('ich.invite',String(code||''))}catch(_){}}
+function takeStashedInvite(){
+  let c='';try{c=sessionStorage.getItem('ich.invite')||''}catch(_){}
   try{sessionStorage.removeItem('ich.invite')}catch(_){}
-  let rec=null;
-  try{rec=(await get(R('invites/'+code))).val()}catch(_){}
-  if(!rec){toast('That invite is invalid or has expired.','bad');return}
-  let srv=null;
-  try{srv=(await get(R('servers/'+rec.sid))).val()}catch(_){}
-  if(!srv){toast('That server no longer exists.','bad');return}
-  if(DModel.inServer(rec.sid,ME.id)){
-    view.mode='global';view.sid=rec.sid;
-    try{localStorage.setItem('ich.sid',rec.sid)}catch(_){}
-    renderChat();
-    toast('You are already in '+srv.name+'.');
-    return;
-  }
+  return c;
+}
+/* Called from boot once the account is known, and from the Join-a-Server dialog. */
+async function handleInviteLink(){
+  let code=readInviteFromUrl();
+  /* Take it out of the address bar immediately, whether or not we can act on it yet: leaving it
+     there means a refresh re-triggers the whole flow, and a shared screenshot leaks the code. */
+  if(code)clearInviteFromUrl();
+  if(code)stashInvite(code);
+  if(!code)code=takeStashedInvite();
+  if(!code)return;
+  if(!ME){stashInvite(code);return}          // signed out: wait for boot to call us again
+  return openInvitePreview(code);
+}
+
+async function openInvitePreview(code){
   const m=dmodal({
     center:true,
-    title:'You’ve been invited to join',
-    sub:'<b>'+esc(srv.name)+'</b>',
-    body:'<div class="derr" id="ilErr"></div>',
-    footer:'<button type="button" class="dbtn sec" data-no>No Thanks</button>'+
-           '<button type="button" class="dbtn" data-yes>Accept Invite</button>'
+    title:'Invite',
+    body:'<div class="ivp-load"><div class="ivp-spin" aria-hidden="true"></div>'+
+         '<div>Checking that invite…</div></div>',
+    footer:'<button type="button" class="dbtn sec" data-no>Close</button>'
   });
   m.foot.querySelector('[data-no]').onclick=m.close;
-  m.foot.querySelector('[data-yes]').onclick=async()=>{
-    const b=m.foot.querySelector('[data-yes]');b.disabled=true;
-    try{
-      const sid=await DModel.joinByInvite(code);
-      m.close();toast('Joined '+srv.name+'.','good');
-      view.mode='global';view.sid=sid;
-      try{localStorage.setItem('ich.sid',sid)}catch(_){}
-      setTimeout(()=>{
-        const c=DModel.channels(sid).find(x=>x.type!=='voice');
-        if(c)selectRoom(c.key);else renderChat();
-        if(typeof DiscordShell!=='undefined')DiscordShell.refresh();
-      },450);
-    }catch(e){m.body.querySelector('#ilErr').textContent=e.message||'Could not join.';b.disabled=false}
-  };
+
+  let p=null;
+  try{p=await DModel.previewInvite(code)}
+  catch(e){p={ok:false,msg:(e&&e.message)||'Could not check that invite.'}}
+  /* dmodal returns {close,root,body,foot} - `root` is the box. Guarding on a
+     property it does not have would mean this always bailed out and never drew. */
+  if(!m.root||!m.root.isConnected)return;         // closed while we were waiting
+
+  if(!p.ok){
+    m.body.innerHTML='<div class="ivp-bad"><div class="ivp-bad-ic" aria-hidden="true">✕</div>'+
+      '<div class="ivp-bad-t">'+esc(p.msg||'That invite is not valid.')+'</div>'+
+      '<div class="dhint">Ask whoever invited you for a new link, or join with a code from '+
+      '<b>+</b> → <b>Join a Server</b>.</div></div>';
+    return;
+  }
+
+  const ic=p.img?'<img src="'+esc(p.img)+'" alt="">'
+                :'<span>'+esc(p.icon||p.name.slice(0,2).toUpperCase())+'</span>';
+  const inviter=p.inviter?dispName(p.inviter,'User '+p.by):(p.by!=null?'User '+p.by:'');
+  const left=(p.max?Math.max(0,p.max-p.uses):0);
+  m.body.innerHTML=
+    '<div class="ivp">'+
+      '<div class="ivp-ic">'+ic+'</div>'+
+      '<div class="ivp-eyebrow">'+(p.alreadyIn?'You’re already a member of':'You’ve been invited to join')+'</div>'+
+      '<div class="ivp-name">'+esc(p.name)+'</div>'+
+      '<div class="ivp-stats">'+
+        '<span class="ivp-dot '+(p.members>0?'on':'')+'"></span>'+
+        '<b>'+p.members+'</b> member'+(p.members===1?'':'s')+
+        '<span class="ivp-sep">·</span>'+
+        (p.isPublic?'Public server':'Private server')+
+      '</div>'+
+      (p.desc?'<div class="ivp-desc">'+esc(p.desc)+'</div>':'')+
+      (inviter?'<div class="ivp-by">Invited by <b>'+esc(inviter)+'</b></div>':'')+
+      (p.dead?'<div class="ivp-dead">'+esc(p.deadMsg||'This invite can no longer be used.')+'</div>':'')+
+      (!p.dead&&!p.alreadyIn&&p.max?'<div class="dhint" style="text-align:center">'+
+        left+' of '+p.max+' use'+(p.max===1?'':'s')+' left</div>':'')+
+      '<div class="derr" id="ivpErr"></div>'+
+    '</div>';
+
+  /* The action depends on the state, and so does whether there is one at all. An invite that
+     cannot be used gets no Join button rather than a button that is certain to fail. */
+  const foot=m.foot;
+  if(p.alreadyIn){
+    foot.innerHTML='<button type="button" class="dbtn sec" data-no>Close</button>'+
+                   '<button type="button" class="dbtn" data-go>Open '+esc(p.name)+'</button>';
+    foot.querySelector('[data-go]').onclick=()=>{m.close();gotoServer(p.sid)};
+  }else if(p.dead){
+    foot.innerHTML='<button type="button" class="dbtn sec" data-no>Close</button>';
+  }else{
+    foot.innerHTML='<button type="button" class="dbtn sec" data-no>No Thanks</button>'+
+                   '<button type="button" class="dbtn" data-go>Accept Invite</button>';
+    const b=foot.querySelector('[data-go]');
+    b.onclick=async()=>{
+      b.disabled=true;b.textContent='Joining…';
+      try{
+        const sid=await DModel.joinByInvite(p.code);
+        m.close();
+        toast('Joined '+p.name+'.','good');
+        gotoServer(sid);
+      }catch(e){
+        m.body.querySelector('#ivpErr').textContent=(e&&e.message)||'Could not join.';
+        b.disabled=false;b.textContent='Accept Invite';
+      }
+    };
+  }
+  foot.querySelector('[data-no]').onclick=m.close;
+}
+
+/* Move the app into a server and open a channel in it. The channel list for a server joined a
+   moment ago may not have arrived yet, so this waits for it rather than landing on a blank
+   chat. Shared by the invite flow and Discover so the two cannot drift apart. */
+function gotoServer(sid){
+  view.mode='global';view.sid=sid;
+  try{localStorage.setItem('ich.sid',sid)}catch(_){}
+  let tries=0;
+  (function go(){
+    const c=DModel.channels(sid).find(x=>x.type!=='voice');
+    if(c){selectRoom(c.key)}
+    else if(tries++<12){setTimeout(go,250);return}
+    else renderChat();
+    try{if(typeof DiscordShell!=='undefined')DiscordShell.refresh()}catch(_){}
+  })();
 }
 
 /* ======================================================================
@@ -33229,6 +33986,7 @@ function openDiscover(){
 
   let q='';
   let sort='members';                       // members | name | new
+  let cat='';                               // '' = every category
   /* 'loading' until the discovery node has answered once. DModel subscribes to serverDiscovery
      at sign-in, so the answer is usually already here; this covers the cold case and, just as
      importantly, stops "nothing is listed" being shown for a read that was refused. */
@@ -33262,10 +34020,13 @@ function openDiscover(){
     let siteOwner=false;try{siteOwner=isOwner(ME.id)}catch(_){}
     const manage=(siteOwner&&!mine)
       ?'<button type="button" class="dbtn sm sec" data-manage="'+esc(s.id)+'">Manage</button>':'';
+    const chips=(s.cat?'<span class="dvchip cat">'+esc(s.cat)+'</span>':'')+
+      (s.tags||[]).slice(0,3).map(t=>'<span class="dvchip">'+esc(t)+'</span>').join('');
     return '<div class="dvcard" data-card="'+esc(s.id)+'">'+
       '<div class="dvtop"><div class="dvic">'+ic+'</div>'+
         '<div class="dvmeta"><div class="dvname">'+esc(s.name)+'</div>'+
         '<div class="dvsub">'+cnt+'</div></div></div>'+
+      (chips?'<div class="dvchips">'+chips+'</div>':'')+
       '<div class="dvdesc">'+(s.desc?esc(s.desc):'<i>No description.</i>')+'</div>'+
       '<div class="dvacts">'+
         (banned
@@ -33273,6 +34034,7 @@ function openDiscover(){
           :mine
             ?'<button type="button" class="dbtn sm grey" data-go="'+esc(s.id)+'">Open</button>'
             :'<button type="button" class="dbtn sm" data-join="'+esc(s.id)+'">Join</button>')+
+        '<button type="button" class="dbtn sec sm" data-peek="'+esc(s.id)+'">Details</button>'+
         manage+
       '</div>'+
     '</div>';
@@ -33298,13 +34060,23 @@ function openDiscover(){
     try{list=DModel.discoveryList()}
     catch(e){phase='error';errMsg=(e&&e.message)||'';paintList();return}
     const needle=q.trim().toLowerCase();
-    if(needle)list=list.filter(s=>s.name.toLowerCase().includes(needle)||(s.desc||'').toLowerCase().includes(needle));
+    if(cat)list=list.filter(s=>s.cat===cat);
+    /* Name, description AND tags: somebody searching "minecraft" means any of the three, and
+       a search that only looked at the name would miss a server whose whole point is in its
+       description. */
+    if(needle)list=list.filter(s=>
+      s.name.toLowerCase().includes(needle)||
+      (s.desc||'').toLowerCase().includes(needle)||
+      (s.tags||[]).some(t=>t.includes(needle))||
+      (s.cat||'').toLowerCase().includes(needle));
     list=sorted(list);
     box.innerHTML=list.length
       ?'<div class="dvgrid">'+list.map(cardHTML).join('')+'</div>'
       :'<div class="dempty">'+(needle
-          ?'No public servers match “'+esc(q.trim())+'”.'
-          :'No servers are listed yet. A server owner can list theirs in Server Settings → Overview.')+'</div>';
+          ?'No public servers match “'+esc(q.trim())+'”'+(cat?' in '+esc(cat):'')+'.'
+          :cat
+            ?'No public servers in '+esc(cat)+' yet.'
+            :'No servers are listed yet. A server owner can list theirs in Server Settings → Overview.')+'</div>';
     wireCards(box);
   }
 
@@ -33323,6 +34095,65 @@ function openDiscover(){
       }
     });
     box.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{const sid=b.dataset.go;close();enterServer(sid)});
+
+    /* The server detail preview. Everything in it is already on the card or already readable -
+       this is a bigger look at real data, not a second source of it, and it shows the SAME live
+       count the card does rather than re-reading anything. Joining from here goes through a
+       confirmation, because from a details pane the button is further from the "I know what
+       this is" moment than it is on a card. */
+    box.querySelectorAll('[data-peek]').forEach(b=>b.onclick=()=>{
+      const sid=b.dataset.peek;
+      const s=(DModel.discoveryList().find(x=>x.id===sid));
+      if(!s){toast('That server is no longer listed.','bad');paintList();return}
+      const mine=DModel.inServer(s.id,ME.id);
+      const banned=DModel.isServerBanned(s.id,ME.id);
+      const ic=s.img?'<img src="'+esc(s.img)+'" alt="">':'<span>'+esc(s.icon||s.name.slice(0,2).toUpperCase())+'</span>';
+      const m=dmodal({
+        center:true,
+        title:'Server details',
+        body:'<div class="ivp">'+
+            '<div class="ivp-ic">'+ic+'</div>'+
+            '<div class="ivp-eyebrow">'+(mine?'You’re a member of':'Public server')+'</div>'+
+            '<div class="ivp-name">'+esc(s.name)+'</div>'+
+            '<div class="ivp-stats"><span class="ivp-dot'+(s.members>0?' on':'')+'"></span>'+
+              '<b>'+s.members+'</b> member'+(s.members===1?'':'s')+
+              '<span class="ivp-sep">·</span>Listed '+esc(s.at?new Date(s.at).toLocaleDateString():'recently')+
+            '</div>'+
+            (s.cat||(s.tags||[]).length
+              ?'<div class="dvchips" style="justify-content:center;margin-top:12px">'+
+                 (s.cat?'<span class="dvchip cat">'+esc(s.cat)+'</span>':'')+
+                 (s.tags||[]).map(t=>'<span class="dvchip">'+esc(t)+'</span>').join('')+'</div>'
+              :'')+
+            (s.desc?'<div class="ivp-desc">'+esc(s.desc)+'</div>'
+                   :'<div class="ivp-desc"><i>This server hasn’t written a description.</i></div>')+
+            (banned?'<div class="ivp-dead">You are banned from this server.</div>':'')+
+            '<div class="derr" id="pkErr"></div>'+
+          '</div>',
+        footer:'<button type="button" class="dbtn sec" data-x>Close</button>'+
+               (banned?''
+                 :mine?'<button type="button" class="dbtn" data-open>Open</button>'
+                      :'<button type="button" class="dbtn" data-join>Join Server</button>')
+      });
+      m.foot.querySelector('[data-x]').onclick=m.close;
+      const op=m.foot.querySelector('[data-open]');
+      if(op)op.onclick=()=>{m.close();close();enterServer(s.id)};
+      const jn=m.foot.querySelector('[data-join]');
+      if(jn)jn.onclick=()=>{
+        m.close();
+        dconfirm({
+          title:'Join ‘'+s.name+'’?',
+          sub:'You’ll appear in its member list and it will show up in your server list. '+
+              'You can leave again at any time from the server menu.',
+          confirm:'Join Server',
+          onConfirm:async()=>{
+            await DModel.joinPublic(s.id);
+            toast('Joined '+s.name+'.','good');
+            close();
+            enterServer(s.id);
+          }
+        });
+      };
+    });
     /* Manage keeps Discover open underneath, so closing the settings pane puts the site owner
        back where they were instead of at the top of the app. */
     box.querySelectorAll('[data-manage]').forEach(b=>b.onclick=async()=>{
@@ -33334,21 +34165,10 @@ function openDiscover(){
     });
   }
 
-  /* One place that actually moves the app into a server, used by both Join and Open, so the
-     two can never drift apart. The channel list for a server joined a moment ago may not have
-     arrived yet, so this waits for it rather than landing on a blank chat. */
-  function enterServer(sid){
-    view.mode='global';view.sid=sid;
-    try{localStorage.setItem('ich.sid',sid)}catch(_){}
-    let tries=0;
-    (function go(){
-      const c=DModel.channels(sid).find(x=>x.type!=='voice');
-      if(c){selectRoom(c.key)}
-      else if(tries++<12){setTimeout(go,250);return}
-      else renderChat();
-      try{if(typeof DiscordShell!=='undefined')DiscordShell.refresh()}catch(_){}
-    })();
-  }
+  /* v54.7: this was a second copy of what the invite flow also needed. Both now call the one
+     gotoServer() above, so "what happens after you join" cannot differ depending on which door
+     you came through. */
+  const enterServer=sid=>gotoServer(sid);
 
   // The whole pane. Only called when the chrome itself has to change.
   function paint(){
@@ -33365,11 +34185,25 @@ function openDiscover(){
         '<button type="button" class="dbtn grey sm" id="dvRefresh">Refresh</button>'+
         '<button type="button" class="dbtn grey sm" id="dvCode">Have a code?</button>'+
       '</div>'+
+      /* Only categories that actually have a server in them get a chip. A filter bar listing
+         ten categories, nine of which lead to "nothing here", is worse than no filter bar. */
+      (function(){
+        let list=[];try{list=DModel.discoveryList()}catch(_){return ''}
+        const used=DModel.SRV_CATS.filter(c=>list.some(s=>s.cat===c));
+        if(!used.length)return '';
+        const n=c=>list.filter(s=>s.cat===c).length;
+        return '<div class="dvcats">'+
+          '<button type="button" class="dvchip btn'+(cat?'':' on')+'" data-cat="">All <b>'+list.length+'</b></button>'+
+          used.map(c=>'<button type="button" class="dvchip btn'+(cat===c?' on':'')+'" data-cat="'+esc(c)+'">'+
+            esc(c)+' <b>'+n(c)+'</b></button>').join('')+
+        '</div>';
+      })()+
       '<div id="dvList"></div>';
     const qi=main.querySelector('#dvQ');
     qi.oninput=()=>{q=qi.value;paintList()};
     main.querySelector('#dvSort').onchange=e=>{sort=e.target.value;paintList()};
     main.querySelector('#dvCode').onclick=()=>{close();openJoinServer()};
+    main.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{cat=b.dataset.cat;paint()});
     const rb=main.querySelector('#dvRefresh');
     rb.onclick=async()=>{
       rb.disabled=true;const was=rb.textContent;rb.textContent='Refreshing…';
@@ -33525,8 +34359,14 @@ const DAudit=(function(){
   /* act -> how it reads, and which icon. Kept in one table so the log and any future filter
      agree on the vocabulary. */
   const ACTS={
+    'srv.create'   :{n:'Server created',        ic:'\u{2728}'},
     'srv.update'   :{n:'Server updated',        ic:'⚙'},
     'srv.public'   :{n:'Discovery changed',     ic:'\u{1F9ED}'},
+    /* srv.delete is in this table so the label exists, but NOTHING EVER WRITES IT and nothing
+       can: deleting a server deletes auditLog/$sid along with it, so an entry recording the
+       deletion would be destroyed by the very action it describes. Recording it would need a
+       site-wide log node, which does not exist and would need its own rules and retention
+       story. Said plainly here rather than left as a mystery for whoever greps for it. */
     'srv.delete'   :{n:'Server deleted',        ic:'\u{1F5D1}'},
     'ch.create'    :{n:'Channel created',       ic:'➕'},
     'ch.update'    :{n:'Channel updated',       ic:'✎'},
@@ -33767,6 +34607,11 @@ registerServerSection({
   const catName=(sid,cid)=>{try{const c=(DModel.cats(sid)||[]).find(x=>x.id===cid);return c?c.name:String(cid)}catch(_){return String(cid)}};
 
   /* ---- the server itself ---- */
+  /* v54.7: a new server's log began empty, so there was no record of when it came into being
+     or who made it - the one entry every other action is implicitly dated against. It is also
+     the only act whose sid comes from the RESULT rather than the arguments, since the server
+     does not exist until the call resolves. */
+  wrap('createServer','srv.create',{sid:(a,out)=>out,fields:(a)=>({name:String(a[0]||'')})});
   wrap('updateServer','srv.update',{fields:(a)=>{
     const f=a[1]||{};
     const changed=Object.keys(f).filter(k=>f[k]!==undefined);
@@ -34778,6 +35623,779 @@ registerServerSection({
       '</div>'+dist;
   }
 });
+
+/* ==========================================================================
+ * js/discord/owner-center.js  (v54.7)
+ *
+ * The ICH owner control center: what is actually on the site, who is on it, and whether the
+ * backend is wired up. Five sections — Overview, Users, Servers, Global Roles, Diagnostics.
+ *
+ * WHERE THE NUMBERS COME FROM
+ *   Every figure on this page is read out of the live database when the page is opened. There
+ *   is no sample data anywhere in this file, and nothing is estimated: if a number cannot be
+ *   obtained it is shown as "—" with the reason, rather than as a plausible-looking zero. A
+ *   dashboard that invents a figure is worse than one that admits it does not have it, because
+ *   you cannot tell which is which afterwards.
+ *
+ *   servers/ and serverMembers/ became listable BY SITE OWNERS ONLY in v54.7
+ *   (scripts/add_rules_v547.py). Each individual child of both was already readable by every
+ *   signed-in account, so that grant adds enumeration and no new information — the reasoning is
+ *   written out in full in that script. Because a site owner reading them downloads every
+ *   server record and every membership map, this file reads them ONCE with get(), never with a
+ *   listener, and only when the panel is actually opened. Closing and reopening re-reads;
+ *   Refresh re-reads. Nothing here subscribes to anything.
+ *
+ * WHAT IS GATED, AND HOW
+ *   isOwner() is read from owners/ and secretowner/ in the database — never from a username, a
+ *   profile field, localStorage or a client variable. Every entry point checks it, every
+ *   section re-checks it, and every action re-checks it immediately before acting, so a panel
+ *   left open while ownership is removed stops working rather than continuing on a stale pass.
+ *
+ *   That said, the gate here is a COURTESY, not the enforcement. Nothing in this file can do
+ *   anything the database rules would not already allow the signed-in account to do: it calls
+ *   the same DModel functions and the same authenticated endpoints as the rest of the app. If
+ *   every check in this file were deleted, a non-owner would get a screen full of refusals, not
+ *   power. The enforcement is in the rules and in api/, which is where it belongs.
+ *
+ * WHAT IS DELIBERATELY NOT HERE
+ *   - No credentials, tokens, webhook URLs or secrets. Diagnostics reports whether each
+ *     environment variable is SET, as a boolean, from GET /api/health — never a value, never a
+ *     prefix, never a length. Copy Diagnostics carries exactly what is on screen.
+ *   - No email addresses or other private user data. Those live in userPrivate/, which is not
+ *     readable here and has no business on an administrative page.
+ *   - No "delete ICH". The main server is not deletable by anybody (DModel.deleteServer
+ *     refuses it), and this page does not offer a button that would be refused.
+ *   - No granting of owner, admin, mod, MVP or VIP. Those carry real power and are changed from
+ *     the existing Settings owner tools, which already have their own confirmations and audit
+ *     trail. The Global Roles section handles customroles/ only — cosmetic roles, granted
+ *     through an authenticated endpoint — and says so on screen.
+ * ========================================================================== */
+'use strict';
+
+const DOwner=(function(){
+
+  /* Shared across a single opening of the panel. Reset on open so a stale read can never be
+     shown as current, and so closing the panel releases the memory of every server record. */
+  let S=null;
+
+  function blank(){
+    return{
+      loaded:false,err:'',
+      servers:{},            // sid -> record, as read
+      members:{},            // sid -> membership map, as read
+      roles:null,            // from /api/customrole {action:'list'}, or null when unavailable
+      rolesErr:'',
+      health:null,           // from GET /api/health, or null
+      healthErr:'',
+      at:0
+    };
+  }
+
+  /* ------------------------------------------------------------------
+   *  THE GATE
+   * ------------------------------------------------------------------ */
+  function amOwner(){
+    try{return !!(ME&&isOwner(ME.id))}catch(_){return false}
+  }
+  /* Called before every action, not just on open. An owner who is removed while the panel is
+     open should find it stops working. */
+  function assertOwner(){
+    if(!amOwner())throw new Error('Site owners only.');
+  }
+
+  /* ------------------------------------------------------------------
+   *  READING THE SITE
+   * ------------------------------------------------------------------ */
+
+  async function loadCore(){
+    S.err='';
+    /* Both reads are site-owner-gated at the collection level. A refusal here means the rules
+       in the console are older than this build, which is a specific and fixable thing - so it
+       is reported as that rather than as an empty dashboard. */
+    try{
+      const [srv,mem]=await Promise.all([
+        get(R('servers')).then(s=>s.val()||{}),
+        get(R('serverMembers')).then(s=>s.val()||{})
+      ]);
+      S.servers=(srv&&typeof srv==='object')?srv:{};
+      S.members=(mem&&typeof mem==='object')?mem:{};
+      S.loaded=true;S.at=Date.now();
+    }catch(e){
+      S.loaded=false;
+      S.err=(e&&(e.code==='PERMISSION_DENIED'||/permission/i.test(e.message||'')))
+        ?'The database refused to list servers. The published rules are older than this build — publish the current firebase-rules.json (it adds a site-owner-only read on servers/ and serverMembers/).'
+        :'Could not read the server list. Check your connection and try again.';
+    }
+  }
+
+  /* GET /api/health. Unauthenticated on purpose (see that file): the panel has to work when
+     signing in is the thing that is broken. Distinguishes "not deployed" from "unreachable"
+     from "deployed but unconfigured", because those need three different fixes. */
+  async function loadHealth(){
+    S.healthErr='';S.health=null;
+    const base=(typeof tosApiBase==='function')?tosApiBase():String((CFG&&CFG.TOS_API)||'').replace(/\/$/,'');
+    if(!base){S.healthErr='No API base is configured (CFG.TOS_API is empty), so there is nothing to ask.';return}
+    const c=(typeof AbortController!=='undefined')?new AbortController():null;
+    const tm=setTimeout(()=>{try{c&&c.abort()}catch(_){}},9000);
+    try{
+      const r=await fetch(base+'/api/health',{method:'GET',cache:'no-store',signal:c?c.signal:undefined});
+      if(r.status===404){S.healthErr='The api/ folder is not deployed at '+base+' (404). The site works without it; TOS logging, IP checks, the spin and global role grants do not.';return}
+      if(!r.ok){S.healthErr='The health endpoint answered '+r.status+'.';return}
+      S.health=await r.json();
+    }catch(e){
+      S.healthErr=(e&&e.name==='AbortError')
+        ?'The health endpoint did not answer within 9 seconds.'
+        :'Could not reach '+base+'. Either CFG.TOS_API is wrong, the deployment is down, or the network blocked it.';
+    }finally{clearTimeout(tm)}
+  }
+
+  /* The global custom roles, through the authenticated owner-only endpoint. customroles/ is
+     world-READABLE, so the list itself is not privileged - but this call is what proves the
+     endpoint is deployed and that this account is accepted by it, which is exactly what the
+     grant buttons depend on. Falling back to the local cache would show a panel whose buttons
+     cannot work. */
+  async function loadRoles(){
+    S.rolesErr='';S.roles=null;
+    try{
+      const r=await api('list',{});
+      S.roles=(r&&r.roles)||[];
+    }catch(e){S.rolesErr=(e&&e.message)||'Could not load the global roles.'}
+  }
+
+  /* One place for every call to /api/customrole, so the auth token, the timeout and the error
+     wording cannot drift between the four actions. */
+  async function api(action,body){
+    assertOwner();
+    const base=(typeof tosApiBase==='function')?tosApiBase():String((CFG&&CFG.TOS_API)||'').replace(/\/$/,'');
+    if(!base)throw new Error('No API base is configured (CFG.TOS_API is empty).');
+    let token='';
+    try{token=await auth.currentUser.getIdToken()}
+    catch(_){throw new Error('Could not get a sign-in token. Try signing out and in again.')}
+    const c=(typeof AbortController!=='undefined')?new AbortController():null;
+    const tm=setTimeout(()=>{try{c&&c.abort()}catch(_){}},12000);
+    let r;
+    try{
+      r=await fetch(base+'/api/customrole',{
+        method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',
+        signal:c?c.signal:undefined,
+        body:JSON.stringify({idToken:token,action,...(body||{})})
+      });
+    }catch(e){
+      throw new Error(e&&e.name==='AbortError'
+        ?'The role endpoint did not answer in time.'
+        :'Could not reach the role endpoint. Is api/ deployed at '+base+'?');
+    }finally{clearTimeout(tm)}
+    if(r.status===404)throw new Error('api/customrole.js is not deployed at '+base+'. Global role grants need it — the rest of ICH does not.');
+    let j=null;try{j=await r.json()}catch(_){}
+    if(!r.ok||!j||j.error)throw new Error((j&&j.error)||('The role endpoint answered '+r.status+'.'));
+    return j;
+  }
+
+  /* ------------------------------------------------------------------
+   *  DERIVED FIGURES
+   * ------------------------------------------------------------------ */
+
+  function countMembers(sid){
+    const m=S.members[sid];
+    if(!m||typeof m!=='object')return 0;
+    return Object.keys(m).filter(k=>{const v=m[k];return !!v&&(typeof v==='object'||v===true)}).length;
+  }
+  function serverRows(){
+    return Object.keys(S.servers).map(sid=>{
+      const v=S.servers[sid]||{};
+      return{
+        sid,
+        name:String(v.name||'(unnamed)').slice(0,40),
+        icon:String(v.icon||'').slice(0,8),
+        img:(typeof isSafeServerImg==='function'&&isSafeServerImg(v.img))?v.img:'',
+        ownerId:Number(v.ownerId)||0,
+        createdAt:Number(v.createdAt)||0,
+        desc:String(v.desc||'').slice(0,200),
+        members:countMembers(sid),
+        isPublic:(()=>{try{return DModel.isPublic(sid)}catch(_){return false}})()
+      };
+    });
+  }
+  function totals(){
+    const rows=serverRows();
+    let accounts='—',online='—';
+    try{accounts=DB.allUsers().length}catch(_){}
+    try{online=DB.onlineCount()}catch(_){}
+    return{
+      accounts,online,
+      servers:rows.length,
+      publicServers:rows.filter(r=>r.isPublic).length,
+      memberships:rows.reduce((n,r)=>n+r.members,0),
+      empty:rows.filter(r=>r.members===0).length,
+      banned:(()=>{try{return Object.keys(DB.bannedIds?DB.bannedIds():{}).length}catch(_){return null}})()
+    };
+  }
+  const nameOf=uid=>{
+    try{const u=DB.getUser(uid);return u?dispName(u,'User '+uid):'User '+uid}
+    catch(_){return 'User '+uid}
+  };
+  const when=t=>{
+    if(!t)return 'unknown';
+    try{return new Date(t).toLocaleString()}catch(_){return String(t)}
+  };
+
+  /* ------------------------------------------------------------------
+   *  THE PANEL
+   * ------------------------------------------------------------------ */
+
+  const SECTIONS=[
+    ['overview','Overview'],
+    ['users','Users'],
+    ['servers','Servers'],
+    ['roles','Global Roles'],
+    ['diag','Diagnostics']
+  ];
+
+  let el=null,sec='overview',userQ='',srvQ='',srvSort='members';
+
+  function close(){
+    document.removeEventListener('keydown',onKey);
+    if(el){el.remove();el=null}
+    S=null;                       // drop every server record we downloaded
+  }
+  function onKey(e){
+    if(e.key!=='Escape')return;
+    if(el&&el.classList.contains('dset-paned')&&window.matchMedia&&window.matchMedia('(max-width:820px)').matches){
+      el.classList.remove('dset-paned');return;
+    }
+    close();
+  }
+
+  async function open(section){
+    if(!amOwner()){toast('Site owners only.','bad');return}
+    close();
+    S=blank();
+    sec=section||'overview';
+    el=document.createElement('div');
+    el.className='dset dset-owner';
+    el.innerHTML=
+      '<div class="dset-nav"><div class="dset-nav-inner">'+
+        '<div class="dset-cat">ICH Control Center</div>'+
+        SECTIONS.map(([k,l])=>'<div class="dset-item'+(k===sec?' active':'')+'" data-s="'+k+'">'+l+'</div>').join('')+
+      '</div></div>'+
+      '<div class="dset-main"><div class="dset-main-inner" id="ocMain"></div></div>'+
+      '<div class="dset-close-col"><button type="button" class="dset-close" id="ocX" aria-label="Close">'+DI.x+
+        '</button><div class="dset-close-lbl">ESC</div></div>'+
+      '<button type="button" class="dset-x-mobile" id="ocXm" aria-label="Close">'+DI.x+'</button>'+
+      '<button type="button" class="dset-back-mobile" id="ocBack" aria-label="Back to the control center menu">'+
+        '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>'+
+        '<span>Control Center</span></button>';
+    document.body.appendChild(el);
+    document.addEventListener('keydown',onKey);
+    el.querySelector('#ocX').onclick=close;
+    el.querySelector('#ocXm').onclick=close;
+    el.querySelector('#ocBack').onclick=()=>el.classList.remove('dset-paned');
+    const narrow=()=>!!(window.matchMedia&&window.matchMedia('(max-width:820px)').matches);
+    el.querySelectorAll('[data-s]').forEach(n=>n.onclick=()=>{
+      sec=n.dataset.s;
+      el.querySelectorAll('[data-s]').forEach(x=>x.classList.toggle('active',x.dataset.s===sec));
+      if(narrow())el.classList.add('dset-paned');      // phones show one pane at a time
+      draw();
+    });
+    /* On a phone the panel opens on the section list, so the first tap is a choice rather than
+       an arbitrary section. On desktop both panes are visible, so there is nothing to choose. */
+    if(narrow()&&!section)el.classList.remove('dset-paned');
+    else if(narrow())el.classList.add('dset-paned');
+
+    draw();
+    await loadCore();
+    if(!el)return;
+    draw();
+  }
+
+  function main(){return el&&el.querySelector('#ocMain')}
+
+  function draw(){
+    const m=main();if(!m)return;
+    if(!amOwner()){
+      m.innerHTML='<div class="dset-h1">Control Center</div>'+
+        '<div class="dnote bad">This account is not a site owner. Nothing on this page is available to it.</div>';
+      return;
+    }
+    if(sec==='overview')drawOverview(m);
+    else if(sec==='users')drawUsers(m);
+    else if(sec==='servers')drawServers(m);
+    else if(sec==='roles')drawRoles(m);
+    else drawDiag(m);
+  }
+
+  const stat=(n,l,sub)=>'<div class="oc-stat"><div class="oc-stat-n">'+esc(String(n))+'</div>'+
+    '<div class="oc-stat-l">'+esc(l)+'</div>'+(sub?'<div class="oc-stat-sub">'+esc(sub)+'</div>':'')+'</div>';
+
+  /* ---------------- Overview ---------------- */
+  function drawOverview(m){
+    if(S.err){
+      m.innerHTML='<div class="dset-h1">Overview</div><div class="dnote bad">'+esc(S.err)+'</div>'+
+        '<button type="button" class="dbtn" id="ocRetry">Try again</button>';
+      m.querySelector('#ocRetry').onclick=async()=>{await loadCore();draw()};
+      return;
+    }
+    if(!S.loaded){
+      m.innerHTML='<div class="dset-h1">Overview</div>'+
+        '<div class="oc-grid">'+'<div class="oc-stat"><div class="oc-stat-n">…</div><div class="oc-stat-l">Reading the database</div></div>'.repeat(6)+'</div>';
+      return;
+    }
+    const t=totals();
+    const rows=serverRows();
+    const newestServers=rows.slice().sort((a,b)=>b.createdAt-a.createdAt).slice(0,6);
+    /* "Recent accounts" by id, descending: ids are allocated in order, so the highest are the
+       newest. Honest about the one thing it cannot show - account creation is not timestamped
+       anywhere this page can read, so no date is invented. */
+    let newestUsers=[];
+    try{newestUsers=DB.allUsers().slice().sort((a,b)=>b.id-a.id).slice(0,6)}catch(_){}
+    const biggest=rows.slice().sort((a,b)=>b.members-a.members).slice(0,5);
+
+    m.innerHTML=
+      '<div class="dset-h1">Overview</div>'+
+      '<div class="oc-note">Read from the database when this panel was opened'+
+        (S.at?' at '+esc(new Date(S.at).toLocaleTimeString()):'')+'. Nothing here is cached or estimated.</div>'+
+      '<div class="oc-grid">'+
+        stat(t.accounts,'Registered accounts','from the username directory')+
+        stat(t.online,'Online now','accounts, not tabs')+
+        stat(t.servers,'Custom servers','ICH itself is not counted')+
+        stat(t.publicServers,'Listed on Discover',t.servers?(Math.round(t.publicServers/t.servers*100)+'% of servers'):'')+
+        stat(t.memberships,'Server memberships','one per person per server')+
+        stat(t.empty,'Servers with no members',t.empty?'candidates for cleanup':'none')+
+      '</div>'+
+      '<div class="dset-h2">System health</div>'+
+      '<div id="ocHealthMini"><div class="oc-diag"><div class="oc-diag-l">Checking the API…</div></div></div>'+
+      '<div class="dset-h2">Newest servers</div>'+
+      (newestServers.length?newestServers.map(r=>
+        '<div class="oc-row"><div class="oc-ic">'+(r.img?'<img src="'+esc(r.img)+'" alt="">':esc(r.icon||r.name.slice(0,2).toUpperCase()))+'</div>'+
+        '<div class="oc-row-txt"><div class="oc-row-nm">'+esc(r.name)+'</div>'+
+        '<div class="oc-row-d">'+r.members+' member'+(r.members===1?'':'s')+' · owned by '+esc(nameOf(r.ownerId))+
+          ' · created '+esc(when(r.createdAt))+'</div></div>'+
+        '<span class="oc-tag '+(r.isPublic?'ok':'off')+'">'+(r.isPublic?'Public':'Private')+'</span></div>'
+      ).join(''):'<div class="dempty">No custom servers yet.</div>')+
+      '<div class="dset-h2">Busiest servers</div>'+
+      (biggest.length?biggest.map(r=>
+        '<div class="oc-row"><div class="oc-row-txt"><div class="oc-row-nm">'+esc(r.name)+'</div>'+
+        '<div class="oc-row-d">owned by '+esc(nameOf(r.ownerId))+'</div></div>'+
+        '<span class="oc-tag">'+r.members+'</span></div>'
+      ).join(''):'')+
+      '<div class="dset-h2">Newest accounts</div>'+
+      (newestUsers.length?newestUsers.map(u=>
+        '<div class="oc-row">'+avatarHtml(u,u.username,'width:34px;height:34px;font-size:12px')+
+        '<div class="oc-row-txt"><div class="oc-row-nm">'+esc(dispName(u,u.username))+'</div>'+
+        '<div class="oc-row-d">account #'+u.id+'</div></div>'+
+        '<button type="button" class="dbtn sm grey" data-u="'+u.id+'">View</button></div>'
+      ).join('')+'<div class="dhint" style="margin-top:8px">Ordered by account number — ICH does not record when an account was created, so no date is shown rather than a guessed one.</div>'
+       :'<div class="dempty">No accounts.</div>')+
+      '<div class="rm-bar"><button type="button" class="dbtn grey" id="ocRe">Refresh</button></div>';
+
+    m.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>{sec='users';userQ=nameOf(Number(b.dataset.u));
+      el.querySelectorAll('[data-s]').forEach(x=>x.classList.toggle('active',x.dataset.s==='users'));draw()});
+    m.querySelector('#ocRe').onclick=async()=>{S.loaded=false;draw();await loadCore();draw()};
+
+    /* The health strip is filled in after the fact so the rest of Overview is not held up by a
+       network call that may take nine seconds to fail. */
+    (async()=>{
+      if(!S.health&&!S.healthErr)await loadHealth();
+      const box=main()&&main().querySelector('#ocHealthMini');
+      if(!box)return;
+      box.innerHTML=healthLines().slice(0,4).join('')||'<div class="oc-diag"><div class="oc-diag-l">No API configured</div></div>';
+    })();
+  }
+
+  /* ---------------- Users ---------------- */
+  function drawUsers(m){
+    let all=[];
+    try{all=DB.allUsers()}catch(_){}
+    const q=userQ.trim().toLowerCase();
+    /* Search by name or by account number, because an owner chasing a report usually has one
+       or the other and not both. */
+    const list=all.filter(u=>!q||String(u.username||'').toLowerCase().includes(q)||String(u.id)===q)
+                  .sort((a,b)=>String(a.username||'').localeCompare(String(b.username||'')))
+                  .slice(0,100);
+    m.innerHTML=
+      '<div class="dset-h1">Users</div>'+
+      '<div class="oc-note">'+all.length+' registered account'+(all.length===1?'':'s')+
+        '. Search by username or account number. Email addresses and other private details are '+
+        'deliberately not shown here — they live in a node this page cannot read.</div>'+
+      '<div class="oc-bar"><input class="dinput" id="ocUq" placeholder="Search users" value="'+esc(userQ)+'" aria-label="Search users"></div>'+
+      (list.length?list.map(u=>{
+        const tags=[];
+        try{
+          if(isOwner(u.id))tags.push('<span class="oc-tag bad">Owner</span>');
+          else if(typeof isAdmin==='function'&&isAdmin(u.id))tags.push('<span class="oc-tag warn">Admin</span>');
+          else if(typeof isMod==='function'&&isMod(u.id))tags.push('<span class="oc-tag">Mod</span>');
+          if(DB.isMvp&&DB.isMvp(u.id))tags.push('<span class="oc-tag ok">MVP</span>');
+          if(DB.isBanned&&DB.isBanned(u.id))tags.push('<span class="oc-tag bad">Banned</span>');
+          (DB.customRolesOf(u.id)||[]).forEach(r=>{
+            tags.push('<span class="oc-tag" style="color:'+esc(r.color)+'">'+esc(r.name)+'</span>');
+          });
+        }catch(_){}
+        return '<div class="oc-row">'+avatarHtml(u,u.username,'width:34px;height:34px;font-size:12px')+
+          '<div class="oc-row-txt"><div class="oc-row-nm">'+esc(dispName(u,u.username))+'</div>'+
+          '<div class="oc-row-d">#'+u.id+(tags.length?' ':'')+tags.join(' ')+'</div></div>'+
+          '<button type="button" class="dbtn sm grey" data-prof="'+u.id+'">Profile</button>'+
+          '<button type="button" class="dbtn sm" data-role="'+u.id+'">Roles</button></div>';
+      }).join('')
+       :'<div class="dempty">'+(q?'No account matches “'+esc(userQ.trim())+'”.':'No accounts.')+'</div>')+
+      (all.length>100&&!q?'<div class="dhint" style="margin-top:10px">Showing the first 100. Search to narrow it.</div>':'');
+
+    const qi=m.querySelector('#ocUq');
+    qi.oninput=()=>{userQ=qi.value;const at=qi.selectionStart;drawUsers(m);
+      const n=main().querySelector('#ocUq');n.focus();try{n.setSelectionRange(at,at)}catch(_){}};
+    m.querySelectorAll('[data-prof]').forEach(b=>b.onclick=()=>{
+      /* The existing profile card, rather than a second half-built copy of it on this page. */
+      try{openUserProfile(Number(b.dataset.prof),{full:true})}catch(_){toast('Could not open that profile','bad')}
+    });
+    m.querySelectorAll('[data-role]').forEach(b=>b.onclick=()=>openGrant(Number(b.dataset.role)));
+  }
+
+  /* ---------------- Servers ---------------- */
+  function drawServers(m){
+    if(S.err){
+      m.innerHTML='<div class="dset-h1">Servers</div><div class="dnote bad">'+esc(S.err)+'</div>';
+      return;
+    }
+    if(!S.loaded){m.innerHTML='<div class="dset-h1">Servers</div><div class="dempty">Reading the database…</div>';return}
+    const q=srvQ.trim().toLowerCase();
+    let rows=serverRows().filter(r=>!q||r.name.toLowerCase().includes(q)||r.sid.toLowerCase()===q||
+      String(nameOf(r.ownerId)).toLowerCase().includes(q));
+    if(srvSort==='name')rows.sort((a,b)=>a.name.localeCompare(b.name));
+    else if(srvSort==='new')rows.sort((a,b)=>b.createdAt-a.createdAt);
+    else rows.sort((a,b)=>b.members-a.members||a.name.localeCompare(b.name));
+
+    m.innerHTML=
+      '<div class="dset-h1">Servers</div>'+
+      '<div class="oc-note">Every custom server on ICH, with its real member count read from the '+
+        'membership records. <b>Itsukis Chat Hub itself is not listed</b>: it is built into the site '+
+        'and cannot be deleted or unlisted by anybody, so there is nothing here to do to it.</div>'+
+      '<div class="oc-bar">'+
+        '<input class="dinput" id="ocSq" placeholder="Search by server, owner or id" value="'+esc(srvQ)+'" aria-label="Search servers">'+
+        '<select class="dinput" id="ocSs" aria-label="Sort servers" style="width:auto;min-width:150px">'+
+          ['members:Most members','name:Name','new:Newest'].map(o=>{
+            const[v,l]=o.split(':');return '<option value="'+v+'"'+(srvSort===v?' selected':'')+'>'+l+'</option>';
+          }).join('')+
+        '</select>'+
+        '<button type="button" class="dbtn grey" id="ocSr">Refresh</button>'+
+      '</div>'+
+      (rows.length?rows.map(r=>
+        '<div class="oc-row"><div class="oc-ic">'+(r.img?'<img src="'+esc(r.img)+'" alt="">':esc(r.icon||r.name.slice(0,2).toUpperCase()))+'</div>'+
+        '<div class="oc-row-txt"><div class="oc-row-nm">'+esc(r.name)+
+          ' <span class="oc-tag '+(r.isPublic?'ok':'off')+'">'+(r.isPublic?'Public':'Private')+'</span>'+
+          (r.members===0?' <span class="oc-tag warn">Empty</span>':'')+'</div>'+
+        '<div class="oc-row-d">'+r.members+' member'+(r.members===1?'':'s')+' · '+esc(nameOf(r.ownerId))+
+          ' · '+esc(r.sid)+'</div></div>'+
+        '<button type="button" class="dbtn sm grey" data-open="'+esc(r.sid)+'">Manage</button>'+
+        '<button type="button" class="dbtn sm danger" data-del="'+esc(r.sid)+'">Delete</button></div>'
+      ).join('')
+       :'<div class="dempty">'+(q?'No server matches “'+esc(srvQ.trim())+'”.':'No custom servers yet.')+'</div>');
+
+    const qi=m.querySelector('#ocSq');
+    qi.oninput=()=>{srvQ=qi.value;const at=qi.selectionStart;drawServers(m);
+      const n=main().querySelector('#ocSq');n.focus();try{n.setSelectionRange(at,at)}catch(_){}};
+    m.querySelector('#ocSs').onchange=e=>{srvSort=e.target.value;drawServers(m)};
+    m.querySelector('#ocSr').onclick=async()=>{S.loaded=false;drawServers(m);await loadCore();draw()};
+
+    /* Manage opens the REAL server settings pane, which holds roles, members, channels,
+       moderation and the audit log, and which already lets a site owner in for a server they
+       are not a member of (DModel.holdServerReady, v54.6). Rebuilding any of that here would
+       have produced a second, worse copy that could drift. */
+    m.querySelectorAll('[data-open]').forEach(b=>b.onclick=async()=>{
+      const sid=b.dataset.open;
+      b.disabled=true;const was=b.textContent;b.textContent='Opening…';
+      try{await openServerSettings(sid)}
+      catch(e){toast((e&&e.message)||'Could not open that server','bad')}
+      b.disabled=false;b.textContent=was;
+    });
+
+    m.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+      const sid=b.dataset.del;
+      const r=rows.find(x=>x.sid===sid)||{name:sid,members:0,ownerId:0};
+      dconfirm({
+        title:'Delete ‘'+r.name+'’',
+        sub:'<b>'+esc(r.name)+'</b> will be permanently deleted'+
+            (r.members?' for its <b>'+r.members+'</b> member'+(r.members===1?'':'s'):'')+
+            '. Its channels, roles, invites, messages and member list all go with it. '+
+            '<b>This cannot be undone.</b>'+
+            '<div class="dnote" style="margin-top:10px">You are deleting this as a <b>site owner</b>'+
+            (r.ownerId?' — it belongs to <b>'+esc(nameOf(r.ownerId))+'</b>':'')+'.</div>',
+        confirm:'Delete Server',danger:true,
+        onConfirm:async()=>{
+          assertOwner();
+          await DModel.deleteServer(sid);
+          toast('‘'+r.name+'’ was deleted.','good');
+          delete S.servers[sid];delete S.members[sid];
+          draw();
+        }
+      });
+    });
+  }
+
+  /* ---------------- Global Roles ---------------- */
+  function drawRoles(m){
+    m.innerHTML=
+      '<div class="dset-h1">Global Roles</div>'+
+      '<div class="oc-note">The site-wide custom roles in <code>customroles/</code> — Developer, '+
+        'Builder, the Trick-or-Treat milestones, and anything else you have defined. These are '+
+        '<b>cosmetic</b>: a colour, an icon, a tag and a member-list group. They grant no powers, '+
+        'which is why handing them out from a web page is safe at all.<br><br>'+
+        '<b>Owner, Admin, Mod, MVP and VIP are not here.</b> Those carry real power and are changed '+
+        'from Settings, which has its own confirmations. This section cannot touch them.</div>'+
+      '<div id="ocRolesBody"><div class="dempty">Loading…</div></div>';
+    const body=()=>main()&&main().querySelector('#ocRolesBody');
+    (async()=>{
+      if(!S.roles&&!S.rolesErr)await loadRoles();
+      const b=body();if(!b)return;
+      if(S.rolesErr){
+        b.innerHTML='<div class="dnote bad">'+esc(S.rolesErr)+'</div>'+
+          '<div class="dhint">Granting a global role needs <code>api/customrole.js</code> deployed, because '+
+          '<code>customroles/</code> is write-protected against every browser on purpose. Until then, roles '+
+          'can still be granted from the Firebase console.</div>'+
+          '<button type="button" class="dbtn grey" id="ocRr" style="margin-top:12px">Try again</button>';
+        b.querySelector('#ocRr').onclick=async()=>{S.roles=null;S.rolesErr='';drawRoles(main())};
+        return;
+      }
+      const roles=S.roles||[];
+      b.innerHTML=
+        (roles.length?roles.map(r=>{
+          const timed=Object.keys(r.expires||{}).length;
+          return '<div class="oc-row">'+
+            '<div class="oc-ic" style="background:'+esc(/^#[0-9a-fA-F]{3,8}$/.test(r.color||'')?r.color:'#7c6cff')+'">'+
+              esc(r.icon||r.name.slice(0,2).toUpperCase())+'</div>'+
+            '<div class="oc-row-txt"><div class="oc-row-nm">'+esc(r.name)+'</div>'+
+            '<div class="oc-row-d">'+r.members.length+' holder'+(r.members.length===1?'':'s')+
+              (timed?' · '+timed+' timed':'')+' · rank '+r.rank+' · '+esc(r.id)+'</div></div>'+
+            '<button type="button" class="dbtn sm grey" data-who="'+esc(r.id)+'">Holders</button>'+
+            '<button type="button" class="dbtn sm" data-give="'+esc(r.id)+'">Grant</button></div>';
+        }).join('')
+         :'<div class="dempty">No global custom roles are defined. Create one in the Firebase console under '+
+          '<code>customroles/</code> — this page grants existing roles, and deliberately cannot invent them, '+
+          'so a typo can’t become a permanent junk role.</div>')+
+        '<div class="rm-bar"><button type="button" class="dbtn grey" id="ocHist">Grant history</button>'+
+        '<button type="button" class="dbtn grey" id="ocRr2">Refresh</button></div>';
+      b.querySelectorAll('[data-give]').forEach(x=>x.onclick=()=>openGrant(null,x.dataset.give));
+      b.querySelectorAll('[data-who]').forEach(x=>x.onclick=()=>{
+        const r=roles.find(z=>z.id===x.dataset.who);if(!r)return;
+        dmodal({
+          title:esc(r.name)+' — holders',
+          sub:r.members.length?r.members.length+' account'+(r.members.length===1?'':'s'):'Nobody holds this role.',
+          body:r.members.length?r.members.map(uid=>{
+            const exp=Number((r.expires||{})[uid])||0;
+            return '<div class="oc-row"><div class="oc-row-txt"><div class="oc-row-nm">'+esc(nameOf(uid))+'</div>'+
+              '<div class="oc-row-d">#'+uid+' · '+(exp?'until '+esc(when(exp)):'permanent')+'</div></div>'+
+              '<button type="button" class="dbtn sm danger" data-rv="'+uid+'">Revoke</button></div>';
+          }).join(''):'<div class="dempty">No holders.</div>',
+          footer:'<button type="button" class="dbtn sec" data-x>Close</button>',
+          onOpen:mm=>{
+            mm.foot.querySelector('[data-x]').onclick=mm.close;
+            mm.body.querySelectorAll('[data-rv]').forEach(rb=>rb.onclick=async()=>{
+              rb.disabled=true;
+              try{
+                await api('revoke',{role:r.id,target:Number(rb.dataset.rv)});
+                toast('Role revoked.','good');
+                mm.close();S.roles=null;drawRoles(main());
+              }catch(e){toast((e&&e.message)||'Could not revoke','bad');rb.disabled=false}
+            });
+          }
+        });
+      });
+      b.querySelector('#ocRr2').onclick=async()=>{S.roles=null;S.rolesErr='';drawRoles(main())};
+      b.querySelector('#ocHist').onclick=openHistory;
+    })();
+  }
+
+  /* Grant a role. Reachable from a user (role unknown) or from a role (user unknown), so both
+     fields are editable either way and whichever one is known arrives filled in. */
+  function openGrant(uid,roleId){
+    const roles=S.roles||[];
+    const m=dmodal({
+      title:'Grant a global role',
+      sub:'Cosmetic roles only. This goes through <code>api/customrole.js</code>, which verifies '+
+          'your sign-in and checks site ownership against the database before writing anything.',
+      body:'<div class="dfield"><label class="dlabel">Role</label>'+
+             '<select class="dinput" id="grRole">'+
+               (roles.length?roles.map(r=>'<option value="'+esc(r.id)+'"'+(roleId===r.id?' selected':'')+'>'+esc(r.name)+'</option>').join('')
+                            :'<option value="">(none defined)</option>')+
+             '</select></div>'+
+           '<div class="dfield"><label class="dlabel">Account number<span class="req">*</span></label>'+
+             '<input class="dinput" id="grWho" inputmode="numeric" placeholder="e.g. 42" value="'+(uid?String(uid):'')+'">'+
+             '<div class="dhint">'+(uid?esc(nameOf(uid)):'The number shown as #n in the Users list.')+'</div></div>'+
+           '<div class="dfield"><label class="dlabel">Length</label>'+
+             '<select class="dinput" id="grDays">'+
+               '<option value="0" selected>Permanent</option>'+
+               '<option value="7">7 days</option>'+
+               '<option value="30">30 days</option>'+
+               '<option value="90">90 days</option>'+
+               '<option value="365">1 year</option>'+
+             '</select></div>'+
+           '<div class="derr" id="grErr"></div>',
+      footer:'<button type="button" class="dbtn sec" data-x>Cancel</button>'+
+             '<button type="button" class="dbtn" data-go>Grant Role</button>'
+    });
+    m.foot.querySelector('[data-x]').onclick=m.close;
+    const go=m.foot.querySelector('[data-go]');
+    go.onclick=async()=>{
+      const role=m.body.querySelector('#grRole').value;
+      const target=Number(m.body.querySelector('#grWho').value);
+      const days=Number(m.body.querySelector('#grDays').value)||0;
+      const err=m.body.querySelector('#grErr');err.textContent='';
+      if(!role){err.textContent='No role selected.';return}
+      if(!Number.isInteger(target)||target<=0){err.textContent='That account number is not valid.';return}
+      go.disabled=true;go.textContent='Granting…';
+      try{
+        await api('grant',{role,target,days});
+        m.close();
+        toast('Granted '+role+' to '+nameOf(target)+'.','good');
+        S.roles=null;
+        if(sec==='roles')drawRoles(main());
+      }catch(e){
+        err.textContent=(e&&e.message)||'Could not grant that role.';
+        go.disabled=false;go.textContent='Grant Role';
+      }
+    };
+  }
+
+  function openHistory(){
+    const m=dmodal({
+      title:'Global role history',
+      sub:'Written by <code>api/customrole.js</code> only. No client can append to it or delete from it.',
+      body:'<div class="dempty">Loading…</div>',
+      footer:'<button type="button" class="dbtn sec" data-x>Close</button>'
+    });
+    m.foot.querySelector('[data-x]').onclick=m.close;
+    (async()=>{
+      try{
+        const r=await api('history',{limit:100});
+        const h=(r&&r.history)||[];
+        /* dmodal returns {close,root,body,foot} - `root` is the box. Guarding on a
+     property it does not have would mean this always bailed out and never drew. */
+  if(!m.root||!m.root.isConnected)return;
+        m.body.innerHTML=h.length?h.map(e=>{
+          const act=e.act==='grant'?'granted':(e.act==='revoke'?'revoked':'expired');
+          const tone=e.act==='grant'?'ok':(e.act==='revoke'?'bad':'off');
+          return '<div class="oc-row"><div class="oc-row-txt">'+
+            '<div class="oc-row-nm">'+esc(e.role||'?')+' → '+esc(nameOf(e.target))+'</div>'+
+            '<div class="oc-row-d">'+esc(when(e.at))+
+              (e.by?' · by '+esc(nameOf(e.by)):' · automatic')+
+              (e.until?' · until '+esc(when(e.until)):'')+'</div></div>'+
+            '<span class="oc-tag '+tone+'">'+act+'</span></div>';
+        }).join(''):'<div class="dempty">Nothing recorded yet. Grants made before v54.7, or made directly in the Firebase console, are not in this log.</div>';
+      }catch(e){
+        /* dmodal returns {close,root,body,foot} - `root` is the box. Guarding on a
+     property it does not have would mean this always bailed out and never drew. */
+  if(!m.root||!m.root.isConnected)return;
+        m.body.innerHTML='<div class="dnote bad">'+esc((e&&e.message)||'Could not load the history.')+'</div>';
+      }
+    })();
+  }
+
+  /* ---------------- Diagnostics ---------------- */
+
+  /* One row per thing worth knowing. Returns HTML strings so Overview can show the first few
+     and Diagnostics can show them all without two copies of the logic. */
+  function healthLines(){
+    const row=(l,v,tone)=>'<div class="oc-diag"><div class="oc-diag-l">'+esc(l)+'</div>'+
+      '<div class="oc-diag-v">'+(tone?'<span class="oc-tag '+tone+'">'+esc(v)+'</span>':esc(v))+'</div></div>';
+    const out=[];
+    if(S.healthErr){out.push(row('API','unreachable','bad'));out.push(row('Why',S.healthErr));return out}
+    const h=S.health;
+    if(!h){out.push(row('API','checking…'));return out}
+    const a=h.admin||{};
+    out.push(row('API','available','ok'));
+    out.push(row('Admin credentials',a.credentials?'set':'not set',a.credentials?'ok':'bad'));
+    out.push(row('Database (from the API)',a.databaseReachable===true?'reachable':(a.databaseReachable===false?'unreachable':'not checked'),
+      a.databaseReachable===true?'ok':(a.databaseReachable===false?'bad':'off')));
+    const svc=h.services||{};
+    Object.keys(svc).forEach(k=>{
+      const v=svc[k]||{};
+      const tone=v.status==='available'?'ok':(v.status==='unconfigured'?'warn':'bad');
+      out.push(row(k,v.status+(v.missing&&v.missing.length?' ('+v.missing.join(', ')+')':''),tone));
+    });
+    return out;
+  }
+
+  function drawDiag(m){
+    const build=(document.querySelector('meta[name="build-version"]')||{}).content||'(none)';
+    let ver='';try{ver=(APP_VERSION_CACHE&&APP_VERSION_CACHE.current)||''}catch(_){}
+    let signedIn=false,uid='';
+    try{signedIn=!!(auth&&auth.currentUser);uid=signedIn?auth.currentUser.uid:''}catch(_){}
+    let errs=[];
+    try{errs=(window.__ICH_ERRORS||[]).slice(-8)}catch(_){}
+
+    const row=(l,v,tone)=>'<div class="oc-diag"><div class="oc-diag-l">'+esc(l)+'</div>'+
+      '<div class="oc-diag-v">'+(tone?'<span class="oc-tag '+tone+'">'+esc(v)+'</span>':esc(v))+'</div></div>';
+
+    m.innerHTML=
+      '<div class="dset-h1">Diagnostics</div>'+
+      '<div class="oc-note">Everything on this page is safe to share. Environment variables are '+
+        'reported as <b>set</b> or <b>not set</b> — never their values, not even partially, '+
+        'because a prefix identifies a provider and a length narrows a brute force. '+
+        'Copy Diagnostics copies exactly what you can see.</div>'+
+      '<div class="dset-h2">This page</div>'+
+      row('Build label',build)+
+      row('Required build',ver||'(not set)')+
+      row('Page address',(function(){try{return location.protocol+'//'+(location.host||'(no host)')}catch(_){return '(unknown)'}})())+
+      row('Shareable invite links',(typeof inviteUrl==='function'&&inviteUrl('TEST'))?'yes':'no — codes only',
+          (typeof inviteUrl==='function'&&inviteUrl('TEST'))?'ok':'warn')+
+      '<div class="dset-h2">Account and database</div>'+
+      row('Signed in',signedIn?'yes':'no',signedIn?'ok':'bad')+
+      row('Firebase UID',uid?uid.slice(0,8)+'…':'(none)')+
+      row('My account number',ME?('#'+ME.id):'(none)')+
+      row('Site owner',amOwner()?'yes':'no',amOwner()?'ok':'off')+
+      row('Realtime sync',(function(){try{return DB.onlineCount()>=0?'receiving':'unknown'}catch(_){return 'unknown'}})(),'ok')+
+      row('Server list readable',S.loaded?'yes':(S.err?'no':'not read yet'),S.loaded?'ok':(S.err?'bad':'off'))+
+      (S.err?row('Why',S.err):'')+
+      '<div class="dset-h2">Backend</div>'+
+      '<div id="ocDiagApi">'+healthLines().join('')+'</div>'+
+      '<div class="dset-h2">Optional systems configured in this page</div>'+
+      row('Voice (Agora App ID)',(function(){try{return (CFG&&CFG.APP_ID)?'set':'not set'}catch(_){return 'not set'}})(),
+          (function(){try{return (CFG&&CFG.APP_ID)?'ok':'warn'}catch(_){return 'warn'}})())+
+      row('Voice token endpoint',(function(){try{return (CFG&&CFG.TOKEN_URL)?'set':'not set — the Agora project must have its certificate disabled'}catch(_){return 'not set'}})())+
+      row('Cloudinary uploads',(function(){try{return (CFG&&CFG.CLOUD_NAME)?'set':'not set'}catch(_){return 'not set'}})(),
+          (function(){try{return (CFG&&CFG.CLOUD_NAME)?'ok':'warn'}catch(_){return 'warn'}})())+
+      row('API base (CFG.TOS_API)',(function(){try{return String((CFG&&CFG.TOS_API)||'')||'(empty)'}catch(_){return '(empty)'}})())+
+      '<div class="dset-h2">Recent client errors</div>'+
+      (errs.length?errs.map(e=>'<div class="oc-diag"><div class="oc-diag-l" style="font-size:12px">'+
+         esc(String(e&&e.msg||e).slice(0,160))+((e&&e.n>1)?' <b>\u00d7'+e.n+'</b>':'')+
+         '</div><div class="oc-diag-v">'+esc(when(e&&e.at))+'</div></div>').join('')
+        :'<div class="dempty">None recorded this session.</div>')+
+      '<div class="rm-bar">'+
+        '<button type="button" class="dbtn grey" id="ocDr">Re-check the API</button>'+
+        '<button type="button" class="dbtn" id="ocCopy">Copy Diagnostics</button>'+
+      '</div>';
+
+    m.querySelector('#ocDr').onclick=async()=>{
+      S.health=null;S.healthErr='';
+      const box=main().querySelector('#ocDiagApi');
+      if(box)box.innerHTML='<div class="oc-diag"><div class="oc-diag-l">Checking…</div></div>';
+      await loadHealth();
+      if(main())drawDiag(main());
+    };
+    m.querySelector('#ocCopy').onclick=async()=>{
+      /* Built from the rendered rows, so what is copied is exactly what was reviewed on screen.
+         Composing a separate richer payload is how a secret ends up in a pasted bug report. */
+      const lines=[];
+      main().querySelectorAll('.dset-h2,.oc-diag').forEach(n=>{
+        if(n.classList.contains('dset-h2')){lines.push('','== '+n.textContent.trim()+' ==');return}
+        const l=n.querySelector('.oc-diag-l'),v=n.querySelector('.oc-diag-v');
+        lines.push((l?l.textContent.trim():'')+': '+(v?v.textContent.trim():''));
+      });
+      const txt='ICH diagnostics '+new Date().toISOString()+lines.join('\n');
+      const ok=await copyText(txt);
+      toast(ok?'Diagnostics copied':'Could not copy',ok?'good':'bad');
+    };
+
+    if(!S.health&&!S.healthErr)(async()=>{
+      await loadHealth();
+      if(main()&&sec==='diag')drawDiag(main());
+    })();
+  }
+
+  return{open,close,amOwner};
+})();
+
+/* The entry point used by the rail and the quick switcher. A plain function so it matches
+   openDiscover / openShop / openSettings rather than being the one that needs a namespace. */
+function openOwnerCenter(section){return DOwner.open(section)}
 
 /* ==========================================================================
  * js/ui/quick-switcher.js  (v54)

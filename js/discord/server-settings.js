@@ -47,8 +47,11 @@ let _dset=null;
 let _dsetRelease=null;
 function closeServerSettings(){
   if(_dset){_dset.remove();_dset=null;document.removeEventListener('keydown',_dsetKey)}
+  _dsetGuard=null;
   if(_dsetRelease){const f=_dsetRelease;_dsetRelease=null;try{f()}catch(_){}}
 }
+/* Set by openServerSettings while a pane is open; see closeGuarded there. */
+let _dsetGuard=null;
 function _dsetKey(e){
   if(e.key!=='Escape')return;
   // on a phone, Escape backs out of a section to the list before it closes the whole panel
@@ -56,6 +59,7 @@ function _dsetKey(e){
      window.matchMedia&&window.matchMedia('(max-width:820px)').matches){
     _dset.classList.remove('dset-paned');return;
   }
+  if(_dsetGuard){_dsetGuard();return}
   closeServerSettings();
 }
 
@@ -90,8 +94,13 @@ async function openServerSettings(sid,section){
   document.body.appendChild(el);
   _dset=el;
   document.addEventListener('keydown',_dsetKey);
-  el.querySelector('#svX').onclick=closeServerSettings;
-  el.querySelector('#svXm').onclick=closeServerSettings;
+  /* v54.7: closing the pane goes through the same guard as switching role or tab, so a
+     half-finished permission draft cannot be lost to a stray click on the X. _dsetGuard is
+     module-level because _dsetKey (Escape) lives outside this closure and needs it too. */
+  const closeGuarded=()=>guardLeave(closeServerSettings);
+  _dsetGuard=closeGuarded;
+  el.querySelector('#svX').onclick=closeGuarded;
+  el.querySelector('#svXm').onclick=closeGuarded;
   el.querySelector('#svBack').onclick=()=>el.classList.remove('dset-paned');
 
   const nav=el.querySelector('#svNav'),main=el.querySelector('#svMain');
@@ -196,6 +205,22 @@ async function openServerSettings(sid,section){
         dtoggleHTML(DModel.isPublic(sid),'id="svPublic"')+'</div>'+
         '<div class="dfield" style="margin-top:12px"><label class="dlabel">Short description</label>'+
         '<input class="dinput" id="svDesc" maxlength="200" value="'+esc((DModel._state.discovery[sid]||{}).desc||'')+'" placeholder="What is this server about?"></div>'+
+        /* v54.7: the category and tags people search Discover by. The category is a fixed list
+           (DModel.SRV_CATS) rather than free text - a free field gives you "Gaming", "gaming"
+           and "GAMING " as three different categories and a filter that matches none of them. */
+        '<div class="dfield"><label class="dlabel">Category</label>'+
+        '<select class="dinput" id="svCat">'+
+          '<option value="">\u2014 none \u2014</option>'+
+          DModel.SRV_CATS.map(c=>'<option value="'+esc(c)+'"'+
+            (((DModel._state.discovery[sid]||{}).cat===c)?' selected':'')+'>'+esc(c)+'</option>').join('')+
+        '</select>'+
+        '<div class="dhint">Puts the server under a filter chip in Discover.</div></div>'+
+        '<div class="dfield"><label class="dlabel">Tags</label>'+
+        '<input class="dinput" id="svTags" maxlength="100" value="'+
+          esc(String((DModel._state.discovery[sid]||{}).tags||''))+
+          '" placeholder="minecraft, chill, uk"></div>'+
+        '<div class="dhint" style="margin:-8px 0 12px">Up to six, comma separated. People searching '+
+        'Discover match against these as well as the name and description.</div>'+
         '<button type="button" class="dbtn grey" id="svPubSave">Save listing</button>')+
       /* ---- v53: the things Discord calls System Messages, plus a server description ---- */
       (sys?'':'<div class="dsep"></div>'+
@@ -299,8 +324,20 @@ async function openServerSettings(sid,section){
     if(pb)pb.onclick=async()=>{
       pb.disabled=true;const err=main.querySelector('#svErr');err.textContent='';
       try{
-        await DModel.setPublic(sid,main.querySelector('#svPublic').checked,main.querySelector('#svDesc').value);
-        toast(main.querySelector('#svPublic').checked?'Listed in Discover.':'Removed from Discover.','good');
+        const on=main.querySelector('#svPublic').checked;
+        await DModel.setPublic(sid,on,{
+          desc:main.querySelector('#svDesc').value,
+          cat:main.querySelector('#svCat').value,
+          tags:main.querySelector('#svTags').value
+        });
+        toast(on?'Listed in Discover.':'Removed from Discover.','good');
+        /* Re-read what was actually stored: normalizeTags() drops duplicates, strips odd
+           characters and caps at six, so the field has to show the saved value rather than
+           what was typed - otherwise the next save writes the unnormalised text back. */
+        if(on)setTimeout(()=>{
+          const t=main.querySelector('#svTags');
+          if(t)t.value=String((DModel._state.discovery[sid]||{}).tags||'');
+        },350);
       }catch(e){err.textContent=e.message||'Could not save the listing.'}
       finally{pb.disabled=false}
     };
@@ -308,6 +345,26 @@ async function openServerSettings(sid,section){
 
   /* ---------------- Roles ---------------- */
   let selRole=null,roleTab='display',memQ='';
+  /* v54.7 role-manager state. permQ filters the permission list; roleQ filters the role list.
+     permDirty/permDiscard are installed by panePerms so that anything which would NAVIGATE AWAY
+     from a half-finished permission draft can ask first - the role list, the tab strip, and
+     closing the pane. They are reset to no-ops whenever a pane that owns no draft is drawn, so
+     a stale guard can never block navigation after the draft is gone. */
+  let permQ='',roleQ='';
+  let permDirty=()=>0,permDiscard=()=>{};
+  function clearPermGuard(){permDirty=()=>0;permDiscard=()=>{}}
+  /* Runs `go` now if there is nothing to lose, otherwise asks. One place, so every exit from
+     the permission pane behaves the same way. */
+  function guardLeave(go){
+    let n=0;try{n=permDirty()}catch(_){n=0}
+    if(!n)return go();
+    dconfirm({
+      title:'Discard '+n+' unsaved permission change'+(n===1?'':'s')+'?',
+      sub:'You changed this role\u2019s permissions but haven\u2019t saved. Leaving now throws those changes away.',
+      confirm:'Discard Changes',danger:true,
+      onConfirm:()=>{try{permDiscard()}catch(_){}clearPermGuard();go()}
+    });
+  }
   function drawRoles(){
     const roles=DModel.roles(sid);
     if(!selRole||!roles.some(r=>r.id===selRole))selRole=(roles.find(r=>!r.virtual&&!r.everyone)||roles[0]).id;
@@ -331,16 +388,29 @@ async function openServerSettings(sid,section){
        so a role created here could never be given to anyone. The + is left out rather than
        offered and then refused. */
     const sysRoles=DModel.isSystem(sid);
-    host.innerHTML='<div class="drm-list-head"><h3>Roles — '+roles.length+'</h3>'+
-      (sysRoles?'':'<button type="button" class="dbtn sm" id="rmNew">'+DI.plus+'</button>')+'</div>'+
+    /* v54.7: a search box over the role list. A server with thirty roles made finding one a
+       scroll, and the list is the only way into everything else on this page. Filtering never
+       hides the SELECTED role, so searching cannot make the pane on the right orphaned. */
+    const rq=roleQ.trim().toLowerCase();
+    host.innerHTML='<div class="drm-list-head"><h3>Roles \u2014 '+roles.length+'</h3>'+
+      (sysRoles?'':'<button type="button" class="dbtn sm" id="rmNew" title="Create a role" aria-label="Create a role">'+DI.plus+'</button>')+'</div>'+
+      (roles.length>6?'<div style="padding:0 8px 8px"><input class="dinput" id="rmQ" placeholder="Search roles" value="'+esc(roleQ)+'" aria-label="Search roles" style="height:30px;font-size:13px"></div>':'')+
       (sysRoles?'<div class="dhint" style="padding:0 10px 8px">ICH\u2019s roles are the site ranks. They\u2019re granted from the owner tools, not created here.</div>':'')+
       '<div id="rmRoles"></div>';
+    const rqi=host.querySelector('#rmQ');
+    if(rqi)rqi.oninput=()=>{
+      roleQ=rqi.value;const at=rqi.selectionStart;
+      drawRoleList();
+      const n=main.querySelector('#rmQ');if(n){n.focus();try{n.setSelectionRange(at,at)}catch(_){}}
+    };
     if(host.querySelector('#rmNew'))host.querySelector('#rmNew').onclick=async()=>{
       try{const rid=await DModel.createRole(sid,'new role');selRole=rid;roleTab='display';setTimeout(drawRoles,250)}
       catch(e){toast(e.message||'Could not create a role','bad')}
     };
     const box=host.querySelector('#rmRoles');
-    roles.forEach(r=>{
+    const shown=roles.filter(r=>!rq||r.id===selRole||String(r.name||'').toLowerCase().includes(rq));
+    if(!shown.length){box.innerHTML='<div class="dhint" style="padding:8px 10px">No role matches.</div>';return}
+    shown.forEach(r=>{
       const row=document.createElement('div');
       const locked=r.virtual||r.everyone||!DModel.canManageRole(sid,r.id);
       row.className='drm-role'+(selRole===r.id?' active':'')+(locked?' locked':'')+(r.virtual?' virtual':'');
@@ -349,7 +419,7 @@ async function openServerSettings(sid,section){
         '<span class="dot" style="background:'+esc(r.color||'#99aab5')+'"></span>'+
         '<span class="nm">'+esc(r.name)+'</span>'+
         '<span class="ct">'+roleMemberCount(r)+'</span>';
-      row.onclick=()=>{selRole=r.id;drawRoleList();drawRoleEdit()};
+      row.onclick=()=>guardLeave(()=>{clearPermGuard();selRole=r.id;drawRoleList();drawRoleEdit()});
       if(!locked){
         row.draggable=true;
         row.addEventListener('dragstart',e=>{_dragRid=r.id;row.classList.add('dragging');try{e.dataTransfer.setData('text/plain',r.id)}catch(_){}});
@@ -392,11 +462,11 @@ async function openServerSettings(sid,section){
       (r.virtual?'<div class="dnote">‘'+esc(r.name)+'’ is one of the site’s built-in ranks. It is shown here so you can see where it sits in the hierarchy, but it is managed from your backend — the database rules stop the browser changing it.</div>':'')+
       (!r.virtual&&readOnly?'<div class="dnote bad">This role sits above your highest role, so you cannot edit it.</div>':'')+
       '<div id="rmPane"></div>';
-    host.querySelectorAll('[data-t]').forEach(t=>t.onclick=()=>{roleTab=t.dataset.t;drawRoleEdit()});
+    host.querySelectorAll('[data-t]').forEach(t=>t.onclick=()=>guardLeave(()=>{clearPermGuard();roleTab=t.dataset.t;drawRoleEdit()}));
     const pane=host.querySelector('#rmPane');
-    if(roleTab==='display')paneDisplay(pane,r,readOnly);
+    if(roleTab==='display'){clearPermGuard();paneDisplay(pane,r,readOnly)}
     else if(roleTab==='perms')panePerms(pane,r,readOnly);
-    else paneMembers(pane,r);
+    else{clearPermGuard();paneMembers(pane,r)}
   }
 
   function paneDisplay(pane,r,readOnly){
@@ -461,38 +531,131 @@ async function openServerSettings(sid,section){
     });
   }
 
+  /* ---------------- the permission matrix (v54.7, reworked) ----------------
+
+     WHAT CHANGED AND WHY
+       Every toggle used to write to the database the instant it moved. Flipping twelve
+       permissions on a role was twelve separate updateRole() calls, and each one re-flattens
+       the permission cache for EVERY member of the server (DModel.syncPerms) - so a routine
+       edit to a role in a 200-member server fired twelve cascades of two hundred writes. It
+       also meant a half-finished edit was already live: turn Administrator on while deciding,
+       and for those few seconds the role really could do everything.
+
+       Now the pane holds the changes, shows what is unsaved, and writes once. Save sends a
+       single updateRole() with all of the changed keys, so one cascade instead of twelve.
+       Reset throws the draft away. Leaving with unsaved changes asks first - the role list,
+       the tab strip and the pane's own Escape all route through guardLeave().
+
+       The search box exists because 23 permissions over six headings is more than anybody
+       wants to scan to find "can they pin things".
+  */
   function panePerms(pane,r,readOnly){
     const mine=DModel.basePerms(sid,ME.id);
-    pane.innerHTML=DModel.PERM_CATS.map(cat=>{
-      const inCat=DModel.PERMS.filter(p=>p.cat===cat);
-      if(!inCat.length)return '';
-      return '<div class="dperm-cat">'+cat+'</div>'+inCat.map(p=>{
-        const on=r.perms&&r.perms[p.k];
-        // You cannot hand out a permission you do not have yourself.
-        const blocked=readOnly||(!mine[p.k]&&!isOwner(ME.id));
-        return '<div class="dperm'+(p.danger?' danger':'')+'">'+
-          '<div class="dperm-txt"><div class="dperm-nm">'+esc(p.n)+
-            (blocked&&!readOnly?' <span class="dhint" style="margin:0">(you don’t have this)</span>':'')+
-          '</div><div class="dperm-d">'+esc(p.d)+'</div></div>'+
-          dtoggleHTML(!!on,'data-perm="'+p.k+'"'+(blocked?' disabled':''))+
-        '</div>';
+    let siteOwner=false;try{siteOwner=isOwner(ME.id)}catch(_){}
+    const saved=()=>{const o={};DModel.PERM_KEYS.forEach(k=>{o[k]=!!(r.perms&&r.perms[k])});return o};
+    let base=saved();                 // what the database says right now
+    let draft={...base};              // what the person has built
+    const changed=()=>DModel.PERM_KEYS.filter(k=>!!draft[k]!==!!base[k]);
+
+    /* Registered so the role list and the tab strip can ask before they discard a draft. */
+    permDirty=()=>changed().length;
+    permDiscard=()=>{draft={...base}};
+
+    function render(){
+      const q=permQ.trim().toLowerCase();
+      const dirty=changed();
+      const cats=DModel.PERM_CATS.map(cat=>{
+        let inCat=DModel.PERMS.filter(p=>p.cat===cat);
+        if(q)inCat=inCat.filter(p=>p.n.toLowerCase().includes(q)||p.d.toLowerCase().includes(q)||p.k.toLowerCase().includes(q));
+        if(!inCat.length)return '';
+        return '<div class="rm-cat">'+esc(cat)+'</div>'+inCat.map(p=>{
+          const on=!!draft[p.k];
+          const moved=!!draft[p.k]!==!!base[p.k];
+          // You cannot hand out a permission you do not hold yourself.
+          const blocked=readOnly||(!mine[p.k]&&!siteOwner);
+          return '<div class="rm-perm'+(blocked?' locked':'')+'">'+
+            '<div class="rm-perm-txt"><div class="rm-perm-nm">'+esc(p.n)+
+              (p.danger?'<span class="rm-danger">Dangerous</span>':'')+
+              (moved?'<span class="rm-danger" style="background:rgba(250,166,26,.16);color:#f0b232">Unsaved</span>':'')+
+            '</div><div class="rm-perm-d">'+esc(p.d)+
+              (blocked&&!readOnly?' <b>You don’t have this permission, so you can’t grant it.</b>':'')+
+            '</div></div>'+
+            dtoggleHTML(on,'data-perm="'+p.k+'"'+(blocked?' disabled':'')+
+              ' aria-label="'+esc(p.n)+'"')+
+          '</div>';
+        }).join('');
       }).join('');
-    }).join('')+'<div class="derr" id="pErr"></div>';
-    if(readOnly)return;
-    pane.querySelectorAll('[data-perm]').forEach(inp=>{
-      inp.onchange=async()=>{
-        const k=inp.dataset.perm;
-        inp.disabled=true;
-        try{
-          await DModel.updateRole(sid,r.id,{perms:{[k]:inp.checked}});
-          if(k==='admin'&&inp.checked)toast('Administrator granted — that role can now do everything.','good');
-          if(typeof renderChat==='function')renderChat();
-        }catch(e){
-          inp.checked=!inp.checked;
-          pane.querySelector('#pErr').textContent=e.message||'Could not save.';
-        }finally{inp.disabled=false}
+
+      pane.innerHTML=
+        '<div class="dfield" style="margin-bottom:4px">'+
+          '<input class="dinput" id="pq" placeholder="Search permissions" value="'+esc(permQ)+'" aria-label="Search permissions">'+
+        '</div>'+
+        (cats||'<div class="dempty">No permission matches “'+esc(permQ.trim())+'”.</div>')+
+        '<div class="derr" id="pErr"></div>'+
+        (readOnly
+          ?'<div class="rm-ro">You can see this role’s permissions but not change them — it sits at or above your own highest role.</div>'
+          :'<div class="rm-bar">'+
+             (dirty.length?'<span class="rm-dirty">'+dirty.length+' unsaved change'+(dirty.length===1?'':'s')+'</span>':'<span class="rm-dirty" style="color:var(--dl-tx3,#949ba4)">Saved</span>')+
+             '<button type="button" class="dbtn grey" id="pReset"'+(dirty.length?'':' disabled')+'>Reset</button>'+
+             '<button type="button" class="dbtn" id="pSave"'+(dirty.length?'':' disabled')+'>Save Permissions</button>'+
+           '</div>');
+
+      const qi=pane.querySelector('#pq');
+      qi.oninput=()=>{
+        permQ=qi.value;
+        const at=qi.selectionStart;
+        render();
+        const n=pane.querySelector('#pq');n.focus();try{n.setSelectionRange(at,at)}catch(_){}
       };
-    });
+      if(readOnly)return;
+      pane.querySelectorAll('[data-perm]').forEach(inp=>{
+        inp.onchange=()=>{draft[inp.dataset.perm]=inp.checked;render()};
+      });
+      const rs=pane.querySelector('#pReset');
+      if(rs)rs.onclick=()=>{draft={...base};render()};
+      const sv=pane.querySelector('#pSave');
+      if(sv)sv.onclick=async()=>{
+        const keys=changed();
+        if(!keys.length)return;
+        const patch={};keys.forEach(k=>{patch[k]=!!draft[k]});
+        const grantingAdmin=patch.admin===true;
+        const commit=async()=>{
+          sv.disabled=true;sv.textContent='Saving…';
+          try{
+            /* One call, all of the changed keys: one permission-cache cascade instead of one
+               per toggle. */
+            await DModel.updateRole(sid,r.id,{perms:patch});
+            base={...draft};
+            toast(keys.length+' permission'+(keys.length===1?'':'s')+' saved.','good');
+            if(typeof renderChat==='function')renderChat();
+            setTimeout(()=>{drawRoleList();render()},200);
+          }catch(e){
+            pane.querySelector('#pErr').textContent=(e&&e.message)||'Could not save.';
+            sv.disabled=false;sv.textContent='Save Permissions';
+          }
+        };
+        /* Administrator is the one permission that cannot be partially understood: it bypasses
+           every other box on this page, including the ones left off. It gets its own
+           confirmation rather than being one switch among twenty-three. */
+        if(grantingAdmin){
+          dconfirm({
+            title:'Grant Administrator to ‘'+r.name+'’',
+            sub:'<b>Administrator</b> gives every permission in this server and bypasses every '+
+                'channel restriction, including private channels and anything you leave switched '+
+                'off on this page. Anyone with ‘'+esc(r.name)+'’ will be able to manage '+
+                'channels, roles and members, and ban people.'+
+                (DModel.roles(sid).find(x=>x.id===r.id)&&roleMemberCount(r)
+                  ?'<div class="dnote" style="margin-top:10px"><b>'+roleMemberCount(r)+'</b> member'+
+                    (roleMemberCount(r)===1?' has':'s have')+' this role right now.</div>':''),
+            confirm:'Grant Administrator',danger:true,
+            onConfirm:commit
+          });
+          return;
+        }
+        commit();
+      };
+    }
+    render();
   }
 
   function paneMembers(pane,r){
@@ -568,25 +731,67 @@ async function openServerSettings(sid,section){
       return;
     }
     DModel.listInvites(sid).then(list=>{
+      const now=Date.now()+(typeof SKEW==='number'?SKEW:0);
+      /* v54.7: an invite row used to say only who made it and a raw use count, which left the
+         two questions you actually open this page to answer - is this one still working, and
+         what do I send somebody - unanswered. Each row now carries its state, the link where
+         one can be built, and a confirmation before anything is destroyed. */
+      const state=iv=>{
+        if(iv.exp&&iv.exp<now)return{k:'dead',t:'Expired'};
+        if(iv.max&&(iv.uses||0)>=iv.max)return{k:'dead',t:'Used up'};
+        if(iv.exp)return{k:'live',t:'Expires '+new Date(iv.exp).toLocaleString()};
+        return{k:'live',t:'Never expires'};
+      };
+      const live=list.filter(iv=>state(iv).k==='live');
       main.innerHTML='<div class="dset-h1">Invites</div>'+
+        '<div class="dhint" style="margin:-6px 0 14px">An invite link shows the server and asks before '+
+        'anybody joins. Opening one doesn’t use it up — only joining does.</div>'+
         '<button type="button" class="dbtn" id="ivNew" style="margin-bottom:16px">Create Invite</button>'+
         (list.length?list.map(iv=>{
           const who=DB.getUser(iv.by);
-          const exp=iv.exp?new Date(iv.exp).toLocaleString():'Never';
-          return '<div class="drow"><div class="drow-txt"><div class="drow-nm">'+esc(iv.code)+'</div>'+
-            '<div class="drow-d">By '+esc(who?who.username:'user '+iv.by)+' · '+iv.uses+
-            (iv.max?'/'+iv.max:'')+' uses · Expires: '+esc(exp)+'</div></div>'+
-            '<button type="button" class="dbtn sm grey" data-cp="'+esc(iv.code)+'">Copy</button>'+
+          const st=state(iv);
+          const url=(typeof inviteUrl==='function')?inviteUrl(iv.code):'';
+          const used=(iv.uses||0);
+          const uses=iv.max?(used+' of '+iv.max+' use'+(iv.max===1?'':'s')):(used+' use'+(used===1?'':'s')+' · no limit');
+          return '<div class="drow iv-row'+(st.k==='dead'?' iv-dead':'')+'">'+
+            '<div class="drow-txt"><div class="drow-nm"><code class="iv-code">'+esc(iv.code)+'</code>'+
+              '<span class="iv-pill '+st.k+'">'+esc(st.k==='dead'?st.t:'Active')+'</span></div>'+
+            '<div class="drow-d">'+esc(uses)+' · by '+esc(who?who.username:'user '+iv.by)+
+              ' · '+esc(st.k==='dead'?(iv.exp&&iv.exp<now?'Expired '+new Date(iv.exp).toLocaleString():'Reached its limit'):st.t)+
+            '</div></div>'+
+            '<button type="button" class="dbtn sm grey" data-cp="'+esc(iv.code)+'">Code</button>'+
+            (url?'<button type="button" class="dbtn sm grey" data-cpl="'+esc(iv.code)+'">Link</button>':'')+
             '<button type="button" class="dbtn sm danger" data-rv="'+esc(iv.code)+'">Revoke</button></div>';
-        }).join(''):'<div class="dempty">No active invites.</div>');
+        }).join('')
+         :'<div class="dempty">No invites yet. <b>Create Invite</b> makes a code and a shareable link.</div>')+
+        (list.length?'<div class="dhint" style="margin-top:12px">'+live.length+' of '+list.length+
+          ' still usable.'+(list.length>live.length?' Expired and used-up invites stay listed until you revoke them.':'')+'</div>':'');
       main.querySelector('#ivNew').onclick=()=>openInvite(sid);
       main.querySelectorAll('[data-cp]').forEach(b=>b.onclick=async()=>{
-        const ok=await copyText(b.dataset.cp);toast(ok?'Copied':'Could not copy',ok?'good':'bad');
+        const ok=await copyText(b.dataset.cp);toast(ok?'Invite code copied':'Could not copy',ok?'good':'bad');
       });
-      main.querySelectorAll('[data-rv]').forEach(b=>b.onclick=async()=>{
-        b.disabled=true;
-        try{await DModel.revokeInvite(b.dataset.rv,sid);toast('Invite revoked.');drawInvites()}
-        catch(e){toast(e.message||'Could not revoke','bad');b.disabled=false}
+      main.querySelectorAll('[data-cpl]').forEach(b=>b.onclick=async()=>{
+        const u=(typeof inviteUrl==='function')?inviteUrl(b.dataset.cpl):'';
+        if(!u){toast('No shareable address for this window','bad');return}
+        const ok=await copyText(u);toast(ok?'Invite link copied':'Could not copy',ok?'good':'bad');
+      });
+      main.querySelectorAll('[data-rv]').forEach(b=>b.onclick=()=>{
+        /* Revoking is irreversible and silent from the other side - whoever holds the link just
+           finds it stops working - so it gets a confirmation like any other destructive act. */
+        const code=b.dataset.rv;
+        const iv=list.find(x=>x.code===code)||{};
+        dconfirm({
+          title:'Revoke invite '+code,
+          sub:'Anybody holding this link or code will no longer be able to join with it. '+
+              ((iv.uses||0)?'It has already been used <b>'+iv.uses+'</b> time'+(iv.uses===1?'':'s')+'. ':'')+
+              'Members who already joined are not affected.',
+          confirm:'Revoke Invite',danger:true,
+          onConfirm:async()=>{
+            await DModel.revokeInvite(code,sid);
+            toast('Invite revoked.','good');
+            drawInvites();
+          }
+        });
       });
     }).catch(()=>{
       main.innerHTML='<div class="dset-h1">Invites</div><div class="dnote bad">Could not load invites.</div>';

@@ -170,21 +170,45 @@ async function reboot(page,who,keep){
 
   /* ----- an ICH (site-wide) timeout must not silence other servers ----- */
   console.log('\n--- an ICH timeout does not reach other servers ---');
+  /* v54.7: this used to mute mina (4), who is NOT one of the members this suite adds to the
+     test server (2, 3 and 5). It passed only because a non-member used to be granted the
+     @everyone defaults, which is the bug v54.7 fixed in DModel.basePerms - so the check was
+     really asserting "a stranger can send in a server they are not in". Muting ghost (5), who
+     IS a member, tests what this case was always meant to test: a SITE-WIDE mute does not
+     reach into a custom server. */
   const ichMute=await page.evaluate(sid=>{
     const t=window.__FAKE.dump();
-    t.muted={4:Date.now()+600000};           // mina, site mute
+    t.muted={5:Date.now()+600000};           // ghost, site mute
+    /* Re-assert ghost's membership rather than assuming it survived: the kick and ban cases
+       above operate on these same accounts, so which of them is still in the server depends on
+       the order the suite happens to run in. The point of this case is the mute, not that. */
+    t.serverMembers=t.serverMembers||{};t.serverMembers[sid]=t.serverMembers[sid]||{};
+    t.serverMembers[sid][5]={at:Date.now(),roles:{}};
+    t.userServers=t.userServers||{};t.userServers[5]=t.userServers[5]||{};t.userServers[5][sid]=true;
+    if(t.serverBans&&t.serverBans[sid])delete t.serverBans[sid][5];
     window.__FAKE.seed(t);
     return new Promise(r=>setTimeout(()=>{
       const D=__T.DModel;
       r({
-        ichMuted:__T.DB.isMuted(4),
+        ichMuted:__T.DB.isMuted(5),
+        inServer:D.inServer(sid,5),
         // the rules are what really enforce this; the model mirrors them
-        serverSend:D.canIn(sid,D.channels(sid).find(c=>c.type!=='voice'),'send',4)
+        serverSend:D.canIn(sid,D.channels(sid).find(c=>c.type!=='voice'),'send',5)
       });
     },500));
   },S.sid);
-  ok('mina is muted on ICH',ichMute.ichMuted);
+  ok('ghost is muted on ICH',ichMute.ichMuted,ichMute);
+  ok('and is a member of the custom server',ichMute.inServer===true,ichMute);
   ok('…but not silenced in other servers',ichMute.serverSend!==false,ichMute);
+  /* And the other half, which nothing checked: a non-member really does get nothing. */
+  const stranger=await page.evaluate(sid=>{
+    const D=__T.DModel;
+    const ch=D.channels(sid).find(c=>c.type!=='voice');
+    return{inServer:D.inServer(sid,4),send:D.canIn(sid,ch,'send',4),invite:D.can(sid,'invite',4)};
+  },S.sid);
+  ok('mina is not a member of it',stranger.inServer===false,stranger);
+  ok('so she cannot send there',stranger.send===false,stranger);
+  ok('nor create invites for it',stranger.invite===false,stranger);
 
   /* ================= hierarchy and self-targeting ================= */
   console.log('\n--- guards ---');

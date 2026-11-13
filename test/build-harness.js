@@ -60,6 +60,10 @@ const inlined=
      entitled to are actually OFFERED. A permission the model grants and no button
      reaches is the bug this export exists to catch. */
   'openServerMenu,closeCtx,'+
+  /* v54.7: the invite flow, the owner control center and the invite-URL helpers, so the suites
+     can drive the real thing rather than a re-implementation of it. */
+  'openInvite,openInvitePreview,handleInviteLink,inviteUrl,readInviteFromUrl,pageIsAddressable,'+
+  'openOwnerCenter,DOwner,DAudit,gotoServer,'+
   'isOwner,isMod,isAdmin,isMvp,selectRoom,renderChat,openChat,goHome,refreshBadge,'+
   'openSettings,modalGameHubs,openSpin,openUserProfile,openAccount,'+
   'serverLockReason,openDiscover,inviteUrl,readInviteFromUrl,clearInviteFromUrl,'+

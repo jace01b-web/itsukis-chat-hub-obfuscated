@@ -95,6 +95,15 @@ function outranks(actor,target){
  *       icon:   "\u{1F6E0}"        (optional emoji or up to 3 characters)
  *       rank:   50                 (optional; higher sits higher in the member list. Default 0)
  *       members: { "7": 1, "12": 1 }   (user IDs -> 1)
+ *       expires: { "12": 1764547200000 }  (optional, v54.7; user ID -> ms timestamp)
+ *
+ * v54.7 added TIMED grants, additively. members/<id> is unchanged and still the thing that
+ * makes somebody a member; a grant with a term additionally records when it ends under
+ * expires/<id>. A role whose term has passed stops being drawn here, and api/customrole.js
+ * deletes the grant outright the next time an owner lists or changes anything - so the display
+ * rule below is tidiness, and the endpoint is what actually enforces the term. Putting the
+ * timestamp inside members/<id> would have been simpler and was wrong: crHasMember() tests for
+ * 1 or true, so every existing reader would have treated a timed grant as no grant at all.
  *
  * Database rules must make it world-readable and client-unwritable (see the setup notes in package.json ("comments" -> "setup")):
  *   "customroles": { ".read": true, ".write": false }
@@ -117,7 +126,8 @@ function crClean(id,v){
     color:CR_HEX_RE.test(v.color||'')?v.color:'#7c6cff',
     icon:(typeof v.icon==='string'&&v.icon.trim())?Array.from(v.icon.trim()).slice(0,3).join(''):'',
     rank:Number.isFinite(Number(v.rank))?Number(v.rank):0,
-    members:(v.members&&typeof v.members==='object')?v.members:{}
+    members:(v.members&&typeof v.members==='object')?v.members:{},
+    expires:(v.expires&&typeof v.expires==='object')?v.expires:{}
   };
 }
 // Every custom role, highest rank first (ties broken by name) — the order they are listed in.
@@ -126,7 +136,20 @@ function customRoleList(){
   for(const k in CUSTOM_ROLES_CACHE){const r=crClean(k,CUSTOM_ROLES_CACHE[k]);if(r)out.push(r)}
   return out.sort((a,b)=>b.rank-a.rank||a.name.localeCompare(b.name));
 }
-function crHasMember(r,id){const m=r.members[String(Number(id))];return m===1||m===true}
+function crHasMember(r,id){
+  const k=String(Number(id));
+  const m=r.members[k];
+  if(m!==1&&m!==true)return false;
+  /* A term that has passed means the role is no longer theirs. Clock skew is not worth
+     worrying about here: custom roles grant nothing but a colour and a tag, so being a minute
+     out either way has no consequence beyond when the tag stops being drawn. */
+  const exp=r.expires?Number(r.expires[k]):0;
+  if(exp>0&&exp<=Date.now())return false;
+  return true;
+}
+/* When a timed grant runs out, or 0 for a permanent one. Used by the owner panel to show the
+   term next to the grant rather than leaving "why did this disappear" to be worked out. */
+function crExpiresAt(r,id){const e=r&&r.expires?Number(r.expires[String(Number(id))]):0;return e>0?e:0}
 // Which custom roles this person has, in listing order.
 function customRolesOf(id){id=Number(id);if(!id&&id!==0)return[];return customRoleList().filter(r=>crHasMember(r,id))}
 // The one that represents them (their highest-ranked), used for the name tag and member group.

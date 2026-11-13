@@ -1,0 +1,188 @@
+/* ==========================================================================
+ * css/30-v547.css — v54.7
+ *
+ * New in this release, kept in its own last-loaded stylesheet so nothing above it had to be
+ * touched and the cascade order stays obvious:
+ *   1. the invite preview (what somebody sees when they open an invite link)
+ *   2. the invite manager rows in Server Settings
+ *   3. the role manager's permission matrix
+ *   4. the site-owner control center
+ * Everything uses the existing theme variables, so light, dark and the special themes all
+ * follow without a second set of rules.
+ * ========================================================================== */
+
+/* ---------------------------------------------------------------- 1. invite preview --------- */
+.ivp-load{display:flex;flex-direction:column;align-items:center;gap:12px;padding:28px 0;color:var(--dl-tx3,#949ba4)}
+.ivp-spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--dl-bg3,rgba(255,255,255,.1));
+  border-top-color:var(--dl-acc,#5865f2)}
+@media (prefers-reduced-motion:no-preference){.ivp-spin{animation:ivpspin .8s linear infinite}}
+@keyframes ivpspin{to{transform:rotate(360deg)}}
+
+.ivp{display:flex;flex-direction:column;align-items:center;text-align:center;padding:4px 0 2px}
+.ivp-ic{width:72px;height:72px;border-radius:24px;overflow:hidden;flex:0 0 auto;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--dl-acc,#5865f2);color:#fff;font-weight:800;font-size:24px;letter-spacing:.5px;
+  margin-bottom:14px}
+.ivp-ic img{width:100%;height:100%;object-fit:cover;display:block}
+.ivp-eyebrow{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--dl-tx3,#949ba4)}
+.ivp-name{font-size:22px;font-weight:800;line-height:1.2;margin:4px 0 8px;color:var(--dl-tx1,#f2f3f5);
+  overflow-wrap:anywhere}
+.ivp-stats{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;
+  font-size:13px;color:var(--dl-tx2,#b5bac1)}
+.ivp-stats b{color:var(--dl-tx1,#f2f3f5)}
+.ivp-sep{opacity:.5}
+.ivp-dot{width:8px;height:8px;border-radius:50%;background:var(--dl-tx3,#949ba4);flex:0 0 auto}
+.ivp-dot.on{background:#3ba55d}
+.ivp-desc{margin-top:12px;font-size:14px;line-height:1.45;color:var(--dl-tx2,#b5bac1);
+  max-width:38ch;overflow-wrap:anywhere}
+.ivp-by{margin-top:12px;font-size:13px;color:var(--dl-tx3,#949ba4)}
+.ivp-by b{color:var(--dl-tx2,#b5bac1)}
+/* An invite that cannot be used. Stated, not hidden: the person still gets to see which
+   server it was and why it failed, because "expired" and "revoked" are actionable and
+   "invalid" is not. */
+.ivp-dead{margin-top:14px;width:100%;padding:10px 12px;border-radius:8px;font-size:13px;font-weight:600;
+  background:rgba(237,66,69,.12);color:#f58d8f;border:1px solid rgba(237,66,69,.3)}
+.ivp-bad{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:18px 0 6px}
+.ivp-bad-ic{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:22px;background:rgba(237,66,69,.14);color:#f58d8f}
+.ivp-bad-t{font-size:16px;font-weight:700;color:var(--dl-tx1,#f2f3f5)}
+.ivlink{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;min-width:0;font-size:13px}
+
+/* ------------------------------------------------------- 2. invite manager rows ------------- */
+.iv-row .drow-nm{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.iv-code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:1px;
+  background:var(--dl-bg3,rgba(255,255,255,.06));padding:2px 7px;border-radius:5px;font-size:13px}
+.iv-pill{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  padding:2px 7px;border-radius:999px}
+.iv-pill.live{background:rgba(59,165,93,.16);color:#4fc47b}
+.iv-pill.dead{background:rgba(237,66,69,.14);color:#f58d8f}
+/* Dimmed rather than removed: a used-up invite is still a record of what happened, and the
+   owner is the one who decides when it stops being listed. */
+.iv-dead{opacity:.62}
+
+/* --------------------------------------------------- 3. role manager / permission matrix ---- */
+.rm{display:grid;grid-template-columns:minmax(180px,230px) minmax(0,1fr);gap:0;
+  border:1px solid var(--dl-bd,rgba(255,255,255,.08));border-radius:10px;overflow:hidden}
+.rm-list{border-right:1px solid var(--dl-bd,rgba(255,255,255,.08));min-width:0;
+  background:var(--dl-bg2,rgba(0,0,0,.14))}
+.rm-list-hd{display:flex;align-items:center;gap:8px;padding:10px;border-bottom:1px solid var(--dl-bd,rgba(255,255,255,.08))}
+.rm-list-hd .dinput{height:32px;font-size:13px;padding:0 8px}
+.rm-roles{max-height:420px;overflow:auto;overscroll-behavior:contain}
+.rm-role{display:flex;align-items:center;gap:9px;padding:9px 11px;cursor:pointer;border:0;width:100%;
+  background:none;text-align:left;color:var(--dl-tx2,#b5bac1);font:inherit;min-width:0}
+.rm-role:hover{background:var(--dl-bg3,rgba(255,255,255,.04));color:var(--dl-tx1,#f2f3f5)}
+.rm-role.sel{background:var(--dl-acc-soft,rgba(88,101,242,.16));color:var(--dl-tx1,#f2f3f5)}
+.rm-role.sel .rm-role-nm{font-weight:700}
+.rm-swatch{width:12px;height:12px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 0 1px rgba(0,0,0,.25) inset}
+.rm-role-nm{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rm-role-n{font-size:11px;color:var(--dl-tx3,#949ba4);flex:0 0 auto;font-variant-numeric:tabular-nums}
+.rm-main{padding:14px 16px;min-width:0}
+.rm-tabs{display:flex;gap:4px;flex-wrap:wrap;margin:-2px 0 14px;border-bottom:1px solid var(--dl-bd,rgba(255,255,255,.08))}
+.rm-tab{border:0;background:none;color:var(--dl-tx3,#949ba4);font:inherit;font-weight:600;font-size:13px;
+  padding:8px 10px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.rm-tab:hover{color:var(--dl-tx1,#f2f3f5)}
+.rm-tab.on{color:var(--dl-tx1,#f2f3f5);border-bottom-color:var(--dl-acc,#5865f2)}
+.rm-cat{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--dl-tx3,#949ba4);margin:16px 0 6px;padding-top:12px;
+  border-top:1px solid var(--dl-bd,rgba(255,255,255,.07))}
+.rm-cat:first-child{margin-top:4px;padding-top:0;border-top:0}
+.rm-perm{display:flex;align-items:flex-start;gap:12px;padding:9px 0;
+  border-bottom:1px solid var(--dl-bd,rgba(255,255,255,.05))}
+.rm-perm:last-child{border-bottom:0}
+.rm-perm-txt{flex:1 1 auto;min-width:0}
+.rm-perm-nm{font-size:14px;font-weight:600;color:var(--dl-tx1,#f2f3f5)}
+.rm-perm-nm .rm-danger{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  color:#f58d8f;background:rgba(237,66,69,.14);padding:2px 6px;border-radius:999px;margin-left:7px}
+.rm-perm-d{font-size:12px;line-height:1.4;color:var(--dl-tx3,#949ba4);margin-top:2px}
+/* A permission this account cannot grant is shown and disabled, not hidden: knowing the
+   permission exists and is out of your reach beats it being invisible. */
+.rm-perm.locked{opacity:.5}
+.rm-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px;padding-top:14px;
+  border-top:1px solid var(--dl-bd,rgba(255,255,255,.08))}
+.rm-dirty{font-size:13px;font-weight:600;color:#faa61a;margin-right:auto}
+.rm-ro{margin-top:4px;padding:10px 12px;border-radius:8px;font-size:13px;
+  background:var(--dl-bg3,rgba(255,255,255,.05));color:var(--dl-tx2,#b5bac1)}
+.rm-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.rm-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;font-size:12px;
+  background:var(--dl-bg3,rgba(255,255,255,.06));color:var(--dl-tx2,#b5bac1);border:0;font:inherit;cursor:pointer}
+.rm-chip:hover{color:var(--dl-tx1,#f2f3f5)}
+.rm-chip.on{background:var(--dl-acc,#5865f2);color:#fff}
+.rm-mem{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--dl-bd,rgba(255,255,255,.05))}
+.rm-mem:last-child{border-bottom:0}
+.rm-mem-nm{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+
+/* Phones: the two-pane matrix becomes one column. The role list keeps its own scroll so the
+   page does not become one enormous scroll of every role and every permission. */
+@media (max-width:760px){
+  .rm{grid-template-columns:minmax(0,1fr)}
+  .rm-list{border-right:0;border-bottom:1px solid var(--dl-bd,rgba(255,255,255,.08))}
+  .rm-roles{max-height:220px}
+  .rm-main{padding:12px}
+  .rm-perm{gap:10px}
+  .rm-bar .dbtn{flex:1 1 auto}
+}
+
+/* ------------------------------------------------------- 4. owner control center ------------ */
+.oc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+.oc-stat{padding:13px 14px;border-radius:10px;background:var(--dl-bg2,rgba(0,0,0,.14));
+  border:1px solid var(--dl-bd,rgba(255,255,255,.07));min-width:0}
+.oc-stat-n{font-size:24px;font-weight:800;line-height:1.1;color:var(--dl-tx1,#f2f3f5);
+  font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.oc-stat-l{font-size:12px;color:var(--dl-tx3,#949ba4);margin-top:3px}
+.oc-stat-sub{font-size:11px;color:var(--dl-tx3,#949ba4);opacity:.8;margin-top:2px}
+.oc-row{display:flex;align-items:center;gap:10px;padding:10px 0;
+  border-bottom:1px solid var(--dl-bd,rgba(255,255,255,.06));min-width:0}
+.oc-row:last-child{border-bottom:0}
+.oc-row-txt{flex:1 1 auto;min-width:0}
+.oc-row-nm{font-size:14px;font-weight:600;color:var(--dl-tx1,#f2f3f5);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.oc-row-d{font-size:12px;color:var(--dl-tx3,#949ba4);margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.oc-ic{width:34px;height:34px;border-radius:11px;flex:0 0 auto;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;
+  background:var(--dl-acc,#5865f2);color:#fff}
+.oc-ic img{width:100%;height:100%;object-fit:cover;display:block}
+.oc-tag{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  padding:2px 6px;border-radius:999px;background:var(--dl-bg3,rgba(255,255,255,.07));
+  color:var(--dl-tx3,#949ba4);white-space:nowrap}
+.oc-tag.ok{background:rgba(59,165,93,.16);color:#4fc47b}
+.oc-tag.warn{background:rgba(250,166,26,.15);color:#f0b232}
+.oc-tag.bad{background:rgba(237,66,69,.14);color:#f58d8f}
+.oc-tag.off{background:var(--dl-bg3,rgba(255,255,255,.07));color:var(--dl-tx3,#949ba4)}
+.oc-diag{display:flex;align-items:center;gap:10px;padding:9px 0;
+  border-bottom:1px solid var(--dl-bd,rgba(255,255,255,.06))}
+.oc-diag:last-child{border-bottom:0}
+.oc-diag-l{flex:1 1 auto;min-width:0;font-size:14px;color:var(--dl-tx2,#b5bac1)}
+.oc-diag-v{font-size:12px;color:var(--dl-tx3,#949ba4);text-align:right;
+  overflow-wrap:anywhere;max-width:52%}
+.oc-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.oc-bar .dinput{flex:1 1 180px;min-width:0}
+.oc-note{font-size:12px;line-height:1.45;color:var(--dl-tx3,#949ba4);margin:-4px 0 14px}
+@media (max-width:620px){
+  .oc-grid{grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:8px}
+  .oc-stat-n{font-size:20px}
+  .oc-bar .dinput{flex:1 1 100%}
+  .oc-bar .dbtn{flex:1 1 auto}
+  .oc-diag-v{max-width:46%}
+}
+
+/* --------------------------------------------- 5. Discover categories, tags and details ----- */
+.dvcats{display:flex;gap:6px;flex-wrap:wrap;margin:-6px 0 14px}
+.dvchip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;
+  font-size:11px;font-weight:600;background:var(--dl-bg3,rgba(255,255,255,.06));
+  color:var(--dl-tx3,#949ba4);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.dvchip b{font-weight:800;opacity:.65;font-variant-numeric:tabular-nums}
+.dvchip.cat{background:var(--dl-acc-soft,rgba(88,101,242,.16));color:var(--dl-acc-tx,#aab1ff)}
+/* The clickable variant used by the filter bar. A chip on a card is a label, not a control, so
+   only this one gets a pointer and a hover state. */
+.dvchip.btn{border:0;font:inherit;cursor:pointer}
+.dvchip.btn:hover{background:var(--dl-bg4,rgba(255,255,255,.1));color:var(--dl-tx1,#f2f3f5)}
+.dvchip.btn.on{background:var(--dl-acc,#5865f2);color:#fff}
+.dvchip.btn.on b{opacity:.8}
+.dvchips{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0 0}
+@media (max-width:620px){
+  .dvcats{gap:5px;margin-bottom:12px}
+  /* Touch targets: 11px text in a 6px pill is readable but not tappable. */
+  .dvchip.btn{padding:6px 11px;font-size:12px}
+}
