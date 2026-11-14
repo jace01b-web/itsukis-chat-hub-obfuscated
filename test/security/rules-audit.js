@@ -92,6 +92,13 @@ const BRANCH_READ_OK = {
     + 'Enumeration only, for the dashboard total',
   customroleLog: 'v54.7, SITE OWNERS ONLY: the global custom-role grant history. write is false '
     + 'for every client; api/customrole.js appends it with the Admin SDK',
+  ownerLog: 'v54.8, SITE OWNERS ONLY: the ownership grant/revocation trail. Same shape and same '
+    + 'reasoning as customroleLog — write is false for every client, api/ownership.js appends it '
+    + 'with the Admin SDK. It exists because owners/ and secretowner/ changes used to leave no '
+    + 'record at all, which is how an orphaned secretowner grant went unnoticed',
+  authEpoch: 'v54.8: read is FALSE at this level. authEpoch/$id is readable by that account '
+    + 'alone, so a client can notice its own authorization being revoked and stop trusting a '
+    + 'cached permission. Nothing here says anything about anybody else',
   onlineUsers: 'presence counts',
   appVersion: 'the build check',
   liveAnnouncement: 'a site-wide banner, meant to be seen by everybody',

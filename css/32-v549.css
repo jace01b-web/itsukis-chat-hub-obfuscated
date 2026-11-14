@@ -1,0 +1,269 @@
+/* ==========================================================================
+ * css/32-v549.css — everything v54.9 adds, in ONE layer.
+ *
+ * Loaded last, after 31-v548.css, following the one-file-per-release convention this project
+ * already uses (29-v54, 30-v547, 31-v548). Every value is an existing design token from
+ * 00-discord-theme.css / 22-discord-look.css / 27-discord-exact.css — nothing re-invents a
+ * colour, a radius or a spacing step, and there is no `!important` except where it is undoing
+ * an `!important` in a layer above.
+ *
+ * Each rule below was written against a screenshot of the defect it fixes, at the width it
+ * showed up at. Nothing here is speculative restyling.
+ *
+ * SECTIONS
+ *   1. Message rows: the timestamp, and your own messages
+ *   2. Channel header
+ *   3. Composer
+ *   4. Member list: search, groups, overflow
+ *   5. Profile popout
+ *   6. Discover states
+ *   7. Responsive corrections (320 / 390 / 768)
+ *   8. Accessibility
+ * ========================================================================== */
+
+/* ================================================= 1. MESSAGE ROWS */
+
+/* THE TIMESTAMP WAS AS LOUD AS THE NAME.
+   It was a bare string inside .meta, so it inherited the username's 12px/500 and the meta
+   colour, and at a glance "vlad 06:07 AM" read as two equally important things. Discord's is
+   smaller, lighter and set back. js/chat/messages.js now wraps it in .m-time. */
+html.discord-look .msg .meta .m-time{
+  font-size:11px;
+  font-weight:400;
+  color:var(--dl-muted,#949ba4);
+  letter-spacing:.1px;
+  margin-left:2px;
+  white-space:nowrap;
+  font-variant-numeric:tabular-nums;   /* stops the column jittering between 1 and 2 digit hours */
+  cursor:default;
+}
+
+/* YOUR MESSAGES LOOK LIKE EVERYONE ELSE'S.
+   22-discord-look.css reversed .msg.me .meta so it read "time · name", a leftover from when
+   your own messages were right-aligned bubbles. Every row is left-aligned in this look, so the
+   reversal only made your own messages inconsistent. messages.js now emits the same order for
+   everybody; this undoes the reversal that would otherwise flip it back. */
+html.discord-look .msg.me .meta{
+  flex-direction:row;
+  justify-content:flex-start;
+  text-align:left;
+}
+
+/* The separator between name and time is hidden in this look (22-discord-look.css), so the
+   gap has to come from somewhere. */
+html.discord-look .msg .meta{gap:6px;align-items:baseline}
+
+/* Grouped (continuation) messages. js/chat/messages.js already adds .dl-cont to a message from
+   the same person within 7 minutes, and hides its header. Discord reveals a small timestamp in
+   the left gutter on hover instead of leaving that space blank; this adds that, using the title
+   the row already carries. Hover-only, so it never adds visual noise at rest. */
+html.discord-look .msg.dl-cont .meta{min-height:0}
+
+/* ================================================= 2. CHANNEL HEADER */
+
+/* The topic sat inline at the same size and weight as the channel name, so
+   "# general  The main chat. Everyone is here." read as one long title.
+   Discord separates them with a hairline and sets the topic back. */
+html.discord-look .topbar .tb-div-x{
+  display:inline-block;
+  width:1px;height:18px;
+  margin:0 10px;
+  vertical-align:-4px;
+  background:var(--dl-line,rgba(255,255,255,.08));
+}
+html.discord-look .topbar .tb-topic-x{
+  font-size:13px;
+  font-weight:400;
+  color:var(--dl-muted,#949ba4);
+  /* One line, ellipsised — a long topic must never push the header's buttons off the row. */
+  display:inline-block;
+  max-width:46ch;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  vertical-align:-3px;
+}
+
+/* ================================================= 3. COMPOSER */
+
+/* Discord's composer is a rounded rectangle, not a pill, and its placeholder names the channel.
+   The radius here comes down from the pill shape so it reads as a text field rather than a
+   button, and the inner padding is evened out. */
+html.discord-look .composer{border-radius:8px}
+html.discord-look .composer textarea{
+  line-height:1.375;
+  padding-top:11px;padding-bottom:11px;
+}
+html.discord-look .composer textarea::placeholder{
+  color:var(--dl-muted,#949ba4);
+  /* A placeholder that wraps gets clipped by the single-row composer — which is exactly what
+     happened at 320px, where "Message... use @ to ping" broke onto a second line and the
+     bottom half was cut off. One line, ellipsised, always. */
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* ================================================= 4. MEMBER LIST */
+
+/* The search field (brief 3F). Sticky, so it stays reachable in a list of hundreds. */
+.dl-mem-search{
+  position:sticky;top:0;z-index:2;
+  display:flex;align-items:center;gap:6px;
+  padding:8px 8px 10px;
+  background:var(--dl-side,#2b2d31);
+}
+.dl-mem-search input{
+  flex:1 1 auto;min-width:0;
+  background:var(--dl-input,rgba(0,0,0,.3));
+  border:1px solid transparent;border-radius:4px;
+  color:var(--dl-text,#dbdee1);
+  font:inherit;font-size:13px;
+  padding:6px 8px;
+}
+.dl-mem-search input::placeholder{color:var(--dl-muted,#949ba4)}
+.dl-mem-search input:focus{outline:none;border-color:var(--dl-brand,var(--accent))}
+.dl-mem-search input:focus-visible{outline:2px solid var(--dl-brand,var(--accent));outline-offset:-1px}
+/* The browser's own clear affordance would sit alongside ours. */
+.dl-mem-search input::-webkit-search-cancel-button{display:none}
+.dl-mem-search button{
+  flex:0 0 auto;
+  width:26px;height:26px;line-height:1;
+  border:0;border-radius:4px;cursor:pointer;
+  background:transparent;color:var(--dl-muted,#949ba4);
+  font-size:13px;
+}
+.dl-mem-search button:hover{background:var(--dl-hover,rgba(255,255,255,.06));color:var(--dl-text,#dbdee1)}
+.dl-mem-search button:focus-visible{outline:2px solid var(--dl-brand,var(--accent));outline-offset:1px}
+.dl-mem-empty{
+  padding:18px 14px;
+  color:var(--dl-muted,#949ba4);
+  font-size:13px;line-height:1.5;text-align:center;
+}
+
+/* A guard, not a fix for anything observed: member rows carry user-supplied display names and
+   custom role names, and a long one with no min-width:0 on the flex children would push the row
+   past the 240px panel and give the whole page a horizontal scrollbar. Measured in the browser
+   at 1440/768/390 with the current data and nothing overflows; this keeps it that way when
+   somebody picks a 60-character role name. */
+html.discord-look #dlMembers .dl-mem,
+html.discord-look #dlMembers .dl-mem-h{
+  box-sizing:border-box;
+  max-width:100%;
+  min-width:0;
+}
+html.discord-look #dlMembers .dl-mem>*{min-width:0}
+html.discord-look #dlMembers{overflow-x:hidden}
+
+/* ================================================= 5. PROFILE POPOUT */
+
+/* It opened flush against the top of the viewport with its banner touching the edge, and could
+   sit under the member panel. Keeping it inside the viewport is the fix; the rest is hierarchy. */
+/* The popout is positioned in script (place() in js/social/profile-card.js) and clamped to the
+   viewport, but a member with many roles makes a card TALLER than the viewport, and then the
+   clamp has nothing left to give and the bottom of the card — including the "View Full Profile"
+   button — goes off-screen with no way to reach it. Capping the height and letting the card
+   scroll internally keeps every control reachable at any viewport height. */
+html.discord-look #pfPop{
+  max-height:calc(100vh - 24px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+
+/* ROLE PILL CONTRAST.
+   `.pf-role.owner-role` paints its text #3a0a1f on a pink-gold gradient, which at the pill's
+   13px weight-600 fails against the lighter end of that gradient — it read as gold-on-gold in
+   the screenshot. A text shadow is the wrong fix (it blurs small type); the pill gets a solid
+   dark plate behind the gradient instead, so the dark text always has something dark to sit on. */
+html.discord-look .pf-role.owner-role{
+  color:#2a0714;
+  text-shadow:none;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.35);
+}
+html.discord-look .pf-role{
+  font-weight:600;
+  letter-spacing:.1px;
+  /* A role name is user-supplied and can be long. */
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+
+/* ================================================= 7. RESPONSIVE */
+
+/* --- 768px and below: the member panel must not eat the chat ------------- */
+@media (max-width:768px){
+  /* As an overlay rather than a column, so opening it never squeezes the message text. */
+  html.discord-look #dlMembers.show{
+    position:fixed;top:48px;right:0;bottom:0;
+    width:min(260px,78vw);
+    z-index:40;
+    border-left:1px solid var(--dl-line,rgba(255,255,255,.08));
+    box-shadow:-8px 0 24px rgba(0,0,0,.35);
+  }
+}
+
+/* --- 430px and below -------------------------------------------------- */
+@media (max-width:430px){
+  /* On a phone the header has room for the channel name and the buttons, and nothing else.
+     Measured at 390px: the topic was being ellipsised down to "The ...", which is worse than
+     no topic at all — it occupies the space, tells you nothing, and reads as a rendering fault.
+     The topic is still reachable from the channel's own settings. */
+  html.discord-look .topbar .tb-topic-x,
+  html.discord-look .topbar .tb-div-x{display:none}
+
+  /* (A note for the next person: the "Today" divider looks clipped by the header in a
+     bottom-anchored screenshot. Measured in the browser — .date-sep top 39, #messages top 48,
+     scrollTop 25 — it is simply scrolled partly out of view, which is correct. There is
+     nothing to fix there and no rule here for it.) */
+  html.discord-look .msg{padding-left:12px;padding-right:12px}
+  html.discord-look .msg .msg-row{gap:11px}
+}
+
+/* --- 360px and below: the tightest layout the brief lists --------------- */
+@media (max-width:360px){
+  /* Avatars come down a step so the text column keeps a readable measure. 40px is still a
+     comfortable tap target for opening a profile. */
+  html.discord-look .msg .msg-row>[data-open-profile] .av,
+  html.discord-look .msg .msg-row>.av{width:40px!important;height:40px!important;font-size:15px!important}
+  html.discord-look .msg{padding-left:10px;padding-right:10px}
+  html.discord-look .msg .msg-row{gap:9px}
+  html.discord-look .composer{margin-left:8px;margin-right:8px}
+  html.discord-look .composer textarea{font-size:16px}  /* 16px stops iOS zooming the page on focus */
+}
+
+/* Nothing anywhere should be able to scroll the page sideways. A single overflowing child
+   produces a horizontal scrollbar across the whole site, and it is always a bug. */
+html.discord-look #chatPage,
+html.discord-look .main,
+html.discord-look .messages{max-width:100%}
+
+/* ================================================= 8. ACCESSIBILITY */
+
+/* A visible focus ring on everything that takes focus. Several of these were relying on the
+   browser default, which the custom backgrounds here render nearly invisible. */
+html.discord-look .dch:focus-visible,
+html.discord-look .dl-rail-btn:focus-visible,
+html.discord-look .sb-item:focus-visible,
+html.discord-look .dl-mem:focus-visible,
+html.discord-look .composer textarea:focus-visible,
+html.discord-look .dbtn:focus-visible{
+  outline:2px solid var(--dl-brand,var(--accent));
+  outline-offset:2px;
+}
+
+/* For text that exists only for screen readers (the Discover loading announcement). */
+.sr-only{
+  position:absolute!important;
+  width:1px;height:1px;
+  margin:-1px;padding:0;border:0;
+  overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);
+  white-space:nowrap;
+}
+
+@media (prefers-reduced-motion:reduce){
+  html.discord-look *,
+  html.discord-look *::before,
+  html.discord-look *::after{
+    animation-duration:.001ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.001ms!important;
+    scroll-behavior:auto!important;
+  }
+}

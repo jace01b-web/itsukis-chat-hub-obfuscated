@@ -1,0 +1,280 @@
+/* ==========================================================================
+ * css/31-v548.css — everything v54.8 adds, in ONE layer.
+ *
+ * Loaded LAST, after 30-v547.css, so it can correct the layers above it without
+ * !important. The brief asked for no scattering of override files, so every v54.8
+ * style lives here rather than in a new file per feature, and every value below is
+ * an existing design token from 00-discord-theme.css / 27-discord-exact.css —
+ * nothing re-invents a colour or a radius.
+ *
+ * SECTIONS
+ *   1. Ownership audit (owner control center)
+ *   2. Context menus — the one consolidated menu system
+ *   3. Profile popout + full profile
+ *   4. Status / presence indicators
+ *   5. Settings navigation
+ *   6. Density, empty states and member list
+ *   7. Responsive corrections
+ * ========================================================================== */
+
+/* ============================================================ 1. OWNERSHIP */
+
+.oc-own-row{align-items:flex-start;gap:12px}
+.oc-own-row.bad{
+  border-color:color-mix(in srgb, var(--danger) 45%, transparent);
+  background:color-mix(in srgb, var(--danger) 7%, transparent);
+}
+.oc-own-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.oc-chip{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 8px;border-radius:999px;
+  font-size:11px;font-weight:600;line-height:1.6;
+  letter-spacing:.2px;
+  background:var(--bg-3,rgba(255,255,255,.06));
+  color:var(--muted);
+  border:1px solid rgba(255,255,255,.08);
+  font-family:var(--mono,ui-monospace,SFMono-Regular,Menlo,monospace);
+}
+.oc-chip.own{
+  background:color-mix(in srgb, var(--accent) 22%, transparent);
+  color:#fff;border-color:color-mix(in srgb, var(--accent) 55%, transparent);
+}
+/* The one that matters: a secret grant has to be the most visible thing on the row,
+   because being invisible is exactly what made it a problem. */
+.oc-chip.secret{
+  background:color-mix(in srgb, var(--warn,#faa61a) 24%, transparent);
+  color:#ffd892;border-color:color-mix(in srgb, var(--warn,#faa61a) 60%, transparent);
+}
+.oc-chip.ban{
+  background:color-mix(in srgb, var(--danger) 22%, transparent);
+  color:#ffb4b4;border-color:color-mix(in srgb, var(--danger) 55%, transparent);
+}
+.oc-chip.you{
+  background:color-mix(in srgb, var(--ok,#3ba55d) 20%, transparent);
+  color:#b6f0c6;border-color:color-mix(in srgb, var(--ok,#3ba55d) 50%, transparent);
+}
+.oc-own-prob{
+  margin-top:7px;padding:8px 10px;
+  border-left:3px solid var(--danger);
+  border-radius:0 6px 6px 0;
+  background:rgba(0,0,0,.22);
+  color:var(--text-2,#dbdee1);
+  font-size:12.5px;line-height:1.5;
+}
+.oc-own-acts{display:flex;flex-direction:column;gap:6px;flex:0 0 auto;align-items:stretch}
+.dbtn.sm{padding:6px 10px;font-size:12.5px;min-height:0}
+.oc-dim{color:var(--muted);font-weight:400;font-size:12.5px}
+.oc-empty{
+  padding:18px;border-radius:8px;text-align:center;
+  background:var(--bg-2,rgba(255,255,255,.03));
+  color:var(--muted);font-size:13px;line-height:1.55;
+}
+
+@media (max-width:620px){
+  .oc-own-row{flex-direction:column}
+  .oc-own-acts{flex-direction:row;flex-wrap:wrap;width:100%}
+  .oc-own-acts .dbtn{flex:1 1 auto}
+}
+
+/* ======================================================= 2. CONTEXT MENUS
+ * The one consolidated menu system (openCtx in js/discord/ui.js). The base look lives in
+ * 99-discord-shell.css and 27-discord-exact.css and is deliberately left alone — this layer
+ * only adds what v54.8's features need: submenus, keyboard focus, hints, and the scrolling
+ * behaviour a very tall menu needs on a phone.
+ * ======================================================================= */
+
+/* Focus is how a keyboard user reads a menu, so it has to be at least as clear as hover.
+   :focus-visible would hide it here: focus is moved programmatically by the arrow keys, which
+   some browsers do not consider "visible" interaction. */
+.dctx{outline:none}
+.dctx-item:focus{
+  background:var(--dl-brand,var(--accent));
+  color:#fff;outline:none;
+}
+.dctx-item.danger:focus{background:var(--dl-danger,var(--danger));color:#fff}
+
+/* The item's label takes the room, so the icon, the hint and the submenu arrow stay put
+   instead of being pushed around by a long name. */
+.dctx-item{display:flex;align-items:center;gap:8px}
+.dctx-tx{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dctx-hint{
+  flex:0 0 auto;font-size:11px;opacity:.65;
+  font-variant-numeric:tabular-nums;letter-spacing:.2px;
+}
+.dctx-arrow{flex:0 0 auto;font-size:15px;line-height:1;opacity:.75;margin-left:2px}
+.dctx-item:focus .dctx-hint,.dctx-item:hover .dctx-hint{opacity:.85}
+
+/* A submenu is its own menu positioned against the viewport, so it needs the same surface as
+   the parent and a stacking order above it. */
+.dctx-sub{z-index:calc(var(--z-ctx, 9000) + 1)}
+.dctx-item.has-sub{padding-right:6px}
+
+/* Tall menus: scroll inside themselves rather than running off the bottom of the screen.
+   openCtx sets max-height inline when it needs to; this only styles the result. */
+.dctx{scrollbar-width:thin}
+.dctx::-webkit-scrollbar{width:8px}
+.dctx::-webkit-scrollbar-thumb{background:rgba(0,0,0,.35);border-radius:8px}
+
+/* Touch: bigger rows and no hover-only affordances. 44px is the usual minimum target. */
+@media (hover:none){
+  .dctx-item{min-height:44px}
+  .dctx-hint{display:none}       /* keyboard hints mean nothing on a touch device */
+}
+@media (prefers-reduced-motion:reduce){
+  .dctx,.dctx-sub{transition:none!important;animation:none!important}
+}
+
+/* ======================================= 3. STATUS & CUSTOM STATUS
+ * The term controls added to the account panel's status popout (section 5.3).
+ * ================================================================= */
+.dl-stexp{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  margin-top:8px;
+}
+.dl-stexp label{
+  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+  color:var(--dl-muted,var(--muted));margin:0;
+}
+.dl-stexp select{
+  flex:1 1 110px;min-width:0;
+  background:var(--dl-input,rgba(0,0,0,.3));
+  color:var(--dl-text,var(--text));
+  border:1px solid var(--dl-line,rgba(255,255,255,.08));
+  border-radius:4px;padding:5px 7px;font-size:13px;font-family:inherit;
+}
+.dl-stexp select:focus-visible{outline:2px solid var(--dl-brand,var(--accent));outline-offset:1px}
+.dl-stclear{
+  flex:0 0 auto;
+  background:transparent;color:var(--dl-red,var(--danger));
+  border:1px solid color-mix(in srgb, var(--dl-red,var(--danger)) 45%, transparent);
+  border-radius:4px;padding:5px 9px;font-size:12.5px;font-weight:600;cursor:pointer;
+}
+.dl-stclear:hover:not(:disabled){background:var(--dl-danger,var(--danger));color:#fff;border-color:transparent}
+.dl-stclear:disabled{opacity:.4;cursor:default}
+.dl-stexp-now{
+  margin-top:5px;font-size:11.5px;color:var(--dl-muted,var(--muted));
+  min-height:14px;font-variant-numeric:tabular-nums;
+}
+
+/* ============================ 4. SETTINGS: ACTIVITY & PRESENCE
+ * The pane added in v54.8. Uses the existing .set-card / .field / .hint vocabulary so it reads
+ * as part of the settings panel rather than as a bolted-on page.
+ * ============================================================= */
+.sxp-st{display:grid;gap:6px}
+.sxp-stbtn{
+  display:flex;align-items:center;gap:11px;width:100%;
+  padding:10px 12px;border-radius:6px;cursor:pointer;text-align:left;
+  background:var(--dl-input,rgba(0,0,0,.18));
+  border:1px solid transparent;color:var(--dl-text,var(--text));
+  font-family:inherit;font-size:14px;
+}
+.sxp-stbtn:hover{background:var(--dl-hover,rgba(255,255,255,.05))}
+.sxp-stbtn:focus-visible{outline:2px solid var(--dl-brand,var(--accent));outline-offset:1px}
+.sxp-stbtn.on{
+  border-color:var(--dl-brand,var(--accent));
+  background:color-mix(in srgb, var(--dl-brand,var(--accent)) 14%, transparent);
+}
+.sxp-stbtn:disabled{opacity:.6;cursor:default}
+.sxp-sttx{display:flex;flex-direction:column;gap:1px;min-width:0}
+.sxp-sttx b{font-weight:600;line-height:1.25}
+.sxp-sttx small{color:var(--dl-muted,var(--muted));font-size:12px;line-height:1.35}
+
+/* The four statuses as four SHAPES as well as four colours, matching the approach the profile
+   card already takes — idle is a crescent, DND is barred, invisible is a ring. Colour alone
+   would fail anybody who cannot distinguish these hues. */
+.sxp-stdot{
+  flex:0 0 auto;width:14px;height:14px;border-radius:50%;position:relative;
+  background:var(--dl-muted,#80848e);
+}
+.sxp-stdot.online{background:var(--dl-green,#23a55a)}
+.sxp-stdot.idle{
+  background:var(--dl-yellow,#f0b232);
+  mask:radial-gradient(circle 7px at 70% 30%, transparent 98%, #000 100%);
+  -webkit-mask:radial-gradient(circle 7px at 70% 30%, transparent 98%, #000 100%);
+}
+.sxp-stdot.dnd{background:var(--dl-red,#f23f43)}
+.sxp-stdot.dnd::after{
+  content:'';position:absolute;left:2px;right:2px;top:5.5px;height:3px;
+  background:var(--dl-float,#111214);border-radius:2px;
+}
+.sxp-stdot.invisible{
+  background:transparent;
+  box-shadow:inset 0 0 0 3px var(--dl-muted,#80848e);
+}
+.sxp-idle{
+  font-size:13px;line-height:1.5;color:var(--dl-text-2,var(--text));
+  background:rgba(0,0,0,.18);border-radius:6px;padding:9px 11px;min-height:18px;
+}
+
+/* ================================= 5. CHAT COLUMN: DENSITY AND CONTINUITY
+ * Three things the v54.8 screenshots showed, all in the main chat column.
+ * ====================================================================== */
+
+/* (a) THE SEAM.
+   .main (css/06-chat.css) sets no background, so the message scroller showed the APP
+   background (--dl-bg3, #1e1f22) while the topbar and the composer above and below it were
+   --dl-bg (#313338). The result was a dark band with two lighter bars clamped onto it rather
+   than one continuous column, and it is the first thing the eye lands on.
+   Discord's chat column is one colour from the header to the composer, so it is here too.
+
+   Scoped to the Discord look, which is the only look that ships: the Chat Background feature
+   (a user-chosen image painted on #bgLayer) is deliberately hidden in this look — see the
+   `dl-hide` on its nav button in js/settings/discord-settings.js — so there is no custom
+   background underneath for this to cover. In any other look .main stays transparent and the
+   image shows through exactly as before. */
+html.discord-look #chatPage .main{background:var(--dl-bg)}
+
+/* (b) MESSAGES SIT AT THE BOTTOM.
+   #messages is already a flex column, and a short conversation was pinned to the TOP of a
+   742px-tall scroller — several hundred pixels of nothing between the last message and the
+   composer, which is the "chat areas with poor information density" of section 3.2.
+   margin-top:auto on the first child, rather than justify-content:flex-end on the container:
+   an auto margin pushes content down when there is spare room and collapses to nothing when
+   there is not, so a long history still scrolls from its true top. justify-content:flex-end
+   on a scroll container makes overflowing content unreachable above the scroll origin in some
+   engines, which would hide the oldest messages. */
+html.discord-look #messages > *:first-child{margin-top:auto}
+
+/* (c) The scroll anchor stays at the bottom while images finish loading, so a late-decoding
+   attachment stops shoving the newest message out of view (section 2.3). */
+html.discord-look #messages{overflow-anchor:auto}
+html.discord-look #messages .msg{overflow-anchor:none}
+html.discord-look #messages > *:last-child{overflow-anchor:auto}
+
+/* ============================================ 6. RESPONSIVE CORRECTIONS
+ * (section 11). Measured at 390x844, the narrowest case the brief lists.
+ * ====================================================================== */
+@media (max-width:720px){
+  /* The channel name was clipped mid-word — "# genera" — because the topbar's left group had
+     no min-width:0, so it could not shrink below its content and the row overflowed instead.
+     A flex child's default min-width is auto, which is the whole bug; 0 lets it shrink, and
+     the ellipsis then does what it is there for. */
+  .topbar .tb-left{min-width:0;flex:1 1 auto;overflow:hidden}
+  .topbar #chatTitle{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .topbar #chatTitle .ct-topic{display:none}   /* the topic is not worth a phone's width */
+  .topbar .tb-right{flex:0 0 auto}
+
+  /* Touch targets: 44px is the usual floor, and the topbar icons were well under it. */
+  .topbar .tb-right button,.topbar .tb-right a{min-width:40px;min-height:40px}
+}
+@media (max-width:480px){
+  /* MEASURED at 390x844: the topbar's icon row was 258px of a 390px screen — six 40px buttons —
+     which left the channel name 68px and clipped it mid-word ("# genera"). min-width:0 above is
+     necessary and not sufficient: the row has to actually give some width back.
+
+     The three that step aside all have another route on a phone, which is the only reason they
+     may go: Settings is the gear in the account panel at the foot of the drawer and is in the
+     page's own right-click menu; Saved Messages is on every message's menu; Rules is in the
+     Itsukis Chat Hub group in the channel list. Member list, Pins and Search have no other
+     route from here, so they stay. */
+  .topbar .tb-right #cpSavedBtn,
+  .topbar .tb-right #rulesBtn,
+  .topbar .tb-right #settingsBtn{display:none}
+  /* With the row shorter, the name gets the room — and an ellipsis if it still does not fit. */
+  .topbar .tb-left{flex:1 1 auto}
+  .topbar #chatTitle{max-width:100%}
+}
+
+/* Nothing in the app should be able to scroll the PAGE sideways. A single overflowing child
+   anywhere produces a horizontal scrollbar across the whole site, and it is always a bug. */
+html.discord-look,html.discord-look body{overflow-x:hidden;max-width:100%}

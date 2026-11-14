@@ -68,7 +68,29 @@ function updateMuteLock(){
   if(srvReason&&mutedBanner){mutedBanner.classList.remove('hidden');mutedBanner.textContent='\u23F1\uFE0F '+srvReason}
   const locked=muted||!!srvReason||announceLocked||shitLocked||!!tosReason||(view.roomKey===CFG.VIP_ROOM&&!DB.vipInfo(ME.id))||(view.roomKey===CFG.MVP_ROOM&&!hasMvpPerks(ME.id));
   [input,sendBtn,attachBtn,emojiBtn].forEach(el=>{if(el)el.disabled=locked});
-  if(input)input.placeholder=srvReason?srvReason:(muted?'You are muted — you can\'t send messages right now':(announceLocked?'Only the owner can post announcements':(shitLocked?'Only mods, admins and owners can post here':(tosReason&&tosReason!=='Checking your account…'?'Chat is locked. See the notice above.':'Message... use @ to ping'))));
+  /* v54.9: the composer names where you are, the way Discord's does — "Message #general",
+     "Message @vlad" — instead of the generic "Message... use @ to ping". It tells you which
+     channel you are about to post in, which matters most on mobile, where the channel list is
+     hidden behind a drawer and the header is the only other clue. The @-ping hint it replaces
+     is already in the composer's own help affordance.
+     Every locked-state message is unchanged and still takes precedence. */
+  const whereLabel=(()=>{
+    const k=view.roomKey;
+    try{
+      if(k&&String(k).startsWith('dm_')){
+        const [,a,b]=String(k).split('_').map(Number);
+        const ou=DB.getUser(a===ME.id?b:a);
+        return ou?'@'+dispName(ou):null;
+      }
+      const _ich={[CFG.GLOBAL_ROOM]:'general',[CFG.ANNOUNCEMENTS_ROOM]:'announcements',
+                  [CFG.SHITPOST_ROOM]:'shitpost',[CFG.VIP_ROOM]:'vip-lounge',[CFG.MVP_ROOM]:'mvp-lounge'};
+      if(_ich[k])return '#'+_ich[k];
+      const ch=DModel.channelByKey(k);
+      return ch?'#'+ch.name:null;
+    }catch(_){return null}
+  })();
+  const openPlaceholder=whereLabel?('Message '+whereLabel):'Message';
+  if(input)input.placeholder=srvReason?srvReason:(muted?'You are muted — you can\'t send messages right now':(announceLocked?'Only the owner can post announcements':(shitLocked?'Only mods, admins and owners can post here':(tosReason&&tosReason!=='Checking your account…'?'Chat is locked. See the notice above.':openPlaceholder))));
   // Announcements have no message length limit (owner-only, so no spam risk) —
   // every other channel keeps the normal 2000-char cap (MVPs get double: see maxMsgFor()).
   if(input){if(inAnnouncements)input.removeAttribute('maxlength');else input.maxLength=maxMsgFor(ME.id)}
@@ -91,7 +113,12 @@ function bumpRoomSwitch(){
   const box=$('#messages');if(!box)return;
   box.classList.remove('room-switch');void box.offsetWidth;box.classList.add('room-switch');
 }
-function renderChat(){
+/* v54.8: renderChat() is now a thin timing wrapper around the real work, so the single most
+   expensive thing the app does has a measured cost instead of an assumed one. Perf.time counts
+   the call and accumulates its duration; Perf.report() turns that into a per-call average.
+   The name is unchanged because roughly thirty call sites use it. */
+function renderChat(){return Perf.time('renderChat',renderChatBody)}
+function renderChatBody(){
   ME=DB.currentUser();if(!ME)return;
   applyStyle();
   const banned=DB.isBanned(ME.id);
@@ -182,7 +209,7 @@ function renderChat(){
        arbitrary positions their friend-ids give them. */
     _dmRows.forEach(({fid,f,k,pending})=>{
       const unread=DB.unreadIn(k,ME.id);
-      const it=sbItem(null,f.username,view.roomKey===k,()=>{view.dmView='chat';selectRoom(k)},unread,f);
+      const it=sbItem(null,f.username,view.roomKey===k,()=>{view.dmView='chat';selectRoom(k)},unread,f,null,k);
       it.classList.add('sb-friend');it.dataset.fname=String(f.username).toLowerCase();
       /* A conversation they have not accepted is marked, so an unanswered message reads as
          "not accepted yet" rather than "ignoring me". */
@@ -324,9 +351,13 @@ function closeModalAnimated(root,after){
   bg.classList.add('closing');
   setTimeout(()=>{if(root.querySelector('.modal-bg')===bg)root.innerHTML='';if(after)after()},200);
 }
-function sbItem(ic,name,active,fn,badge,profileUser,leaveFn){
+function sbItem(ic,name,active,fn,badge,profileUser,leaveFn,roomKey){
   const d=document.createElement('div');
   d.className='sb-item'+(active?' active':'');
+  /* v54.9: the conversation this row opens, so a right-click or a long press can find it.
+     The DM context menu in js/ui/discord-shell.js is delegated off this attribute — without it
+     a DM row had no menu at all, which is why a per-conversation mute was unreachable. */
+  if(roomKey)d.dataset.room=roomKey;
   const dlOn=typeof DiscordLook!=='undefined'&&DiscordLook.on();
   let dot='';if(dlOn&&profileUser){let o=false;try{o=DB.onlineIds().indexOf(profileUser.id)>-1}catch(_){}dot=`<i class="dl-dot${o?'':' off'}"></i>`}
   const icHtml=profileUser?`<span data-open-profile="${profileUser.id}" style="cursor:pointer;position:relative">${avatarHtml(profileUser,profileUser.username,'width:22px;height:22px;font-size:10px')}${dot}</span>`:`<span>${ic}</span>`;
@@ -343,6 +374,56 @@ function sbItem(ic,name,active,fn,badge,profileUser,leaveFn){
   return d;
 }
 function selectRoom(k){view.roomKey=k;view.pending=[];clearPendingFiles();view.replyingTo=null;view.editingId=null;renderPreviews();DB.watchMessages(k);renderChat();bumpRoomSwitch()}
+
+/* ==========================================================================
+ * v54.8 — the cheap path for a presence change
+ *
+ * Measured on 600 accounts with a 300-message channel open: sixty people going on and offline
+ * drove sixty FULL chat rebuilds (659 ms of render) and sixty member-list rebuilds (378 ms),
+ * because DB.onChange carried no information about what had changed and renderChat was the only
+ * answer anybody had.
+ *
+ * Presence touches exactly three things on screen:
+ *   - the "Online in …" pill
+ *   - the little dot on each DM row in the sidebar
+ *   - the member list, where it decides which group somebody sits in
+ *
+ * It touches NO message row: a message shows an avatar, a name and bubble colours, none of
+ * which presence can change (see _userRenderSig in js/core/database.js, which is what keeps a
+ * profile edit off this path and on the full one). So the three are updated directly and the
+ * rebuild is skipped.
+ *
+ * Written out of the renderers that already exist rather than with new DOM code, so there is
+ * no second implementation of the member list or the pill to drift out of step with the first.
+ * ========================================================================== */
+function refreshPresenceLight(){
+  Perf.hit('presenceOnly');
+  try{renderOnlinePill(view.mode==='global')}catch(_){}
+  try{refreshSidebarDots()}catch(_){}
+  try{if(typeof DiscordShell!=='undefined'&&DiscordShell.refreshPresence)DiscordShell.refreshPresence()}catch(_){}
+  /* Unread badges can move without a message arriving (another device reading a conversation
+     writes lastRead), but that is its own topic and gets the full path. Nothing to do here. */
+}
+/* The DM rows' online dots, updated in place. sbItem() draws them as
+   `[data-open-profile=<id>] > i.dl-dot`, with the class `off` meaning offline — so this is a
+   class toggle per row, not a rebuild, and it keeps scroll position and hover. */
+function refreshSidebarDots(){
+  const list=document.getElementById('sbList');
+  if(!list)return;
+  let on;
+  try{on=new Set(DB.onlineIds())}catch(_){return}
+  list.querySelectorAll('[data-open-profile] > .dl-dot').forEach(dot=>{
+    const host=dot.parentElement;
+    if(!host||!host.dataset)return;
+    const id=Number(host.dataset.openProfile);
+    if(!Number.isFinite(id))return;
+    /* Invisible has to read as offline here exactly as it does in the member list, or the
+       sidebar would be the one place that gave an invisible person away. */
+    let off=!on.has(id);
+    if(!off){try{if(DB.statusOf&&DB.statusOf(id)==='offline')off=true}catch(_){}}
+    dot.classList.toggle('off',off);
+  });
+}
 
 function renderOnlinePill(isGlobalSection){
   // A specific context is open (Global Chat, a room, or a DM) -> show who is

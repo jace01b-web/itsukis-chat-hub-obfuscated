@@ -138,7 +138,13 @@ function ownerAnnouncementBanner(v,ms){
     +'<div class="ownann-bar" style="animation-duration:'+Math.max(1500,ms||10000)+'ms"></div>';
   el.querySelector('.ownann-text').textContent=v.text;      // textContent: never render announcement text as HTML
   document.body.appendChild(el);OWNANN_BANNER=el;
-  try{if(typeof beep==='function')beep()}catch(_){}
+  /* v54.8: routed through the Notifier instead of calling beep() directly.
+     An owner announcement is the one message that interrupts everybody, so it was also the one
+     that most obviously should not ignore Do Not Disturb — and it did, because the chime was
+     raised right here. The BANNER still appears either way: an announcement is information the
+     owner needs everyone to have, and DND is about alerts rather than about hiding content.
+     What DND now suppresses is the sound and the desktop notification. */
+  try{Notifier.announcement(v.text)}catch(_){}
   const close=()=>{if(OWNANN_BANNER!==el)return;clearTimeout(OWNANN_TIMER);OWNANN_BANNER=null;el.classList.add('closing');setTimeout(()=>{try{el.remove()}catch(_){}},260)};
   el.querySelector('.ownann-x').onclick=close;
   OWNANN_TIMER=setTimeout(close,Math.max(1500,ms||10000));

@@ -94,6 +94,12 @@ function appendMsgRow(box,m,lastDay,live){
     if(prev&&prev.classList.contains('msg')&&!prev.classList.contains('sys')&&!el.classList.contains('sys')&&
        prev._sid===m.senderId&&m.at-prev._at<420000&&!(m.replyTo&&m.replyTo.id))el.classList.add('dl-cont');
   }
+  /* v54.9: msgRows was declared in js/core/perf.js and never incremented anywhere, so it read 0
+     no matter how much the chat drew — a counter that silently lies is worse than no counter,
+     because the next person measuring render cost reads "0 rows written" and concludes the
+     message list is free. This is the one place a message row reaches the DOM, on both the full
+     rebuild and the incremental append, so counting here counts everything exactly once. */
+  Perf.hit('msgRows');
   box.appendChild(el);
   fitAvatarToRow(el);
   renderedNodes.set(m.id,{el,sig:senderSig(m)});
@@ -247,12 +253,41 @@ function renderMessages(key){
   const liveIds=new Set(liveRows.map(m=>m.id));
   list.forEach(m=>{
     if(m.senderId===ME.id)return;
-    const pinged=m.pings.includes(ME.id)||(m.pings.includes('everyone')&&ME.settings.pings.everyone);
+    /* v54.9: Prefs.notif, not the legacy `pings` map — see js/core/prefs.js. */
+    const pinged=m.pings.includes(ME.id)||(m.pings.includes('everyone')&&Prefs.notif('notifEveryone'));
     if(!pinged||pingSeen(m.id))return;
     markPingSeen(m);
     if(!liveIds.has(m.id)||m.at<=NOTIFY_SINCE)return;   // history / already-there: seen silently, no repeat toast
-    pingToast(m,key,DB.getUser(m.senderId));
-    if(ME.settings.pings.sound)beep();
+    /* v54.8: this used to be `if(ME.settings.pings.sound)beep()` — a raw chime that consulted
+       one account switch and nothing else. Do Not Disturb, the scheduled quiet window, a muted
+       channel and a muted server all failed to silence it, which is the single most noticeable
+       half of "DND does not work": the sound is what people actually notice.
+
+       Notifier.message() is now the only thing that decides. The TOAST is deliberately kept
+       outside that decision when the person is looking at the conversation — an on-screen toast
+       in a chat you are reading is not an alert — but under DND it goes too, because a banner
+       that grabs attention is exactly what DND is for. */
+    /* v54.9: the server is derived from the CONVERSATION, not from whatever server happens to be
+       selected. `view.sid` is the server the shell is showing, and a DM can be opened from the DM
+       sidebar, a profile, the quick switcher or the friends page without clearing it — so a DM
+       arriving while a muted server was last selected was evaluated against THAT server's mute
+       and silenced for no reason the person could see.
+       DModel.serverOfChannel() answers from the key: null for a DM, ICH_ID for the original
+       channels, the owning server for a server channel. js/chat/pings.js already used it; this
+       path did not. */
+    const isDm=String(key).startsWith('dm_');
+    let sid=null;
+    try{sid=DModel.serverOfChannel(key)}catch(_){sid=null}
+    const silenced=Notifier.suppressed(key,sid,{mention:true,dm:isDm});
+    if(!silenced||silenced==='mentions-only'){
+      pingToast(m,key,DB.getUser(m.senderId));
+    }
+    Notifier.message(key,sid,{
+      mention:true,dm:isDm,
+      title:(function(){const s=DB.getUser(m.senderId);return s&&!s.deleted?dispName(s):'Someone'})(),
+      body:(m.text||'').replace(/\s+/g,' ').trim().slice(0,180),
+      tag:'itsuki-'+key
+    });
   });
   lastCount[key]=list.length;
 }
@@ -327,7 +362,11 @@ function msgEl(m){
   const name=(sender&&!sender.deleted)?dispName(sender):'Deleted User';
   const pinged=m.pings.includes(ME.id)||m.pings.includes('everyone');
   const el=document.createElement('div');el.className='msg'+(mine?' me':'')+(pinged?' ping-row':'')+(m.pings.includes('everyone')?' ping-all':'');el.dataset.msgId=m.id;
-  const time=new Date(m.at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  /* v54.9: wrapped in a span of its own, so the timestamp can be styled as the secondary thing
+     it is. It was a bare string inside .meta and inherited the username's size and weight, which
+     is why it read as loudly as the name itself. The full date goes in the tooltip. */
+  const time='<span class="m-time" title="'+esc(new Date(m.at).toLocaleString())+'">'+
+    esc(new Date(m.at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}))+'</span>';
   const av=avatarHtml(sender,name,'width:46px;height:46px;font-size:17px');
   const avClickable=(sender&&!sender.deleted)?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${av}</span>`:av;
   // Everyone's message bubble reflects how THEY styled their own messages (their meBubble/meText),
@@ -402,8 +441,17 @@ function msgEl(m){
   const nameSpan=(sender&&!sender.deleted)
     ?`<span data-open-profile="${m.senderId}" style="cursor:pointer">${msgNameHTML(m.senderId,esc(name))}</span>`
     :esc(name);
-  const nameHTML=mine?'':nameSpan+'<span class="nm-sep">·</span>';
-  const nameAfter=mine?'<span class="nm-sep">·</span>'+nameSpan:'';
+  /* v54.9: YOUR messages are laid out exactly like everybody else's — name, then timestamp.
+     They used to be reversed ("time · name", with .meta set to row-reverse in
+     css/22-discord-look.css) so the name sat beside the avatar back when your own messages were
+     right-aligned bubbles. In the Discord look every row is already left-aligned with the avatar
+     on the left, so the reversal had stopped meaning anything and was only making your messages
+     look unlike everyone else's — the "generic chat-bubble appearance" the brief asks to move
+     away from.
+     No custom bubble colour or message styling is touched: this is the ORDER of two spans on the
+     header line and nothing else. */
+  const nameHTML=nameSpan+'<span class="nm-sep">·</span>';
+  const nameAfter='';
   const reactionsHTML=reactionRowHTML(m.id);
   el.innerHTML=`${replyRefHTML}<div class="msg-row">${mine?myAv:avClickable}<div class="msg-body"><div class="meta">${nameHTML}${time}${editedTag}${isShownOwner(m.senderId)?' <span class="tag owner">#'+m.senderId+'</span>':''}${DB.isMuted(m.senderId)?' <span class="tag" style="background:#555;color:#fff">muted</span>':''}${nameAfter}</div>
     <div class="bubble${pinged?' pinged':''}${(!m.text&&((m.images&&m.images.length)||(m.files&&m.files.length)))?' img-only':''}${isEmojiOnly(m.text)?' jumbo-emoji':''}"${bStyle}><div class="msg-hover-bar">${_dl?`${copyBtn}${replyBtn}${reactBtn}${editBtn}${delBtn}`:`${copyBtn}${editBtn}${delBtn}${reactBtn}${replyBtn}`}</div>${fmtText(displayMsgText(m.text))}${imagesHTML(m.images)}${filesHTML(m.files)}</div>${reactionsHTML}</div></div>`;

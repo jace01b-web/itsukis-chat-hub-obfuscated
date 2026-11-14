@@ -31,6 +31,8 @@ const PCard=(function(){
 
   /* What is currently open, so an async arrival knows whether to bother. */
   let open={id:null,mode:null,tab:'info'};
+  /* How to close whatever is open. Declared here because both openers set it; see closeAll(). */
+  let _closer=null;
 
   /* ------------------------------------------------------------------
    *  AVATAR + DECORATION
@@ -57,15 +59,20 @@ const PCard=(function(){
      only decides WHICH of online/idle/dnd it is. Invisible is the one exception: it is already
      masked to 'offline' for everyone but the person who chose it, and that person should see
      their own choice rather than being told they are offline. */
+  /* v54.8: this now DELEGATES.
+     The three-step dance below used to live here in full: read style.status, decide whether the
+     person counts as connected, mask invisible. The member list did its own version, the
+     sidebar dots did a third, and that is how the same account came to be Online on its profile
+     and Offline in the list. DB.statusOf() is the canonical resolver (js/core/database.js) and
+     folds presence in itself, so there is one answer and this is one of its callers.
+     The one thing kept here: my OWN card shows the status I chose, even when that is Invisible —
+     being told I am offline on my own profile is not useful. */
   function statusOfLive(id){
     id=Number(id);
-    const mine=!!(ME&&id===ME.id);
-    let st='offline';
-    try{st=mine?normStatus(ME.style&&ME.style.status):DB.statusOf(id)}catch(_){}
-    if(st==='invisible')return 'invisible';
-    let on=mine;
-    if(!on){try{on=DB.onlineIds().indexOf(id)>-1}catch(_){on=false}}
-    return on?st:'offline';
+    try{
+      if(ME&&id===Number(ME.id))return DB.chosenStatusOf(id);
+      return DB.statusOf(id);
+    }catch(_){return 'offline'}
   }
   function statusDot(id,cls){
     const st=statusOfLive(id);
@@ -204,10 +211,12 @@ const PCard=(function(){
     open={id,mode:'popout',tab:'info'};
     root.innerHTML='<div class="modal-bg dlpo-bg"><div class="dlpo pf2" id="pfPop" role="dialog" aria-label="Profile"></div></div>';
     const bg=root.querySelector('.dlpo-bg'),card=root.querySelector('#pfPop');
-    const close=()=>{open={id:null,mode:null,tab:'info'};root.innerHTML='';document.removeEventListener('keydown',onKey,true)};
+    const close=()=>{open={id:null,mode:null,tab:'info'};_closer=null;root.innerHTML='';document.removeEventListener('keydown',onKey,true)};
     const onKey=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close()}};
     document.addEventListener('keydown',onKey,true);
     bg.onclick=e=>{if(e.target===bg)close()};
+    _closer=close;                       /* v54.8: so PCard.closeAll() can tear this down properly */
+    card.setAttribute('aria-modal','true');
 
     function paint(){
       const x=DB.getUser(id);if(!x)return;
@@ -396,10 +405,12 @@ const PCard=(function(){
 
     root.innerHTML='<div class="modal-bg pf2-bg"><div class="pf2 pf2-big" id="pfFull" role="dialog" aria-label="Profile"></div></div>';
     const bg=root.querySelector('.pf2-bg'),card=root.querySelector('#pfFull');
-    const close=()=>{open={id:null,mode:null,tab:'info'};root.innerHTML='';document.removeEventListener('keydown',onKey,true)};
+    const close=()=>{open={id:null,mode:null,tab:'info'};_closer=null;root.innerHTML='';document.removeEventListener('keydown',onKey,true)};
     const onKey=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close()}};
     document.addEventListener('keydown',onKey,true);
     bg.onclick=e=>{if(e.target===bg)close()};
+    _closer=close;                       /* v54.8: see closeAll() */
+    card.setAttribute('aria-modal','true');
 
     /* The record may not be in the cache yet (a profile opened from a message by someone who has
        not been fetched). getUser() kicks off the fetch; this waits for it rather than rendering
@@ -626,7 +637,42 @@ const PCard=(function(){
   function repaintAll(){if(open.id!=null)repaint(open.id)}
   function openedId(){return open.id}
 
-  return{openPopout,openFull,repaint,repaintAll,decoAvatar,statusDot,statusOfLive,statusLabel,badgeTrayHTML,openedId,
+  /* ------------------------------------------------------------------
+   *  v54.8: CLOSING, AND STAYING CURRENT
+   * ------------------------------------------------------------------ */
+  /* Each open registers how to close itself, so anything outside can close the card properly —
+     removing its Escape listener rather than only emptying #modalRoot. Without this, every
+     profile opened left a keydown listener on the document for the life of the page, which is
+     the listener leak section 7.5 asks about. */
+  function closeAll(){
+    if(_closer){const f=_closer;_closer=null;try{f()}catch(_){}return true}
+    if(open.id==null)return false;
+    open={id:null,mode:null,tab:'info'};
+    try{const r=$('#modalRoot');if(r&&r.querySelector('.pf2'))r.innerHTML=''}catch(_){}
+    return true;
+  }
+
+  /* An open card now follows the database.
+     Before this, it was repainted only by the things that KNEW about it: the async badge and
+     connection fetches, and the settings panes after an explicit save. So a profile edited
+     anywhere else — by that person on another device, by a moderator, by the account itself
+     through a path that forgot to call repaintAll — sat there showing the old avatar, the old
+     display name and the old status until it was closed and reopened. That is the "stale
+     information" and "profile not refreshing after an edit" of section 4.4.
+
+     It costs nothing when no card is open, which is almost always, and the topics mean a
+     message arriving does not repaint a profile. */
+  try{
+    DB.onChange(topics=>{
+      if(open.id==null)return;
+      if(topics&&!topics.has('users')&&!topics.has('presence')&&!topics.has('onlineUsers')
+         &&!topics.has('mvp')&&!topics.has('vip')&&!topics.has('customroles')
+         &&!topics.has('owners')&&!topics.has('mods')&&!topics.has('admin'))return;
+      repaint(open.id);
+    });
+  }catch(_){}
+
+  return{openPopout,openFull,repaint,repaintAll,closeAll,decoAvatar,statusDot,statusOfLive,statusLabel,badgeTrayHTML,openedId,
          PROFILE_DECOS,PROFILE_THEMES};
 })();
 

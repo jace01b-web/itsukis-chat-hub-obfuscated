@@ -68,11 +68,23 @@
   }
 
   // A write to a/b/c must wake listeners on a, a/b and a/b/c.
+  const denied=new Set();
+  function isDenied(p){
+    for(const d of denied){if(p===d||p.indexOf(d+'/')===0)return true}
+    return false;
+  }
+  function denyErr(p){
+    const e=new Error('permission_denied at /'+p+': Client doesn\'t have permission to access the desired data.');
+    e.code='PERMISSION_DENIED';
+    return e;
+  }
   function fire(path){
+    /* A denied path delivers errors, not values — see __FAKE.deny. */
     const p=split(path).join('/');
     listeners.slice().forEach(l=>{
       const lp=l.path;
       if(lp===''||p===lp||p.startsWith(lp+'/')||lp.startsWith(p+'/')||p===''){
+        if(isDenied(lp)){if(l.err)try{l.err(denyErr(lp))}catch(e){console.error(e)}return}
         try{l.cb(snap(lp))}catch(e){console.error('[fake-fb] listener threw',lp,e)}
       }
     });
@@ -95,12 +107,22 @@
 
   api.ref=(db,p)=>makeRef(p===undefined?(typeof db==='string'?db:''):p);
 
+  /* v54.9: a read can be made to FAIL.
+     Needed because several things in the app are supposed to behave differently when a listener
+     is refused rather than empty — Discover's error state is the obvious one — and a harness
+     that can only succeed cannot tell the two apart, which is exactly the bug class being
+     tested. __FAKE.deny('serverDiscovery') makes that path (and anything under it) call the
+     error callback with a PERMISSION_DENIED-shaped error, both for listeners attached
+     afterwards and, immediately, for the ones already attached. */
   api.onValue=function(r,cb,errCb){
     const p=pathOf(r);
     const l={path:p,cb,err:errCb};
     listeners.push(l);
     // Firebase delivers the current value immediately; async, like the real one.
-    Promise.resolve().then(()=>{try{cb(snap(p))}catch(e){console.error('[fake-fb] initial listener threw',p,e)}});
+    Promise.resolve().then(()=>{
+      if(isDenied(p)){if(errCb)try{errCb(denyErr(p))}catch(e){console.error(e)}return}
+      try{cb(snap(p))}catch(e){console.error('[fake-fb] initial listener threw',p,e)}
+    });
     return()=>{const i=listeners.indexOf(l);if(i>=0)listeners.splice(i,1)};
   };
 
@@ -244,6 +266,21 @@
       if(!rec)throw new Error('no such fake account: '+email);
       currentUser={uid:rec.uid,email:String(email).toLowerCase(),emailVerified:true,delete:()=>Promise.resolve()};
       emitAuth();
+    },
+    /* Make a path refuse reads. Existing listeners on it are told straight away. */
+    deny(path){
+      denied.add(String(path).replace(/^\/+|\/+$/g,''));
+      listeners.slice().forEach(l=>{
+        if(!isDenied(l.path)||!l.err)return;
+        try{l.err(denyErr(l.path))}catch(e){console.error(e)}
+      });
+      return Promise.resolve();
+    },
+    /* Let it read again, and re-deliver to anything still listening. */
+    allow(path){
+      denied.delete(String(path).replace(/^\/+|\/+$/g,''));
+      fire(String(path).replace(/^\/+|\/+$/g,''));
+      return Promise.resolve();
     },
     listenerCount(){return listeners.length}
   };

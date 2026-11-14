@@ -36,7 +36,33 @@ let _dctx=null;
    than at any one of those call sites. */
 let _dctxClose=null;
 function closeCtx(){
+  _ctxCloseSub();
   if(_dctx){_dctx.remove();_dctx=null}
+  /* Give focus back to whatever had it before the menu opened. Without this, dismissing a menu
+     with Escape leaves focus on a removed node and the next Tab starts from the top of the
+     document — the small thing that makes keyboard navigation feel broken.
+
+     The element is often GONE by now: a channel row, a member row and a message row are all
+     rebuilt by their renderers, and opening a menu is quite capable of triggering one. So the
+     ancestor chain is remembered too, and focus lands on the nearest surviving container — the
+     channel list, the member panel, the message list — rather than at the top of the document.
+     The right region is not as good as the right element and is far better than nothing. */
+  if(_dctxReturnFocus){
+    const f=_dctxReturnFocus,chain=_dctxReturnChain;
+    _dctxReturnFocus=null;_dctxReturnChain=null;
+    try{
+      if(f&&f.isConnected){f.focus({preventScroll:true})}
+      else if(chain){
+        const host=chain.find(n=>n&&n.isConnected);
+        if(host){
+          /* A container is not focusable by default; -1 makes it programmatically focusable
+             without adding it to the Tab order. */
+          if(!host.hasAttribute('tabindex'))host.setAttribute('tabindex','-1');
+          host.focus({preventScroll:true});
+        }
+      }
+    }catch(_){}
+  }
   if(_dctxClose){const f=_dctxClose;_dctxClose=null;try{f()}catch(_){}}
 }
 document.addEventListener('click',e=>{if(_dctx&&!e.target.closest('.dctx'))closeCtx()});
@@ -44,35 +70,308 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeCtx()});
 window.addEventListener('resize',closeCtx);
 window.addEventListener('scroll',closeCtx,{passive:true,capture:true});
 
-/* items: [{label, icon, danger, disabled, onClick} | {sep:true} | {label:'...', head:true}]
-   opts.onClose: called once, whenever this menu goes away. */
-function openCtx(anchorOrEvent,items,opts){
-  closeCtx();
-  _dctxClose=(opts&&typeof opts.onClose==='function')?opts.onClose:null;
+/* ======================================================================
+ * openCtx — THE context menu (v54.8)
+ *
+ * ICH used to have two separate implementations of "a menu at the pointer":
+ *
+ *   this one (.dctx)            servers, categories, channels, members, messages, profiles
+ *   js/ui/context-menu.js       the generic page menu (Settings, Fullscreen, Sign Out)
+ *
+ * They had different markup, different positioning, different closing rules and no shared
+ * keyboard behaviour — and because the generic one listened on the document, right-clicking a
+ * channel opened BOTH, stacked on the same pixel. That had been papered over with a
+ * `document.querySelector('.dctx')` check and a comment explaining why the obvious fix
+ * (defaultPrevented) could not work.
+ *
+ * v54.8 makes this the only implementation. js/ui/context-menu.js now builds its items and
+ * hands them here, so there is one menu element, one set of closing rules, one positioner and
+ * one keyboard model, and the stacking problem cannot come back because there is only ever one
+ * menu to open.
+ *
+ * ITEM SHAPES
+ *   {label, icon, danger, disabled, hint, onClick}   an action
+ *   {label, icon, items:[...]}                        a submenu
+ *   {sep:true}                                        a divider
+ *   {label, head:true}                                a section heading
+ *   A falsy entry is skipped, so callers can write `cond && {…}` inline.
+ *
+ * OPTIONS
+ *   opts.onClose   called once, whenever this menu goes away
+ *   opts.label     accessible name for the menu as a whole
+ *
+ * WHAT IT GUARANTEES
+ *   - only one menu open at a time, submenus included
+ *   - stays inside the viewport, flipping rather than clamping when there is no room below
+ *   - full keyboard control: arrows, Home/End, Enter/Space, Escape, Left/Right for submenus,
+ *     and type-ahead
+ *   - focus moves into the menu and returns to whatever had it when the menu closes
+ *   - proper roles, so a screen reader announces a menu and its items rather than a pile of
+ *     anonymous divs (brief, section 12)
+ * ====================================================================== */
+let _dctxReturnFocus=null,_dctxReturnChain=null;
+const CTX_PAD=8;
+
+function _ctxRow(it,depth){
+  const b=document.createElement('div');
+  b.className='dctx-item'+(it.danger?' danger':'')+(it.disabled?' disabled':'')+(it.items?' has-sub':'');
+  b.setAttribute('role','menuitem');
+  b.setAttribute('tabindex','-1');
+  if(it.disabled)b.setAttribute('aria-disabled','true');
+  if(it.items){b.setAttribute('aria-haspopup','menu');b.setAttribute('aria-expanded','false')}
+  b.innerHTML='<span class="dctx-tx">'+esc(it.label)+'</span>'+
+    (it.hint?'<span class="dctx-hint">'+esc(it.hint)+'</span>':'')+
+    (it.items?'<span class="dctx-arrow" aria-hidden="true">›</span>':'')+
+    (it.icon?'<span class="ic">'+it.icon+'</span>':'');
+  b._ctxItem=it;b._ctxDepth=depth||0;
+  return b;
+}
+
+/* One level of menu. Submenus are built as their own .dctx element parented to the same body,
+   so a long submenu is positioned against the viewport rather than clipped by its parent. */
+function _ctxBuild(items,depth,label){
   const el=document.createElement('div');
-  el.className='dctx';
-  items.forEach(it=>{
-    if(it.sep){const d=document.createElement('div');d.className='dctx-sep';el.appendChild(d);return}
-    if(it.head){const d=document.createElement('div');d.className='dctx-label';d.textContent=it.label;el.appendChild(d);return}
-    const b=document.createElement('div');
-    b.className='dctx-item'+(it.danger?' danger':'')+(it.disabled?' disabled':'');
-    b.innerHTML='<span>'+esc(it.label)+'</span>'+(it.icon?'<span class="ic">'+it.icon+'</span>':'');
-    b.onclick=ev=>{ev.stopPropagation();closeCtx();if(it.onClick)it.onClick()};
-    el.appendChild(b);
+  el.className='dctx'+(depth?' dctx-sub':'');
+  el.setAttribute('role','menu');
+  if(label)el.setAttribute('aria-label',label);
+  (items||[]).forEach(it=>{
+    if(!it)return;                      // lets callers write `cond && {…}`
+    if(it.sep){
+      const d=document.createElement('div');d.className='dctx-sep';
+      d.setAttribute('role','separator');el.appendChild(d);return;
+    }
+    if(it.head){
+      const d=document.createElement('div');d.className='dctx-label';
+      d.textContent=it.label;el.appendChild(d);return;
+    }
+    el.appendChild(_ctxRow(it,depth));
   });
-  document.body.appendChild(el);
-  // position: at the pointer for a right-click, under the element for a click
-  const vw=innerWidth,vh=innerHeight,r=el.getBoundingClientRect();
-  let x,y;
-  if(anchorOrEvent&&typeof anchorOrEvent.clientX==='number'){x=anchorOrEvent.clientX;y=anchorOrEvent.clientY}
-  else{
-    const a=(anchorOrEvent&&anchorOrEvent.getBoundingClientRect)?anchorOrEvent.getBoundingClientRect():{left:vw/2,bottom:vh/2,top:vh/2};
-    x=a.left;y=a.bottom+4;
-  }
-  el.style.left=Math.max(8,Math.min(x,vw-r.width-8))+'px';
-  el.style.top=Math.max(8,Math.min(y,vh-r.height-8))+'px';
-  _dctx=el;
   return el;
+}
+
+function _ctxRows(el){return el?[...el.querySelectorAll(':scope > .dctx-item:not(.disabled)')]:[]}
+
+function _ctxPlace(el,x,y,anchorRect){
+  const vw=innerWidth,vh=innerHeight;
+  el.style.left='0px';el.style.top='0px';     // measure unclamped
+  /* offsetWidth/offsetHeight, NOT getBoundingClientRect().
+     .dctx opens with `animation:dctxIn` which starts at transform:scale(.96), and
+     getBoundingClientRect reports the VISUAL box — so measuring it one frame after insertion
+     returned a menu 4% smaller than the real one, and the clamp below let the full-size menu
+     overhang the viewport by a few pixels at the bottom-right. offsetWidth is the layout size
+     and is unaffected by the transform. */
+  const r={width:el.offsetWidth,height:el.offsetHeight};
+  let nx=x,ny=y;
+  /* Prefer right-and-down from the pointer, which is what every desktop menu does. When there
+     is no room, FLIP to the other side rather than clamping: clamping slides the menu back
+     under the cursor, so the first item ends up beneath the pointer and a stray click picks it. */
+  if(nx+r.width>vw-CTX_PAD){
+    const flipped=(anchorRect?anchorRect.left:x)-r.width;
+    nx=flipped>=CTX_PAD?flipped:Math.max(CTX_PAD,vw-r.width-CTX_PAD);
+  }
+  if(ny+r.height>vh-CTX_PAD){
+    const flipped=(anchorRect?anchorRect.top:y)-r.height;
+    ny=flipped>=CTX_PAD?flipped:Math.max(CTX_PAD,vh-r.height-CTX_PAD);
+  }
+  el.style.left=Math.max(CTX_PAD,nx)+'px';
+  el.style.top=Math.max(CTX_PAD,ny)+'px';
+  /* A menu taller than the viewport scrolls inside itself rather than running off the bottom —
+     which is the phone case, and the long-member-list case. */
+  if(r.height>vh-CTX_PAD*2){
+    el.style.top=CTX_PAD+'px';
+    el.style.maxHeight=(vh-CTX_PAD*2)+'px';
+    el.style.overflowY='auto';
+  }
+}
+
+/* The open submenu, if any. Only one at a time: a sibling opening closes it. */
+let _dctxSub=null,_dctxSubOwner=null,_dctxSubT=0;
+function _ctxCloseSub(){
+  if(_dctxSub){_dctxSub.remove();_dctxSub=null}
+  if(_dctxSubOwner){_dctxSubOwner.setAttribute('aria-expanded','false');_dctxSubOwner=null}
+}
+function _ctxOpenSub(row){
+  if(_dctxSubOwner===row)return;
+  _ctxCloseSub();
+  const it=row._ctxItem;
+  const sub=_ctxBuild(it.items,(row._ctxDepth||0)+1,it.label);
+  document.body.appendChild(sub);
+  const r=row.getBoundingClientRect();
+  _ctxPlace(sub,r.right-2,r.top-4,{left:r.left,top:r.bottom});
+  _dctxSub=sub;_dctxSubOwner=row;
+  row.setAttribute('aria-expanded','true');
+  _ctxWire(sub);
+}
+
+/* Click, hover and keyboard for one level. */
+function _ctxWire(el){
+  el.addEventListener('click',ev=>{
+    const row=ev.target.closest&&ev.target.closest('.dctx-item');
+    if(!row||!el.contains(row))return;
+    ev.stopPropagation();
+    const it=row._ctxItem;
+    if(!it||row.classList.contains('disabled'))return;
+    if(it.items){_ctxOpenSub(row);const f=_ctxRows(_dctxSub)[0];if(f)f.focus();return}
+    closeCtx();
+    if(it.onClick)it.onClick();
+  });
+  el.addEventListener('pointerover',ev=>{
+    const row=ev.target.closest&&ev.target.closest('.dctx-item');
+    if(!row||!el.contains(row))return;
+    row.focus({preventScroll:true});
+    clearTimeout(_dctxSubT);
+    if(row._ctxItem&&row._ctxItem.items&&!row.classList.contains('disabled')){
+      _dctxSubT=setTimeout(()=>_ctxOpenSub(row),90);   // a small delay, so sliding past does not open it
+    }else if(el===_dctx){
+      _dctxSubT=setTimeout(_ctxCloseSub,140);
+    }
+  });
+  el.addEventListener('keydown',ev=>{
+    const rows=_ctxRows(el);
+    if(!rows.length)return;
+    const i=rows.indexOf(document.activeElement);
+    const go=n=>{ev.preventDefault();rows[(n+rows.length)%rows.length].focus()};
+    switch(ev.key){
+      case 'ArrowDown':return go(i+1);
+      case 'ArrowUp':return go(i-1);
+      case 'Home':return go(0);
+      case 'End':return go(rows.length-1);
+      case 'Enter':case ' ':{
+        ev.preventDefault();
+        const row=rows[i>=0?i:0];if(row)row.click();
+        return;
+      }
+      case 'ArrowRight':{
+        const row=rows[i];
+        if(row&&row._ctxItem&&row._ctxItem.items){
+          ev.preventDefault();_ctxOpenSub(row);
+          const f=_ctxRows(_dctxSub)[0];if(f)f.focus();
+        }
+        return;
+      }
+      case 'ArrowLeft':{
+        if(el===_dctxSub){
+          ev.preventDefault();
+          const owner=_dctxSubOwner;_ctxCloseSub();
+          if(owner)owner.focus();
+        }
+        return;
+      }
+      case 'Escape':{
+        ev.preventDefault();ev.stopPropagation();
+        if(el===_dctxSub){const owner=_dctxSubOwner;_ctxCloseSub();if(owner)owner.focus()}
+        else closeCtx();
+        return;
+      }
+      case 'Tab':{ev.preventDefault();return go(ev.shiftKey?i-1:i+1)}
+      default:{
+        /* Type-ahead: a letter jumps to the next item starting with it, which is how a
+           desktop menu behaves and costs nothing to support. */
+        if(ev.key&&ev.key.length===1&&!ev.ctrlKey&&!ev.metaKey&&!ev.altKey){
+          const k=ev.key.toLowerCase();
+          const start=(i<0?0:i+1);
+          for(let n=0;n<rows.length;n++){
+            const r=rows[(start+n)%rows.length];
+            const tx=(r.querySelector('.dctx-tx')||{}).textContent||'';
+            if(tx.trim().toLowerCase().startsWith(k)){ev.preventDefault();r.focus();return}
+          }
+        }
+      }
+    }
+  });
+}
+
+function openCtx(anchorOrEvent,items,opts){
+  /* Remember what had focus BEFORE closeCtx() runs, not after: closing a previous menu restores
+     focus to whatever that menu had taken it from, so reading activeElement afterwards captures
+     that element instead of the one the user is actually on. A node inside a menu is never a
+     sensible place to return to, so those are ignored. */
+  let ret=null;
+  try{
+    const a=document.activeElement;
+    if(a&&a!==document.body&&!(a.closest&&a.closest('.dctx')))ret=a;
+  }catch(_){}
+  /* Keep the ORIGINAL element when this open has nothing better to offer.
+     Two handlers can open a menu for one right-click — a row's own oncontextmenu and a
+     delegated document listener both fire for a channel row — and on the second call focus is
+     already inside the menu the first call made. Overwriting with null there is what lost the
+     return target: the menu closed and focus fell to <body>. */
+  const prev=_dctxReturnFocus,prevChain=_dctxReturnChain;
+  closeCtx();
+  opts=opts||{};
+  _dctxClose=(typeof opts.onClose==='function')?opts.onClose:null;
+  _dctxReturnFocus=ret||((prev&&prev.isConnected)?prev:null);
+  /* The ancestors of the element focus came from, nearest first, for the case where the element
+     itself has been re-rendered away by the time the menu closes. Capped so this never walks a
+     deep tree, and it holds references only until the menu closes. */
+  if(ret){
+    const chain=[];
+    let n=ret.parentElement;
+    for(let i=0;i<8&&n&&n!==document.body;i++){chain.push(n);n=n.parentElement}
+    _dctxReturnChain=chain;
+  }else _dctxReturnChain=prevChain;
+
+  const el=_ctxBuild(items,0,opts.label||'Context menu');
+  document.body.appendChild(el);
+
+  // position: at the pointer for a right-click or a long-press, under the element for a click
+  let x,y,anchorRect=null;
+  if(anchorOrEvent&&typeof anchorOrEvent.clientX==='number'){
+    x=anchorOrEvent.clientX;y=anchorOrEvent.clientY;
+  }else if(anchorOrEvent&&anchorOrEvent.touches&&anchorOrEvent.touches[0]){
+    x=anchorOrEvent.touches[0].clientX;y=anchorOrEvent.touches[0].clientY;
+  }else{
+    const a=(anchorOrEvent&&anchorOrEvent.getBoundingClientRect)
+      ?anchorOrEvent.getBoundingClientRect():{left:innerWidth/2,bottom:innerHeight/2,top:innerHeight/2};
+    x=a.left;y=a.bottom+4;anchorRect=a;
+  }
+  _ctxPlace(el,x,y,anchorRect);
+  _dctx=el;
+  _ctxWire(el);
+  Perf.hit('ctxMenus');
+  /* Focus the menu itself rather than its first item: focusing item one makes Enter activate it
+     immediately, which is a surprising way to lose a file. Arrow Down moves to the first item. */
+  try{el.setAttribute('tabindex','-1');el.focus({preventScroll:true})}catch(_){}
+  return el;
+}
+
+/* ---- long-press, for touch (brief, sections 8.1 and 8.7) -------------------
+   Browsers on touch devices do not fire `contextmenu` reliably, so a menu wired only to that
+   event is desktop-only. ctxLongPress() attaches a press-and-hold that opens the same menu.
+   It is careful about the two things that make long-press implementations annoying:
+     - a press that MOVES is a scroll, not a long press, so it is cancelled (CANCEL_SLOP px)
+     - the menu opens on a timer, and the click that would follow the release is swallowed once,
+       so opening the menu does not also activate whatever was underneath it. */
+function ctxLongPress(host,selector,build){
+  const HOLD_MS=480,CANCEL_SLOP=10;
+  let t=0,sx=0,sy=0,target=null,fired=false;
+  const clear=()=>{clearTimeout(t);t=0;target=null};
+  host.addEventListener('touchstart',e=>{
+    const row=e.target.closest&&e.target.closest(selector);
+    if(!row||!e.touches||e.touches.length!==1)return;
+    target=row;fired=false;
+    sx=e.touches[0].clientX;sy=e.touches[0].clientY;
+    const ev={clientX:sx,clientY:sy};
+    clearTimeout(t);
+    t=setTimeout(()=>{
+      if(!target)return;
+      fired=true;
+      try{build(ev,target)}catch(_){}
+      /* A short vibration is the standard confirmation that a long press registered. */
+      try{if(navigator.vibrate)navigator.vibrate(12)}catch(_){}
+    },HOLD_MS);
+  },{passive:true});
+  host.addEventListener('touchmove',e=>{
+    if(!t||!e.touches||!e.touches[0])return;
+    if(Math.abs(e.touches[0].clientX-sx)>CANCEL_SLOP||Math.abs(e.touches[0].clientY-sy)>CANCEL_SLOP)clear();
+  },{passive:true});
+  host.addEventListener('touchend',()=>{clear()},{passive:true});
+  host.addEventListener('touchcancel',()=>{clear()},{passive:true});
+  /* Swallow exactly one click after a long press opened a menu. */
+  host.addEventListener('click',e=>{
+    if(!fired)return;
+    fired=false;e.preventDefault();e.stopPropagation();
+  },true);
 }
 
 /* ======================================================================
@@ -333,7 +632,14 @@ async function openServerMenu(anchor,sid,ev){
     items.push({label:'Create Category',icon:DI.plus,onClick:()=>openCreateCategory(sid)});
   }
   if(!sys)items.push({label:'Server Boost',icon:DI.boost,onClick:()=>openBoostDialog(sid)});
-  items.push({label:'Notification Settings',icon:DI.people,onClick:()=>openSettings(false)});
+  /* v54.9: this entry used to just open the Settings page — a control named for a thing it did
+     not do. It is the real submenu now, writing notifPrefs/<me>/srv/<sid>. */
+  items.push(notifMenuItems('server',sid));
+  items.push({label:'Mark Server As Read',onClick:()=>{
+    try{DModel.channels(sid).forEach(c=>{if(c.type!=='voice'&&c.key)DB.markRead(ME.id,c.key)});
+      refreshBadge();renderChat();toast('Marked as read','good')}
+    catch(_){toast('Could not mark those as read','bad')}
+  }});
   if(items.length)items.push({sep:true});
   const goHomeAfter=()=>{
     view.sid=DModel.ICH_ID;
@@ -545,9 +851,66 @@ function openCreateChannel(sid,catId){
   m.body.querySelector('#ccName').addEventListener('keydown',e=>{if(e.key==='Enter')go.click()});
 }
 
+/* ======================================================================
+ *  v54.9 — the notification submenu, built once for every surface that needs it.
+ *
+ *  The settings pane has always told people to "right-click any server or channel to change it
+ *  there too". Until now that was not true of either: NotifPrefs.setChannel() had exactly one
+ *  call site in the project and it passed '' to clear, so no UI anywhere could create a channel
+ *  override, and the server menu had no notification entry at all.
+ *
+ *  One builder for both so the levels, the labels and the inheritance wording cannot drift
+ *  between the two menus, and so "Reset to Default" means the same thing in both.
+ *
+ *  scope: 'server' -> sets notifPrefs/<me>/srv/<sid>
+ *         'channel'-> sets notifPrefs/<me>/ch/<message key>
+ *  The hierarchy the levels resolve through (channel -> server -> server default -> account) is
+ *  NotifPrefs.effective()'s business, not this menu's; this only writes one level of it.
+ * ====================================================================== */
+function notifMenuItems(scope,id,sid){
+  const isCh=scope==='channel';
+  let cur='',eff='all';
+  try{
+    cur=isCh?NotifPrefs.channelLevel(id):NotifPrefs.serverLevel(id);
+    eff=isCh?NotifPrefs.effective(id,sid||null):NotifPrefs.serverEffective(id);
+  }catch(_){}
+  const write=async level=>{
+    try{
+      if(isCh)await NotifPrefs.setChannel(id,level);
+      else await NotifPrefs.setServer(id,level);
+      toast(level?('Notifications: '+NotifPrefs.LABEL[level]):'Back to default','good');
+      try{DiscordShell.refresh()}catch(_){}
+    }catch(e){
+      toast((typeof rulesHint==='function'?rulesHint(e,'notification setting')
+                                         :'Could not save that notification setting.'),'bad');
+    }
+  };
+  const sub=NotifPrefs.LEVELS.map(l=>({
+    label:NotifPrefs.LABEL[l],
+    /* The hint says which one is in force rather than only which one is explicitly set, because
+       "nothing is ticked" is the normal state and tells you nothing on its own. */
+    hint:cur===l?'set':(!cur&&eff===l?'inherited':''),
+    onClick:()=>write(l)
+  }));
+  sub.push({sep:true});
+  sub.push({
+    label:'Reset to Default',
+    disabled:!cur,
+    hint:cur?'':'already',
+    onClick:()=>write('')
+  });
+  return{label:'Notification Settings',items:sub};
+}
+
 function openChannelMenu(ev,sid,c){
   const items=[];
   if(c.type!=='voice')items.push({label:'Mark As Read',onClick:()=>{DB.markRead(ME.id,c.key);refreshBadge();renderChat()}});
+  /* Voice channels have no messages to notify about, so the entry is only offered where it
+     means something — and it is keyed by c.key, the identifier overrides are stored under. */
+  if(c.type!=='voice'&&c.key){
+    items.push({sep:true});
+    items.push(notifMenuItems('channel',c.key,sid));
+  }
   items.push({label:'Copy Channel Name',icon:DI.copy,onClick:async()=>{
     const ok=await copyText(c.name);toast(ok?'Copied':'Could not copy',ok?'good':'bad');
   }});

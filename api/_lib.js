@@ -231,6 +231,121 @@ async function roleOf(id) {
   return { owner, admin: owner || ad === 1 };
 }
 
+/* ==========================================================================
+ * v54.8 — ONE canonical authorization model
+ *
+ * Before this, eight endpoints each repeated the same three lines:
+ *
+ *     const uid = await L.verifyToken(b.idToken);
+ *     const id  = Number(await L.adb('GET', 'uidToId/' + uid));
+ *     const who = await L.roleOf(id);
+ *
+ * Repeating it is how they drifted: some checked banned/, some did not; some trusted
+ * b.id when uidToId was missing. resolveCaller() is now the ONE way a privileged
+ * endpoint learns who is calling, and it answers from the verified token alone.
+ *
+ * Nothing in the request body contributes to identity. There is deliberately no
+ * parameter by which a caller can name themselves.
+ * ========================================================================== */
+
+/* Every database node that grants site-level power. This list is the authorization
+ * model: if a node can make somebody an owner, it belongs here, and revokeOwnership()
+ * clears all of them together. The former-owner bug in v54.7 existed precisely because
+ * `secretowner` was a grant source that no list enumerated and no tool could clear. */
+const OWNER_GRANT_PATHS = ['owners', 'secretowner'];
+const STAFF_GRANT_PATHS = ['admin', 'mods'];
+const ALL_GRANT_PATHS = OWNER_GRANT_PATHS.concat(STAFF_GRANT_PATHS);
+
+/* Who is calling, resolved server-side. Returns null when the token is not real.
+ * `role` is the same shape roleOf() has always returned, plus `shown`/`secret` so an
+ * audit can say WHICH source granted ownership rather than only that it did. */
+async function resolveCaller(body) {
+  const uid = await verifyToken(body && body.idToken);
+  if (!uid) return null;
+  let id = 0;
+  try { id = Number(await adb('GET', 'uidToId/' + uid)); } catch (_) { id = 0; }
+  if (!id || !Number.isFinite(id)) return { uid, id: 0, banned: false, role: { owner: false, admin: false, shown: false, secret: false, mod: false } };
+  const [o, so, ad, md, bn] = await Promise.all(
+    ['owners/' + id, 'secretowner/' + id, 'admin/' + id, 'mods/' + id, 'banned/' + id]
+      .map(p => adb('GET', p).catch(() => null)));
+  const shown = o === 1, secret = so === 1, owner = shown || secret;
+  return {
+    uid, id, banned: bn === true,
+    role: { owner, admin: owner || ad === 1, mod: owner || ad === 1 || md === 1, shown, secret }
+  };
+}
+
+/* Standard refusal ladder for an owner-only endpoint. Returns the caller on success,
+ * or null after having already answered the request. */
+async function requireOwner(req, res, body) {
+  const who = await resolveCaller(body);
+  if (!who) { send(res, 401, { error: 'Not signed in.' }); return null; }
+  if (!who.id) { send(res, 403, { error: 'No account.' }); return null; }
+  if (who.banned) { send(res, 403, { error: 'This account is banned.' }); return null; }
+  if (!who.role.owner) { send(res, 403, { error: 'Site owners only.' }); return null; }
+  return who;
+}
+
+/* Every grant held by one numeric id, plus the integrity of its identity mapping.
+ * `problems` is the point of the whole function: it is what the v54.7 audit could not
+ * answer, because nothing could read secretowner/ to compare it against owners/. */
+async function ownershipOf(id) {
+  id = Number(id);
+  const paths = ALL_GRANT_PATHS.map(p => p + '/' + id).concat(['idToUid/' + id, 'users/' + id + '/username', 'banned/' + id]);
+  const vals = await Promise.all(paths.map(p => adb('GET', p).catch(() => null)));
+  const grants = {};
+  ALL_GRANT_PATHS.forEach((p, i) => { grants[p] = vals[i] === 1; });
+  const uid = vals[ALL_GRANT_PATHS.length];
+  const username = vals[ALL_GRANT_PATHS.length + 1];
+  const banned = vals[ALL_GRANT_PATHS.length + 2] === true;
+  // Does the uid this id claims map back to this same id? A one-way or crossed mapping is
+  // how an account can end up resolving to somebody else's numeric id.
+  let backId = null;
+  if (typeof uid === 'string' && uid) { try { backId = Number(await adb('GET', 'uidToId/' + uid)); } catch (_) { backId = null; } }
+  const problems = [];
+  if (grants.secretowner && !grants.owners) problems.push('orphan-secret-owner');
+  if (!uid) problems.push('no-idToUid-mapping');
+  if (uid && backId !== id) problems.push('mapping-mismatch:uidToId=' + backId);
+  if (username == null) problems.push('no-user-record');
+  if (banned && (grants.owners || grants.secretowner)) problems.push('banned-but-owner');
+  return { id, uid: uid || null, username: username == null ? null : String(username), banned, grants, backId, problems };
+}
+
+/* Everyone who holds any site-level grant, each one audited. */
+async function listOwnership() {
+  const tables = await Promise.all(ALL_GRANT_PATHS.map(p => adb('GET', p).catch(() => null)));
+  const ids = new Set();
+  tables.forEach(t => {
+    if (!t || typeof t !== 'object') return;
+    Object.keys(t).forEach(k => { if (t[k] === 1 && /^\d+$/.test(String(k))) ids.add(Number(k)); });
+  });
+  const rows = [];
+  for (const id of Array.from(ids).sort((a, b) => a - b)) rows.push(await ownershipOf(id));
+  return rows;
+}
+
+/* Remove every site-level grant from one account, in ONE multi-path write.
+ * One write means there is no window in which owners/ is gone but secretowner/ is not —
+ * which is the exact state the reported bug was living in.
+ *
+ * `keep` lets a caller strip only the secret grant (the usual repair) rather than all of them. */
+async function revokeOwnership(id, actorId, opts) {
+  id = Number(id);
+  const o = (opts || {});
+  const paths = o.only && o.only.length ? o.only.filter(p => ALL_GRANT_PATHS.includes(p)) : ALL_GRANT_PATHS;
+  const patch = {};
+  paths.forEach(p => { patch[p + '/' + id] = null; });
+  // Audit trail first-class: the server writes it, no client can.
+  const at = Date.now();
+  patch['ownerLog/' + at + '-' + id] = { act: 'revoke', target: id, by: Number(actorId) || 0, at, paths: paths.join(',') };
+  // Bump the account's authorization epoch. Live clients watch this and re-resolve their own
+  // permissions the moment it changes, so an open owner panel in another tab stops working
+  // rather than continuing on a snapshot taken before the revocation.
+  patch['authEpoch/' + id] = at;
+  await adb('PATCH', '', patch);
+  return { revoked: paths, at };
+}
+
 /* ---------- Discord (the webhook only ever lives in the server env - never in the repo or the browser) ----------
  * Returns 'sent' | 'not-configured' | 'failed-<status>' | 'failed' so /api/tos can tell the owner panel whether the backup worked. */
 async function discord(payload) {
@@ -280,4 +395,7 @@ async function alert(kind, id, fields) {
   await discord({ embeds: [{ title: 'Anti-cheat: ' + kind, color: 0xfaa61a, fields: Object.entries(fields).map(([n, v]) => ({ name: n, value: '`' + clean(v, 120) + '`', inline: true })), timestamp: new Date().toISOString() }] });
 }
 
-module.exports = { cors, send, readBody, clientIp, normalizeIp, ipHash, isPrivateIp, vpnCheck, verifyToken, adb, adbGetTagged, adbPutIfMatch, checkBuild, compareBuilds, buildToken, roleOf, discord, logTos, alert, clean, limited, net, TOS_VERSION, ATTEST_TTL_MS };
+module.exports = { cors, send, readBody, clientIp, normalizeIp, ipHash, isPrivateIp, vpnCheck, verifyToken, adb, adbGetTagged, adbPutIfMatch, checkBuild, compareBuilds, buildToken, roleOf, discord, logTos, alert, clean, limited, net, TOS_VERSION, ATTEST_TTL_MS,
+  /* v54.8 canonical authorization */
+  resolveCaller, requireOwner, ownershipOf, listOwnership, revokeOwnership,
+  OWNER_GRANT_PATHS, STAFF_GRANT_PATHS, ALL_GRANT_PATHS };

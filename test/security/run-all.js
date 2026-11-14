@@ -47,6 +47,7 @@ const SUITES = [
   ['no-secrets.js',        'no credential in anything the browser is served'],
   ['rules-audit.js',       'the rules file, structurally'],
   ['attack-suite.js',      'the rules, behaviourally: attacks and legitimate operations'],
+  ['former-owner.js',      'v54.8 section 1.7: former owners, secret owners and announcements'],
   ['compat-diff.js',       'old rules vs new: regressions'],
   ['spin-concurrency.js',  'the Daily Spin: concurrency'],
   ['spin-states.js',       'the Daily Spin: transaction states, failures, recovery'],

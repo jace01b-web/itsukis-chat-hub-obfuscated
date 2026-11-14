@@ -572,8 +572,15 @@ const clearModals=page=>page.evaluate(()=>{
     };
   });
   ok('the panel opened for a site owner',    oc.opened===true,oc);
-  ok('it has all five sections',
-     JSON.stringify(oc.sections)===JSON.stringify(['Overview','Users','Servers','Global Roles','Diagnostics']),oc.sections);
+  /* v54.8 UPDATED THIS CASE, deliberately.
+     It asserted the exact five sections of the v54.7 control center. v54.8 adds a sixth,
+     Ownership — the audit that can see and clear secretowner/ grants, which is the fix for
+     former owners keeping their powers. So the old list is no longer the right expectation.
+     It is updated rather than deleted, and it still pins the exact set and ORDER (Ownership
+     second, because an orphaned grant is the thing somebody opening this panel most needs to
+     find), so a section vanishing or being reordered still fails here. */
+  ok('it has all six sections, in order',
+     JSON.stringify(oc.sections)===JSON.stringify(['Overview','Ownership','Users','Servers','Global Roles','Diagnostics']),oc.sections);
   ok('it counts both seeded servers',        oc.stats['Custom servers']==='2',oc.stats);
   ok('it counts both as listed on Discover', oc.stats['Listed on Discover']==='2',oc.stats);
   /* srvA: vlad(2), jace(3), mina(4), plus suki(1) who joined with GOODCODE above = 4.

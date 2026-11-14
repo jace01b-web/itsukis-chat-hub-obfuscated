@@ -50,7 +50,12 @@ window.APP_MANIFEST={
        the rebuilt profile cards, pins, search, polls, the quick switcher, and the new settings
        and server panes. Last so it can correct the layers above it without !important wars. */
     "29-v54.css",
-    "30-v547.css"
+    "30-v547.css",
+    /* v54.8. Last, so it can correct every layer above it: the ownership audit, the one
+       consolidated context-menu system, the rebuilt profile popout and full profile, status
+       indicators, the settings navigation, density and the responsive corrections. */
+    "31-v548.css",
+    "32-v549.css"
   ],
   /* Not loaded on purpose: 23-lockdown.css belongs to js/features/lockdown.js, which is kept in the
      repo but left out of the load list (its master switch is ON, so loading it would lock the site). */
@@ -58,6 +63,10 @@ window.APP_MANIFEST={
     "core/firebase-imports.js",
     "core/diagnostics.js",
     "core/config.js",
+    /* v54.8: the performance counters. Declares only — nothing in it reads DB or ME at load
+       time — so it is safe this early, and being early is what lets every later file count
+       into it without a typeof guard. */
+    "core/perf.js",
     "chat/emoji-data.js",
     "moderation/content-filter.js",
     "core/name-styles.js",
@@ -74,6 +83,9 @@ window.APP_MANIFEST={
        so it is safe this early, and being this early is what makes the appearance preferences
        apply on the first paint instead of snapping in a second later. */
     "core/prefs.js",
+    /* v54.8: automatic idle and timed custom statuses. Declares only; AutoIdle.start() is
+       called from js/chat/live-sync.js once an account is actually signed in. */
+    "core/idle.js",
     "features/gift-promo.js",
     "chat/pings.js",
     "core/auto-update.js",

@@ -237,6 +237,74 @@ const DiscordShell=(function(){
   });
 
 
+  /* ======================================================================
+   *  v54.9 — the DM / conversation context menu.
+   *
+   *  There was no menu on a DM row at all. Two things followed from that:
+   *    - a per-conversation mute was unreachable, even though NotifPrefs has always been able to
+   *      store one (notifPrefs/<me>/ch/<dm key>) and effective() has always honoured it;
+   *    - the social actions on a person you DM were only reachable by opening their profile.
+   *
+   *  Built from the same notifMenuItems() builder the server and channel menus use, so a
+   *  conversation's notification settings read and behave exactly like a channel's.
+   * ====================================================================== */
+  document.addEventListener('contextmenu',e=>{
+    const row=e.target.closest&&e.target.closest('#sbList .sb-item[data-room]');
+    if(!row||!ME)return;
+    const key=row.dataset.room;
+    if(!key||!String(key).startsWith('dm_'))return;     // channels have their own menu
+    e.preventDefault();
+    const other=String(key).replace(/^dm_/,'').split('_').map(Number).find(n=>n!==Number(ME.id));
+    const items=[];
+    items.push({label:'Mark As Read',onClick:()=>{DB.markRead(ME.id,key);refreshBadge();renderChat()}});
+    items.push(notifMenuItems('channel',key,null));
+    if(Number.isFinite(other)){
+      items.push({sep:true});
+      items.push({label:'View Profile',onClick:()=>openUserProfile(other)});
+      let friend=false,blocked=false;
+      try{friend=DB.isFriend(ME.id,other);blocked=DB.isBlocked(ME.id,other)}catch(_){}
+      if(!blocked){
+        if(friend)items.push({label:'Remove Friend',danger:true,onClick:()=>{
+          dconfirm({title:'Remove friend',sub:'Remove this person from your friends?',confirm:'Remove',danger:true,
+            onConfirm:()=>DB.removeFriend(ME.id,other)
+              .then(()=>{toast('Removed.');renderChat()}).catch(err=>toast(err.message,'bad'))});
+        }});
+        else items.push({label:'Add Friend',onClick:()=>DB.friendReqById(ME.id,other)
+          .then(r=>toast(r==='accepted'?'You are now friends.':'Friend request sent.','good'))
+          .catch(err=>toast(err.message,'bad'))});
+      }
+      items.push({label:(typeof Ignored!=='undefined'&&Ignored.has(other))?'Stop Ignoring':'Ignore',onClick:()=>{
+        try{Ignored.toggle(other);toast(Ignored.has(other)?'Ignored.':'No longer ignoring them.')}catch(_){}
+      }});
+      items.push({label:blocked?'Unblock':'Block',danger:!blocked,onClick:()=>{
+        if(blocked){
+          DB.unblockUser(ME.id,other).then(()=>{toast('Unblocked.');renderChat()}).catch(err=>toast(err.message,'bad'));
+          return;
+        }
+        dconfirm({title:'Block this person',
+          sub:'They will not be able to message you, and you will stop seeing their messages.',
+          confirm:'Block',danger:true,
+          onConfirm:()=>DB.blockUser(ME.id,other)
+            .then(()=>{toast('Blocked.');renderChat()}).catch(err=>toast(err.message,'bad'))});
+      }});
+      items.push({sep:true});
+      const copy=(what,v)=>copyText(String(v)).then(ok=>toast(ok?(what+' copied'):'Could not copy',ok?'good':'bad'));
+      const sub=[{label:'Copy User ID',onClick:()=>copy('User ID',other)}];
+      try{const u=DB.getUser(other);if(u&&!u.deleted)sub.push({label:'Copy Username',onClick:()=>copy('Username',u.username)})}catch(_){}
+      items.push({label:'Copy',items:sub});
+    }
+    openCtx(e,items,{label:'Conversation menu'});
+  });
+  /* Touch: the same menu on a long press (v54.8's ctxLongPress, which cancels on movement so it
+     never fights the sidebar's own scrolling). */
+  try{
+    ctxLongPress(document,'#sbList .sb-item[data-room]',(ev,row)=>{
+      const key=row&&row.dataset&&row.dataset.room;
+      if(!key||!ME||!String(key).startsWith('dm_'))return;
+      row.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:ev.clientX,clientY:ev.clientY}));
+    });
+  }catch(_){}
+
   /* ---------- user panel (bottom of the sidebar) ---------- */
   /* The user panel sits at the foot of the CHANNEL SIDEBAR, 240px wide - it does not run under the
      server rail. (It used to be appended to .chat-layout on desktop, which stretched it across both
@@ -285,6 +353,18 @@ const DiscordShell=(function(){
       <div class="dl-stcustom">
         <label for="dlStCustom">Custom status</label>
         <input id="dlStCustom" type="text" maxlength="128" placeholder="What's on your mind?" value="${esc(custom)}" autocomplete="off">
+        <!-- v54.8: a term and a clear button (brief, section 5.3). The term is stored as
+             style/customStatusUntil and every client stops SHOWING an expired status the
+             moment it looks at it, so "for 1 hour" actually means an hour rather than
+             "until I remember to delete it". -->
+        <div class="dl-stexp">
+          <label for="dlStUntil">Clear after</label>
+          <select id="dlStUntil">
+            ${CS_TERMS.map(([v,l])=>`<option value="${v}">${esc(l)}</option>`).join('')}
+          </select>
+          <button type="button" class="dl-stclear" id="dlStClear"${custom?'':' disabled'}>Clear status</button>
+        </div>
+        <div class="dl-stexp-now" id="dlStNow"></div>
       </div>
       <div class="dl-stpop-sep"></div>
       <button type="button" class="dl-stitem plain" data-go="profile"><span class="dl-stitem-t"><b>Edit Profile</b></span></button>
@@ -301,14 +381,51 @@ const DiscordShell=(function(){
       catch(e){toast('Could not save your status'+(/PERMISSION/i.test(e.code||e.message||'')?' — the database rules need republishing.':'.'),'bad')}
     });
     const ci=stPop.querySelector('#dlStCustom');
+    const sel=stPop.querySelector('#dlStUntil');
+    const nowEl=stPop.querySelector('#dlStNow');
+    const clearBtn=stPop.querySelector('#dlStClear');
+
+    /* Show the term currently in force, so a status that is about to vanish says so. */
+    const showTerm=()=>{
+      let until=0;try{until=DB.customStatusUntil(ME.id)}catch(_){}
+      nowEl.textContent=until
+        ?('Clears at '+new Date(until).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}))
+        :'';
+      if(clearBtn)clearBtn.disabled=!(ci.value||'').trim();
+    };
+    showTerm();
+    ci.addEventListener('input',showTerm);
+
+    let saving=false;
     const saveCustom=async()=>{
+      /* A racing save is how two writes end up fighting over the same field: the input fires
+         blur AND Enter in some browsers, and the second write can land with the earlier value.
+         One at a time, and only when something actually changed. */
+      if(saving)return;
       const v=ci.value;
-      if(v===custom)return;
-      try{await DB.setCustomStatus(ME.id,v);ME=DB.currentUser();renderUser()}
-      catch(e){toast('Could not save your custom status.','bad')}
+      let curUntil=0;try{curUntil=DB.customStatusUntil(ME.id)}catch(_){}
+      const want=csTermToMs(sel?sel.value:'0');
+      /* Unchanged text AND an unchanged term: nothing to write. `want===0 && curUntil===0` is
+         the common case of somebody opening the menu and closing it again. */
+      if(v===custom&&((want===0&&curUntil===0)||want===-1))return;
+      saving=true;
+      try{
+        await DB.setCustomStatus(ME.id,v,want>0?Date.now()+want:0);
+        ME=DB.currentUser();renderUser();showTerm();
+      }catch(e){toast('Could not save your custom status.','bad')}
+      finally{saving=false}
     };
     ci.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();saveCustom();closeStatusMenu()}});
     ci.addEventListener('blur',saveCustom);
+    if(sel)sel.addEventListener('change',()=>{if((ci.value||'').trim())saveCustom()});
+    if(clearBtn)clearBtn.onclick=async()=>{
+      clearBtn.disabled=true;
+      try{
+        await DB.setCustomStatus(ME.id,'',0);
+        ME=DB.currentUser();ci.value='';renderUser();showTerm();
+        toast('Custom status cleared','good');
+      }catch(_){toast('Could not clear your status.','bad');clearBtn.disabled=false}
+    };
     stPop.querySelector('[data-go="profile"]').onclick=()=>{closeStatusMenu();openSettings(false,'profile')};
     stPop.querySelector('[data-go="settings"]').onclick=()=>{closeStatusMenu();openSettings(false)};
   }
@@ -761,7 +878,27 @@ const DiscordShell=(function(){
     let cs='';try{cs=DB.customStatusOf?DB.customStatusOf(id):''}catch(_){}
     return `<div class="dl-mem${off?' off':''}" data-open-profile="${id}"${cr?` title="${esc(cr.name)}"`:''}><span class="dl-fr-av">${avatarHtml(u,u.username,'width:32px;height:32px;font-size:13px')}<i class="dl-dot ${dotClass(id,off)}"></i></span><span class="dl-mem-nm">${nameH}${(!off&&cs)?`<small class="dl-mem-cs">${esc(cs)}</small>`:''}</span></div>`;
   }
-  function renderMembers(){
+  /* v54.8: measured, and no longer rewrites the DOM when nothing it draws has changed.
+     This list is the single biggest render on the site — on ICH it is every account that has a
+     profile, sorted by display name with a locale comparator, and it was rebuilt from scratch
+     on every presence tick. `innerHTML=` on 1,200 rows costs a parse, a style recalc and a
+     layout even when the output is byte-for-byte what is already on screen, which it very often
+     is: somebody's avatar changing re-emits, and the member list looks exactly the same.
+     So the generated markup is compared with what was last written and the assignment is
+     skipped when they match. The sort and the string build still happen — that is the honest
+     limit of this change, and it is the cheap half. */
+  let _memSig=null;
+  /* v54.9: the member-list filter (brief 3F). Kept in a module variable rather than read off
+     the DOM, so a re-render does not lose it; the input's value is restored from it below. */
+  let memQuery='';
+  /* One collator for the whole session. `sensitivity:'base'` makes it case- and accent-
+     insensitive, which is what the old .toLowerCase().localeCompare() was approximating, so the
+     resulting order is the same without lowercasing 1,200 strings per render. */
+  const MEM_COLL=(typeof Intl!=='undefined'&&Intl.Collator)
+    ? new Intl.Collator(undefined,{sensitivity:'base',numeric:true})
+    : {compare:(a,b)=>String(a).toLowerCase()<String(b).toLowerCase()?-1:(String(a).toLowerCase()>String(b).toLowerCase()?1:0)};
+  function renderMembers(){return Perf.time('memberRenders',renderMembersBody)}
+  function renderMembersBody(){
     const m=document.getElementById('dlMembers'),btn=ensureMembersBtn();
     const srv=serverMode();
     const dmPeer=dmPeerId();
@@ -770,7 +907,7 @@ const DiscordShell=(function(){
     const vis=(srv||dmPeer!=null)&&showMembers;
     m.classList.toggle('show',vis);
     m.classList.toggle('dm',vis&&dmPeer!=null);
-    if(!vis){m._dlpSig=null;m.innerHTML='';return}
+    if(!vis){m._dlpSig=null;_memSig=null;memQuery='';m.innerHTML='';return}
     if(dmPeer!=null){renderDmProfile(m,dmPeer);return}
     m._dlpSig=null;
     const key=view.roomKey;
@@ -797,6 +934,21 @@ const DiscordShell=(function(){
       if(ME&&id===ME.id)return true;
       try{return DB.statusOf?DB.statusOf(id)!=='offline':true}catch(_){return true}
     });
+    /* v54.9 — MEMBER SEARCH.
+       Applied to the id lists BEFORE grouping, so the role groups, their order and their counts
+       all describe what is actually on screen rather than what would have been. Matching is on
+       the display name and the username, accent-insensitively, which is what the member sort's
+       collator already does for ordering. */
+    const memNeedle=memQuery.trim().toLowerCase();
+    const memMatch=id=>{
+      if(!memNeedle)return true;
+      let u=null;try{u=DB.peekUser(id)}catch(_){}
+      if(!u)return false;
+      const dn=(dispName(u)||'').toLowerCase();
+      const un=(u.username||'').toLowerCase();
+      return dn.indexOf(memNeedle)>=0||un.indexOf(memNeedle)>=0;
+    };
+    if(memNeedle){onIds=onIds.filter(memMatch);everyone=everyone.filter(memMatch)}
     const onSet=new Set(onIds);
     if(key===CFG.VIP_ROOM)everyone=everyone.filter(id=>{try{return !!DB.vipInfo(id,true)}catch(_){return false}});
     if(key===CFG.MVP_ROOM)everyone=everyone.filter(id=>{try{return hasMvpPerks(id)}catch(_){return false}});
@@ -805,8 +957,21 @@ const DiscordShell=(function(){
        the whole subscription set on every render and left most rows without a profile, which is
        what made them render as "Deleted User". Only the rows actually drawn (memRow) subscribe. */
     const offIds=everyone.filter(id=>!onSet.has(id)&&DB.peekUser(id));
-    const nameOf=id=>{const u=DB.peekUser(id);return u?dispName(u):'Loading…'};
-    const cmp=(a,b)=>nameOf(a).toLowerCase().localeCompare(nameOf(b).toLowerCase());
+    /* v54.8: the member sort, which on ICH runs over every account that has a profile.
+       Two costs were hiding in the one-line comparator:
+         1. String.prototype.localeCompare builds a collator on EVERY call. Sorting 600 names
+            is ~5,000 comparisons, so it built ~5,000 collators per render. MEM_COLL is one
+            Intl.Collator, made once.
+         2. nameOf() was called twice per comparison — ~10,000 peekUser + dispName calls per
+            render — to produce at most 600 distinct answers. They are resolved once into a
+            map, and the comparator reads from it. */
+    const _nm=new Map();
+    const nameOf=id=>{
+      let v=_nm.get(id);
+      if(v===undefined){const u=DB.peekUser(id);v=u?dispName(u):'Loading…';_nm.set(id,v)}
+      return v;
+    };
+    const cmp=(a,b)=>MEM_COLL.compare(nameOf(a),nameOf(b));
     const defs=memGroupDefs(),buckets={};defs.forEach(d=>buckets[d[0]]=[]);
     // A group key always exists in defs, but customroles/ can change between the two calls — never throw over it.
     onIds.forEach(id=>{const k=memGroupOf(id);(buckets[k]||buckets.online).push(id)});
@@ -821,7 +986,47 @@ const DiscordShell=(function(){
       html+=`<div class="dl-mem-h">Offline — ${offIds.length}</div>`+shown.map(id=>memRow(id,true)).join('');
       if(shown.length<offIds.length)html+=`<button type="button" class="dl-mem-more" id="dlMemMore">Show ${offIds.length-shown.length} more</button>`;
     }
-    m.innerHTML=html||'<div class="dl-mem-h">No members</div>';
+    /* The search box is part of the generated markup so the identical-markup skip below still
+       works; its value is re-applied from memQuery and the caret restored after the write, which
+       is what stops a presence tick from eating what somebody is typing. */
+    const searchHTML=
+      '<div class="dl-mem-search">'+
+        '<input type="search" id="dlMemQ" placeholder="Search members" aria-label="Search members" '+
+          'autocomplete="off" spellcheck="false" value="'+esc(memQuery)+'">'+
+        (memQuery?'<button type="button" id="dlMemQX" title="Clear" aria-label="Clear search">✕</button>':'')+
+      '</div>';
+    const body=html||(memNeedle
+      ?'<div class="dl-mem-empty">No members match “'+esc(memQuery.trim())+'”.</div>'
+      :'<div class="dl-mem-empty">No members to show.</div>');
+    const out=searchHTML+body;
+    /* Identical markup means there is nothing to show that is not already shown. Skipping the
+       write also preserves scroll position and any :hover the pointer is sitting on, which the
+       unconditional rebuild used to drop on every presence tick. */
+    if(out===_memSig&&m.firstChild){Perf.hit('renderChatSkipped');return}
+    _memSig=out;
+    Perf.add('memberRows',onIds.length+Math.min(offIds.length,offAll?offIds.length:MEM_SHOW_OFF));
+    /* Remember where the caret was: this innerHTML replaces the search input itself, and
+       without restoring it every keystroke would send the caret to the end of the field. */
+    const prevInput=m.querySelector('#dlMemQ');
+    const hadFocus=prevInput&&document.activeElement===prevInput;
+    const caret=hadFocus?prevInput.selectionStart:null;
+    m.innerHTML=out;
+    const q=m.querySelector('#dlMemQ');
+    if(q){
+      q.value=memQuery;
+      if(hadFocus){try{q.focus({preventScroll:true});q.setSelectionRange(caret,caret)}catch(_){}}
+      q.oninput=()=>{memQuery=q.value;renderMembers()};
+      /* Escape clears rather than closing the panel, which is what a search field inside a
+         panel should do — and it stops Escape here from being swallowed by the page handler. */
+      q.onkeydown=e=>{
+        if(e.key!=='Escape')return;
+        e.stopPropagation();
+        if(!memQuery)return;
+        e.preventDefault();memQuery='';renderMembers();
+      };
+    }
+    const qx=m.querySelector('#dlMemQX');
+    if(qx)qx.onclick=()=>{memQuery='';renderMembers();const n=m.querySelector('#dlMemQ');if(n)n.focus()};
     const more=document.getElementById('dlMemMore');if(more)more.onclick=()=>{offAll=true;renderMembers()};
   }
   document.addEventListener('click',e=>{const r=e.target.closest&&e.target.closest('#dlMembers [data-open-profile]');if(r)openUserProfile(Number(r.dataset.openProfile),e.target.closest('.dlp-full')?{full:true}:undefined)});
@@ -990,5 +1195,17 @@ const DiscordShell=(function(){
     return true;
   }
 
-  return{refresh,renderFriends,on,serverMode,renderChannels,openServer,openChannel,lastChannelOf};
+  /* v54.8: the presence-sized slice of refresh().
+     refresh() redraws the server rail, the channel list, the account panel AND the member list.
+     A presence change can only move something in the last two, so this does those and leaves
+     the rail and the channel list alone. renderMembers() already skips its DOM write when the
+     markup it produces is unchanged, so the common case — a re-emit that changes nothing
+     visible — now costs a string build and no layout at all. */
+  function refreshPresence(){
+    if(!on()||!ME)return;
+    try{renderUser()}catch(_){}
+    try{renderMembers()}catch(_){}
+  }
+
+  return{refresh,refreshPresence,renderFriends,on,serverMode,renderChannels,openServer,openChannel,lastChannelOf};
 })();

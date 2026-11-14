@@ -297,7 +297,11 @@ const PBadges=(function(){
 
   function invalidate(id){delete boostCache[Number(id)];delete achCache[Number(id)]}
 
-  return{CATALOG,forUser,invalidate,ageOf,boostCountOf,achOf};
+  /* v54.8: the per-account boost count is cached; it has to go on an account switch.
+     See profileCacheReset() at the end of this file. */
+  function resetAll(){Object.keys(boostCache).forEach(k=>delete boostCache[k])}
+
+  return{CATALOG,forUser,invalidate,ageOf,boostCountOf,achOf,resetAll};
 })();
 
 /* ======================================================================
@@ -679,5 +683,40 @@ const PConn=(function(){
     await load(ME.id);
   }
 
-  return{of,load,save,del,invalidate,KINDS:CONN_KINDS,BY_ID:CONN_BY_ID};
+  /* v54.8: drop EVERY cached connection list, not one id's. Needed on account switch — see
+     profileCacheReset() at the end of this file. */
+  function resetAll(){Object.keys(cache).forEach(k=>delete cache[k])}
+
+  return{of,load,save,del,invalidate,resetAll,KINDS:CONN_KINDS,BY_ID:CONN_BY_ID};
 })();
+
+/* ==========================================================================
+ *  v54.8 — ONE place that drops every per-account profile cache.
+ *
+ *  Each module above keeps its own cache, and for good reasons: badges need a boost count that
+ *  costs a read, connections are fetched per profile, notes are private to the viewer, mutuals
+ *  are derived from the viewer's own friend list. What none of them had was a way to be told
+ *  "this is a different person now".
+ *
+ *  So signing out and into another account in the same tab left the PREVIOUS account's profile
+ *  data in memory: their notes (which are private to them), their mutual-friend lists, their
+ *  badge/boost counts, their connections. The first profile opened afterwards drew from it.
+ *  That is the "profile state being shared accidentally between accounts" in section 4.4, and
+ *  the fact that notes are involved makes it a privacy problem rather than only a cosmetic one.
+ *
+ *  Called from resetAccountCaches() in js/core/database.js, which runs on every auth change.
+ *  Each clear is wrapped on its own: a module that has not started yet must not stop the rest
+ *  from being cleared.
+ * ========================================================================== */
+function profileCacheReset(){
+  try{PConn.resetAll()}catch(_){}
+  try{PBadges.resetAll()}catch(_){}
+  try{PAch.stop&&PAch.stop()}catch(_){}
+  try{PNotes.stop&&PNotes.stop()}catch(_){}
+  try{PActivity.stop&&PActivity.stop()}catch(_){}
+  try{PData.stop&&PData.stop()}catch(_){}
+  /* The open card belongs to the previous account's session too. Closing it is the honest
+     outcome: repainting it for the new account would show one person's card with another
+     person's viewer-specific rows (their note, their mutuals, their friend buttons). */
+  try{if(typeof PCard!=='undefined'&&PCard.closeAll)PCard.closeAll()}catch(_){}
+}

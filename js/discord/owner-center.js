@@ -136,34 +136,43 @@ const DOwner=(function(){
     }catch(e){S.rolesErr=(e&&e.message)||'Could not load the global roles.'}
   }
 
-  /* One place for every call to /api/customrole, so the auth token, the timeout and the error
-     wording cannot drift between the four actions. */
-  async function api(action,body){
+  /* One place for every authenticated owner-only POST, so the token, the timeout and the error
+     wording cannot drift between callers. v54.8 made the endpoint a parameter (it was hardcoded
+     to customrole) so the ownership audit can reuse exactly this path — including the detail
+     that the ONLY thing sent as identity is a freshly minted Firebase ID token. There is no
+     field here by which this client could name an account; the server resolves that itself. */
+  async function apiTo(endpoint,action,body,label){
     assertOwner();
     const base=(typeof tosApiBase==='function')?tosApiBase():String((CFG&&CFG.TOS_API)||'').replace(/\/$/,'');
     if(!base)throw new Error('No API base is configured (CFG.TOS_API is empty).');
+    const what=label||endpoint;
     let token='';
     try{token=await auth.currentUser.getIdToken()}
     catch(_){throw new Error('Could not get a sign-in token. Try signing out and in again.')}
     const c=(typeof AbortController!=='undefined')?new AbortController():null;
-    const tm=setTimeout(()=>{try{c&&c.abort()}catch(_){}},12000);
+    const tm=setTimeout(()=>{try{c&&c.abort()}catch(_){}},15000);
     let r;
     try{
-      r=await fetch(base+'/api/customrole',{
+      r=await fetch(base+'/api/'+endpoint,{
         method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',
         signal:c?c.signal:undefined,
         body:JSON.stringify({idToken:token,action,...(body||{})})
       });
     }catch(e){
       throw new Error(e&&e.name==='AbortError'
-        ?'The role endpoint did not answer in time.'
-        :'Could not reach the role endpoint. Is api/ deployed at '+base+'?');
+        ?'The '+what+' endpoint did not answer in time.'
+        :'Could not reach the '+what+' endpoint. Is api/ deployed at '+base+'?');
     }finally{clearTimeout(tm)}
-    if(r.status===404)throw new Error('api/customrole.js is not deployed at '+base+'. Global role grants need it — the rest of ICH does not.');
+    if(r.status===404)throw new Error('api/'+endpoint+'.js is not deployed at '+base+'. '+
+      (endpoint==='ownership'
+        ?'The ownership audit needs it; the rest of ICH does not.'
+        :'Global role grants need it — the rest of ICH does not.'));
     let j=null;try{j=await r.json()}catch(_){}
-    if(!r.ok||!j||j.error)throw new Error((j&&j.error)||('The role endpoint answered '+r.status+'.'));
+    if(!r.ok||!j||j.error)throw new Error((j&&j.error)||('The '+what+' endpoint answered '+r.status+'.'));
     return j;
   }
+  const api=(action,body)=>apiTo('customrole',action,body,'role');
+  const ownApi=(action,body)=>apiTo('ownership',action,body,'ownership');
 
   /* ------------------------------------------------------------------
    *  DERIVED FIGURES
@@ -219,6 +228,7 @@ const DOwner=(function(){
 
   const SECTIONS=[
     ['overview','Overview'],
+    ['ownership','Ownership'],
     ['users','Users'],
     ['servers','Servers'],
     ['roles','Global Roles'],
@@ -244,6 +254,7 @@ const DOwner=(function(){
     if(!amOwner()){toast('Site owners only.','bad');return}
     close();
     S=blank();
+    own={loading:false,err:'',rows:null,summary:null,at:0,busy:0};   // never show a previous opening's audit
     sec=section||'overview';
     el=document.createElement('div');
     el.className='dset dset-owner';
@@ -292,6 +303,7 @@ const DOwner=(function(){
       return;
     }
     if(sec==='overview')drawOverview(m);
+    else if(sec==='ownership')drawOwnership(m);
     else if(sec==='users')drawUsers(m);
     else if(sec==='servers')drawServers(m);
     else if(sec==='roles')drawRoles(m);
@@ -300,6 +312,177 @@ const DOwner=(function(){
 
   const stat=(n,l,sub)=>'<div class="oc-stat"><div class="oc-stat-n">'+esc(String(n))+'</div>'+
     '<div class="oc-stat-l">'+esc(l)+'</div>'+(sub?'<div class="oc-stat-sub">'+esc(sub)+'</div>':'')+'</div>';
+
+  /* ==================================================================
+   *  OWNERSHIP  (v54.8)
+   *
+   *  THE SECTION THAT DID NOT EXIST, AND WHOSE ABSENCE WAS THE BUG.
+   *
+   *  ICH grants site ownership from two nodes: owners/ and secretowner/. The second is
+   *  unreadable by every client — including this one, including other owners — because its
+   *  whole purpose is ownership that shows no Owner tag. isOwner(), the database rules and
+   *  api/_lib.roleOf() all honour it.
+   *
+   *  So deleting an account from owners/ in the Firebase console removed its TAG and left its
+   *  POWERS in place whenever secretowner/$id was also set, and no screen in ICH could show
+   *  that. An account would look like an ordinary member and still be able to post
+   *  announcements. That is the reported symptom.
+   *
+   *  Everything on this page comes from POST /api/ownership, which reads those nodes with the
+   *  Admin SDK after verifying that the CALLER is an owner — so the secret node stays
+   *  unreadable from the browser and is still auditable by the person who runs the site.
+   *
+   *  This page cannot GRANT anything. Only take away. See the header of api/ownership.js for
+   *  why that asymmetry is deliberate.
+   * ================================================================== */
+  let own={loading:false,err:'',rows:null,summary:null,at:0,busy:0};
+
+  async function loadOwnership(){
+    own.loading=true;own.err='';
+    try{
+      const j=await ownApi('audit',{});
+      own.rows=Array.isArray(j.rows)?j.rows:[];
+      own.summary=j.summary||null;
+      own.at=Date.now();
+    }catch(e){own.err=(e&&e.message)||'Could not read the ownership tables.';own.rows=null}
+    finally{own.loading=false}
+  }
+
+  /* The human sentence for each machine-readable problem code the endpoint reports. Written out
+     rather than shown as a code, because the point of this page is that somebody can act on it. */
+  const OWN_PROBLEM={
+    'orphan-secret-owner':'Has secretowner/ but NOT owners/. This is the state that keeps full '+
+      'owner powers — announcements included — while showing no Owner tag. If this account was '+
+      'meant to lose ownership, revoke it below.',
+    'no-idToUid-mapping':'No idToUid/ record, so the database rules cannot tie this id to a '+
+      'sign-in. Its grants cannot be used, but they should still be cleared.',
+    'no-user-record':'No users/ record: the account was deleted but its grant was left behind.',
+    'banned-but-owner':'Banned AND holding site ownership. Ownership beats the ban in most '+
+      'rules, so this account is not actually locked out.'
+  };
+  function ownProblemText(p){
+    if(OWN_PROBLEM[p])return OWN_PROBLEM[p];
+    if(p.indexOf('mapping-mismatch')===0)
+      return 'Its uid maps back to a DIFFERENT numeric id ('+esc(p.split('=')[1]||'?')+'), so this '+
+             'account does not resolve to the id its grant is written under.';
+    return p;
+  }
+
+  function drawOwnership(m){
+    const head=
+      '<div class="dset-h1">Ownership</div>'+
+      '<div class="oc-note">Every account holding a site-level grant, read live through '+
+        '<code>/api/ownership</code> with the service account. This is the only place '+
+        '<code>secretowner/</code> can be seen: the database rules make it unreadable from the '+
+        'browser, which is why removing an account from <code>owners/</code> alone could leave '+
+        'its powers intact with no Owner tag to show it.</div>';
+
+    if(own.loading&&!own.rows){
+      m.innerHTML=head+'<div class="oc-diag"><div class="oc-diag-l">Reading the ownership tables…</div></div>';
+      return;
+    }
+    if(own.err){
+      m.innerHTML=head+'<div class="dnote bad">'+esc(own.err)+'</div>'+
+        '<button type="button" class="dbtn" id="ocOwnRetry">Try again</button>';
+      m.querySelector('#ocOwnRetry').onclick=async()=>{draw();await loadOwnership();draw()};
+      return;
+    }
+    if(!own.rows){
+      m.innerHTML=head+'<button type="button" class="dbtn primary" id="ocOwnLoad">Run the ownership audit</button>';
+      m.querySelector('#ocOwnLoad').onclick=async()=>{own.loading=true;draw();await loadOwnership();draw()};
+      return;
+    }
+
+    const s=own.summary||{};
+    const problems=own.rows.filter(r=>r.problems&&r.problems.length);
+    const esum=
+      '<div class="oc-grid">'+
+        stat(s.owners||0,'Visible owners','owners/ — these show the Owner tag')+
+        stat(s.secretOwners||0,'Secret owners','secretowner/ — full powers, no tag')+
+        stat(s.admins||0,'Site admins','admin/')+
+        stat(s.mods||0,'Site moderators','mods/')+
+        stat(s.orphanSecretOwners||0,'Orphaned secret grants',(s.orphanSecretOwners?'ACT ON THESE':'none'))+
+        stat(s.brokenMappings||0,'Broken id mappings',(s.brokenMappings?'cannot sign in as that id':'none'))+
+      '</div>';
+
+    const banner=problems.length
+      ? '<div class="dnote bad"><b>'+problems.length+' account'+(problems.length===1?'':'s')+' need'+
+        (problems.length===1?'s':'')+' attention.</b> Each one is listed below with what is wrong '+
+        'and what revoking would remove.</div>'
+      : '<div class="dnote ok">No orphaned grants, no broken mappings, no ownership held by a '+
+        'deleted or banned account. Every grant below is intentional.</div>';
+
+    const rowHtml=r=>{
+      const g=r.grants||{};
+      const chips=[
+        g.owners?'<span class="oc-chip own">owners/</span>':'',
+        g.secretowner?'<span class="oc-chip secret">secretowner/</span>':'',
+        g.admin?'<span class="oc-chip">admin/</span>':'',
+        g.mods?'<span class="oc-chip">mods/</span>':''
+      ].filter(Boolean).join('');
+      const bad=(r.problems||[]).length;
+      const me=Number(r.id)===Number(ME&&ME.id);
+      return '<div class="oc-row oc-own-row'+(bad?' bad':'')+'">'+
+        '<div class="oc-row-txt">'+
+          '<div class="oc-row-nm">'+esc(r.username||'(no account record)')+
+            ' <span class="oc-dim">#'+esc(String(r.id))+'</span>'+(me?' <span class="oc-chip you">you</span>':'')+
+            (r.banned?' <span class="oc-chip ban">banned</span>':'')+'</div>'+
+          '<div class="oc-own-chips">'+chips+'</div>'+
+          (bad?(r.problems.map(p=>'<div class="oc-own-prob">'+ownProblemText(p)+'</div>').join('')):'')+
+        '</div>'+
+        '<div class="oc-own-acts">'+
+          (g.secretowner&&!g.owners
+            ?'<button type="button" class="dbtn danger sm" data-rvs="'+esc(String(r.id))+'">Revoke secret ownership</button>':'')+
+          '<button type="button" class="dbtn sm" data-rva="'+esc(String(r.id))+'">Revoke every grant</button>'+
+        '</div>'+
+      '</div>';
+    };
+
+    const ordered=own.rows.slice().sort((a,b)=>
+      ((b.problems||[]).length?1:0)-((a.problems||[]).length?1:0)||a.id-b.id);
+
+    m.innerHTML=head+esum+banner+
+      '<div class="dset-h2">Grants</div>'+
+      (ordered.length?ordered.map(rowHtml).join('')
+        :'<div class="oc-empty">No account holds any site-level grant. That cannot normally '+
+         'happen — if you are reading this, check that the audit actually reached the database.</div>')+
+      '<div class="dset-h2">Granting</div>'+
+      '<div class="oc-note">Ownership is still granted from the Firebase console only, by '+
+        'setting <code>owners/&lt;id&gt;</code> or <code>secretowner/&lt;id&gt;</code> to <code>1</code>. '+
+        'This page deliberately cannot give power, only take it away: an endpoint that could '+
+        'grant ownership would be worth attacking, and one that can only revoke is recoverable '+
+        'from the console if it is ever misused.</div>'+
+      '<div class="oc-note">Revocations are recorded in <code>ownerLog/</code>, which only '+
+        'owners can read and no browser can write.</div>'+
+      '<button type="button" class="dbtn" id="ocOwnRe">Re-run the audit</button>'+
+      (own.at?'<span class="oc-dim"> read at '+esc(new Date(own.at).toLocaleTimeString())+'</span>':'');
+
+    m.querySelector('#ocOwnRe').onclick=async()=>{own.rows=null;own.loading=true;draw();await loadOwnership();draw()};
+    m.querySelectorAll('[data-rvs]').forEach(b=>b.onclick=()=>revoke(Number(b.dataset.rvs),['secretowner'],b));
+    m.querySelectorAll('[data-rva]').forEach(b=>b.onclick=()=>revoke(Number(b.dataset.rva),null,b));
+  }
+
+  async function revoke(id,only,btn){
+    const row=(own.rows||[]).find(r=>Number(r.id)===id)||{};
+    const who=(row.username||('account #'+id))+' (#'+id+')';
+    const what=only?'secret ownership':'every site-level grant (owner, secret owner, admin and moderator)';
+    const self=Number(id)===Number(ME&&ME.id);
+    const msg='Remove '+what+' from '+who+'?'+
+      (self?'\n\nTHIS IS YOUR OWN ACCOUNT. You will lose access to this panel immediately.':'')+
+      '\n\nThis cannot be undone from here — re-granting is a Firebase console action.';
+    if(!confirm(msg))return;
+    if(btn)btn.disabled=true;
+    try{
+      assertOwner();
+      const j=await ownApi('revoke',{target:id,...(only?{only}:{}),...(self?{confirmSelf:true}:{})});
+      const n=(j.revoked||[]).length;
+      toast(n?('Revoked: '+j.revoked.join(', ')):'That account held no grants.',n?'good':'');
+      own.rows=null;own.loading=true;draw();await loadOwnership();draw();
+    }catch(e){
+      toast((e&&e.message)||'Could not revoke that.','bad');
+      if(btn)btn.disabled=false;
+    }
+  }
 
   /* ---------------- Overview ---------------- */
   function drawOverview(m){
@@ -764,9 +947,27 @@ const DOwner=(function(){
     })();
   }
 
-  return{open,close,amOwner};
+  /* v54.8: called by the authEpoch listener in js/core/database.js when this account's site
+     grants are taken away while it is signed in. owners/ and secretowner/ are already watched
+     live, so the PERMISSION is already gone by the time this runs — what is left to do is get
+     the now-useless panel off the screen instead of leaving a page whose every button will be
+     refused, and say why. */
+  function revoked(){
+    if(!el)return;
+    if(amOwner())return;              // still an owner (e.g. only `admin` was removed)
+    close();
+    try{toast('Your site ownership was removed. The control center is closed.','bad')}catch(_){}
+  }
+
+  return{open,close,amOwner,revoked};
 })();
 
 /* The entry point used by the rail and the quick switcher. A plain function so it matches
    openDiscover / openShop / openSettings rather than being the one that needs a namespace. */
 function openOwnerCenter(section){return DOwner.open(section)}
+/* Hook for js/core/database.js's authEpoch watcher. Declared as a plain function so the
+   `typeof onAuthorizationRevoked==='function'` guard there finds it whatever the load order. */
+function onAuthorizationRevoked(){
+  try{DOwner.revoked()}catch(_){}
+  try{if(typeof DiscordShell!=='undefined')DiscordShell.refresh()}catch(_){}
+}

@@ -379,12 +379,22 @@ function openDiscover(){
   let q='';
   let sort='members';                       // members | name | new
   let cat='';                               // '' = every category
-  /* 'loading' until the discovery node has answered once. DModel subscribes to serverDiscovery
-     at sign-in, so the answer is usually already here; this covers the cold case and, just as
-     importantly, stops "nothing is listed" being shown for a read that was refused. */
-  let phase=(DModel._state&&DModel._state.discovery&&Object.keys(DModel._state.discovery).length)?'ready':'loading';
-  let errMsg='';
-  const settle=setTimeout(()=>{if(phase==='loading'){phase='ready';paint()}},4000);
+  /* v54.9: the phase is READ FROM THE MODEL, which now knows whether the read succeeded.
+     What was here before: a guess from whether the cached map happened to be non-empty, plus a
+     4-second timer that flipped 'loading' to 'ready' whatever had happened. So a refused or
+     failed read rendered as "No public servers yet" — an error reported as a fact about the
+     world. The timer is gone; there is nothing left for it to paper over.
+     An 'error' that still has a cached list says so and shows the list, because a listener that
+     dropped mid-session had correct data a moment ago and blanking it helps nobody. */
+  function modelPhase(){
+    let st={state:'off',error:'',count:0};
+    try{st=DModel.discoveryState()}catch(_){}
+    if(st.state==='error')return st.count?'stale':'error';
+    if(st.state==='ready')return 'ready';
+    return 'loading';
+  }
+  function modelErr(){try{return DModel.discoveryState().error||''}catch(_){return ''}}
+  let phase=modelPhase();
 
   const SORTS=[['members','Most members'],['name','Name'],['new','Newest']];
 
@@ -437,20 +447,49 @@ function openDiscover(){
   function paintList(){
     const box=main.querySelector('#dvList');
     if(!box)return;
+    const wireRetry=()=>{
+      const r=box.querySelector('#dvRetry');
+      if(!r)return;
+      r.onclick=()=>{
+        /* v54.9: this actually retries. DModel.retryDiscovery() tears the serverDiscovery
+           listener down and creates it again, so the read genuinely happens a second time and
+           the next state change is a real answer. The old handler set phase='loading', waited
+           600ms and set phase='ready' — it could not fail, and it could not succeed either. */
+        r.disabled=true;r.textContent='Retrying…';
+        let ok=false;
+        try{ok=DModel.retryDiscovery()}catch(_){}
+        if(!ok){r.disabled=false;r.textContent='Try again';toast('Sign in to browse Discover.','bad');return}
+        phase='loading';paintList();
+      };
+    };
     if(phase==='error'){
-      box.innerHTML='<div class="dempty"><b>Discover could not be loaded.</b><div class="dhint" style="margin-top:6px">'+
-        esc(errMsg||'The server list could not be read. Check your connection and try again.')+
-        '</div><button type="button" class="dbtn sec sm" id="dvRetry" style="margin-top:12px">Try again</button></div>';
-      const r=box.querySelector('#dvRetry');if(r)r.onclick=()=>{phase='loading';errMsg='';paint();setTimeout(()=>{phase='ready';paint()},600)};
+      box.innerHTML='<div class="dempty dv-err"><b>Discover could not be loaded.</b>'+
+        '<div class="dhint" style="margin-top:6px">'+
+          esc(modelErr()==='PERMISSION_DENIED'
+            ?'The public server list could not be read. The database rules for serverDiscovery may not be published.'
+            :'The public server list could not be read. Check your connection and try again.')+
+        '</div>'+
+        (modelErr()?'<div class="dhint dv-code">'+esc(modelErr())+'</div>':'')+
+        '<button type="button" class="dbtn sec sm" id="dvRetry" style="margin-top:12px">Try again</button></div>';
+      wireRetry();
       return;
     }
     if(phase==='loading'){
-      box.innerHTML='<div class="dvgrid">'+'<div class="dvcard skel"></div>'.repeat(6)+'</div>';
+      box.innerHTML='<div class="dvgrid">'+'<div class="dvcard skel" aria-hidden="true"></div>'.repeat(6)+'</div>'+
+        '<div class="sr-only" role="status">Loading public servers…</div>';
       return;
     }
     let list;
     try{list=DModel.discoveryList()}
-    catch(e){phase='error';errMsg=(e&&e.message)||'';paintList();return}
+    catch(e){
+      /* A rendering failure, which is a different thing from the read failing — and is the only
+         thing this branch ever actually caught before. Said as what it is. */
+      box.innerHTML='<div class="dempty dv-err"><b>Discover could not be drawn.</b>'+
+        '<div class="dhint" style="margin-top:6px">'+esc((e&&e.message)||'Unexpected error.')+'</div>'+
+        '<button type="button" class="dbtn sec sm" id="dvRetry" style="margin-top:12px">Try again</button></div>';
+      wireRetry();
+      return;
+    }
     const needle=q.trim().toLowerCase();
     if(cat)list=list.filter(s=>s.cat===cat);
     /* Name, description AND tags: somebody searching "minecraft" means any of the three, and
@@ -462,13 +501,24 @@ function openDiscover(){
       (s.tags||[]).some(t=>t.includes(needle))||
       (s.cat||'').toLowerCase().includes(needle));
     list=sorted(list);
-    box.innerHTML=list.length
+    /* v54.9: 'stale' is the fourth state — the listener dropped AFTER delivering a list once.
+       The list is still shown, because it was right a moment ago and blanking it helps nobody,
+       with a banner saying it may no longer be current and a real retry. Reporting this as a
+       clean success is how a disconnected session looks healthy. */
+    const staleBar=phase==='stale'
+      ?'<div class="dv-stale" role="status">This list may be out of date — the connection to the '+
+         'server directory dropped. <button type="button" class="dbtn sec sm" id="dvRetry">Refresh</button></div>'
+      :'';
+    box.innerHTML=staleBar+(list.length
       ?'<div class="dvgrid">'+list.map(cardHTML).join('')+'</div>'
+      /* An EMPTY RESULT. Reached only when the read genuinely succeeded, which is the whole
+         point of separating the states: this sentence is now a fact rather than a guess. */
       :'<div class="dempty">'+(needle
           ?'No public servers match “'+esc(q.trim())+'”'+(cat?' in '+esc(cat):'')+'.'
           :cat
             ?'No public servers in '+esc(cat)+' yet.'
-            :'No servers are listed yet. A server owner can list theirs in Server Settings → Overview.')+'</div>';
+            :'No servers are listed yet. A server owner can list theirs in Server Settings → Overview.')+'</div>');
+    if(phase==='stale')wireRetry();
     wireCards(box);
   }
 
@@ -616,8 +666,11 @@ function openDiscover(){
   paint();
   /* Repaint the list - and only the list - whenever the model changes: a count moving, a server
      being listed or unlisted, somebody else deleting one while this is open. */
-  try{offModel=DModel.onChange(()=>{if(!el.isConnected){close();return}if(phase==='loading'){phase='ready'}paintList()})}catch(_){}
-  el.addEventListener('remove',()=>clearTimeout(settle));
+  /* v54.9: re-read the phase from the model rather than assuming a change means success.
+     The old line forced 'ready' on the first change of any kind, which is how a failure
+     became an empty list. */
+  try{offModel=DModel.onChange(()=>{if(!el.isConnected){close();return}phase=modelPhase();paintList()})}catch(_){}
+  /* v54.9: the `settle` timer this cleared is gone — see modelPhase(). Nothing to clear. */
 }
 
 /* ======================================================================

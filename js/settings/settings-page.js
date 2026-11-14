@@ -9,6 +9,14 @@
 /* `startTab` opens settings straight on one pane - the user panel uses it for Profiles, the
    voice panel for Voice & Video, and the panes that rebuild their own markup use it to come
    back to where you were. */
+/* v54.8: set while the settings panel is open; see the note by _settingsClose= below. */
+let _settingsClose=null;
+function closeSettingsPanel(){
+  if(!_settingsClose)return false;
+  const f=_settingsClose;_settingsClose=null;
+  try{f()}catch(_){}
+  return true;
+}
 function openSettings(fromChat,startTab){
   ME=DB.currentUser();
   const orig={...ME.settings,pings:{...ME.settings.pings}};
@@ -92,26 +100,18 @@ function openSettings(fromChat,startTab){
       </div>
     </div>
 
-    <div data-p="ping" class="hidden">
-      <div class="set-card">
-        <div class="section-h" style="margin-top:0">🔔 Notifications</div>
-        <div class="toggle-row" style="margin-bottom:14px">
-          <div style="font-weight:600;font-size:14px">Receive @everyone pings</div>
-          <label class="switch"><input type="checkbox" id="sPe" ${s.pings.everyone?'checked':''}><span class="slider"></span></label>
-        </div>
-        <div class="toggle-row">
-          <div style="font-weight:600;font-size:14px">Play sound on ping</div>
-          <label class="switch"><input type="checkbox" id="sPs" ${s.pings.sound?'checked':''}><span class="slider"></span></label>
-        </div>
-        <div class="toggle-row" style="margin-top:14px">
-          <div>
-            <div style="font-weight:600;font-size:14px">Desktop notifications</div>
-            <div class="hint" style="margin-top:2px">Silent notifications with the sender's name when you're pinged or DMed elsewhere.</div>
-          </div>
-          <label class="switch"><input type="checkbox" id="sPd" ${s.pings.desktop?'checked':''}><span class="slider"></span></label>
-        </div>
-      </div>
-    </div>
+    <!-- v54.9: THE LEGACY NOTIFICATION TOGGLES WERE HERE AND ARE GONE.
+         This pane used to carry its own "Receive @everyone pings" / "Play sound on ping" /
+         "Desktop notifications" switches (#sPe, #sPs, #sPd) writing a MAP at
+         users/$id/settings/pings, while js/settings/settings-plus.js appended a second set of
+         cards into this same pane writing the scalar Prefs keys. The result was two "Desktop
+         notifications" switches and two sound switches visible side by side, bound to different
+         storage, with disagreeing defaults — and js/chat/pings.js gated its whole scan on the
+         legacy value, so the newer switch did nothing.
+         There is now one system (js/core/prefs.js), and the cards that render it are appended
+         here by V54_PANES.ping. Existing accounts keep their choices: Prefs.migrateLegacyNotif()
+         copies the old map across once, and Prefs.notif() honours the old value until it has. -->
+    <div data-p="ping" class="hidden"></div>
 
     <div data-p="music" class="hidden">
       <div class="set-card">
@@ -1104,7 +1104,12 @@ function openSettings(fromChat,startTab){
     s.discordLook=true;   // always on
     s.antiLag=AntiLag.on();   // keep the Save payload in step with the toggle (it saves itself instantly)
     s.filterLocal=$$('#sFilterLocal').checked;
-    s.pings={everyone:$$('#sPe').checked,sound:$$('#sPs').checked,desktop:$$('#sPd').checked};
+    /* v54.9: `pings` is no longer written. The three preferences it held are scalars now and
+       save themselves the moment they are toggled, like every other Prefs key. The stored map
+       is deliberately LEFT IN PLACE rather than deleted: it is what
+       Prefs.migrateLegacyNotif() reads, and on an account whose migration write has not yet
+       succeeded it is still the live answer. Deleting it here would be the silent reset the
+       brief rules out. */
     s.music={enabled:$$('#sMusicOn').checked,volume:musicWidgetVolume(),shuffle:s.music&&s.music.shuffle!==false};
   }
   $$('#sFontUp').onclick=()=>$$('#sFontFile').click();
@@ -1190,24 +1195,9 @@ function openSettings(fromChat,startTab){
     $$('#dlThemeCard').querySelectorAll('[data-dl-theme]').forEach(x=>x.classList.toggle('active',x===b));
     const nm=$$('#dlThemeName');if(nm)nm.textContent=b.title;
   });
-  // Flipping this on has to ask the browser for permission right here, inside the click
-  // handler — browsers require a real user gesture for the prompt to reliably show at all,
-  // and this is the ONLY place in the app permission is ever requested (see the notes above
-  // checkPingNotifications). Turning it off never touches browser permission at all.
-  $$('#sPd').addEventListener('change',e=>{
-    if(!e.target.checked)return;                 // turning off: just a preference change
-    if(typeof Notification==='undefined'){e.target.checked=false;preview();toast('Your browser does not support notifications.','bad');return}
-    if(Notification.permission==='granted')return;        // already have it — nothing to ask
-    if(Notification.permission==='denied'){                // previously blocked — auto turn back off
-      e.target.checked=false;preview();
-      toast('Notifications are blocked for this site in your browser settings.','bad');
-      return;
-    }
-    // permission is 'default' — genuinely ask; auto-revert the toggle if they decline
-    Notification.requestPermission().then(p=>{
-      if(p!=='granted'){e.target.checked=false;preview();toast('Notifications were not allowed.','bad')}
-    });
-  });
+  /* v54.9: the permission request that lived here on #sPd moved with the toggle. It is now on
+     the canonical `desktopNotif` switch in js/settings/settings-plus.js, which still asks
+     inside the change handler — browsers only show the prompt for a real user gesture. */
   root.querySelectorAll('input,select').forEach(i=>i.addEventListener('input',preview));
   $$('#sBgI').onchange=async e=>{
     const f=e.target.files[0];if(!f)return;
@@ -1219,11 +1209,19 @@ function openSettings(fromChat,startTab){
     }catch(_){$$('#fileTxt').textContent='❌ Could not load that image'}
     preview();
   };
-  const closeRevert=()=>{if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();if(banListStop){banListStop();banListStop=null}if(muteListTimer){clearInterval(muteListTimer);muteListTimer=null}closeModalAnimated(root,()=>{applyStyle(document.documentElement,ME.settings);refitAllAvatars();MusicPlayer.applyPrefs(ME.settings.music)})};
+  const closeRevert=()=>{_settingsClose=null;if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();if(banListStop){banListStop();banListStop=null}if(muteListTimer){clearInterval(muteListTimer);muteListTimer=null}closeModalAnimated(root,()=>{applyStyle(document.documentElement,ME.settings);refitAllAvatars();MusicPlayer.applyPrefs(ME.settings.music)})};
   $$('#sCancel').onclick=closeRevert;
   $$('#sX').onclick=closeRevert;
+  /* v54.8: remember how to tear this panel down, so an account switch can do it.
+     The settings panel is built from ONE account's settings object, read when it opened. Signing
+     into another account in the same tab left it on screen showing — and able to save — the
+     previous account's preferences, which is the "account switching does not show the previous
+     account's settings" of section 7.5. closeRevert is used rather than a bare innerHTML wipe
+     because it is the path that also drops the music listeners, the ban-list subscription and
+     the mute timer. */
+  _settingsClose=closeRevert;
   // Discord look: the profile card at the top of the nav opens your account/profile (settings are reverted first, like Cancel)
-  const goAccount=()=>{if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();if(banListStop){banListStop();banListStop=null}if(muteListTimer){clearInterval(muteListTimer);muteListTimer=null}closeModalAnimated(root,()=>{applyStyle(document.documentElement,ME.settings);refitAllAvatars();MusicPlayer.applyPrefs(ME.settings.music);openAccount()})};
+  const goAccount=()=>{_settingsClose=null;if(musicUnsub)musicUnsub();if(musicTimeUnsub)musicTimeUnsub();if(banListStop){banListStop();banListStop=null}if(muteListTimer){clearInterval(muteListTimer);muteListTimer=null}closeModalAnimated(root,()=>{applyStyle(document.documentElement,ME.settings);refitAllAvatars();MusicPlayer.applyPrefs(ME.settings.music);openAccount()})};
   const t0=root.querySelector('#sTitle');if(t0&&typeof DiscordLook!=='undefined'&&DiscordLook.on())t0.textContent='Messages';
   const prof=root.querySelector('#sProfile');
   if(prof){prof.onclick=goAccount;prof.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();goAccount()}}}

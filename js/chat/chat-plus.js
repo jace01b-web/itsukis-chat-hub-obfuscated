@@ -824,30 +824,127 @@ document.addEventListener('contextmenu',e=>{
   const m=(DB.messages(key)||[]).find(x=>x.id===id);
   if(!m)return;
   e.preventDefault();
+  openCtx(e,messageMenuItems(key,m),{label:'Message menu'});
+},true);
+
+/* ======================================================================
+ *  THE MESSAGE MENU (v54.8, brief section 8.2)
+ *
+ *  Built in one place so the right-click menu and the touch long-press offer exactly the same
+ *  actions, and so every action's permission test lives next to the action itself.
+ *
+ *  ONLY VALID ACTIONS ARE SHOWN, and that is a presentation decision, not a security one:
+ *    - Edit appears on your own text messages only, because DB.editMessage and the database
+ *      rules both require it (messages/$key/$msg/.write: the edit branch tests
+ *      idToUid/<data senderId> === auth.uid).
+ *    - Delete appears on your own, or where the staff ladder in js/moderation/roles.js
+ *      (outranks) or the server's Manage Messages permission allows it — the same test msgEl()
+ *      uses for the hover bar, so the two cannot disagree.
+ *    - Pin asks DPins.canPin.
+ *  If every check here were deleted, the extra items would simply fail against the rules. That
+ *  is what makes hiding them the right behaviour rather than the enforcement.
+ * ====================================================================== */
+function messageMenuItems(key,m){
+  const id=m.id;
+  const mine=Number(m.senderId)===Number(ME.id);
   const items=[];
-  if(DPins.canPin(key))
-    items.push({label:DPins.isPinned(key,id)?'Unpin Message':'Pin Message',onClick:()=>{
-      DPins.toggle(key,id).catch(err=>toast((err&&err.message)||'Could not pin.','bad'));
-    }});
+
+  /* ---- things anybody can do with any message ---- */
+  items.push({label:'Reply',onClick:()=>startReply(m)});
+  items.push({label:'Add Reaction',onClick:()=>{
+    /* Opens the picker already aimed at this message, which is what the hover bar's react
+       button does — reusing it rather than re-implementing the picker. */
+    const row=document.querySelector('#messages [data-msg-id="'+String(id).replace(/"/g,'')+'"]');
+    const btn=row&&row.querySelector('[data-react-btn]');
+    if(btn){btn.click();return}
+    toast('Scroll to the message to add a reaction.','bad');
+  }});
+
+  /* ---- your own message ---- */
+  if(mine&&m.text)items.push({label:'Edit Message',onClick:()=>startEdit(m)});
+
+  let canDelete=mine;
+  if(!canDelete){try{canDelete=outranks(ME.id,m.senderId)}catch(_){}}
+  if(!canDelete){
+    try{
+      const s=(typeof view!=='undefined'&&view.sid)||null;
+      if(s&&typeof DModel!=='undefined'&&!DModel.isSystem(s)&&view.mode!=='dms')
+        canDelete=DModel.can(s,'manageMsg',ME.id)&&DModel.canManageMember(s,m.senderId);
+    }catch(_){}
+  }
+  if(canDelete)items.push({label:mine?'Delete Message':'Delete Message (moderation)',danger:true,
+    onClick:()=>modalDeleteMessageConfirm(key,m)});
+
+  items.push({sep:true});
+
+  /* ---- keeping it ---- */
+  let canPin=false;try{canPin=DPins.canPin(key)}catch(_){}
+  if(canPin)items.push({label:DPins.isPinned(key,id)?'Unpin Message':'Pin Message',onClick:()=>{
+    DPins.toggle(key,id).catch(err=>toast((err&&err.message)||'Could not pin.','bad'));
+  }});
   items.push({label:DSaved.has(key,id)?'Remove from Saved':'Save Message',onClick:()=>{
     DSaved.save(key,id).catch(err=>toast((err&&err.message)||'Could not save.','bad'));
   }});
-  if(m.text)items.push({label:'Copy Text',onClick:()=>copyText(String(m.text)).then(ok=>toast(ok?'Copied':'Could not copy',ok?'':'bad'))});
-  items.push({label:'Reply',onClick:()=>startReply(m)});
-  if(m.senderId!==ME.id){
+
+  /* ---- copying ---- */
+  const copy=(what,text)=>copyText(String(text)).then(ok=>toast(ok?(what+' copied'):'Could not copy',ok?'':'bad'));
+  const sub=[];
+  if(m.text)sub.push({label:'Copy Text',onClick:()=>copy('Message',displayMsgText(m.text))});
+  sub.push({label:'Copy Message ID',onClick:()=>copy('ID',id)});
+  sub.push({label:'Copy Message Link',onClick:()=>copy('Link',messageLink(key,id))});
+  sub.push({label:'Copy User ID',onClick:()=>copy('User ID',m.senderId)});
+  {
+    const u=DB.getUser(m.senderId);
+    if(u&&!u.deleted)sub.push({label:'Copy Username',onClick:()=>copy('Username',u.username)});
+  }
+  items.push({sep:true});
+  items.push({label:'Copy',items:sub});
+
+  /* ---- the sender ---- */
+  if(!mine){
     items.push({sep:true});
-    items.push({label:'Profile',onClick:()=>openUserProfile(Number(m.senderId))});
+    items.push({label:'View Profile',onClick:()=>openUserProfile(Number(m.senderId))});
     items.push({label:Ignored.has(m.senderId)?'Stop Ignoring':'Ignore This Person',onClick:()=>{
       Ignored.toggle(m.senderId);
       toast(Ignored.has(m.senderId)?'Ignored. Their messages will collapse.':'No longer ignoring them.');
     }});
+    /* Report: there is no reporting backend in this project, so rather than offer a button that
+       silently does nothing, this copies the details a moderator needs and says so. An honest
+       half-feature beats a convincing dead one. */
+    items.push({label:'Report Message',danger:true,onClick:()=>{
+      const u=DB.getUser(m.senderId);
+      const txt='ICH report\nchannel: '+key+'\nmessage: '+id+
+        '\nfrom: '+((u&&u.username)||'unknown')+' (#'+m.senderId+')'+
+        '\nat: '+new Date(Number(m.at)||Date.now()).toISOString()+
+        '\ntext: '+String(m.text||'(no text)').slice(0,500);
+      copyText(txt).then(ok=>toast(ok
+        ?'Report details copied — send them to a moderator.'
+        :'Could not copy the report details.',ok?'':'bad'));
+    }});
   }
-  if(Prefs.get('devMode')){
-    items.push({sep:true});
-    items.push({label:'Copy Message ID',onClick:()=>copyText(String(id)).then(ok=>toast(ok?'ID copied':'Could not copy',ok?'':'bad'))});
-  }
-  openCtx(e,items);
-},true);
+  return items;
+}
+/* A link that opens this message's conversation. The page is usually loaded from an
+   about:blank/blob launcher where location is not addressable, so CFG.SITE_URL is the fallback —
+   the same reasoning inviteUrl() in js/discord/moderation.js already uses. */
+function messageLink(key,id){
+  let base='';
+  try{base=(typeof pageIsAddressable==='function'&&pageIsAddressable())
+    ?(location.origin+location.pathname):String((CFG&&CFG.SITE_URL)||'')}catch(_){}
+  base=String(base||'').replace(/[?#].*$/,'').replace(/\/$/,'');
+  return base?(base+'/#/c/'+encodeURIComponent(key)+'/'+encodeURIComponent(id)):(key+'/'+id);
+}
+
+/* Touch: press and hold a message for the same menu (brief, section 8.7). */
+try{
+  ctxLongPress(document,'#messages .msg',(ev,row)=>{
+    if(!ME||!row||!row.dataset.msgId)return;
+    const key=view.roomKey;if(!key)return;
+    const m=(DB.messages(key)||[]).find(x=>x.id===row.dataset.msgId);
+    if(!m)return;
+    openCtx(ev,messageMenuItems(key,m),{label:'Message menu'});
+  });
+}catch(_){}
 
 /* Also add Ignore to the profile overflow menu, where somebody would look for it. */
 (function addIgnoreToProfileMenu(){

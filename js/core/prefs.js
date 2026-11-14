@@ -70,9 +70,21 @@ const Prefs=(function(){
     shareActivity:{t:'b',d:true},
     allowDmScan:  {t:'b',d:true},
 
-    /* ---- Notifications ---- */
+    /* ---- Notifications ----
+       v54.9: this is now the ONLY notification preference system. Until v54.8 there were two.
+       The legacy one was a MAP at users/$id/settings/pings = {everyone, sound, desktop}, edited
+       by three toggles in the Notifications pane; this one is a set of scalars, edited by the
+       cards appended to that same pane. Both were visible at once — two "Desktop notifications"
+       switches and two sound switches, side by side, writing different places — and their
+       defaults disagreed (`pings.desktop` defaulted TRUE, `desktopNotif` defaults false), while
+       js/chat/pings.js gated its entire scan on the legacy value. So the new switch did nothing
+       and the two could not agree.
+       `notifEveryone` is new here and replaces `pings.everyone`, which had no scalar equivalent
+       and so could not be migrated without one. migrateLegacyNotif() below carries the old
+       values across once per account; nothing is reset. */
     desktopNotif: {t:'b',d:false},
     notifSound:   {t:'b',d:true},
+    notifEveryone:{t:'b',d:true},
     notifMentions:{t:'b',d:true},
     notifDM:      {t:'b',d:true},
     notifFriend:  {t:'b',d:true},
@@ -80,6 +92,9 @@ const Prefs=(function(){
     dndOn:        {t:'b',d:false},
     dndFrom:      {t:'s',d:'22:00'},
     dndTo:        {t:'s',d:'08:00'},
+    /* Set once, when the legacy map has been carried across for this account. A scalar so it
+       lives under the same settings rule as everything else here. */
+    notifMigrated:{t:'n',d:0,       v:[0,9]},
 
     /* ---- Accessibility ---- */
     keyboardNav:  {t:'b',d:false,                                     dom:true},
@@ -93,6 +108,31 @@ const Prefs=(function(){
   };
 
   const LS='ich.pref.';
+
+  /* v54.9: the legacy notification map (users/$id/settings/pings), and the three scalar keys
+     that replaced it. Declared up here because get() consults it — see the note inside get().
+       pings.desktop  -> desktopNotif
+       pings.sound    -> notifSound
+       pings.everyone -> notifEveryone */
+  const LEGACY_NOTIF=[['desktop','desktopNotif'],['sound','notifSound'],['everyone','notifEveryone']];
+  const LEGACY_BY_NEW={};LEGACY_NOTIF.forEach(([o,n])=>{LEGACY_BY_NEW[n]=o});
+
+  /* The legacy value for one of the three, or undefined when this account has no legacy map
+     (a fresh account) or no value for that entry.
+     DB.rawSetting('pings'), NOT ME.settings.pings: defaultSettings() in js/core/database.js
+     includes pings:{everyone:true,sound:true,desktop:true}, so the MERGED settings object always
+     has the map whether or not the account ever saved one. Reading the merged copy here made the
+     fallback fire for every account, which would have turned desktop notifications on for
+     everybody — the opposite mistake to the silent reset this migration exists to avoid. */
+  function legacyPing(which){
+    try{
+      if(typeof DB==='undefined'||!DB.rawSetting)return undefined;
+      const p=DB.rawSetting('pings');
+      if(!p||typeof p!=='object')return undefined;
+      const v=p[which];
+      return (v===undefined||v===null)?undefined:(v===true||v===1||v==='true');
+    }catch(_){return undefined}
+  }
 
   function clamp(k,raw){
     const s=SCHEMA[k];if(!s)return raw;
@@ -117,6 +157,19 @@ const Prefs=(function(){
       const v=me&&me.settings?me.settings[k]:undefined;
       if(v!==undefined&&v!==null)return clamp(k,v);
     }catch(_){}
+    /* v54.9: the legacy notification map, for the three keys that replaced it.
+       It sits HERE — after the account's own scalar and before the browser copy — because it is
+       an ACCOUNT value: an account that has not been migrated yet, or whose migration write has
+       not landed, must still get its real preference rather than this device's cached guess or a
+       default that happens to disagree (`pings.desktop` defaulted true, `desktopNotif` defaults
+       false, so the default is the one answer that would be wrong).
+       Putting it in get() rather than at the call sites is deliberate: every reader is correct
+       without having to remember, which is what went wrong in the first place. */
+    const legacyKey=LEGACY_BY_NEW[k];
+    if(legacyKey){
+      const l=legacyPing(legacyKey);
+      if(l!==undefined)return clamp(k,l);
+    }
     try{
       const l=localStorage.getItem(LS+k);
       if(l!==null)return clamp(k,s.t==='b'?(l==='1'):l);
@@ -153,6 +206,76 @@ const Prefs=(function(){
     }
   }
 
+  /* Has the signed-in ACCOUNT got an explicit value for this key, as opposed to falling back to
+     the browser copy or the default? The migration below needs to tell "set to false" from
+     "never set", and get() cannot: both answer false.
+     Note this deliberately ignores localStorage. A browser copy is this device's memory of a
+     value, not the account's decision, and migrating on the strength of one would overwrite the
+     account's real setting with whatever the last device to touch it happened to cache. */
+  function stored(k){
+    if(!SCHEMA[k])return false;
+    try{
+      const me=(typeof ME!=='undefined'&&ME)?ME:null;
+      const v=me&&me.settings?me.settings[k]:undefined;
+      return v!==undefined&&v!==null;
+    }catch(_){return false}
+  }
+
+  /* ------------------------------------------------------------------
+   * v54.9 — carry the legacy `pings` map across, once per account.
+   *
+   * users/$id/settings/pings = {everyone, sound, desktop} was the notification preference up to
+   * v54.8, with these defaults: everyone true, sound true, desktop TRUE. The scalars that
+   * replace it default: notifEveryone true, notifSound true, desktopNotif FALSE.
+   *
+   * So the dangerous case is desktop. Simply switching systems would have turned desktop
+   * notifications off for every existing account that had never touched the setting — a silent
+   * reset of a working preference, which is exactly what must not happen. The legacy value is
+   * therefore authoritative here whenever it exists and the new key has never been written.
+   *
+   * Rules:
+   *   - a legacy value is copied only when the new key is NOT already stored, so anybody who has
+   *     used the newer switches keeps what they chose;
+   *   - a missing legacy map means a fresh account, and the new defaults stand;
+   *   - it runs once (notifMigrated), and is idempotent if it ever runs twice;
+   *   - it writes in ONE updateSettings call, so a half-migrated account is not possible;
+   *   - a refused or offline write leaves notifMigrated unset, so the next sign-in retries.
+   *     Until it succeeds the legacy fallback in readLegacyPing() keeps answering, so nothing
+   *     changes behaviour in the meantime.
+   * ------------------------------------------------------------------ */
+  /* Kept as a NAME for the notification path to use, so the call sites read as what they mean,
+     but get() does the work now: account scalar -> legacy map -> browser copy -> default.
+     There is deliberately no separate code path here. Two accessors that were supposed to agree
+     is the shape of the bug this release is fixing. */
+  function notif(k){return get(k)}
+
+  async function migrateLegacyNotif(){
+    try{
+      const me=(typeof ME!=='undefined'&&ME)?ME:null;
+      if(!me||typeof DB==='undefined')return false;
+      if(Number(get('notifMigrated'))>=1)return false;
+      const patch={};
+      LEGACY_NOTIF.forEach(([old,key])=>{
+        if(stored(key))return;                    // they have used the new switch: leave it alone
+        const v=legacyPing(old);
+        if(v===undefined)return;                  // no legacy map: the new default stands
+        patch[key]=v;
+      });
+      patch.notifMigrated=1;
+      Object.keys(patch).forEach(k=>{if(k!=='notifMigrated')cache(k,patch[k])});
+      /* setSettingKeys, NOT updateSettings: a partial patch through updateSettings would
+         replace the whole private settings blob — see the note on setSettingKeys in
+         js/core/database.js. This is a database-level merge of exactly these keys. */
+      await DB.setSettingKeys(me.id,patch);
+      return true;
+    }catch(e){
+      /* Left unmarked on purpose, so the next sign-in tries again. notif() above means the
+         account's real preferences are being honoured in the meantime regardless. */
+      console.warn('[Prefs] notification migration deferred',e&&(e.code||e.message));
+      return false;
+    }
+  }
+
   function all(){const o={};Object.keys(SCHEMA).forEach(k=>o[k]=get(k));return o}
   function defaults(){const o={};Object.keys(SCHEMA).forEach(k=>o[k]=SCHEMA[k].d);return o}
   function schema(){return SCHEMA}
@@ -169,7 +292,10 @@ const Prefs=(function(){
     try{
       if(typeof ME!=='undefined'&&ME&&typeof DB!=='undefined'){
         const patch={};ks.forEach(k=>patch[k]=SCHEMA[k].d);
-        await DB.updateSettings(ME.id,patch);
+        /* v54.9: setSettingKeys for the same reason as the migration above. Through
+           updateSettings this reset would have wiped every preference that is not an
+           appearance key, rather than resetting the ones it names. */
+        await DB.setSettingKeys(ME.id,patch);
       }
     }catch(e){console.warn('[Prefs] reset save failed',e&&(e.code||e.message))}
   }
@@ -248,9 +374,14 @@ const Prefs=(function(){
     return inDndWindow();
   }
 
-  return{get,set,all,defaults,schema,reset,apply,applySoon,inDndWindow,quietHours,parseHHMM,SCHEMA};
+  return{get,set,all,defaults,schema,reset,apply,applySoon,inDndWindow,quietHours,parseHHMM,SCHEMA,
+         /* v54.9 notification consolidation */
+         stored,notif,legacyPing,migrateLegacyNotif};
 })();
 
 /* Apply once as early as this file runs, so a compact/contrast/font-scale choice made on a
    previous visit is already in place rather than flashing the default first. */
 try{Prefs.apply()}catch(e){console.warn('[Prefs] first apply failed',e)}
+/* The site is one module; the notification-migration tests read these from the page, the same
+   way window.Perf and window.Notifier are exported. */
+try{window.Prefs=Prefs}catch(_){}

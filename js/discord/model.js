@@ -123,7 +123,42 @@ const DModel=(()=>{
 
   function emit(){subs.forEach(f=>{try{f()}catch(e){console.warn('[DModel] subscriber failed',e)}})}
   let _pending=false;
-  function emitSoon(){if(_pending)return;_pending=true;Promise.resolve().then(()=>{_pending=false;emit()})}
+  function emitSoon(){if(_pending)return;_pending=true;Promise.resolve().then(()=>{_pending=false;syncPreviews();emit()})}
+
+  /* ==========================================================================
+   * v54.9 — tell the DB layer which server channels to keep a preview of.
+   *
+   * The channel list is DModel's, and the message listeners are DB's, so neither could do this
+   * alone: watchPreview() was only ever called for the three built-in ICH rooms, the legacy
+   * rooms and DMs, and so C.messages was empty for every server channel that was not open.
+   * That is what made every server channel's unread badge read zero and what left
+   * checkPingNotifications() walking a list of channels it had no messages for. The long note on
+   * syncChannelPreviews() in js/core/database.js has the detail.
+   *
+   * Driven from emitSoon() because that already runs whenever the channel list or the set of
+   * joined servers changes, and it is coalesced to once per microtask — so joining a server with
+   * twenty channels produces one sync, not twenty. The DB side diffs against what it already
+   * holds, so calling it with an unchanged list costs a Set comparison.
+   * ========================================================================== */
+  let _prevSig='';
+  function syncPreviews(){
+    if(myId==null)return;
+    try{
+      const keys=[];
+      Object.keys(S.myServers||{}).forEach(sid=>{
+        /* visibleChannels(), not channels(): a channel this account cannot read is one the
+           rules would refuse the listener for, and attaching it would only produce a denied
+           read on every snapshot. */
+        (visibleChannels(sid)||[]).forEach(c=>{
+          if(c&&c.key&&c.type!=='voice')keys.push(c.key);
+        });
+      });
+      const sig=keys.join('|');
+      if(sig===_prevSig)return;               // nothing changed; do not walk it again
+      _prevSig=sig;
+      DB.syncChannelPreviews(keys);
+    }catch(e){console.warn('[DModel] preview sync failed',e&&e.message)}
+  }
 
   function watch(path,cb){
     const u=onValue(R(path),s=>{try{cb(s.val())}catch(e){console.warn('[DModel]',path,e)}},
@@ -228,7 +263,12 @@ const DModel=(()=>{
     });
     watch('channelServer',v=>{S.chanServer=v||{};emitSoon()});
     watch('serverOrder/'+myId,v=>{S.order=v||{};emitSoon()});
-    watch('serverDiscovery',v=>{S.discovery=v||{};syncDiscoveryWatchers();emitSoon()});
+    /* v54.9: the discovery listener now RECORDS whether it succeeded.
+       It used to be watch(), whose error handler only console.warn()s — so a refused or failed
+       read was indistinguishable from an empty directory, and openDiscover() flipped itself to
+       'ready' on a 4-second timer regardless. A permission problem looked like "no public
+       servers yet", which is the worst possible way to report it. */
+    attachDiscovery();
     emitSoon();
     /* Housekeeping, once the first round of listeners has had time to deliver: drop servers
        that were deleted while I was away, and re-assert my channel access everywhere in case a
@@ -253,6 +293,10 @@ const DModel=(()=>{
        still be the old account's answer after signing back in as somebody else. */
     Object.keys(discUnsub).forEach(sid=>{try{discUnsub[sid]()}catch(_){}delete discUnsub[sid];delete discCounts[sid]});
     discHolders=0;
+    /* v54.9: the discovery load state is per-account too. Left at 'ready' across a sign-out,
+       the next account's Discover would show the previous session's cached list as if it had
+       just been read. 'off' means nothing has been asked for yet. */
+    discRootUnsub=null;discState='off';discErr='';_prevSig='';
     S.myServers={};S.chanServer={};S.order={};S.discovery={};
   }
 
@@ -811,6 +855,19 @@ const DModel=(()=>{
     return out.sort((a,b)=>a.pos-b.pos||a.name.localeCompare(b.name));
   }
   function channel(sid,cid){return channels(sid).find(c=>c.id===cid)||null}
+  /* v54.8: which server a message key belongs to, as an id and nothing more.
+     channelByKey() already resolved this on its way to finding the channel record, but callers
+     that only need the server id — the notification policy, which wants the server to look up a
+     per-server mute — had to either build the whole channel list or read S.chanServer directly.
+     Reaching into _state from another file is how two copies of this lookup start to disagree,
+     so it is a function.
+     Returns null for a DM, and ICH_ID for the five original channels. */
+  function serverOfChannel(key){
+    key=String(key||'');
+    if(!key||key.startsWith('dm_'))return null;
+    if(key==='global'||key==='announcements'||key==='shitpost'||key==='vip'||key==='mvp'||key==='voice')return ICH_ID;
+    return S.chanServer[key]||null;
+  }
   function channelByKey(key){
     const sid=key==='global'||key==='announcements'||key==='shitpost'||key==='vip'||key==='mvp'||key==='voice'
       ?ICH_ID:S.chanServer[key];
@@ -1642,6 +1699,53 @@ const DModel=(()=>{
       return !!m&&(typeof m==='object'||m===true);
     }).length;
   }
+  /* ======================================================================
+   *  v54.9 — discovery load state
+   *
+   *  Four states, kept apart on purpose, because they need four different screens:
+   *    'loading'  the read has not answered yet
+   *    'ready'    it answered; S.discovery is the truth, empty or not
+   *    'error'    it failed or was refused; S.discovery says NOTHING about the world
+   *    'off'      no account is signed in, so nothing has been asked for
+   *
+   *  'ready' with an empty map and 'error' are completely different facts and must never render
+   *  the same way. That conflation was the bug.
+   * ====================================================================== */
+  /* `discUnsub` is already taken, by the per-server member-count watchers below. */
+  let discState='off',discErr='',discRootUnsub=null;
+  function attachDiscovery(){
+    if(discRootUnsub){try{discRootUnsub()}catch(_){}discRootUnsub=null}
+    discState='loading';discErr='';
+    const who=myId;
+    discRootUnsub=onValue(R('serverDiscovery'),
+      s=>{
+        if(myId!==who)return;                       // a sign-out raced us
+        S.discovery=s.val()||{};
+        discState='ready';discErr='';
+        syncDiscoveryWatchers();emitSoon();
+      },
+      e=>{
+        if(myId!==who)return;
+        /* Keep whatever was already loaded on screen rather than blanking it: a listener that
+           drops mid-session should not erase a list that was correct a moment ago. The state
+           still goes to 'error' so the view can say the list may be stale. */
+        discState='error';
+        discErr=(e&&(e.code||e.message))?String(e.code||e.message):'read failed';
+        console.warn('[DModel] serverDiscovery failed',discErr);
+        emitSoon();
+      });
+    unsubs.push(discRootUnsub);
+  }
+  function discoveryState(){return{state:discState,error:discErr,
+    count:Object.keys(S.discovery||{}).length}}
+  /* What Retry actually retries: the listener is torn down and re-created, so the read really
+     happens again. The old Retry button set a flag, waited 600ms and claimed success. */
+  function retryDiscovery(){
+    if(myId==null){discState='off';return false}
+    attachDiscovery();
+    return true;
+  }
+
   function syncDiscoveryWatchers(){
     const want=discHolders>0?Object.keys(S.discovery||{}):[];
     want.forEach(sid=>{
@@ -1790,7 +1894,8 @@ const DModel=(()=>{
     myServers,server,isSystem,isServerOwner,inServer,
     createServer,updateServer,deleteServer,leaveServer,setServerOrder,
     createInvite,listInvites,revokeInvite,joinByInvite,
-    cats,channels,channel,channelByKey,visibleChannels,
+    cats,channels,channel,channelByKey,serverOfChannel,visibleChannels,
+    discoveryState,retryDiscovery,
     createChannel,updateChannel,deleteChannel,
     createCategory,updateCategory,deleteCategory,
     roles,role,rolesOf,storedRolesOf,colorOf,topRole,highestPos,

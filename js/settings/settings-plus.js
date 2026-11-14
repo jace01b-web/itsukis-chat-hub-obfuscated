@@ -91,6 +91,16 @@ SET_NAV=function(me){
     const beforeAdvanced=/<button data-t="about"[\s\S]*?<\/button>/;
     if(beforeAdvanced.test(html))html=html.replace(beforeAdvanced,m=>m+sess);
     else html+=sess;
+    /* v54.8: Activity & Presence — one of the categories the brief asks for (section 7), and
+       the answer to a real discoverability problem: status, automatic idle and the custom
+       status were only reachable from the little popout above the account panel, and the two
+       halves of Do Not Disturb (the STATUS and the scheduled WINDOW) lived in different places
+       with nothing saying they were the same feature. It sits next to Notifications because
+       that is what most of it decides. */
+    const pres=dsBtn('presence','Activity &amp; Presence',DSI.people||DSI.friends);
+    const afterPing=/<button data-t="ping"[\s\S]*?<\/button>/;
+    if(afterPing.test(html))html=html.replace(afterPing,m=>m+pres);
+    else html+=pres;
   }catch(e){console.error('[settings] nav splice failed',e)}
   return html;
 };
@@ -130,7 +140,49 @@ function V54_PANES(me,s){
       `<button type="button" class="btn sec" style="width:100%" id="sxSignOut2">🚪 Sign out of this device</button>`)}
   </div>`;
 
-  return conn+sess;
+  /* ---------------- v54.8: Activity & Presence ---------------- */
+  const presence=`<div data-p="presence" class="hidden">
+    ${sxCard('Status',
+      `<div class="hint" style="margin-bottom:12px">Your status is what everyone else sees next
+         to your name. <b>Do Not Disturb silences notifications</b> — it does not stop messages
+         arriving, hide them, or clear your unread counts.</div>
+       <div class="sxp-st" id="sxpStatus">
+         ${STATUSES.map(k=>
+           '<button type="button" class="sxp-stbtn" data-sxst="'+k+'">'+
+             '<span class="sxp-stdot '+k+'" aria-hidden="true"></span>'+
+             '<span class="sxp-sttx"><b>'+esc(STATUS_LABEL[k])+'</b>'+
+             (STATUS_SUB[k]?'<small>'+esc(STATUS_SUB[k])+'</small>':'')+'</span>'+
+           '</button>').join('')}
+       </div>`)}
+    ${sxCard('Custom status',
+      `<div class="field"><label for="sxpCustom">What's on your mind?</label>
+         <input id="sxpCustom" type="text" maxlength="128" autocomplete="off"
+                placeholder="Working on something" value="${esc((function(){try{return DB.customStatusOf(me.id)}catch(_){return ''}})())}"></div>
+       <div class="field"><label for="sxpUntil">Clear after</label>
+         <select id="sxpUntil">${CS_TERMS.map(([v,l])=>'<option value="'+v+'">'+esc(l)+'</option>').join('')}</select></div>
+       <div class="hint" id="sxpUntilNow" style="min-height:16px"></div>
+       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+         <button type="button" class="btn" id="sxpSave" style="width:auto">Save status</button>
+         <button type="button" class="btn sec" id="sxpClear" style="width:auto">Clear</button>
+       </div>
+       <div class="err" id="sxpErr"></div>`)}
+    ${sxCard('Automatic idle',
+      `<div class="hint">After about ${Math.round((typeof AutoIdle!=='undefined'?AutoIdle.IDLE_AFTER_MS:600000)/60000)} minutes
+         without any activity, an <b>Online</b> status becomes <b>Idle</b> on its own, and goes
+         back to Online as soon as you do something. Do Not Disturb and Invisible are never
+         changed for you — if you picked one of those, it stays until you change it.</div>
+       <div class="sxp-idle" id="sxpIdle"></div>`)}
+    ${sxCard('Quiet hours',
+      `<div class="hint" style="margin-bottom:10px">A scheduled window that silences
+         notifications exactly the way Do Not Disturb does. Set it in
+         <b>Notifications</b>; this is where it currently stands.</div>
+       <div class="sxp-idle" id="sxpQuiet"></div>`)}
+    ${sxCard('Activity',
+      sxToggle('shareActivity','Show what I\'m listening to',
+        'Puts the track the music player is on, and the voice channel you\'re in, on your profile. Turning this off removes it for everyone straight away.'))}
+  </div>`;
+
+  return conn+sess+presence;
 }
 
 const _SET_PANES_V53=SET_PANES;
@@ -305,7 +357,15 @@ function V54_BLOCKS(me,s){
         `<div id="sxNotifState" class="hint"></div>
          <button type="button" class="btn sec small" id="sxNotifTest" style="margin-top:8px">Send a test notification</button>`)+
       sxCard('What to notify about',
-        sxToggle('notifSound','Play a sound','The site\'s ping. Silenced by Do Not Disturb below.')+
+        /* v54.9: these are the ONLY notification switches now. This pane used to show these
+           cards AND three older toggles of its own above them — two "Desktop notifications"
+           switches and two sound switches, side by side, writing different storage. The older
+           set is gone and its values were migrated; see js/core/prefs.js.
+           `notifEveryone` is the one that was only in the old set, so it is here now. */
+        sxToggle('notifSound','Play a sound',
+          'The site\'s ping chime. Independent of desktop notifications — you can have the sound with them switched off, and it needs no browser permission.')+
+        sxToggle('notifEveryone','Include @everyone',
+          'Treat an @everyone as a mention of you. With this off, only a direct @you or a role you have counts.')+
         sxToggle('notifMentions','When I\'m mentioned','@you, @everyone and a role you have.')+
         sxToggle('notifDM','Direct messages')+
         sxToggle('notifFriend','Friend requests'))+
@@ -384,6 +444,101 @@ wireDiscordSettings=function(root,me,s,reopen){
 function wireV54Settings(root,me,s,reopen){
   const q=sel=>root.querySelector(sel);
 
+  /* ---- 0. v54.8: Activity & Presence --------------------------------
+     Everything here writes through the same DB functions the account panel's popout uses, so
+     the two surfaces cannot drift apart: DB.setStatus and DB.setCustomStatus are the only
+     writers, and DB.chosenStatusOf / DB.customStatusUntil are the only readers. */
+  (function wirePresence(){
+    const host=q('[data-p="presence"]');
+    if(!host)return;
+
+    const mark=()=>{
+      let cur='online';try{cur=DB.chosenStatusOf(me.id)}catch(_){}
+      host.querySelectorAll('[data-sxst]').forEach(b=>
+        b.classList.toggle('on',b.dataset.sxst===cur));
+    };
+    mark();
+    host.querySelectorAll('[data-sxst]').forEach(b=>b.onclick=async()=>{
+      const v=b.dataset.sxst;
+      host.querySelectorAll('[data-sxst]').forEach(x=>x.disabled=true);
+      try{
+        await DB.setStatus(me.id,v);
+        ME=DB.currentUser();mark();
+        toast('Status: '+STATUS_LABEL[v],'good');
+        try{DiscordShell.refresh()}catch(_){}
+        try{PCard.repaintAll()}catch(_){}
+      }catch(e){toast('Could not change your status.','bad')}
+      finally{host.querySelectorAll('[data-sxst]').forEach(x=>x.disabled=false)}
+    });
+
+    const ci=q('#sxpCustom'),selU=q('#sxpUntil'),nowEl=q('#sxpUntilNow'),err=q('#sxpErr');
+    const showTerm=()=>{
+      let until=0;try{until=DB.customStatusUntil(me.id)}catch(_){}
+      if(nowEl)nowEl.textContent=until
+        ?('Clears at '+new Date(until).toLocaleString([],{hour:'2-digit',minute:'2-digit'}))
+        :'This status does not expire.';
+    };
+    showTerm();
+    let busy=false;
+    const save=async(text,term)=>{
+      if(busy)return;busy=true;if(err)err.textContent='';
+      const sv=q('#sxpSave'),cl=q('#sxpClear');
+      if(sv)sv.disabled=true;if(cl)cl.disabled=true;
+      try{
+        await DB.setCustomStatus(me.id,text,term>0?Date.now()+term:0);
+        ME=DB.currentUser();showTerm();
+        try{DiscordShell.refresh()}catch(_){}
+        try{PCard.repaintAll()}catch(_){}
+        toast(text?'Custom status saved':'Custom status cleared','good');
+      }catch(e){
+        /* Reporting the real failure rather than a shrug: a refused write here almost always
+           means the rules in the console predate this build (style/customStatusUntil is new). */
+        if(err)err.textContent=/PERMISSION/i.test((e&&(e.code||e.message))||'')
+          ?'The database refused that. Publish the current firebase-rules.json — v54.8 adds style/customStatusUntil.'
+          :((e&&e.message)||'Could not save your status.');
+      }finally{
+        busy=false;
+        if(sv)sv.disabled=false;if(cl)cl.disabled=false;
+      }
+    };
+    const sv=q('#sxpSave');if(sv)sv.onclick=()=>save((ci&&ci.value)||'',csTermToMs(selU?selU.value:'0'));
+    const cl=q('#sxpClear');if(cl)cl.onclick=()=>{if(ci)ci.value='';save('',0)};
+    if(ci)ci.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){e.preventDefault();save(ci.value,csTermToMs(selU?selU.value:'0'))}
+    });
+
+    /* The two read-outs. Refreshed on a timer while the pane is open so "idle in 7 minutes"
+       counts down rather than being a snapshot from when settings was opened; the interval is
+       cleared when the panel goes, which is what reopen() hands us a hook for. */
+    const idleEl=q('#sxpIdle'),quietEl=q('#sxpQuiet');
+    const paintLive=()=>{
+      if(!host.isConnected)return false;
+      try{
+        const st=(typeof AutoIdle!=='undefined')?AutoIdle._state():null;
+        if(idleEl&&st){
+          const mins=Math.floor(st.idleForMs/60000);
+          const chosen=DB.chosenStatusOf(me.id);
+          idleEl.textContent=chosen==='online'
+            ?('No activity for '+mins+' minute'+(mins===1?'':'s')+'.'+
+              (st.owned?' You are currently Idle automatically.':''))
+            :(chosen==='idle'&&st.owned
+                ?'You were set to Idle automatically; moving the mouse brings you back.'
+                :STATUS_LABEL[chosen]+' is set by hand, so automatic idle will not change it.');
+        }
+        if(quietEl){
+          const n=(typeof Notifier!=='undefined')?Notifier.state():null;
+          quietEl.textContent=n
+            ?(n.quietHours?'Quiet hours are active right now — notifications are silenced.'
+                          :'Quiet hours are not active right now.')
+            :'';
+        }
+      }catch(_){}
+      return true;
+    };
+    paintLive();
+    const t=setInterval(()=>{if(!paintLive())clearInterval(t)},15000);
+  })();
+
   /* ---- 1. inject the blocks into the panes that already exist ---- */
   let blocks={};
   try{blocks=V54_BLOCKS(me,s)}catch(e){console.error('[settings] block build failed',e)}
@@ -457,12 +612,19 @@ function afterPrefChange(key,root,me){
     if(key==='shareActivity'&&!Prefs.get('shareActivity'))PActivity.clear();
     if(key==='desktopNotif'&&Prefs.get('desktopNotif')){
       Notifier.request().then(p=>{
-        paintNotifState(root);
         if(p!=='granted'){
+          /* v54.9: put the switch back. A toggle left reading "on" while the browser refuses to
+             deliver anything is a control that lies about what it does — the behaviour the old
+             #sPd handler in settings-page.js had and this one had lost. Sound is unaffected:
+             it is a separate preference and needs no permission. */
+          Prefs.set('desktopNotif',false);
+          const box=root.querySelector('[data-pref="desktopNotif"]');
+          if(box)box.checked=false;
           toast(p==='denied'
-            ?'Your browser blocked notifications — allow them in the site settings next to the address bar.'
-            :'Notifications were not allowed.','bad');
+            ?'Your browser blocked notifications — allow them in the site settings next to the address bar. The ping sound still works.'
+            :'Notifications were not allowed. The ping sound still works.','bad');
         }
+        paintNotifState(root);
       });
     }
     if(key==='desktopNotif'||key==='dndOn'||key==='dndFrom'||key==='dndTo')paintNotifState(root);
@@ -749,7 +911,9 @@ function wireNotifications(root,me){
       const row=document.createElement('div');
       row.className='sx-notif';
       const chans=(()=>{try{return DModel.channels(srv.id).filter(c=>c.type!=='voice')}catch(_){return []}})();
-      const overrides=chans.filter(c=>NotifPrefs.channelLevel(c.id));
+      /* v54.9: c.key, not c.id — the identifier overrides are stored under. With c.id this
+         list was always empty and the ✕ cleared a path nothing was ever written to. */
+      const overrides=chans.filter(c=>c.key&&NotifPrefs.channelLevel(c.key));
       row.innerHTML=
         '<div class="sx-notif-top">'+
           '<span class="sx-notif-n">'+esc(srv.name)+'</span>'+
@@ -760,12 +924,32 @@ function wireNotifications(root,me){
         '</div>'+
         (overrides.length
           ?'<div class="sx-notif-ch">'+overrides.map(c=>
-              '<span class="sx-notif-chip">#'+esc(c.name)+' · '+esc(NotifPrefs.LABEL[NotifPrefs.channelLevel(c.id)])+
-              ' <button type="button" data-sxchclear="'+esc(c.id)+'" title="Back to default" aria-label="Back to default">✕</button></span>').join('')+
+              '<span class="sx-notif-chip">#'+esc(c.name)+' · '+esc(NotifPrefs.LABEL[NotifPrefs.channelLevel(c.key)])+
+              ' <button type="button" data-sxchclear="'+esc(c.key)+'" title="Back to default" aria-label="Back to default">✕</button></span>').join('')+
             '</div>'
           :'');
       host.appendChild(row);
     });
+    /* v54.9: DM overrides. A conversation has a message key and no server, so it could never
+       appear under any server row — which meant a muted DM was invisible in Settings and could
+       only be un-muted from the conversation's own menu. */
+    const dmKeys=NotifPrefs.mutedChannels().concat(
+      Object.keys((NotifPrefs.allChannels&&NotifPrefs.allChannels())||{}))
+      .filter(k=>String(k).startsWith('dm_'));
+    const dms=[...new Set(dmKeys)];
+    if(dms.length){
+      const row=document.createElement('div');
+      row.className='sx-notif';
+      row.innerHTML='<div class="sx-notif-top"><span class="sx-notif-n">Direct messages</span></div>'+
+        '<div class="sx-notif-ch">'+dms.map(k=>{
+          const other=String(k).replace(/^dm_/,'').split('_').map(Number).find(n=>n!==Number(ME.id));
+          let nm='Conversation';
+          try{const u=DB.getUser(other);if(u&&!u.deleted)nm=dispName(u)}catch(_){}
+          return '<span class="sx-notif-chip">'+esc(nm)+' · '+esc(NotifPrefs.LABEL[NotifPrefs.channelLevel(k)]||'Default')+
+            ' <button type="button" data-sxchclear="'+esc(k)+'" title="Back to default" aria-label="Back to default">✕</button></span>';
+        }).join('')+'</div>';
+      host.appendChild(row);
+    }
     host.querySelectorAll('[data-sxsrv]').forEach(sel=>sel.onchange=async()=>{
       try{await NotifPrefs.setServer(sel.dataset.sxsrv,sel.value);paint()}
       catch(e){toast(rulesHint(e,'notification setting'),'bad')}

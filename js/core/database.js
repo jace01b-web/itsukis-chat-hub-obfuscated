@@ -42,6 +42,42 @@ const DB=(()=>{
      never kept a subscription. With 1,208 members that meant constant attach/detach and names
      that never arrived. */
   let _watchTick=0;
+  /* Everything about one account that is drawn SOMEWHERE OTHER than the member list. Two
+     records with the same signature differ only in status / customStatus, which is a presence
+     change. Built by joining the fields rather than JSON.stringify so the megabyte-sized
+     settings.bgImage is never serialised: of `settings`, only the two bubble colours are ever
+     rendered for somebody else. */
+  function _userRenderSig(u){
+    if(!u)return '\u0000';
+    const s=u.style||{},t=u.settings||{};
+    return [u.username,u.deleted?1:0,s.displayName,s.avatar,s.accent,s.deco,s.banner,
+      s.pronouns,s.description,s.bubble,s.text,s.bnc,s.radius,s.hiddenTags,
+      t.meBubble,t.meText].join('\u0001');
+  }
+  /* Which topic one account's record changing belongs to.
+     Three answers, cheapest first:
+       'presence'  only status / customStatus moved, OR the profile is new to this client but
+                   that person is not drawn anywhere except the member list — which the
+                   presence path redraws anyway.
+       'users'     their name, avatar or bubble colours changed AND they are drawn somewhere a
+                   full render owns: a message row in the conversation that is open, a DM row in
+                   the sidebar, or the account panel (me).
+
+     The `.some` below walks the open conversation's cached messages — at most a few hundred,
+     a few microseconds — to avoid a ~10 ms full rebuild. That trade is the whole point: the
+     member list arriving at 600 profiles one snapshot at a time used to mean 600 rebuilds. */
+  function _userTopic(id,prev,next){
+    if(_userRenderSig(prev)===_userRenderSig(next))return 'presence';
+    if(id===Number(myId))return 'users';
+    try{
+      const arr=C.messages[msgKey];
+      if(arr&&arr.some(m=>Number(m.senderId)===id))return 'users';
+      const fr=C.friends[myId];
+      if(fr&&fr.indexOf(id)>-1)return 'users';
+      if(C.dmMembers&&C.dmMembers[dmKey(myId,id)])return 'users';
+    }catch(_){return 'users'}      // anything unexpected takes the safe, expensive path
+    return 'presence';
+  }
   function watchUser(id){
     id=Number(id);
     if(!Number.isFinite(id)||id<=0)return;
@@ -53,8 +89,28 @@ const DB=(()=>{
       if(oldest!=null){try{userWatch.get(oldest).off()}catch(_){}userWatch.delete(oldest)}
     }
     const off=onValue(R('users/'+id),s=>{
-      if(s.exists())C.users[id]=s.val();
-      if(ready)emit();
+      if(s.exists()){
+        const prev=C.users[id];
+        const next=s.val();
+        C.users[id]=next;
+        /* The highest-value tag in the file. Up to 400 of these listeners are live at once, and
+           every one of them used to emit the same contentless "something changed", so one
+           person flipping to Do Not Disturb was indistinguishable from a message arriving and
+           rebuilt the entire chat.
+
+           The distinction that matters is WHAT about the record changed:
+             status / customStatus -> 'presence'. It moves a dot, a member-list group and a
+                                     custom-status line. It appears on no message row.
+             anything else         -> 'users'. A name, an avatar or a bubble colour is drawn on
+                                     every message that person has ever sent, so the full
+                                     render is the honest answer.
+           _userRenderSig() is what tells the two apart, and it deliberately leaves `settings`
+           mostly alone: that node can hold a megabyte of background image, and only the two
+           bubble colours out of it are ever drawn by somebody else. */
+        if(ready)emit(_userTopic(id,prev,next));
+      }
+      /* A snapshot that does not exist is left alone on purpose — see the denied-read note
+         below; "no data" and "not allowed" must not both turn a real account into a ghost. */
     },err=>{
       // A denied read is not the same as "no such person" - leave whatever is cached alone,
       // or the member list would start calling real accounts Deleted User.
@@ -177,9 +233,48 @@ const DB=(()=>{
      So emit() is coalesced: however many times it is called, the listeners run once, on the next
      frame. In a hidden tab requestAnimationFrame is paused, so a timer is used instead — ping
      notifications and the ban self-purge have to keep working while the tab is in the background. */
+  /* v54.8: emit() now carries a TOPIC, and that is the whole performance story.
+     Coalescing was already here and was already right — many listeners firing in one tick ran
+     the subscribers once, on the next frame. What was missing is WHAT changed. Every subscriber
+     got the same contentless "something happened", so every subscriber did its maximum work:
+     a single person going idle rebuilt the entire chat, because nothing could tell that render
+     that only presence had moved.
+
+     listen() derives the topic from the path it is watching, so every existing listener is
+     tagged without a call-site change. An untagged emit() still means "assume everything", so
+     anything not yet tagged behaves exactly as it did before — the pessimistic direction.
+
+     The object handed to subscribers:
+       topics.has('messages')         did this flush include a message change?
+       topics.only('presence','user') was it ONLY these? (false if anything untagged fired)
+       topics.list                    every topic in the flush, for diagnostics */
   let _emitPending=false;
-  function _flushEmit(){_emitPending=false;listeners.forEach(f=>{try{f()}catch(e){console.error(e)}})}
-  const emit=()=>{
+  const _emitTopics=new Set();
+  const UNKNOWN='*';
+  function _makeTopics(set){
+    const unknown=set.has(UNKNOWN);
+    return{
+      list:Array.from(set),
+      unknown,
+      has:k=>unknown||set.has(k),
+      only(){
+        if(unknown)return false;
+        const allowed=Array.prototype.slice.call(arguments);
+        for(const t of set)if(allowed.indexOf(t)===-1)return false;
+        return set.size>0;
+      }
+    };
+  }
+  function _flushEmit(){
+    _emitPending=false;
+    const topics=_makeTopics(new Set(_emitTopics));
+    _emitTopics.clear();
+    Perf.hit('flushes');
+    listeners.forEach(f=>{Perf.hit('onChangeCbs');try{f(topics)}catch(e){console.error(e)}});
+  }
+  const emit=topic=>{
+    _emitTopics.add(topic||UNKNOWN);
+    Perf.hit('emits');
     if(_emitPending)return;
     _emitPending=true;
     if(document.visibilityState==='hidden')setTimeout(_flushEmit,0);
@@ -278,11 +373,58 @@ const DB=(()=>{
     return DB.currentUser();
   }
 
+  /* The topic of a watched path is its first segment: 'users/7/style' -> 'users', 'owners' ->
+     'owners'. Derived rather than passed in, so adding a listener cannot forget to tag itself,
+     and so a path and its topic can never disagree. */
+  function topicOf(path){
+    const head=String(path||'').split('/')[0];
+    return head||UNKNOWN;
+  }
   function listen(path,cb){
-    const u=onValue(R(path),s=>{cb(s.val());if(ready)emit()},err=>console.warn('listen denied',path,err.code));
+    const topic=topicOf(path);
+    const u=onValue(R(path),s=>{cb(s.val());if(ready)emit(topic)},err=>console.warn('listen denied',path,err.code));
     unsubs.push(u);return u;
   }
-  function stopAll(){SECRET_OWNER_ID=null;SECRET_LOADED=false;stopUserWatch();C.priv={};unsubs.splice(0).forEach(u=>u());Object.keys(previewUnsubs).forEach(k=>{previewUnsubs[k]();delete previewUnsubs[k]});Object.keys(roomUnsubs).forEach(k=>{roomUnsubs[k]();delete roomUnsubs[k]});if(msgUnsub){msgUnsub();msgUnsub=null}if(reactUnsub){try{reactUnsub()}catch(_){}reactUnsub=null}if(presUnsub){try{presUnsub()}catch(_){}presUnsub=null}if(presenceSelfRef){try{remove(presenceSelfRef).catch(()=>{})}catch(_){}presenceSelfRef=null}if(sessUnsub){try{sessUnsub()}catch(_){}sessUnsub=null}presenceRef=null;mySessionToken=null;sessionConfirmed=false;kicked=false;hideKickOverlay();C.presenceIds=[];C.lastReadLoaded=false;msgKey=null}
+  /* ---- v54.8: wipe every ACCOUNT-SCOPED cache -------------------------------
+     stopAll() used to clear the listeners and C.priv and leave the rest of C in place. Each
+     entry below is data about ONE account, so what survived was the previous account's:
+     C.users held their profile (and so their avatar, display name and status), C.vip / C.mvp /
+     C.flair / C.roles their perks, C.friends / C.dmReqIn / C.lastRead / C.pingSeen their social
+     state. Signing into another account in the same tab therefore showed the OLD account's
+     profile and perks until each listener's first snapshot landed — the "profile state shared
+     between accounts" and "old roles reused" symptoms, and the thing that made an owner panel
+     look live for a moment after signing in as somebody else.
+
+     The database rules were never fooled by any of it (they read the live node every time), so
+     this was always a display and trust problem rather than an escalation. It is still wrong,
+     and a blank panel that fills in is strictly better than a stale one that looks real.
+
+     C.usernames is deliberately KEPT: it is the public name->id directory, identical for every
+     account, and re-downloading it on each switch is a real cost for no benefit. */
+  function resetAccountCaches(){
+    C.users={};C.priv={};C.messages={};C.reactions={};
+    C.rooms={};C.roomMembers={};C.dmMembers={};C.myRoomIds=[];
+    C.friends={};C.friendReqIn={};C.friendReqOut={};C.dmReqIn={};
+    C.lastRead={};C.pingSeen={};C.lastReadLoaded=false;
+    C.banned={};C.muted={};C.blocked={};C.blockedBy={};
+    C.vip={};C.mvp={};C.flair={};C.roles={};C.spinWin=null;C.lastSpin=0;
+    C.online=0;C.onlineIds=[];C.presenceIds=[];
+    /* Rank tables are site-wide rather than per-account, but their LOADED flags must go back to
+       false so ownersKnown() reports "not known yet" for the new session instead of letting the
+       previous session's load stand in for this one. */
+    OWNERS_CACHE={};OWNERS_LOADED=false;
+    MODS_CACHE={};MODS_LOADED=false;
+    ADMINS_CACHE={};ADMINS_LOADED=false;
+    BANNED_LOADED=false;
+    try{if(typeof pingStateReset==='function')pingStateReset()}catch(_){}
+    try{if(typeof friendNotifStateReset==='function')friendNotifStateReset()}catch(_){}
+    try{if(typeof profileCacheReset==='function')profileCacheReset()}catch(_){}
+    /* The settings panel belongs to the account that opened it, so it closes with that account
+       rather than staying on screen with the previous person's preferences in its inputs. */
+    try{if(typeof closeSettingsPanel==='function')closeSettingsPanel()}catch(_){}
+    try{if(typeof idleStateReset==='function')idleStateReset()}catch(_){}
+  }
+  function stopAll(){SECRET_OWNER_ID=null;SECRET_LOADED=false;stopUserWatch();resetAccountCaches();unsubs.splice(0).forEach(u=>u());Object.keys(previewUnsubs).forEach(k=>{previewUnsubs[k]();delete previewUnsubs[k]});Object.keys(roomUnsubs).forEach(k=>{roomUnsubs[k]();delete roomUnsubs[k]});if(msgUnsub){msgUnsub();msgUnsub=null}if(reactUnsub){try{reactUnsub()}catch(_){}reactUnsub=null}if(presUnsub){try{presUnsub()}catch(_){}presUnsub=null}if(presenceSelfRef){try{remove(presenceSelfRef).catch(()=>{})}catch(_){}presenceSelfRef=null}if(sessUnsub){try{sessUnsub()}catch(_){}sessUnsub=null}presenceRef=null;mySessionToken=null;sessionConfirmed=false;kicked=false;hideKickOverlay();C.presenceIds=[];C.lastReadLoaded=false;msgKey=null;chanPreviewKeys.clear()}
 
   // ---- Single-active-session enforcement --------------------------------
   // onlineUsers/$id is one shared boolean per account, not one per tab. The old
@@ -362,7 +504,7 @@ const DB=(()=>{
     presUnsub=onValue(R('presence/'+msgKey),s=>{
       C.presenceIds=s.val()?Object.keys(s.val()).map(Number):[];
       C.presenceIds.forEach(fetchUserIfMissing);
-      if(ready)emit();
+      if(ready)emit('presence');
     },()=>{});
   }
   // Session debug logging — console only (no on-page panel).
@@ -463,8 +605,26 @@ const DB=(()=>{
     };
     listen('owners',v=>{OWNERS_CACHE=v||{};OWNERS_LOADED=true;checkBanLock(myId,C.banned);if(typeof checkForcedVersion==="function")checkForcedVersion();if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}rankUIChanged();});
     {const sid=myId;   // own entry only; a denied/missing read just means "not a secret owner"
-      const done=on=>{SECRET_OWNER_ID=on?sid:null;SECRET_LOADED=true;checkBanLock(myId,C.banned);if(typeof checkForcedVersion==="function")checkForcedVersion();if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}if(ready)emit()};
+      const done=on=>{SECRET_OWNER_ID=on?sid:null;SECRET_LOADED=true;checkBanLock(myId,C.banned);if(typeof checkForcedVersion==="function")checkForcedVersion();if(typeof refreshVipUI==='function'){try{refreshVipUI()}catch(_){}}rankUIChanged()};
       unsubs.push(onValue(R('secretowner/'+sid),sn=>done(sn.val()===1),()=>done(false)));}
+    /* v54.8: authorization epoch. api/ownership.js bumps authEpoch/$id whenever a site grant is
+       taken away from that account. owners/ and secretowner/ are already watched live above, so
+       the PERMISSION itself updates without this — what this adds is the rest of the cleanup:
+       refresh the ID token (so the next API call cannot present one minted before the change)
+       and shut any owner-only screen that is currently open, rather than leaving a panel whose
+       buttons will now all bounce off the rules.
+
+       First snapshot is ignored on purpose: it is the value as it already stood at sign-in. */
+    {let epochSeen=null;
+      unsubs.push(onValue(R('authEpoch/'+myId),sn=>{
+        const v=Number(sn.val())||0;
+        if(epochSeen===null){epochSeen=v;return}
+        if(v===epochSeen)return;
+        epochSeen=v;
+        try{if(auth.currentUser)auth.currentUser.getIdToken(true).catch(()=>{})}catch(_){}
+        try{if(typeof onAuthorizationRevoked==='function')onAuthorizationRevoked()}catch(_){}
+        rankUIChanged();
+      },()=>{}));}
     listen('mods',v=>{MODS_CACHE=v||{};MODS_LOADED=true;rankUIChanged();});
     listen('admin',v=>{ADMINS_CACHE=v||{};ADMINS_LOADED=true;rankUIChanged();});
     // Custom roles: decorative only, written from the backend, never by the client (see js/moderation/roles.js).
@@ -541,7 +701,7 @@ const DB=(()=>{
       C.onlineIds=v?Object.keys(v).map(Number):[];
       C.online=C.onlineIds.length;
       C.onlineIds.forEach(id=>fetchUserIfMissing(id));
-      if(ready)emit();   // refresh online pills/lists the moment someone goes offline
+      if(ready)emit('presence');   // refresh online pills/lists the moment someone goes offline
       healPresence();
     });
     // Owner "Reconnect everyone": the owner clears every online marker and bumps reconnectRequest. Everyone with
@@ -596,9 +756,72 @@ const DB=(()=>{
     previewUnsubs[key]=onValue(q,s=>{
       if(key===msgKey)return;               // the full listener owns the open chat
       const arr=[];s.forEach(c=>{arr.push({...c.val(),id:c.key,images:c.val().images||[],files:c.val().files||[],pings:c.val().pings||[],text:c.val().text||''})});
-      C.messages[key]=arr;if(ready)emit();
+      C.messages[key]=arr;if(ready)emit('messages');
       NSFW.sweep(key,arr);
     },()=>{});
+  }
+
+  /* ==========================================================================
+   * v54.9 — SERVER CHANNELS GET PREVIEWS TOO.
+   *
+   * THE BUG THIS FIXES, which is larger than it looks.
+   *
+   * watchPreview() was called for exactly three things: the built-in ICH rooms (global,
+   * announcements, shitpost), the legacy rooms, and DMs. Never for a channel of a custom
+   * server. So C.messages['ch_…'] was EMPTY for every server channel that was not the one
+   * currently open — and two features read precisely that:
+   *
+   *   unreadIn(key,uid)            counts C.messages[key] against lastRead. With nothing
+   *                                cached it returns 0, so every server channel's unread badge
+   *                                was permanently zero, the `.unread` styling never appeared,
+   *                                and the server rail's badge (which sums unreadIn over the
+   *                                server's channels) was always zero too.
+   *   checkPingNotifications()     builds its key list from every text channel of every server
+   *                                you are in and then reads DB.messages(key) for each. It was
+   *                                walking a list of conversations it had no data for, so a
+   *                                mention in a server channel produced no sound and no desktop
+   *                                notification unless that channel happened to be open.
+   *
+   * Which also means the per-server and per-channel notification preferences had nothing to act
+   * on outside the ICH channels and DMs.
+   *
+   * WHY IT IS BOUNDED
+   *   Somebody in fifteen servers with twenty channels each would otherwise open three hundred
+   *   listeners, and v54.8 spent a release making the listener count something that can be
+   *   reasoned about. So:
+   *     - only text channels of servers you are a member of are considered (the caller decides
+   *       that, since the channel list is DModel's);
+   *     - the total is capped at CHAN_PREVIEW_MAX, and channels you have actually read before
+   *       (a lastRead entry) are preferred over ones you never have — so the cap bites on the
+   *       channels you demonstrably do not follow;
+   *     - a key that leaves the set has its listener dropped immediately.
+   *   The listeners live in previewUnsubs, so stopAll(), listenerCount() and
+   *   listenerBreakdown() already account for them with no further change.
+   * ========================================================================== */
+  const CHAN_PREVIEW_MAX=120;
+  const chanPreviewKeys=new Set();
+  function syncChannelPreviews(keys){
+    if(myId==null)return;
+    let want=[...new Set((keys||[]).filter(k=>typeof k==='string'&&k))];
+    if(want.length>CHAN_PREVIEW_MAX){
+      /* Read-before beats never-read, then it is arbitrary but stable. A channel you have never
+         opened is the one whose badge you are least likely to be waiting on. */
+      const seen=k=>(C.lastRead&&C.lastRead[k]!==undefined&&C.lastRead[k]!==null)?0:1;
+      want=want.slice().sort((a,b)=>seen(a)-seen(b)||(a<b?-1:1)).slice(0,CHAN_PREVIEW_MAX);
+    }
+    const next=new Set(want);
+    /* Drop the ones that are gone — a channel deleted, or a server left. */
+    chanPreviewKeys.forEach(k=>{
+      if(next.has(k))return;
+      chanPreviewKeys.delete(k);
+      if(previewUnsubs[k]){try{previewUnsubs[k]()}catch(_){}delete previewUnsubs[k]}
+      delete C.messages[k];
+    });
+    next.forEach(k=>{
+      if(chanPreviewKeys.has(k))return;
+      chanPreviewKeys.add(k);
+      watchPreview(k);
+    });
   }
   // The message listener follows whichever chat is open
   let pruning=false;
@@ -621,7 +844,7 @@ const DB=(()=>{
     msgUnsub=onValue(q,s=>{
       const arr=[];s.forEach(c=>{arr.push({...c.val(),id:c.key})});
       C.messages[key]=arr.map(m=>({...m,images:m.images||[],files:m.files||[],pings:m.pings||[],text:m.text||''}));
-      if(ready)emit();
+      if(ready)emit('messages');
       NSFW.sweep(key,C.messages[key]);
     },err=>console.warn('messages denied',key,err.code));
   }
@@ -651,7 +874,7 @@ const DB=(()=>{
     // in the conversation, so they get their own node with its own rules.
     reactUnsub=onValue(R('reactions/'+key),s=>{
       C.reactions[key]=s.val()||{};
-      if(ready)emit();
+      if(ready)emit('reactions');
     },()=>{C.reactions[key]={}});
   }
   // Reactions for one message, as [{emoji, ids:[...], mine}], ordered by first-added.
@@ -832,6 +1055,23 @@ const DB=(()=>{
     confirmOnline(){rcPending=false;if(myId!=null&&!kicked){armPresence();armScopedPresence()}},
     settle:async()=>{await Promise.race([authReady,sleep(12000)]);await sessionDone;},
     onChange:f=>{listeners.add(f);return()=>listeners.delete(f)},
+    /* v54.8: how many Firebase listeners this client holds, so a leak can be SEEN rather than
+       suspected. The three groups are counted separately because they leak for different
+       reasons: `unsubs` should be stable after sign-in, `previews`/`rooms` grow with what you
+       are in, and `users` is the LRU-capped profile watch set. */
+    syncChannelPreviews,
+    listenerCount(){
+      return unsubs.length+Object.keys(previewUnsubs).length+Object.keys(roomUnsubs).length+
+        userWatch.size+(msgUnsub?1:0)+(reactUnsub?1:0)+(presUnsub?1:0)+(sessUnsub?1:0);
+    },
+    listenerBreakdown(){
+      return{
+        base:unsubs.length,previews:Object.keys(previewUnsubs).length,
+        rooms:Object.keys(roomUnsubs).length,users:userWatch.size,
+        open:(msgUnsub?1:0)+(reactUnsub?1:0)+(presUnsub?1:0)+(sessUnsub?1:0),
+        total:this.listenerCount()
+      };
+    },
     dmKey,watchMessages,
     // VIP status: owners always count; otherwise a permanent flag or an unexpired 'until'.
     vipInfo:(id,pub,ignoreHidden)=>{id=Number(id);
@@ -1327,19 +1567,119 @@ const DB=(()=>{
       try{await set(R('userPrivate/'+id+'/settings/'+key),val)}
       catch(e){console.error('setting save failed',key,e);throw e}
     },
+    /* ----------------------------------------------------------------
+     * v54.9: SEVERAL scalar settings, atomically, WITHOUT touching their siblings.
+     *
+     * This exists because updateSettings() cannot safely be used for a partial patch.
+     * updateSettings builds `merged = {...C.users[id].settings, ...patch}` and then SETS
+     * userPrivate/$id/settings to it — but C.users[id].settings is the raw PUBLIC node
+     * (users/$id/settings), which v54.1 emptied when it moved settings to userPrivate, and
+     * getUser() computes the real merged object without writing it back. So for a caller that
+     * passes a few keys, `merged` is very nearly just the patch, and the write replaces the
+     * account's entire private settings blob with it.
+     *
+     * The settings pane gets away with it because its Save sends the whole object. Prefs.reset()
+     * and the v54.9 notification migration do not, and would have wiped everything else.
+     *
+     * A multi-path update() under the settings node is the right primitive regardless: the
+     * database merges, so siblings cannot be dropped no matter what the client cache believes,
+     * and the whole patch lands or none of it does.
+     * ---------------------------------------------------------------- */
+    /* ----------------------------------------------------------------
+     * v54.9: a setting EXACTLY AS STORED for my own account, with no defaults merged in.
+     *
+     * getUser().settings is a merge of defaultSettings() and what the account has saved, which
+     * is what almost everything wants — but it makes "stored" and "defaulted" indistinguishable.
+     * That broke the notification migration: defaultSettings() includes
+     * pings:{everyone:true,sound:true,desktop:true}, so ME.settings.pings exists for a brand-new
+     * account that has never had a legacy map, and a fallback reading it would conclude that
+     * every account wants desktop notifications.
+     *
+     * Reads the private blob first (where settings have lived since v54.1) and then the legacy
+     * public node, which is the same order getUser() merges them in. Returns undefined when the
+     * account genuinely has no stored value.
+     * ---------------------------------------------------------------- */
+    rawSetting(key){
+      try{
+        const priv=(C.priv&&C.priv.settings)||null;
+        if(priv&&priv[key]!==undefined&&priv[key]!==null)return priv[key];
+        const pub=(C.users[myId]&&C.users[myId].settings)||null;
+        if(pub&&pub[key]!==undefined&&pub[key]!==null)return pub[key];
+      }catch(_){}
+      return undefined;
+    },
+    async setSettingKeys(id,patch){
+      id=Number(id);
+      const keys=Object.keys(patch||{});
+      if(!keys.length)return;
+      const cur=C.users[id]||{};
+      C.users[id]={...cur,settings:{...(cur.settings||{}),...patch}};
+      if(Number(id)===myId)C.priv={...C.priv,settings:{...((C.priv&&C.priv.settings)||{}),...patch}};
+      emit();
+      try{await update(R('userPrivate/'+id+'/settings'),patch)}
+      catch(e){console.error('settings save failed',keys.join(','),e);throw e}
+    },
     /* ---- Presence status (Discord's Online / Idle / Do Not Disturb / Invisible) ----
        Written straight to the one field rather than through updateSettings, so changing your
        status never re-uploads the whole style node (which can carry a banner). */
+    /* ----------------------------------------------------------------
+     * THE canonical status resolver (v54.8).
+     *
+     * Two facts decide somebody's status and they live in different places:
+     *   users/$id/style/status   what they CHOSE   (online | idle | dnd | invisible)
+     *   onlineUsers/$id          whether they are CONNECTED
+     *
+     * Before v54.8 this function only read the first, so an account that had never opened the
+     * status picker — which is everybody, since 'online' is the default — reported Online
+     * forever, whether or not it had been near the site for a month. Components that happened
+     * to check onlineUsers themselves got it right and components that asked this got it
+     * wrong, which is exactly the "online in one place, offline in another" the brief
+     * describes. Both facts are folded in here now, so there is one answer and every caller
+     * gets it.
+     *
+     * presenceIds is consulted alongside onlineIds because a room or DM has its own scoped
+     * presence node: somebody can be present in the conversation that is open while the
+     * account-level marker is momentarily missing (a reconnect in flight), and showing them as
+     * offline while their messages arrive would be the wrong answer.
+     *
+     * My own client is exempt from the connected test for the obvious reason, and is the only
+     * caller that can ever see 'invisible' — for everybody else it reads as offline, which is
+     * the entire point of the setting. */
     statusOf(id){
-      const u=C.users[Number(id)];
+      id=Number(id);
+      const u=C.users[id];
       const s=normStatus(u&&u.style&&u.style.status);
-      // Invisible reads as offline to everyone except the person who chose it
-      if(s==='invisible'&&Number(id)!==myId)return 'offline';
-      return s;
+      if(id===myId)return s;
+      if(s==='invisible')return 'offline';
+      const here=C.onlineIds.indexOf(id)>-1||C.presenceIds.indexOf(id)>-1;
+      return here?s:'offline';
     },
+    /* What they CHOSE, ignoring whether they are connected. The status picker has to show the
+       option that is actually selected rather than 'offline', and auto-idle has to know whether
+       the person picked Do Not Disturb before deciding it may touch anything. */
+    chosenStatusOf(id){
+      const u=C.users[Number(id)];
+      return normStatus(u&&u.style&&u.style.status);
+    },
+    /* v54.8: an expired custom status stops being shown by EVERY client, not just by the one
+       that owns it. There is no server-side scheduler in this project (that would want a Cloud
+       Function, which it deliberately does not have), so the display rule is what makes expiry
+       actually work: the record may sit in the database for a few more minutes until its owner's
+       next sweep deletes it, and nobody sees it in the meantime. */
     customStatusOf(id){
       const u=C.users[Number(id)];
-      return String((u&&u.style&&u.style.customStatus)||'');
+      const st=u&&u.style;
+      if(!st)return '';
+      const until=Number(st.customStatusUntil||0);
+      if(until>0&&until<=Date.now())return '';
+      return String(st.customStatus||'');
+    },
+    /* When the current custom status runs out, or 0 for "never". Used by the editor to show the
+       term next to the text rather than leaving "why did this vanish" to be worked out. */
+    customStatusUntil(id){
+      const u=C.users[Number(id)];
+      const v=Number(u&&u.style&&u.style.customStatusUntil)||0;
+      return v>Date.now()?v:0;
     },
     /* ---- Display name (Discord's "display name", separate from the @username) ----
        Public, so it lives in `style` with the avatar and the status. An empty value means
@@ -1375,22 +1715,51 @@ const DB=(()=>{
       try{await set(R('users/'+id+'/style/status'),status)}
       catch(e){console.error('status save failed',e);throw e}
     },
-    async setCustomStatus(id,text){
+    /* v54.8: `untilMs` added, additively.
+         0 / omitted  -> never expires, which is what every existing caller gets and so is
+                         exactly the old behaviour
+         a timestamp  -> cleared at that moment (30 min / 1 h / 4 h / today, per section 5.3)
+       The two fields are written in ONE multi-path update rather than two sequential writes, so
+       there is no instant in which the text exists with the previous term attached to it — that
+       window is how a "for 30 minutes" status ends up permanent.
+       The text is sanitised here as well as validated by the rules: < and > are stripped so no
+       client can ever be handed markup, whatever any future renderer forgets to escape. */
+    async setCustomStatus(id,text,untilMs){
       id=Number(id);
       text=String(text||'').replace(/[\u0000-\u001f\u007f<>]/g,'').trim().slice(0,128);
+      let until=Number(untilMs)||0;
+      if(!(until>Date.now()))until=0;                 // in the past or nonsense: treat as "never"
+      if(until>Date.now()+400*24*3600*1000)until=0;   // absurdly far: ignore the term
       const cur=C.users[id]||{};
       const style={...(cur.style||{})};
       if(text)style.customStatus=text;else delete style.customStatus;
-      C.users[id]={...cur,style};emit();
+      if(text&&until)style.customStatusUntil=until;else delete style.customStatusUntil;
+      C.users[id]={...cur,style};emit('presence');
       try{
-        if(text)await set(R('users/'+id+'/style/customStatus'),text);
-        else await remove(R('users/'+id+'/style/customStatus'));
+        await update(R('users/'+id+'/style'),{
+          customStatus:text?text:null,
+          customStatusUntil:(text&&until)?until:null
+        });
       }catch(e){console.error('custom status save failed',e);throw e}
     },
     async updateSettings(id,patch){
       const cur=C.users[id]||{};
       patch={...patch};delete patch.hwTheme;   // hwTheme is only written by setSettingKey (Halloween toggle); a stale snapshot must not overwrite it
-      const merged={...(cur.settings||{}),...patch};
+      /* v54.9: merge onto the EFFECTIVE settings.
+         This used to be `{...(cur.settings||{}), ...patch}`, and cur.settings is the raw PUBLIC
+         users/$id/settings node — which v54.1 emptied when it moved settings to userPrivate, and
+         which getUser() never writes its merge back into. So for anything other than the
+         settings pane's whole-object Save, the base was very nearly empty and this write
+         replaced the account's entire private settings blob with the patch.
+         `base` is now what the account actually has. For a partial patch prefer
+         setSettingKeys() anyway: it is a database-level merge and cannot drop a sibling even if
+         this cache is wrong. */
+      let base=cur.settings||{};
+      try{
+        const eff=this.getUser(id);
+        if(eff&&eff.settings&&Object.keys(eff.settings).length>=Object.keys(base).length)base=eff.settings;
+      }catch(_){}
+      const merged={...base,...patch};
       // Avatar lives only in the public `style` node, never in `settings` (it's
       // deliberately stripped out below before every settings save) — so it can
       // NEVER be read back via merged.avatar. Reading it from there always came

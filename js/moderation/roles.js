@@ -31,12 +31,79 @@ const STATUSES=['online','idle','dnd','invisible'];
 const STATUS_LABEL={online:'Online',idle:'Idle',dnd:'Do Not Disturb',invisible:'Invisible',offline:'Offline'};
 const STATUS_SUB={online:'',idle:'',dnd:'You will not receive any notifications.',invisible:'You will not appear online, but will have full access to Itsukis Chat Hub.'};
 function normStatus(v){v=String(v||'').toLowerCase();return STATUSES.indexOf(v)>=0?v:'online'}
+/* ---------- custom-status terms (v54.8, brief section 5.3) ----------
+   The choices Discord offers, as [value, label]. 'today' is "until the end of today" in the
+   person's own timezone rather than a fixed number of hours, which is what the words mean.
+   Shared here rather than written out in the account panel so the picker, the settings pane and
+   anything added later cannot offer different sets. */
+const CS_TERMS=[['0','Never'],['30m','30 minutes'],['1h','1 hour'],['4h','4 hours'],['today','Today']];
+function csTermToMs(v){
+  switch(String(v||'0')){
+    case '30m':return 30*60*1000;
+    case '1h':return 60*60*1000;
+    case '4h':return 4*60*60*1000;
+    case 'today':{
+      const d=new Date();d.setHours(23,59,59,999);
+      return Math.max(60*1000,d.getTime()-Date.now());
+    }
+    default:return 0;
+  }
+}
 function hiddenTagsOf(id){try{return DB.hiddenTagsOf(id)}catch(_){return[]}}
 function tagHidden(id,t){return hiddenTagsOf(id).indexOf(t)!==-1}
 /* TAG-VISIBILITY:END */
-function isShownOwner(id){return OWNERS_CACHE[Number(id)]===1&&!tagHidden(id,'owner')}
-function isOwner(id){const n=Number(id);return OWNERS_CACHE[n]===1||(SECRET_OWNER_ID!==null&&n===SECRET_OWNER_ID)}
-function ownersKnown(){return OWNERS_LOADED&&SECRET_LOADED}
+/* ==========================================================================
+ * v54.8 — ONE canonical owner resolver (AUTHZ)
+ *
+ * isOwner(), isShownOwner() and ownersKnown() are kept with exactly their old signatures and
+ * answers, because the whole app calls them. What changed is that they now all go through one
+ * place that can also say WHICH grant made somebody an owner, and that refuses to answer
+ * "yes" for a privileged action before the grant tables have actually loaded.
+ *
+ * Why that mattered: ICH grants site ownership from TWO nodes, owners/ and secretowner/, and
+ * secretowner/ is unreadable by every client (rules: ".read": false, own entry excepted). So
+ * removing an account from owners/ in the console removed its Owner TAG and left its POWERS
+ * intact if it also held secretowner/$id — with nothing in the interface able to show why.
+ * See api/ownership.js, which is the tool that can now see and clear both.
+ *
+ * The frontend still cannot GRANT anything: every value below is a live read of a node the
+ * rules make client-unwritable, and every privileged write is re-checked by the rules and by
+ * the API against the caller's verified token. This layer decides what to DISPLAY and what to
+ * let the user TRY — never what is allowed.
+ * ========================================================================== */
+const AUTHZ={
+  /* Which grants this client can see for `id`. secretowner is only ever knowable for the
+     signed-in account itself, which is why `secret` is scoped to SECRET_OWNER_ID. */
+  sources(id){
+    const n=Number(id);
+    const out=[];
+    if(OWNERS_CACHE[n]===1)out.push('owners');
+    if(SECRET_OWNER_ID!==null&&n===SECRET_OWNER_ID)out.push('secretowner');
+    return out;
+  },
+  owner(id){return AUTHZ.sources(id).length>0},
+  /* Owner status that may be DISPLAYED as "Owner". A secret owner is deliberately excluded:
+     that is the entire point of the feature. */
+  shownOwner(id){return OWNERS_CACHE[Number(id)]===1&&!tagHidden(id,'owner')},
+  /* Have the grant tables actually arrived? OWNERS_CACHE starts {} and SECRET_OWNER_ID starts
+     null, so "not an owner" is indistinguishable from "not loaded yet" without this. */
+  known(){return OWNERS_LOADED&&SECRET_LOADED},
+  /* The gate every privileged CLIENT entry point should use. Two differences from isOwner():
+     it refuses while the tables are unknown (so a half-loaded page never offers an owner
+     action), and it throws a message worth showing rather than returning false. */
+  assertOwner(id,what){
+    if(!AUTHZ.known())throw new Error('Still checking your permissions — try again in a moment.');
+    if(!AUTHZ.owner(id))throw new Error(what?('Only site owners can '+what+'.'):'Site owners only.');
+    return true;
+  }
+};
+function isShownOwner(id){return AUTHZ.shownOwner(id)}
+function isOwner(id){return AUTHZ.owner(id)}
+function ownersKnown(){return AUTHZ.known()}
+/* Which node granted it — used by the owner panel's ownership audit and by the diagnostics.
+   For anybody other than the signed-in account this can only ever report 'owners', because a
+   client cannot read another account's secretowner entry. api/ownership.js is what sees all. */
+function ownerSources(id){return AUTHZ.sources(id)}
 // Live cache of mods/, same idea as OWNERS_CACHE above: mods/$id === 1 means that numeric
 // user id is a mod; the client never writes here either (rules: mods/.write is always
 // false), it only reads the live value populated by your backend (Admin SDK).
