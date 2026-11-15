@@ -6,7 +6,7 @@
 <!-- Bump this string every time you edit and re-publish this file. Connected
      clients poll for a change here and auto-refresh once a new version is live,
      so nobody stays on stale code after a deploy. -->
-<meta name="build-version" content="2026-11-11.04">
+<meta name="build-version" content="2026-11-15.01">
 
 
 <title>Itsukis Chat Hub</title>
@@ -14854,7 +14854,15 @@ const DB=(()=>{
             for(let k=0;k<3&&!prof.exists()&&seq===sessionSeq;k++){await sleep(400*(k+1));prof=await getRetry('users/'+id)}
             if(seq!==sessionSeq)return;
             if(prof.exists()){
-              myId=id;C.users[id]=prof.val();startListeners();
+              /* ORDER MATTERS. startListeners() begins with stopAll(), and since v54.8 stopAll() runs
+                 resetAccountCaches(), which empties C.users. The profile used to be stored BEFORE that
+                 call, so it was wiped straight away and stayed missing until the live listener's first
+                 snapshot arrived. Boot checks for it the moment the session settles, so on any
+                 connection slower than that listener it saw "signed in, no profile": it threw up the
+                 "Choose a username" box over the sign-in page (which looks exactly like being logged
+                 out). It was random because it was a race, and worst in slow launcher windows.
+                 Store the profile AFTER the reset. */
+              myId=id;startListeners();C.users[id]=prof.val();
               // link this login to its numeric ID for the database rules, but only if it's
               // not already linked — the rules reject this write once idToUid/$id exists,
               // and firing it unconditionally on every login just spams a permission_denied
@@ -40195,8 +40203,21 @@ const BOOTUI=window.ICHBoot||{prog(){},phase(){},step(){},done(){},fail(){},reve
     $('#loadingHint').textContent="Couldn't reach the server to load your account.";
     $('#loadingRetry').classList.remove('hidden');
   }
-  else if(DB.needsProfile()){show('authPage');modalPickUsername()}
-  else show('authPage');
+  else if(DB.needsProfile()){
+    show('authPage');modalPickUsername();
+    /* Safety net: if the profile turns out to exist after all (it simply had not arrived yet), drop the
+       box and go in, rather than leaving a username prompt over somebody who is already signed in. */
+    const off=DB.onChange(()=>{
+      if(DB.currentUser()){off();$('#modalRoot').innerHTML='';goHome()}
+    });
+  }
+  else{
+    show('authPage');
+    /* A window that cannot store anything (some about:blank / sandboxed launcher windows) can never
+       remember a login. Say so, instead of leaving it looking like the site forgot you. */
+    try{localStorage.setItem('_t','1');localStorage.removeItem('_t')}
+    catch(_){setTimeout(()=>{try{toast('This window blocks browser storage, so it cannot remember your login. Open the site in a normal tab to stay signed in.','bad')}catch(__){}},800)}
+  }
   // Fade the loading screen out ON TOP of whichever page just appeared (the session-error branch
   // above deliberately keeps it up, so it is the one case that skips this).
   if(!(!ME&&DB.hadSessionError()))BOOTUI.done();

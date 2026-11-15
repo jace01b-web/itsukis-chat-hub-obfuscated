@@ -119,7 +119,10 @@
     const l={path:p,cb,err:errCb};
     listeners.push(l);
     // Firebase delivers the current value immediately; async, like the real one.
-    Promise.resolve().then(()=>{
+    /* window.__FAKE_LISTEN_DELAY = ms: delays the FIRST snapshot of every listener, like a real network does.
+       Without it the first snapshot lands in a microtask, which hides every "not loaded yet" race. */
+    const later=f=>{const d=Number(window.__FAKE_LISTEN_DELAY)||0;d?setTimeout(f,d):Promise.resolve().then(f)};
+    later(()=>{
       if(isDenied(p)){if(errCb)try{errCb(denyErr(p))}catch(e){console.error(e)}return}
       try{cb(snap(p))}catch(e){console.error('[fake-fb] initial listener threw',p,e)}
     });

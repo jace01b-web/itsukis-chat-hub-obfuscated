@@ -1,6 +1,6 @@
 {
   "name": "itsukis-chat-hub",
-  "version": "54.9.0",
+  "version": "54.10.0",
   "private": true,
   "description": "Itsuki's Chat Hub - a Discord-style client served as plain static files from GitHub. The SITE NEEDS NO BUILD STEP: index.html fetches the stylesheets and js/loader.js loads the scripts listed in js/manifest.js, in that order, into one shared global scope. This package.json exists only so the test and migration tooling is reproducible, and - since v54.6 - so the handful of things that used to live in loose markdown files are kept somewhere that ships with the code. See \"comments\".",
   "engines": {

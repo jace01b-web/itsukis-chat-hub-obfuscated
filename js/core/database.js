@@ -997,7 +997,15 @@ const DB=(()=>{
             for(let k=0;k<3&&!prof.exists()&&seq===sessionSeq;k++){await sleep(400*(k+1));prof=await getRetry('users/'+id)}
             if(seq!==sessionSeq)return;
             if(prof.exists()){
-              myId=id;C.users[id]=prof.val();startListeners();
+              /* ORDER MATTERS. startListeners() begins with stopAll(), and since v54.8 stopAll() runs
+                 resetAccountCaches(), which empties C.users. The profile used to be stored BEFORE that
+                 call, so it was wiped straight away and stayed missing until the live listener's first
+                 snapshot arrived. Boot checks for it the moment the session settles, so on any
+                 connection slower than that listener it saw "signed in, no profile": it threw up the
+                 "Choose a username" box over the sign-in page (which looks exactly like being logged
+                 out). It was random because it was a race, and worst in slow launcher windows.
+                 Store the profile AFTER the reset. */
+              myId=id;startListeners();C.users[id]=prof.val();
               // link this login to its numeric ID for the database rules, but only if it's
               // not already linked — the rules reject this write once idToUid/$id exists,
               // and firing it unconditionally on every login just spams a permission_denied

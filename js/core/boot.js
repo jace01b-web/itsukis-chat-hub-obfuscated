@@ -78,8 +78,21 @@ const BOOTUI=window.ICHBoot||{prog(){},phase(){},step(){},done(){},fail(){},reve
     $('#loadingHint').textContent="Couldn't reach the server to load your account.";
     $('#loadingRetry').classList.remove('hidden');
   }
-  else if(DB.needsProfile()){show('authPage');modalPickUsername()}
-  else show('authPage');
+  else if(DB.needsProfile()){
+    show('authPage');modalPickUsername();
+    /* Safety net: if the profile turns out to exist after all (it simply had not arrived yet), drop the
+       box and go in, rather than leaving a username prompt over somebody who is already signed in. */
+    const off=DB.onChange(()=>{
+      if(DB.currentUser()){off();$('#modalRoot').innerHTML='';goHome()}
+    });
+  }
+  else{
+    show('authPage');
+    /* A window that cannot store anything (some about:blank / sandboxed launcher windows) can never
+       remember a login. Say so, instead of leaving it looking like the site forgot you. */
+    try{localStorage.setItem('_t','1');localStorage.removeItem('_t')}
+    catch(_){setTimeout(()=>{try{toast('This window blocks browser storage, so it cannot remember your login. Open the site in a normal tab to stay signed in.','bad')}catch(__){}},800)}
+  }
   // Fade the loading screen out ON TOP of whichever page just appeared (the session-error branch
   // above deliberately keeps it up, so it is the one case that skips this).
   if(!(!ME&&DB.hadSessionError()))BOOTUI.done();
