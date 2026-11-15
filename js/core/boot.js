@@ -37,6 +37,16 @@ const BOOTUI=window.ICHBoot||{prog(){},phase(){},step(){},done(){},fail(){},reve
   },10000);
   $('#loadingRetry').onclick=()=>location.reload();
   await DB.settle();
+  /* settle() stops waiting after 12s. On a slow connection that used to land here with nobody
+     "signed in yet" and show the sign-in page - which looked exactly like being logged out on
+     reopen - even though the saved login came through a moment later. Keep the loading screen up
+     and keep waiting; the saved login is only abandoned once Firebase has actually answered. */
+  if(!DB.authResolved()){
+    const hint=$('#loadingHint');if(hint)hint.textContent='Still reconnecting to your account\u2026';
+    const retry=$('#loadingRetry');if(retry)retry.classList.remove('hidden');
+    await Promise.race([DB.authReady,new Promise(r=>setTimeout(r,90000))]);
+    await DB.settle();
+  }
   ME=DB.currentUser();
   checkForcedVersion(); // re-evaluate now that ME (and so owner status) is actually known
   if(ME){

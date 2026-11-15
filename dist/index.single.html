@@ -7354,11 +7354,9 @@ html.pf-noanim *,html.pf-noanim *::before,html.pf-noanim *::after{
   animation-duration:.001ms!important;animation-iteration-count:1!important;
   transition-duration:.001ms!important;scroll-behavior:auto!important}
 
-/* High contrast: harder borders, no translucency, brighter text. */
+/* High contrast: brighter secondary text only. It used to also draw a 1px border/outline around
+   every message, modal, button, channel and member, which boxed in nearly all the text and UI. */
 html.pf-contrast{--dl-muted:#d8dade;--dl-faint:#c2c5cb}
-html.pf-contrast .msg .bubble,html.pf-contrast .modal,html.pf-contrast .dmodal,
-html.pf-contrast .pf2,html.pf-contrast .dctx{border:1px solid var(--dl-text)!important}
-html.pf-contrast .btn,html.pf-contrast .dl-ch,html.pf-contrast .dl-mem{outline:1px solid var(--dl-line)}
 html.pf-contrast .hint,html.pf-contrast small,html.pf-contrast .dim{color:var(--dl-muted)!important}
 
 /* Saturation. Applied to the app shell only - never to <html> and never to the modal layer, so a
@@ -8832,6 +8830,30 @@ html.discord-look .dbtn:focus-visible{
     scroll-behavior:auto!important;
   }
 }
+
+/* ==========================================================================
+ * v54.10: ONE banner shape everywhere.
+ *
+ * Every profile surface used to pick its own banner height (60, 92, 96, 100, 120, 150px), so the
+ * same picture was cropped differently in the popout, the full profile, the member panel and the
+ * settings preview. Discord uses a single 17:6 banner (its uploads are 680x240) and just scales
+ * it to the card's width, which is what this does. Width always fills the card; height follows.
+ * The image is always cover + centred, so what you crop is what everyone sees.
+ * ========================================================================== */
+.pf2-banner,.pf2-banner.big,.pf-banner,.dlpo-banner,.dlp-banner,.dl-acct-banner,
+.acc-banner-preview,.ducard-banner,
+html.discord-look .pf-card .pf-banner,html.discord-look .dlpo-banner,html.discord-look .dlp-banner,
+html.discord-look .dl-acct-banner,html.discord-look .modal.wide:has(#sTabs) .acc-banner-preview{
+  width:100%;height:auto!important;min-height:0!important;aspect-ratio:17/6;flex:none;
+  background-size:cover;background-position:center;background-repeat:no-repeat;
+  box-sizing:border-box}
+
+/* v54.10: the Friends / Message Requests pages are not a message log, so they must not be
+   bottom-anchored like one. `#messages > *:first-child{margin-top:auto}` (v54.8) pinned them to the
+   bottom of the pane with a huge empty gap above. */
+html.discord-look #messages > .dl-fr:first-child{margin-top:0}
+/* Server icons in the rail: the picture must never start a drag of its own. */
+.dl-rail-item img{-webkit-user-drag:none;user-drag:none;user-select:none;pointer-events:none}
 
 </style>
 <script>
@@ -14799,7 +14821,7 @@ const DB=(()=>{
   };
 
   // Signed-in state
-  let authResolve;const authReady=new Promise(r=>authResolve=r);
+  let authResolve,authDone=false;const authReady=new Promise(r=>authResolve=r);
   let sessionDone=Promise.resolve();
   let sessionError=false;                 // true when we could NOT confirm profile state (network etc.)
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -14818,11 +14840,18 @@ const DB=(()=>{
       stopAll();ready=false;myId=null;sessionError=false;myUid=user?user.uid:null;
       if(user){
         try{
-          const s=await getRetry('uidToId/'+user.uid);
+          /* A returning visitor's login is restored from the browser, and the very first reads can
+             come back EMPTY while the database connection is still attaching the new auth token.
+             "Empty" used to be believed on the spot, which dropped a perfectly good account onto the
+             "Choose a username" screen (or, with the retry below missing, the sign-in page). So an
+             empty answer is asked again a couple of times before it is believed. */
+          let s=await getRetry('uidToId/'+user.uid);
+          for(let k=0;k<3&&!s.exists()&&seq===sessionSeq;k++){await sleep(400*(k+1));s=await getRetry('uidToId/'+user.uid)}
           if(seq!==sessionSeq)return;
           if(s.exists()){
             const id=s.val();
-            const prof=await getRetry('users/'+id);
+            let prof=await getRetry('users/'+id);
+            for(let k=0;k<3&&!prof.exists()&&seq===sessionSeq;k++){await sleep(400*(k+1));prof=await getRetry('users/'+id)}
             if(seq!==sessionSeq)return;
             if(prof.exists()){
               myId=id;C.users[id]=prof.val();startListeners();
@@ -14851,7 +14880,7 @@ const DB=(()=>{
         }catch(e){console.error('session load failed',e);sessionError=true}
       }
       if(seq!==sessionSeq)return;
-      ready=true;authResolve();emit();
+      ready=true;authDone=true;authResolve();emit();
     })();
   });
 
@@ -14960,7 +14989,11 @@ const DB=(()=>{
     reactionsFor,toggleReaction,
     isLoggedIn:()=>!!myUid,
     // Only true when we CONFIRMED there is no profile. A failed/slow read is never treated as "no username".
-    needsProfile:()=>!!myUid&&!sessionError&&!(myId&&C.users[myId]),
+    // `ready` matters: while the saved login is still being re-checked after a reopen, myId is null
+    // for a moment, and that used to read as "signed in but no username yet".
+    needsProfile:()=>!!myUid&&ready&&!sessionError&&!(myId&&C.users[myId]),
+    // true once the first "who is signed in?" check has finished (settle() gives up after 12s even if it has not)
+    authResolved:()=>authDone,
     hadSessionError:()=>sessionError,
 
     /* --- Users --- */
@@ -20001,8 +20034,23 @@ function updateMuteLock(){
     if(ch)srvReason=serverLockReason(ch.sid);
   }catch(_){}
   if(srvReason&&mutedBanner){mutedBanner.classList.remove('hidden');mutedBanner.textContent='\u23F1\uFE0F '+srvReason}
-  const locked=muted||!!srvReason||announceLocked||shitLocked||!!tosReason||(view.roomKey===CFG.VIP_ROOM&&!DB.vipInfo(ME.id))||(view.roomKey===CFG.MVP_ROOM&&!hasMvpPerks(ME.id));
+  /* Role / channel permissions. canIn() already resolves @everyone, the member's roles and the
+     channel's allow/deny overrides, but nothing in the composer ever asked it about Send Messages,
+     so denying it for @everyone (or any role) changed the channel list's lock icon and nothing
+     else - everyone could still type. Site owners, the server owner and Administrators come back
+     true from canIn(), exactly as in Discord. */
+  let permLocked=false,permFiles=true;
+  try{
+    const pch=DModel.channelByKey(view.roomKey);
+    if(pch&&pch.type!=='voice'){
+      permLocked=!DModel.canIn(pch.sid,pch,'send',ME.id);
+      permFiles=DModel.canIn(pch.sid,pch,'files',ME.id);
+    }
+  }catch(_){}
+  window.__permLocked=permLocked;
+  const locked=muted||!!srvReason||permLocked||announceLocked||shitLocked||!!tosReason||(view.roomKey===CFG.VIP_ROOM&&!DB.vipInfo(ME.id))||(view.roomKey===CFG.MVP_ROOM&&!hasMvpPerks(ME.id));
   [input,sendBtn,attachBtn,emojiBtn].forEach(el=>{if(el)el.disabled=locked});
+  if(attachBtn&&!locked&&!permFiles)attachBtn.disabled=true;
   /* v54.9: the composer names where you are, the way Discord's does — "Message #general",
      "Message @vlad" — instead of the generic "Message... use @ to ping". It tells you which
      channel you are about to post in, which matters most on mobile, where the channel list is
@@ -20025,7 +20073,7 @@ function updateMuteLock(){
     }catch(_){return null}
   })();
   const openPlaceholder=whereLabel?('Message '+whereLabel):'Message';
-  if(input)input.placeholder=srvReason?srvReason:(muted?'You are muted — you can\'t send messages right now':(announceLocked?'Only the owner can post announcements':(shitLocked?'Only mods, admins and owners can post here':(tosReason&&tosReason!=='Checking your account…'?'Chat is locked. See the notice above.':openPlaceholder))));
+  if(input)input.placeholder=srvReason?srvReason:(permLocked&&!muted?'You do not have permission to send messages in this channel.':muted?'You are muted — you can\'t send messages right now':(announceLocked?'Only the owner can post announcements':(shitLocked?'Only mods, admins and owners can post here':(tosReason&&tosReason!=='Checking your account…'?'Chat is locked. See the notice above.':openPlaceholder))));
   // Announcements have no message length limit (owner-only, so no spam risk) —
   // every other channel keeps the normal 2000-char cap (MVPs get double: see maxMsgFor()).
   if(input){if(inAnnouncements)input.removeAttribute('maxlength');else input.maxLength=maxMsgFor(ME.id)}
@@ -21776,7 +21824,7 @@ const PCard=(function(){
     let img='';
     try{const x=DB.getUser(id);img=(typeof bannerImgOf==='function')?(bannerImgOf(x)||''):''}catch(_){}
     if(img&&typeof isSafeBannerImg==='function'&&isSafeBannerImg(img))
-      return 'background-image:url("'+esc(img)+'");background-size:cover;background-position:center';
+      return "background:url('"+esc(img)+"') center/cover no-repeat";   /* single quotes: this lands inside a double-quoted style="" attribute, and double quotes closed it early, leaving url("") */
     return 'background:linear-gradient(135deg,var(--pf-a),var(--pf-b))';
   }
 
@@ -23448,6 +23496,7 @@ async function send(){
   if(!view.roomKey)return;
   if(DB.isBanned(ME.id)){toast('Your account has been banned.','bad');return}
   {const br=(typeof chatBlockReason==='function')?chatBlockReason():null;if(br){toast(br,'bad');if(TOS_GATE.accepted===false&&typeof modalTos==='function'&&!$('#modalRoot').innerHTML.trim())modalTos({});return}}
+  try{const pch=DModel.channelByKey(view.roomKey);if(pch&&pch.type!=='voice'&&!DModel.canIn(pch.sid,pch,'send',ME.id)){toast('You do not have permission to send messages in this channel.','bad');return}}catch(_){}
   if(view.roomKey===CFG.ANNOUNCEMENTS_ROOM&&!isOwner(ME.id)){toast('Only the owner can post announcements.','bad');return}
   if(view.roomKey===CFG.SHITPOST_ROOM&&!isStaff(ME.id)){toast('Only mods, admins and owners can post in #shitpost.','bad');return}
 
@@ -25751,14 +25800,14 @@ $('#rulesBtn').onclick=()=>modalRules();
  * ========================================================================== */
 'use strict';
 
-/* ---------- MVP image banner: file -> 3:1 JPEG data URL under CFG.MVP_BANNER_MAX_CHARS ---------- */
+/* ---------- MVP image banner: file -> 17:6 (Discord banner ratio) JPEG data URL under CFG.MVP_BANNER_MAX_CHARS ---------- */
 function mvpBannerFromFile(file){
   return new Promise((res,rej)=>{
     const r=new FileReader();
     r.onload=()=>{
       const img=new Image();
       img.onload=()=>{
-        const W=720,H=240,c=document.createElement('canvas');c.width=W;c.height=H;
+        const W=680,H=240,c=document.createElement('canvas');c.width=W;c.height=H;
         const sc=Math.max(W/img.width,H/img.height),w=img.width*sc,h=img.height*sc;
         const g=c.getContext('2d');g.fillStyle='#000';g.fillRect(0,0,W,H);g.drawImage(img,(W-w)/2,(H-h)/2,w,h);
         let q=.86,out=c.toDataURL('image/jpeg',q);
@@ -32757,6 +32806,9 @@ const DiscordShell=(function(){
   function wireRailDrag(r){
     r.querySelectorAll('.dl-rail-item[data-sid]').forEach(el=>{
       const s=el.dataset.sid;
+      /* The icon <img> is itself natively draggable, so grabbing a server with a picture dragged the
+         image ghost AND started the reorder drag. Only the rail item may drag. */
+      el.querySelectorAll('img').forEach(im=>{im.draggable=false;im.setAttribute('draggable','false')});
       if(s===DModel.ICH_ID){el.removeAttribute('draggable');return}
       el.addEventListener('dragstart',e=>{dragSid=s;el.classList.add('dragging');try{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',s)}catch(_){}});
       el.addEventListener('dragend',()=>{dragSid=null;el.classList.remove('dragging');r.querySelectorAll('.drop-before,.drop-after').forEach(n=>n.classList.remove('drop-before','drop-after'))});
@@ -40102,6 +40154,16 @@ const BOOTUI=window.ICHBoot||{prog(){},phase(){},step(){},done(){},fail(){},reve
   },10000);
   $('#loadingRetry').onclick=()=>location.reload();
   await DB.settle();
+  /* settle() stops waiting after 12s. On a slow connection that used to land here with nobody
+     "signed in yet" and show the sign-in page - which looked exactly like being logged out on
+     reopen - even though the saved login came through a moment later. Keep the loading screen up
+     and keep waiting; the saved login is only abandoned once Firebase has actually answered. */
+  if(!DB.authResolved()){
+    const hint=$('#loadingHint');if(hint)hint.textContent='Still reconnecting to your account\u2026';
+    const retry=$('#loadingRetry');if(retry)retry.classList.remove('hidden');
+    await Promise.race([DB.authReady,new Promise(r=>setTimeout(r,90000))]);
+    await DB.settle();
+  }
   ME=DB.currentUser();
   checkForcedVersion(); // re-evaluate now that ME (and so owner status) is actually known
   if(ME){

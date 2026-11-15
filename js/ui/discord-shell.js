@@ -97,6 +97,9 @@ const DiscordShell=(function(){
   function wireRailDrag(r){
     r.querySelectorAll('.dl-rail-item[data-sid]').forEach(el=>{
       const s=el.dataset.sid;
+      /* The icon <img> is itself natively draggable, so grabbing a server with a picture dragged the
+         image ghost AND started the reorder drag. Only the rail item may drag. */
+      el.querySelectorAll('img').forEach(im=>{im.draggable=false;im.setAttribute('draggable','false')});
       if(s===DModel.ICH_ID){el.removeAttribute('draggable');return}
       el.addEventListener('dragstart',e=>{dragSid=s;el.classList.add('dragging');try{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',s)}catch(_){}});
       el.addEventListener('dragend',()=>{dragSid=null;el.classList.remove('dragging');r.querySelectorAll('.drop-before,.drop-after').forEach(n=>n.classList.remove('drop-before','drop-after'))});

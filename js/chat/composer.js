@@ -132,6 +132,7 @@ async function send(){
   if(!view.roomKey)return;
   if(DB.isBanned(ME.id)){toast('Your account has been banned.','bad');return}
   {const br=(typeof chatBlockReason==='function')?chatBlockReason():null;if(br){toast(br,'bad');if(TOS_GATE.accepted===false&&typeof modalTos==='function'&&!$('#modalRoot').innerHTML.trim())modalTos({});return}}
+  try{const pch=DModel.channelByKey(view.roomKey);if(pch&&pch.type!=='voice'&&!DModel.canIn(pch.sid,pch,'send',ME.id)){toast('You do not have permission to send messages in this channel.','bad');return}}catch(_){}
   if(view.roomKey===CFG.ANNOUNCEMENTS_ROOM&&!isOwner(ME.id)){toast('Only the owner can post announcements.','bad');return}
   if(view.roomKey===CFG.SHITPOST_ROOM&&!isStaff(ME.id)){toast('Only mods, admins and owners can post in #shitpost.','bad');return}
 

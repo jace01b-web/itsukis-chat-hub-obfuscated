@@ -66,8 +66,23 @@ function updateMuteLock(){
     if(ch)srvReason=serverLockReason(ch.sid);
   }catch(_){}
   if(srvReason&&mutedBanner){mutedBanner.classList.remove('hidden');mutedBanner.textContent='\u23F1\uFE0F '+srvReason}
-  const locked=muted||!!srvReason||announceLocked||shitLocked||!!tosReason||(view.roomKey===CFG.VIP_ROOM&&!DB.vipInfo(ME.id))||(view.roomKey===CFG.MVP_ROOM&&!hasMvpPerks(ME.id));
+  /* Role / channel permissions. canIn() already resolves @everyone, the member's roles and the
+     channel's allow/deny overrides, but nothing in the composer ever asked it about Send Messages,
+     so denying it for @everyone (or any role) changed the channel list's lock icon and nothing
+     else - everyone could still type. Site owners, the server owner and Administrators come back
+     true from canIn(), exactly as in Discord. */
+  let permLocked=false,permFiles=true;
+  try{
+    const pch=DModel.channelByKey(view.roomKey);
+    if(pch&&pch.type!=='voice'){
+      permLocked=!DModel.canIn(pch.sid,pch,'send',ME.id);
+      permFiles=DModel.canIn(pch.sid,pch,'files',ME.id);
+    }
+  }catch(_){}
+  window.__permLocked=permLocked;
+  const locked=muted||!!srvReason||permLocked||announceLocked||shitLocked||!!tosReason||(view.roomKey===CFG.VIP_ROOM&&!DB.vipInfo(ME.id))||(view.roomKey===CFG.MVP_ROOM&&!hasMvpPerks(ME.id));
   [input,sendBtn,attachBtn,emojiBtn].forEach(el=>{if(el)el.disabled=locked});
+  if(attachBtn&&!locked&&!permFiles)attachBtn.disabled=true;
   /* v54.9: the composer names where you are, the way Discord's does — "Message #general",
      "Message @vlad" — instead of the generic "Message... use @ to ping". It tells you which
      channel you are about to post in, which matters most on mobile, where the channel list is
@@ -90,7 +105,7 @@ function updateMuteLock(){
     }catch(_){return null}
   })();
   const openPlaceholder=whereLabel?('Message '+whereLabel):'Message';
-  if(input)input.placeholder=srvReason?srvReason:(muted?'You are muted — you can\'t send messages right now':(announceLocked?'Only the owner can post announcements':(shitLocked?'Only mods, admins and owners can post here':(tosReason&&tosReason!=='Checking your account…'?'Chat is locked. See the notice above.':openPlaceholder))));
+  if(input)input.placeholder=srvReason?srvReason:(permLocked&&!muted?'You do not have permission to send messages in this channel.':muted?'You are muted — you can\'t send messages right now':(announceLocked?'Only the owner can post announcements':(shitLocked?'Only mods, admins and owners can post here':(tosReason&&tosReason!=='Checking your account…'?'Chat is locked. See the notice above.':openPlaceholder))));
   // Announcements have no message length limit (owner-only, so no spam risk) —
   // every other channel keeps the normal 2000-char cap (MVPs get double: see maxMsgFor()).
   if(input){if(inAnnouncements)input.removeAttribute('maxlength');else input.maxLength=maxMsgFor(ME.id)}

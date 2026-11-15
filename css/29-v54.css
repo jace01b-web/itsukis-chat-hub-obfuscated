@@ -38,11 +38,9 @@ html.pf-noanim *,html.pf-noanim *::before,html.pf-noanim *::after{
   animation-duration:.001ms!important;animation-iteration-count:1!important;
   transition-duration:.001ms!important;scroll-behavior:auto!important}
 
-/* High contrast: harder borders, no translucency, brighter text. */
+/* High contrast: brighter secondary text only. It used to also draw a 1px border/outline around
+   every message, modal, button, channel and member, which boxed in nearly all the text and UI. */
 html.pf-contrast{--dl-muted:#d8dade;--dl-faint:#c2c5cb}
-html.pf-contrast .msg .bubble,html.pf-contrast .modal,html.pf-contrast .dmodal,
-html.pf-contrast .pf2,html.pf-contrast .dctx{border:1px solid var(--dl-text)!important}
-html.pf-contrast .btn,html.pf-contrast .dl-ch,html.pf-contrast .dl-mem{outline:1px solid var(--dl-line)}
 html.pf-contrast .hint,html.pf-contrast small,html.pf-contrast .dim{color:var(--dl-muted)!important}
 
 /* Saturation. Applied to the app shell only - never to <html> and never to the modal layer, so a

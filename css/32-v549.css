@@ -267,3 +267,27 @@ html.discord-look .dbtn:focus-visible{
     scroll-behavior:auto!important;
   }
 }
+
+/* ==========================================================================
+ * v54.10: ONE banner shape everywhere.
+ *
+ * Every profile surface used to pick its own banner height (60, 92, 96, 100, 120, 150px), so the
+ * same picture was cropped differently in the popout, the full profile, the member panel and the
+ * settings preview. Discord uses a single 17:6 banner (its uploads are 680x240) and just scales
+ * it to the card's width, which is what this does. Width always fills the card; height follows.
+ * The image is always cover + centred, so what you crop is what everyone sees.
+ * ========================================================================== */
+.pf2-banner,.pf2-banner.big,.pf-banner,.dlpo-banner,.dlp-banner,.dl-acct-banner,
+.acc-banner-preview,.ducard-banner,
+html.discord-look .pf-card .pf-banner,html.discord-look .dlpo-banner,html.discord-look .dlp-banner,
+html.discord-look .dl-acct-banner,html.discord-look .modal.wide:has(#sTabs) .acc-banner-preview{
+  width:100%;height:auto!important;min-height:0!important;aspect-ratio:17/6;flex:none;
+  background-size:cover;background-position:center;background-repeat:no-repeat;
+  box-sizing:border-box}
+
+/* v54.10: the Friends / Message Requests pages are not a message log, so they must not be
+   bottom-anchored like one. `#messages > *:first-child{margin-top:auto}` (v54.8) pinned them to the
+   bottom of the pane with a huge empty gap above. */
+html.discord-look #messages > .dl-fr:first-child{margin-top:0}
+/* Server icons in the rail: the picture must never start a drag of its own. */
+.dl-rail-item img{-webkit-user-drag:none;user-drag:none;user-select:none;pointer-events:none}

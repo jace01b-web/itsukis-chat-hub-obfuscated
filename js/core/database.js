@@ -964,7 +964,7 @@ const DB=(()=>{
   };
 
   // Signed-in state
-  let authResolve;const authReady=new Promise(r=>authResolve=r);
+  let authResolve,authDone=false;const authReady=new Promise(r=>authResolve=r);
   let sessionDone=Promise.resolve();
   let sessionError=false;                 // true when we could NOT confirm profile state (network etc.)
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -983,11 +983,18 @@ const DB=(()=>{
       stopAll();ready=false;myId=null;sessionError=false;myUid=user?user.uid:null;
       if(user){
         try{
-          const s=await getRetry('uidToId/'+user.uid);
+          /* A returning visitor's login is restored from the browser, and the very first reads can
+             come back EMPTY while the database connection is still attaching the new auth token.
+             "Empty" used to be believed on the spot, which dropped a perfectly good account onto the
+             "Choose a username" screen (or, with the retry below missing, the sign-in page). So an
+             empty answer is asked again a couple of times before it is believed. */
+          let s=await getRetry('uidToId/'+user.uid);
+          for(let k=0;k<3&&!s.exists()&&seq===sessionSeq;k++){await sleep(400*(k+1));s=await getRetry('uidToId/'+user.uid)}
           if(seq!==sessionSeq)return;
           if(s.exists()){
             const id=s.val();
-            const prof=await getRetry('users/'+id);
+            let prof=await getRetry('users/'+id);
+            for(let k=0;k<3&&!prof.exists()&&seq===sessionSeq;k++){await sleep(400*(k+1));prof=await getRetry('users/'+id)}
             if(seq!==sessionSeq)return;
             if(prof.exists()){
               myId=id;C.users[id]=prof.val();startListeners();
@@ -1016,7 +1023,7 @@ const DB=(()=>{
         }catch(e){console.error('session load failed',e);sessionError=true}
       }
       if(seq!==sessionSeq)return;
-      ready=true;authResolve();emit();
+      ready=true;authDone=true;authResolve();emit();
     })();
   });
 
@@ -1125,7 +1132,11 @@ const DB=(()=>{
     reactionsFor,toggleReaction,
     isLoggedIn:()=>!!myUid,
     // Only true when we CONFIRMED there is no profile. A failed/slow read is never treated as "no username".
-    needsProfile:()=>!!myUid&&!sessionError&&!(myId&&C.users[myId]),
+    // `ready` matters: while the saved login is still being re-checked after a reopen, myId is null
+    // for a moment, and that used to read as "signed in but no username yet".
+    needsProfile:()=>!!myUid&&ready&&!sessionError&&!(myId&&C.users[myId]),
+    // true once the first "who is signed in?" check has finished (settle() gives up after 12s even if it has not)
+    authResolved:()=>authDone,
     hadSessionError:()=>sessionError,
 
     /* --- Users --- */

@@ -6,14 +6,14 @@
  * ========================================================================== */
 'use strict';
 
-/* ---------- MVP image banner: file -> 3:1 JPEG data URL under CFG.MVP_BANNER_MAX_CHARS ---------- */
+/* ---------- MVP image banner: file -> 17:6 (Discord banner ratio) JPEG data URL under CFG.MVP_BANNER_MAX_CHARS ---------- */
 function mvpBannerFromFile(file){
   return new Promise((res,rej)=>{
     const r=new FileReader();
     r.onload=()=>{
       const img=new Image();
       img.onload=()=>{
-        const W=720,H=240,c=document.createElement('canvas');c.width=W;c.height=H;
+        const W=680,H=240,c=document.createElement('canvas');c.width=W;c.height=H;
         const sc=Math.max(W/img.width,H/img.height),w=img.width*sc,h=img.height*sc;
         const g=c.getContext('2d');g.fillStyle='#000';g.fillRect(0,0,W,H);g.drawImage(img,(W-w)/2,(H-h)/2,w,h);
         let q=.86,out=c.toDataURL('image/jpeg',q);

@@ -193,7 +193,7 @@ const PCard=(function(){
     let img='';
     try{const x=DB.getUser(id);img=(typeof bannerImgOf==='function')?(bannerImgOf(x)||''):''}catch(_){}
     if(img&&typeof isSafeBannerImg==='function'&&isSafeBannerImg(img))
-      return 'background-image:url("'+esc(img)+'");background-size:cover;background-position:center';
+      return "background:url('"+esc(img)+"') center/cover no-repeat";   /* single quotes: this lands inside a double-quoted style="" attribute, and double quotes closed it early, leaving url("") */
     return 'background:linear-gradient(135deg,var(--pf-a),var(--pf-b))';
   }
 
